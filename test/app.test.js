@@ -238,7 +238,7 @@ describe('D&D Journal App', function() {
       entryCards[1].querySelector('.entry-title').textContent.should.equal('Old Adventure');
     });
 
-    it('should add new entry when form is filled', function() {
+    it('should add new entry when form is filled', async function() {
       const titleInput = document.getElementById('entry-title');
       const contentInput = document.getElementById('entry-content');
       const imageInput = document.getElementById('entry-image');
@@ -247,8 +247,16 @@ describe('D&D Journal App', function() {
       contentInput.value = 'Epic adventure awaits!';
       imageInput.value = 'https://example.com/quest.jpg';
 
+      // Mock window.AI and displayAIPrompt for async behavior
+      global.window = global.window || {};
+      global.window.AI = {
+        isAIEnabled: () => false,
+        getEntrySummary: async () => null
+      };
+      global.displayAIPrompt = async () => {};
+
       const initialLength = state.entries.length;
-      addEntry();
+      await addEntry();
 
       state.entries.should.have.length(initialLength + 1);
       
@@ -595,6 +603,73 @@ describe('D&D Journal App', function() {
 
       // Should not throw an error
       (() => displayCharacterSummary()).should.not.throw();
+    });
+  });
+
+  describe('displayAIPrompt', function() {
+    beforeEach(function() {
+      document.body.innerHTML = `
+        <section id="ai-prompt-section" style="display: none;">
+          <div id="ai-prompt-text" class="loading">Loading...</div>
+        </section>
+      `;
+      // Mock window.AI
+      global.window = {
+        AI: {
+          isAIEnabled: () => false,
+          generateIntrospectionPrompt: async () => null
+        }
+      };
+    });
+
+    it('should hide prompt section when AI is disabled', async function() {
+      await displayAIPrompt();
+      
+      const promptSection = document.getElementById('ai-prompt-section');
+      promptSection.style.display.should.equal('none');
+    });
+
+    it('should show prompt section when AI is enabled and prompt is generated', async function() {
+      global.window.AI.isAIEnabled = () => true;
+      global.window.AI.generateIntrospectionPrompt = async () => 'Test introspection prompt';
+      
+      await displayAIPrompt();
+      
+      const promptSection = document.getElementById('ai-prompt-section');
+      const promptText = document.getElementById('ai-prompt-text');
+      
+      promptSection.style.display.should.equal('block');
+      promptText.textContent.should.equal('Test introspection prompt');
+      promptText.classList.contains('loading').should.be.false;
+    });
+
+    it('should hide prompt section when AI is enabled but no prompt is generated', async function() {
+      global.window.AI.isAIEnabled = () => true;
+      global.window.AI.generateIntrospectionPrompt = async () => null;
+      
+      await displayAIPrompt();
+      
+      const promptSection = document.getElementById('ai-prompt-section');
+      promptSection.style.display.should.equal('none');
+    });
+
+    it('should handle missing DOM elements gracefully', async function() {
+      document.body.innerHTML = '';
+      
+      // Should not throw error
+      (() => displayAIPrompt()).should.not.throw();
+    });
+
+    it('should handle AI module errors gracefully', async function() {
+      global.window.AI.isAIEnabled = () => true;
+      global.window.AI.generateIntrospectionPrompt = async () => {
+        throw new Error('API Error');
+      };
+      
+      await displayAIPrompt();
+      
+      const promptSection = document.getElementById('ai-prompt-section');
+      promptSection.style.display.should.equal('none');
     });
   });
 });

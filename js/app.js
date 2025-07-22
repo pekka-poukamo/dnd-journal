@@ -235,7 +235,7 @@ const getFormData = () => {
 };
 
 // Add new entry - now more functional
-const addEntry = () => {
+const addEntry = async () => {
   const formData = getFormData();
   
   if (!isValidEntry(formData)) return;
@@ -249,6 +249,18 @@ const addEntry = () => {
   renderEntries();
   clearEntryForm();
   focusEntryTitle();
+  
+  // Generate summary for the new entry if AI is enabled
+  if (window.AI && window.AI.isAIEnabled()) {
+    try {
+      await window.AI.getEntrySummary(newEntry);
+    } catch (error) {
+      console.error('Failed to generate summary for new entry:', error);
+    }
+  }
+  
+  // Refresh AI prompt after adding new entry
+  await displayAIPrompt();
 };
 
 // Pure function to clear entry form
@@ -297,6 +309,38 @@ const displayCharacterSummary = () => {
   detailsElement.textContent = summary.details;
 };
 
+// Display AI introspection prompt
+const displayAIPrompt = async () => {
+  const promptSection = document.getElementById('ai-prompt-section');
+  const promptText = document.getElementById('ai-prompt-text');
+  
+  if (!promptSection || !promptText) return;
+  
+  // Check if AI features are enabled
+  if (!window.AI || !window.AI.isAIEnabled()) {
+    promptSection.style.display = 'none';
+    return;
+  }
+  
+  // Show the section
+  promptSection.style.display = 'block';
+  
+  try {
+    // Generate introspection prompt
+    const prompt = await window.AI.generateIntrospectionPrompt(state.character, state.entries);
+    
+    if (prompt) {
+      promptText.textContent = prompt;
+      promptText.classList.remove('loading');
+    } else {
+      promptSection.style.display = 'none';
+    }
+  } catch (error) {
+    console.error('Failed to generate AI prompt:', error);
+    promptSection.style.display = 'none';
+  }
+};
+
 // Setup event handlers for journal entries
 const setupEventHandlers = () => {
   // Entry inputs - manual save via button
@@ -329,11 +373,21 @@ const setupEventHandlers = () => {
 };
 
 // Initialize app
-const init = () => {
+const init = async () => {
   loadData();
   displayCharacterSummary();
   renderEntries();
   setupEventHandlers();
+  
+  // Initialize summarization in background
+  if (window.Summarization) {
+    setTimeout(async () => {
+      await window.Summarization.initializeSummarization();
+    }, 1000); // Delay to not block initial load
+  }
+  
+  // Display AI prompt after everything else is loaded
+  await displayAIPrompt();
   
   // Focus on entry title
   const titleInput = document.getElementById('entry-title');
@@ -360,5 +414,6 @@ if (typeof global !== 'undefined') {
   global.addEntry = addEntry;
   global.createCharacterSummary = createCharacterSummary;
   global.displayCharacterSummary = displayCharacterSummary;
+  global.displayAIPrompt = displayAIPrompt;
   global.init = init;
 }
