@@ -1,41 +1,21 @@
-// Simple D&D Journal POC - All data automatically saved
+// Simple D&D Journal POC - Functional Style
 const STORAGE_KEY = 'simple-dnd-journal';
 
-// Simple state management
-let state = {
+// Pure state management
+const createInitialState = () => ({
   character: {
     name: '',
     race: '',
     class: ''
   },
   entries: []
-};
+});
 
-// Load state from localStorage
-const loadData = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      state = { ...state, ...JSON.parse(stored) };
-    }
-  } catch (error) {
-    console.error('Failed to load data:', error);
-  }
-};
+let state = createInitialState();
 
-// Save state to localStorage
-const saveData = () => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (error) {
-    console.error('Failed to save data:', error);
-  }
-};
-
-// Generate simple ID
+// Pure utility functions
 const generateId = () => Date.now().toString();
 
-// Format date simply
 const formatDate = (timestamp) => {
   return new Date(timestamp).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -46,239 +26,270 @@ const formatDate = (timestamp) => {
   });
 };
 
-// Create entry element
-const createEntryElement = (entry) => {
-  const entryDiv = document.createElement('div');
-  entryDiv.className = 'entry-card';
-  entryDiv.dataset.entryId = entry.id;
+// Pure storage functions
+const loadData = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return { ...createInitialState(), ...parsed };
+    }
+  } catch (error) {
+    console.error('Failed to load data:', error);
+  }
+  return createInitialState();
+};
+
+const saveData = (data) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save data:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Pure state update functions
+const updateCharacter = (currentState, characterData) => ({
+  ...currentState,
+  character: { ...currentState.character, ...characterData }
+});
+
+const addEntry = (currentState, entryData) => ({
+  ...currentState,
+  entries: [...currentState.entries, {
+    id: generateId(),
+    ...entryData,
+    timestamp: Date.now()
+  }]
+});
+
+const updateEntry = (currentState, entryId, entryData) => ({
+  ...currentState,
+  entries: currentState.entries.map(entry => 
+    entry.id === entryId 
+      ? { ...entry, ...entryData, timestamp: Date.now() }
+      : entry
+  )
+});
+
+// Pure DOM creation functions
+const createElement = (tag, attributes = {}, children = []) => {
+  const element = document.createElement(tag);
   
-  const headerDiv = document.createElement('div');
-  headerDiv.className = 'entry-header';
+  Object.entries(attributes).forEach(([key, value]) => {
+    if (key === 'className') element.className = value;
+    else if (key.startsWith('on')) element.addEventListener(key.slice(2), value);
+    else if (key === 'dataset') {
+      Object.entries(value).forEach(([dataKey, dataValue]) => {
+        element.dataset[dataKey] = dataValue;
+      });
+    }
+    else element.setAttribute(key, value);
+  });
   
-  const titleDiv = document.createElement('div');
-  titleDiv.className = 'entry-title';
-  titleDiv.textContent = entry.title;
+  children.forEach(child => {
+    if (typeof child === 'string') {
+      element.appendChild(document.createTextNode(child));
+    } else {
+      element.appendChild(child);
+    }
+  });
   
-  const dateDiv = document.createElement('div');
-  dateDiv.className = 'entry-date';
-  dateDiv.textContent = formatDate(entry.timestamp);
+  return element;
+};
+
+const createEntryElement = (entry, onEdit) => {
+  const headerDiv = createElement('div', { className: 'entry-header' });
   
-  const editBtn = document.createElement('button');
-  editBtn.className = 'btn btn--small btn--secondary';
-  editBtn.textContent = 'Edit';
-  editBtn.onclick = () => editEntry(entry.id);
+  const titleDiv = createElement('div', { className: 'entry-title' }, [entry.title]);
+  const dateDiv = createElement('div', { className: 'entry-date' }, [formatDate(entry.timestamp)]);
+  const editBtn = createElement('button', {
+    className: 'btn btn--small btn--secondary',
+    onclick: () => onEdit(entry.id)
+  }, ['Edit']);
   
   headerDiv.appendChild(titleDiv);
   headerDiv.appendChild(dateDiv);
   headerDiv.appendChild(editBtn);
   
-  const contentDiv = document.createElement('div');
-  contentDiv.className = 'entry-content';
-  contentDiv.textContent = entry.content;
+  const contentDiv = createElement('div', { className: 'entry-content' }, [entry.content]);
   
-  entryDiv.appendChild(headerDiv);
-  entryDiv.appendChild(contentDiv);
+  const children = [headerDiv, contentDiv];
   
   // Add image if present
   if (entry.image && entry.image.trim()) {
-    const imageElement = document.createElement('img');
-    imageElement.className = 'entry-image';
-    imageElement.src = entry.image;
-    imageElement.alt = entry.title;
-    imageElement.onerror = () => {
-      imageElement.style.display = 'none';
-    };
-    entryDiv.appendChild(imageElement);
+    const imageElement = createElement('img', {
+      className: 'entry-image',
+      src: entry.image,
+      alt: entry.title,
+      onerror: () => { imageElement.style.display = 'none'; }
+    });
+    children.push(imageElement);
   }
   
-  return entryDiv;
+  return createElement('div', {
+    className: 'entry-card',
+    dataset: { entryId: entry.id }
+  }, children);
 };
 
-// Render entries
-const renderEntries = () => {
-  const entriesContainer = document.getElementById('entries-list');
-  if (!entriesContainer) return;
+// Pure rendering functions
+const renderEntries = (entries, container) => {
+  if (!container) return;
   
-  if (state.entries.length === 0) {
-    entriesContainer.innerHTML = '<div class="empty-state">No entries yet. Add your first adventure above!</div>';
+  if (entries.length === 0) {
+    container.innerHTML = '<div class="empty-state">No entries yet. Add your first adventure above!</div>';
     return;
   }
   
   // Sort entries by newest first
-  const sortedEntries = [...state.entries].sort((a, b) => b.timestamp - a.timestamp);
+  const sortedEntries = [...entries].sort((a, b) => b.timestamp - a.timestamp);
   
-  entriesContainer.innerHTML = '';
-  sortedEntries.forEach(entry => {
-    entriesContainer.appendChild(createEntryElement(entry));
-  });
+  const entryElements = sortedEntries.map(entry => 
+    createEntryElement(entry, (entryId) => {
+      const entry = state.entries.find(e => e.id === entryId);
+      if (!entry) return;
+      
+      populateForm(entry);
+      setEditMode(true, entryId);
+    })
+  );
+  
+  container.replaceChildren(...entryElements);
 };
 
-// Add new entry
-const addEntry = () => {
+const populateForm = (entry) => {
   const titleInput = document.getElementById('entry-title');
   const contentInput = document.getElementById('entry-content');
   const imageInput = document.getElementById('entry-image');
   
-  const title = titleInput.value.trim();
-  const content = contentInput.value.trim();
-  const image = imageInput.value.trim();
+  if (titleInput) titleInput.value = entry.title;
+  if (contentInput) contentInput.value = entry.content;
+  if (imageInput) imageInput.value = entry.image || '';
+};
+
+const clearForm = () => {
+  const titleInput = document.getElementById('entry-title');
+  const contentInput = document.getElementById('entry-content');
+  const imageInput = document.getElementById('entry-image');
+  
+  if (titleInput) titleInput.value = '';
+  if (contentInput) contentInput.value = '';
+  if (imageInput) imageInput.value = '';
+};
+
+const setEditMode = (isEditing, entryId = null) => {
+  const addBtn = document.getElementById('add-entry-btn');
+  const cancelBtn = document.getElementById('cancel-edit-btn');
+  
+  if (addBtn) {
+    addBtn.textContent = isEditing ? 'Update Entry' : 'Add Entry';
+    addBtn.onclick = isEditing ? () => handleUpdateEntry(entryId) : handleAddEntry;
+  }
+  
+  if (cancelBtn) {
+    cancelBtn.style.display = isEditing ? 'inline-block' : 'none';
+    cancelBtn.onclick = handleCancelEdit;
+  }
+};
+
+// Event handlers
+const handleAddEntry = () => {
+  const titleInput = document.getElementById('entry-title');
+  const contentInput = document.getElementById('entry-content');
+  const imageInput = document.getElementById('entry-image');
+  
+  const title = titleInput?.value.trim();
+  const content = contentInput?.value.trim();
+  const image = imageInput?.value.trim();
   
   if (!title || !content) return;
   
-  const entry = {
-    id: generateId(),
-    title,
-    content,
-    image,
-    timestamp: Date.now()
-  };
+  const newState = addEntry(state, { title, content, image });
+  const saveResult = saveData(newState);
   
-  state.entries.push(entry);
-  saveData();
-  renderEntries();
-  
-  // Clear form
-  titleInput.value = '';
-  contentInput.value = '';
-  imageInput.value = '';
-  
-  // Focus back to title for next entry
-  titleInput.focus();
+  if (saveResult.success) {
+    state = newState;
+    renderEntries(state.entries, document.getElementById('entries-list'));
+    clearForm();
+    focusTitle();
+  }
 };
 
-// Edit entry
-const editEntry = (entryId) => {
-  const entry = state.entries.find(e => e.id === entryId);
-  if (!entry) return;
-  
-  // Populate form with entry data
+const handleUpdateEntry = (entryId) => {
   const titleInput = document.getElementById('entry-title');
   const contentInput = document.getElementById('entry-content');
   const imageInput = document.getElementById('entry-image');
-  const addBtn = document.getElementById('add-entry-btn');
-  const cancelBtn = document.getElementById('cancel-edit-btn');
   
-  titleInput.value = entry.title;
-  contentInput.value = entry.content;
-  imageInput.value = entry.image || '';
-  
-  // Change button text and functionality
-  addBtn.textContent = 'Update Entry';
-  addBtn.onclick = () => updateEntry(entryId);
-  
-  // Show cancel button
-  cancelBtn.style.display = 'inline-block';
-  cancelBtn.onclick = () => cancelEdit();
-  
-  // Store original onclick for cancel functionality
-  addBtn.dataset.originalOnclick = 'addEntry';
-  
-  // Focus on title
-  titleInput.focus();
-};
-
-// Cancel edit and reset form
-const cancelEdit = () => {
-  const titleInput = document.getElementById('entry-title');
-  const contentInput = document.getElementById('entry-content');
-  const imageInput = document.getElementById('entry-image');
-  const addBtn = document.getElementById('add-entry-btn');
-  const cancelBtn = document.getElementById('cancel-edit-btn');
-  
-  // Clear form
-  titleInput.value = '';
-  contentInput.value = '';
-  imageInput.value = '';
-  
-  // Reset button
-  addBtn.textContent = 'Add Entry';
-  addBtn.onclick = addEntry;
-  
-  // Hide cancel button
-  cancelBtn.style.display = 'none';
-  
-  // Focus back to title for next entry
-  titleInput.focus();
-};
-
-// Update existing entry
-const updateEntry = (entryId) => {
-  const titleInput = document.getElementById('entry-title');
-  const contentInput = document.getElementById('entry-content');
-  const imageInput = document.getElementById('entry-image');
-  const addBtn = document.getElementById('add-entry-btn');
-  const cancelBtn = document.getElementById('cancel-edit-btn');
-  
-  const title = titleInput.value.trim();
-  const content = contentInput.value.trim();
-  const image = imageInput.value.trim();
+  const title = titleInput?.value.trim();
+  const content = contentInput?.value.trim();
+  const image = imageInput?.value.trim();
   
   if (!title || !content) return;
   
-  const entryIndex = state.entries.findIndex(e => e.id === entryId);
-  if (entryIndex === -1) return;
+  const newState = updateEntry(state, entryId, { title, content, image });
+  const saveResult = saveData(newState);
   
-  // Update entry
-  state.entries[entryIndex] = {
-    ...state.entries[entryIndex],
-    title,
-    content,
-    image,
-    timestamp: Date.now() // Update timestamp to show it was edited
-  };
-  
-  saveData();
-  renderEntries();
-  
-  // Reset form and button
-  titleInput.value = '';
-  contentInput.value = '';
-  imageInput.value = '';
-  addBtn.textContent = 'Add Entry';
-  addBtn.onclick = addEntry;
-  
-  // Hide cancel button
-  cancelBtn.style.display = 'none';
-  
-  // Focus back to title for next entry
-  titleInput.focus();
+  if (saveResult.success) {
+    state = newState;
+    renderEntries(state.entries, document.getElementById('entries-list'));
+    clearForm();
+    setEditMode(false);
+    focusTitle();
+  }
 };
 
-// Update character
-const updateCharacter = () => {
+const handleCancelEdit = () => {
+  clearForm();
+  setEditMode(false);
+  focusTitle();
+};
+
+const handleCharacterUpdate = () => {
   const nameInput = document.getElementById('character-name');
   const raceInput = document.getElementById('character-race');
   const classInput = document.getElementById('character-class');
   
-  state.character = {
-    name: nameInput.value.trim(),
-    race: raceInput.value.trim(),
-    class: classInput.value.trim()
+  const characterData = {
+    name: nameInput?.value.trim() || '',
+    race: raceInput?.value.trim() || '',
+    class: classInput?.value.trim() || ''
   };
   
-  saveData();
+  const newState = updateCharacter(state, characterData);
+  const saveResult = saveData(newState);
+  
+  if (saveResult.success) {
+    state = newState;
+  }
 };
 
-// Setup auto-updating inputs
-const setupAutoUpdates = () => {
-  // Character inputs
+const focusTitle = () => {
+  const titleInput = document.getElementById('entry-title');
+  if (titleInput) titleInput.focus();
+};
+
+// Setup functions
+const setupCharacterInputs = () => {
   const characterInputs = ['character-name', 'character-race', 'character-class'];
   characterInputs.forEach(id => {
     const input = document.getElementById(id);
     if (input) {
-      input.addEventListener('input', updateCharacter);
+      input.addEventListener('input', handleCharacterUpdate);
     }
   });
-  
-  // Add entry button
-  const addBtn = document.getElementById('add-entry-btn');
-  if (addBtn) {
-    addBtn.addEventListener('click', addEntry);
-  }
-  
-  // Entry inputs - allow Enter key to submit
+};
+
+const setupEntryForm = () => {
   const titleInput = document.getElementById('entry-title');
   const contentInput = document.getElementById('entry-content');
+  const addBtn = document.getElementById('add-entry-btn');
+  
+  if (addBtn) {
+    addBtn.addEventListener('click', handleAddEntry);
+  }
   
   if (titleInput && contentInput) {
     // Enter in title field moves to content
@@ -289,17 +300,16 @@ const setupAutoUpdates = () => {
       }
     });
     
-    // Enter in content field submits the form
+    // Ctrl+Enter in content field submits the form
     contentInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && e.ctrlKey) {
         e.preventDefault();
-        addEntry();
+        handleAddEntry();
       }
     });
   }
 };
 
-// Populate character form
 const populateCharacterForm = () => {
   const nameInput = document.getElementById('character-name');
   const raceInput = document.getElementById('character-race');
@@ -312,19 +322,18 @@ const populateCharacterForm = () => {
 
 // Initialize app
 const init = () => {
-  loadData();
+  state = loadData();
   populateCharacterForm();
-  renderEntries();
-  setupAutoUpdates();
+  renderEntries(state.entries, document.getElementById('entries-list'));
+  setupCharacterInputs();
+  setupEntryForm();
   
   // Focus on character name if empty, otherwise focus on entry title
   const nameInput = document.getElementById('character-name');
-  const titleInput = document.getElementById('entry-title');
-  
   if (nameInput && !state.character.name) {
     nameInput.focus();
-  } else if (titleInput) {
-    titleInput.focus();
+  } else {
+    focusTitle();
   }
 };
 
