@@ -224,3 +224,8 @@ const init = () => {
 
 // Start the app when DOM is ready
 document.addEventListener('DOMContentLoaded', init);
+// Export utility functions for Node tests
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { generateId, formatDate };
+}
+
