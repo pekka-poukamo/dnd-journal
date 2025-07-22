@@ -74,6 +74,14 @@
                                 <span class="stat-label">Pending:</span>
                                 <span class="stat-value" id="pending-summaries">0</span>
                             </div>
+                            <div class="stat-item" id="meta-summary-stat" style="display: none;">
+                                <span class="stat-label">Meta-Summaries:</span>
+                                <span class="stat-value" id="meta-summaries">0</span>
+                            </div>
+                            <div class="stat-item" id="meta-entries-stat" style="display: none;">
+                                <span class="stat-label">In Meta-Summaries:</span>
+                                <span class="stat-value" id="meta-entries">0</span>
+                            </div>
                         </div>
                         <div class="progress-bar">
                             <div class="progress-fill" id="summary-progress"></div>
@@ -85,30 +93,7 @@
                 </div>
             </section>
             
-            <section class="settings-section">
-                <h2>Data Management</h2>
-                <div class="form-group">
-                    <button id="export-data" class="button button--secondary">
-                        Export Journal Data
-                    </button>
-                    <div class="form-help">Download your journal data as a JSON file</div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="import-data" class="button button--secondary">
-                        Import Journal Data
-                        <input type="file" id="import-data" accept=".json" style="display: none;">
-                    </label>
-                    <div class="form-help">Import journal data from a JSON file</div>
-                </div>
-                
-                <div class="form-group">
-                    <button id="clear-all-data" class="button button--danger">
-                        Clear All Data
-                    </button>
-                    <div class="form-help">⚠️ This will permanently delete all your journal entries and character data</div>
-                </div>
-            </section>
+
         </div>
     </main>
 

@@ -194,4 +194,157 @@ describe('Summarization Module', () => {
       expect(summaryEntries[0].title).to.equal('Old 1');
     });
   });
+
+  describe('Meta-Summarization', () => {
+    beforeEach(() => {
+      // Create a large dataset with 60 entries to trigger meta-summarization
+      const journalData = {
+        character: { name: 'Test Character' },
+        entries: []
+      };
+      
+      const summaries = {};
+      
+      // Create 60 entries (55 older + 5 recent)
+      for (let i = 0; i < 60; i++) {
+        const entry = {
+          id: `${i}`,
+          title: `Entry ${i}`,
+          content: `Content for entry ${i}`,
+          timestamp: Date.now() - (i * 24 * 60 * 60 * 1000) // Each day older
+        };
+        journalData.entries.push(entry);
+        
+        // Add summaries for older entries (skip the 5 most recent)
+        if (i >= 5) {
+          summaries[entry.id] = {
+            summary: `Summary for entry ${i}`,
+            originalWordCount: 15 + i,
+            summaryWordCount: 8 + Math.floor(i / 2)
+          };
+        }
+      }
+      
+      global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
+      global.localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify(summaries));
+      global.localStorage.removeItem('simple-dnd-journal-meta-summaries');
+    });
+
+    describe('groupSummariesForMeta', () => {
+      it('should group summaries into batches for meta-summarization', () => {
+        const journalData = JSON.parse(global.localStorage.getItem('simple-dnd-journal'));
+        const summaries = JSON.parse(global.localStorage.getItem('simple-dnd-journal-summaries'));
+        
+        const groups = Summarization.groupSummariesForMeta(journalData.entries, summaries);
+        
+        // Should create groups of 10 entries each (excluding recent 5)
+        // 55 older entries with summaries, grouped into batches of 10 = 5 complete groups
+        expect(groups).to.have.length(5);
+        groups.forEach(group => {
+          expect(group).to.have.length(10);
+        });
+      });
+
+      it('should exclude incomplete groups', () => {
+        // Create smaller dataset with only 7 older entries (less than group size of 10)
+        const journalData = {
+          character: {},
+          entries: []
+        };
+        
+        const summaries = {};
+        
+        for (let i = 0; i < 12; i++) { // 7 older + 5 recent
+          const entry = {
+            id: `${i}`,
+            title: `Entry ${i}`,
+            content: `Content ${i}`,
+            timestamp: Date.now() - (i * 24 * 60 * 60 * 1000)
+          };
+          journalData.entries.push(entry);
+          
+          if (i >= 5) {
+            summaries[entry.id] = { summary: `Summary ${i}` };
+          }
+        }
+        
+        const groups = Summarization.groupSummariesForMeta(journalData.entries, summaries);
+        
+        // Should create no complete groups (only 7 entries, need 10 for a group)
+        expect(groups).to.have.length(0);
+      });
+    });
+
+    describe('getSummaryStats with meta-summarization', () => {
+      it('should indicate meta-summarization is active for large datasets', () => {
+        const stats = Summarization.getSummaryStats();
+        
+        expect(stats.metaSummaryActive).to.be.true;
+        expect(stats.totalEntries).to.equal(60);
+        expect(stats.possibleMetaSummaries).to.equal(5);
+        expect(stats.metaSummaries).to.equal(0); // No meta-summaries generated yet
+      });
+
+      it('should indicate meta-summarization is inactive for small datasets', () => {
+        // Create small dataset
+        const smallData = {
+          character: {},
+          entries: [
+            { id: '1', title: 'Entry 1', content: 'Content 1', timestamp: Date.now() }
+          ]
+        };
+        global.localStorage.setItem('simple-dnd-journal', JSON.stringify(smallData));
+        
+        const stats = Summarization.getSummaryStats();
+        
+        expect(stats.metaSummaryActive).to.be.false;
+        expect(stats.totalEntries).to.equal(1);
+      });
+    });
+
+    describe('getFormattedEntriesForAI with meta-summaries', () => {
+      it('should use meta-summaries when available', () => {
+        const journalData = JSON.parse(global.localStorage.getItem('simple-dnd-journal'));
+        const summaries = JSON.parse(global.localStorage.getItem('simple-dnd-journal-summaries'));
+        
+        // First, determine what the actual groups would be
+        const groups = Summarization.groupSummariesForMeta(journalData.entries, summaries);
+        expect(groups.length).to.be.greaterThan(0); // Ensure we have groups
+        
+        // Create meta-summary for the first group
+        const firstGroup = groups[0];
+        const groupKey = `${firstGroup[0].id}-${firstGroup[firstGroup.length - 1].id}`;
+        
+        const metaSummaries = {};
+        metaSummaries[groupKey] = {
+          summary: 'Meta-summary of first group',
+          entryCount: 10,
+          timeRange: '2023-01-01 - 2023-01-10',
+          originalWordCount: 100,
+          metaSummaryWordCount: 50
+        };
+        global.localStorage.setItem('simple-dnd-journal-meta-summaries', JSON.stringify(metaSummaries));
+        
+        const formatted = Summarization.getFormattedEntriesForAI();
+        
+        // Should include meta-summaries
+        const metaSummaryEntries = formatted.filter(entry => entry.type === 'meta-summary');
+        expect(metaSummaryEntries).to.have.length(1);
+        expect(metaSummaryEntries[0].title).to.include('Adventures (10 entries)');
+        expect(metaSummaryEntries[0].content).to.equal('Meta-summary of first group');
+      });
+
+      it('should fall back to individual summaries when meta-summaries are not available', () => {
+        const formatted = Summarization.getFormattedEntriesForAI();
+        
+        // Should include individual summaries for older entries
+        const summaryEntries = formatted.filter(entry => entry.type === 'summary');
+        expect(summaryEntries.length).to.be.greaterThan(0);
+        
+        // Should not include any meta-summaries
+        const metaSummaryEntries = formatted.filter(entry => entry.type === 'meta-summary');
+        expect(metaSummaryEntries).to.have.length(0);
+      });
+    });
+  });
 });

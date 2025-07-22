@@ -45,22 +45,7 @@ const saveSettings = (settings) => {
   }
 };
 
-// Load journal data
-const loadJournalData = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parseResult = safeParseJSON(stored);
-      if (parseResult.success) {
-        return parseResult.data;
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error('Failed to load journal data:', error);
-    return null;
-  }
-};
+
 
 // Test API key with OpenAI
 const testApiKey = async (apiKey) => {
@@ -157,82 +142,13 @@ const handleSettingsChange = () => {
   updateSummaryStats();
 };
 
-// Export journal data
-const exportJournalData = () => {
-  const data = loadJournalData();
-  if (!data) {
-    alert('No journal data to export');
-    return;
-  }
 
-  const dataStr = JSON.stringify(data, null, 2);
-  const dataBlob = new Blob([dataStr], { type: 'application/json' });
-  
-  const url = URL.createObjectURL(dataBlob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `dnd-journal-export-${new Date().toISOString().split('T')[0]}.json`;
-  link.click();
-  
-  URL.revokeObjectURL(url);
-};
-
-// Import journal data
-const importJournalData = (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const importedData = JSON.parse(e.target.result);
-      
-      // Validate the data structure
-      if (typeof importedData === 'object' && importedData !== null) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(importedData));
-        alert('Journal data imported successfully! Please refresh the page.');
-      } else {
-        alert('Invalid journal data format');
-      }
-    } catch (error) {
-      alert('Error importing data: ' + error.message);
-    }
-  };
-  
-  reader.readAsText(file);
-  
-  // Reset file input
-  event.target.value = '';
-};
-
-// Clear all data
-const clearAllData = () => {
-  const confirmed = confirm(
-    'Are you sure you want to delete ALL journal data?\n\n' +
-    'This will permanently delete:\n' +
-    '• All journal entries\n' +
-    '• Character information\n' +
-    '• AI settings\n\n' +
-    'This action cannot be undone!'
-  );
-  
-  if (confirmed) {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(SETTINGS_KEY);
-    alert('All data has been cleared.');
-    location.reload();
-  }
-};
 
 // Setup event handlers
 const setupEventHandlers = () => {
   const apiKeyInput = document.getElementById('api-key');
   const enableAIInput = document.getElementById('enable-ai-features');
   const testButton = document.getElementById('test-api-key');
-  const exportButton = document.getElementById('export-data');
-  const importInput = document.getElementById('import-data');
-  const clearButton = document.getElementById('clear-all-data');
-
   if (apiKeyInput) {
     apiKeyInput.addEventListener('input', handleSettingsChange);
     apiKeyInput.addEventListener('blur', handleSettingsChange);
@@ -244,18 +160,6 @@ const setupEventHandlers = () => {
 
   if (testButton) {
     testButton.addEventListener('click', handleApiKeyTest);
-  }
-
-  if (exportButton) {
-    exportButton.addEventListener('click', exportJournalData);
-  }
-
-  if (importInput) {
-    importInput.addEventListener('change', importJournalData);
-  }
-
-  if (clearButton) {
-    clearButton.addEventListener('click', clearAllData);
   }
 
   const generateSummariesButton = document.getElementById('generate-summaries');
@@ -288,6 +192,12 @@ const updateSummaryStats = () => {
     const pendingSummariesEl = document.getElementById('pending-summaries');
     const progressFill = document.getElementById('summary-progress');
     
+    // Meta-summary elements
+    const metaSummaryStatEl = document.getElementById('meta-summary-stat');
+    const metaSummariesEl = document.getElementById('meta-summaries');
+    const metaEntriesStatEl = document.getElementById('meta-entries-stat');
+    const metaEntriesEl = document.getElementById('meta-entries');
+    
     if (totalEntriesEl) totalEntriesEl.textContent = stats.totalEntries;
     if (recentEntriesEl) recentEntriesEl.textContent = stats.recentEntries;
     if (summarizedEntriesEl) summarizedEntriesEl.textContent = stats.summarizedEntries;
@@ -295,6 +205,17 @@ const updateSummaryStats = () => {
     
     if (progressFill) {
       progressFill.style.width = `${stats.summaryCompletionRate}%`;
+    }
+    
+    // Show meta-summary stats if meta-summarization is active
+    if (stats.metaSummaryActive) {
+      if (metaSummaryStatEl) metaSummaryStatEl.style.display = 'flex';
+      if (metaEntriesStatEl) metaEntriesStatEl.style.display = 'flex';
+      if (metaSummariesEl) metaSummariesEl.textContent = stats.metaSummaries;
+      if (metaEntriesEl) metaEntriesEl.textContent = stats.entriesInMetaSummaries;
+    } else {
+      if (metaSummaryStatEl) metaSummaryStatEl.style.display = 'none';
+      if (metaEntriesStatEl) metaEntriesStatEl.style.display = 'none';
     }
   }
 };
@@ -362,7 +283,4 @@ if (typeof global !== 'undefined') {
   global.loadSettings = loadSettings;
   global.saveSettings = saveSettings;
   global.testApiKey = testApiKey;
-  global.exportJournalData = exportJournalData;
-  global.importJournalData = importJournalData;
-  global.clearAllData = clearAllData;
 }

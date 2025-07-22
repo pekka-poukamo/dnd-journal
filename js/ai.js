@@ -220,6 +220,7 @@ if (typeof module !== 'undefined' && module.exports) {
     generateIntrospectionPrompt,
     generateEntrySummary,
     getEntrySummary,
-    getWordCount
+    getWordCount,
+    callOpenAI
   };
 }

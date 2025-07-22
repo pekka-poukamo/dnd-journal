@@ -33,6 +33,10 @@ const loadData = () => {
       const parseResult = safeParseJSON(stored);
       if (parseResult.success) {
         state = { ...state, ...parseResult.data };
+        // Update global state reference for tests
+        if (typeof global !== 'undefined') {
+          global.state = state;
+        }
       }
     }
   } catch (error) {
@@ -234,7 +238,7 @@ const getFormData = () => {
   };
 };
 
-// Add new entry - now more functional
+// Add new entry - functional approach
 const addEntry = async () => {
   const formData = getFormData();
   
@@ -242,8 +246,16 @@ const addEntry = async () => {
   
   const newEntry = createEntryFromForm(formData);
   
-  // Add to state (keeping mutation for now to maintain test compatibility)
-  state.entries.push(newEntry);
+  // Add to state immutably - functional approach
+  state = {
+    ...state,
+    entries: [...state.entries, newEntry]
+  };
+  
+  // Update global state reference for tests
+  if (typeof global !== 'undefined') {
+    global.state = state;
+  }
   
   saveData();
   renderEntries();
@@ -287,13 +299,14 @@ const createCharacterSummary = (character) => {
     };
   }
   
-  const details = [];
-  if (character.race) details.push(character.race);
-  if (character.class) details.push(character.class);
+  // Functional approach - filter and map instead of push
+  const details = [character.race, character.class]
+    .filter(detail => detail && detail.trim())
+    .join(' • ');
   
   return {
     name: character.name || 'Unnamed Character',
-    details: details.join(' • ') || 'Click "View Details" to add more information'
+    details: details || 'Click "View Details" to add more information'
   };
 };
 
