@@ -69,6 +69,53 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
 - **Main Page (`index.html`)**: Character summary, AI prompts, and journal entries
 - **Character Page (`character.html`)**: Detailed character creation and editing
 
+## Code Architecture 🏗️
+
+This project follows a **functional programming approach** with **component-based CSS architecture**:
+
+### JavaScript Style
+- **Pure Functions**: All functions avoid side effects where possible
+- **Functional Programming**: Uses `map`, `filter`, `reduce` over loops
+- **Immutable Patterns**: Creates new objects instead of mutating existing ones
+- **Error Handling**: Graceful error handling with `safeParseJSON` pattern
+- **Debounced Auto-save**: Efficient data persistence
+
+### CSS Architecture
+- **BEM Methodology**: Block__Element--Modifier naming convention
+- **Component-Based**: Modular CSS in `/css/components/`
+- **CSS Custom Properties**: Consistent theming with CSS variables
+- **Mobile-First**: Responsive design from mobile up
+- **Shared Components**: Reusable navigation, forms, and UI elements
+
+### File Organization
+```
+css/
+├── components/
+│   ├── navigation.css       # Shared navigation component
+│   ├── character-summary.css # Character summary component
+│   └── character-form.css    # Character form component
+└── main.css                 # Base styles and utilities
+
+js/
+├── app.js                   # Main application logic
+└── character.js             # Character page functionality
+
+test/
+├── app.test.js              # Main app tests
+├── character.test.js        # Character functionality tests
+├── components.test.js       # CSS component tests
+└── integration.test.js      # End-to-end tests
+```
+
+### Testing 🧪
+- **51 passing tests** covering all functionality
+- **Unit Tests**: Pure function testing with isolated components
+- **Integration Tests**: End-to-end user workflow validation
+- **CSS Tests**: Component structure and BEM compliance verification
+- **Error Handling**: Comprehensive edge case coverage
+
+Run tests with: `npm test`
+
 ## What's NOT Included (Simplified) 🚫
 
 - ❌ Multiple characters (one character only)

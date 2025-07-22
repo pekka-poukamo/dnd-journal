@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D Journal - Simple</title>
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components/character-summary.css">
 </head>
 <body>
     <header>
@@ -19,15 +20,15 @@
     <main class="container">
         <div class="grid gap-lg">
             <!-- Character Summary Section -->
-            <section class="character-section">
-                <div class="character-header">
-                    <h2>Your Character</h2>
+            <section class="character-summary">
+                <div class="character-summary__header">
+                    <h2 class="character-summary__title">Your Character</h2>
                     <a href="character.html" class="button button--secondary">View Details</a>
                 </div>
-                <div id="character-summary" class="character-summary">
-                    <div class="character-quick-info">
-                        <div class="character-name" id="summary-name">No character created yet</div>
-                        <div class="character-details" id="summary-details">Click "View Details" to create your character</div>
+                <div class="character-summary__content">
+                    <div class="character-summary__info">
+                        <div class="character-summary__name" id="summary-name">No character created yet</div>
+                        <div class="character-summary__details" id="summary-details">Click "View Details" to create your character</div>
                     </div>
                 </div>
             </section>

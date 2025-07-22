@@ -301,6 +301,26 @@ const focusEntryTitle = () => {
   if (titleInput) titleInput.focus();
 };
 
+// Pure function to create character summary data
+const createCharacterSummary = (character) => {
+  if (!character.name && !character.race && !character.class) {
+    return {
+      name: 'No character created yet',
+      details: 'Click "View Details" to create your character'
+    };
+  }
+  
+  const details = [];
+  if (character.level) details.push(`Level ${character.level}`);
+  if (character.race) details.push(character.race);
+  if (character.class) details.push(character.class);
+  
+  return {
+    name: character.name || 'Unnamed Character',
+    details: details.join(' • ') || 'Click "View Details" to add more information'
+  };
+};
+
 // Display character summary on main page
 const displayCharacterSummary = () => {
   const nameElement = document.getElementById('summary-name');
@@ -308,21 +328,9 @@ const displayCharacterSummary = () => {
   
   if (!nameElement || !detailsElement) return;
   
-  const character = state.character;
-  
-  if (character.name && (character.race || character.class)) {
-    nameElement.textContent = character.name;
-    
-    const details = [];
-    if (character.level) details.push(`Level ${character.level}`);
-    if (character.race) details.push(character.race);
-    if (character.class) details.push(character.class);
-    
-    detailsElement.textContent = details.join(' • ') || 'Click "View Details" to add more information';
-  } else {
-    nameElement.textContent = 'No character created yet';
-    detailsElement.textContent = 'Click "View Details" to create your character';
-  }
+  const summary = createCharacterSummary(state.character);
+  nameElement.textContent = summary.name;
+  detailsElement.textContent = summary.details;
 };
 
 // Setup event handlers for journal entries
@@ -659,6 +667,7 @@ if (typeof global !== 'undefined') {
   global.cancelEdit = cancelEdit;
   global.renderEntries = renderEntries;
   global.addEntry = addEntry;
+  global.createCharacterSummary = createCharacterSummary;
   global.displayCharacterSummary = displayCharacterSummary;
   global.init = init;
   global.openAIService = openAIService;
