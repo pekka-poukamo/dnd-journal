@@ -64,10 +64,18 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
 
 ```
 /
-├── index.html      # Complete application
-├── css/main.css    # Simple styles
-├── js/app.js       # Application logic (~150 lines)
-└── README.md       # This file
+├── index.html              # Complete application
+├── css/main.css            # Simple styles
+├── js/
+│   ├── app.js              # Application logic (~150 lines)
+│   └── journal-core.js     # Testable core logic
+├── test/
+│   ├── journal-core.test.js # Core functionality tests
+│   └── README.md           # Testing documentation
+├── .github/workflows/
+│   └── test.yml            # CI/CD test automation
+├── package.json            # Dependencies and scripts
+└── README.md               # This file
 ```
 
 ## 📦 Automatic Deployment
@@ -96,6 +104,31 @@ npm run deploy
 📖 **See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed instructions.**
 
 ## 🛠 Local Development
+
+### Running Locally
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+```
+
+### Testing
+This project includes comprehensive tests using **Mocha** and **Chai** with **should notation**:
+
+- **30+ test cases** covering core functionality
+- **Edge case testing** for data handling
+- **Mock storage** for browser-independent testing
+- **Automated CI/CD** with GitHub Actions
+
+See [test/README.md](test/README.md) for detailed testing documentation.
 
 ```bash
 # Clone the repository
