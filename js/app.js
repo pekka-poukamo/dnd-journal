@@ -408,9 +408,10 @@ const updateCacheStats = () => {
   if (!cacheStatsDiv || !openAIService) return;
   
   const stats = openAIService.getCacheStats();
+  const analysis = openAIService.analyzeSummarizationNeeds(state.entries);
   const sizeKB = Math.round(stats.cacheSize / 1024 * 100) / 100;
   
-  cacheStatsDiv.innerHTML = `
+  let html = `
     <div class="cache-stat-item">
       <span>Individual Summaries:</span>
       <span>${stats.individualSummaries}</span>
@@ -426,8 +427,28 @@ const updateCacheStats = () => {
     <div class="cache-stat-item">
       <span>Cache Size:</span>
       <span>${sizeKB} KB</span>
+    </div>`;
+
+  // Add analysis info if there are uncached entries
+  if (analysis.needsSummaries > 0) {
+    html += `
+    <div class="cache-stat-item" style="border-top: 1px solid var(--color-border); padding-top: var(--space-sm); margin-top: var(--space-sm);">
+      <span>Entries needing summaries:</span>
+      <span>${analysis.needsSummaries}</span>
     </div>
-  `;
+    <div class="cache-stat-item">
+      <span>Estimated cost:</span>
+      <span>~$${analysis.estimatedCost}</span>
+    </div>`;
+  } else if (analysis.totalOlderEntries > 0) {
+    html += `
+    <div class="cache-stat-item" style="border-top: 1px solid var(--color-border); padding-top: var(--space-sm); margin-top: var(--space-sm);">
+      <span>Cache hit ratio:</span>
+      <span>${analysis.cacheHitRatio}%</span>
+    </div>`;
+  }
+  
+  cacheStatsDiv.innerHTML = html;
 };
 
 // Clear summary cache
@@ -455,9 +476,42 @@ const saveSettings = () => {
   const modelSelect = document.getElementById('ai-model');
   
   if (openAIService && apiKeyInput && modelSelect) {
-    openAIService.saveSettings(apiKeyInput.value.trim(), modelSelect.value);
+    const wasConfigured = openAIService.isConfigured();
+    const newApiKey = apiKeyInput.value.trim();
+    
+    openAIService.saveSettings(newApiKey, modelSelect.value);
     updateAIUI();
+    
+    // If API key was just added and there are many entries, show cost analysis
+    if (!wasConfigured && newApiKey && state.entries.length > 10) {
+      showCostAnalysis();
+    }
+    
     closeSettingsModal();
+  }
+};
+
+// Show cost analysis when API key is first added with many entries
+const showCostAnalysis = () => {
+  if (!openAIService || !openAIService.isConfigured()) return;
+  
+  const analysis = openAIService.analyzeSummarizationNeeds(state.entries);
+  
+  if (analysis.needsSummaries > 0) {
+    const message = `📊 Cost Analysis:
+    
+• ${analysis.totalOlderEntries} older journal entries found
+• ${analysis.needsSummaries} entries need AI summarization
+• Estimated cost: ~$${analysis.estimatedCost}
+• Cache hit ratio: ${analysis.cacheHitRatio}%
+
+Summaries will be generated automatically when you create AI prompts. Each summary is cached to avoid future costs.
+
+Would you like to continue?`;
+
+    if (confirm(message)) {
+      console.log('User confirmed understanding of summarization costs');
+    }
   }
 };
 

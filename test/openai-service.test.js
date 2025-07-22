@@ -587,6 +587,62 @@ describe('OpenAI Service', () => {
       key1.should.be.a('string');
       key1.should.include('123'); // Should include entry ID
     });
+
+    it('should analyze summarization needs correctly', () => {
+      const entries = Array.from({ length: 15 }, (_, i) => ({
+        id: String(i),
+        title: `Entry ${i}`,
+        content: `Content for entry ${i}`,
+        timestamp: Date.now() - i * 1000
+      }));
+
+      const analysis = service.analyzeSummarizationNeeds(entries);
+      
+      analysis.should.have.property('needsSummaries');
+      analysis.should.have.property('totalOlderEntries');
+      analysis.should.have.property('estimatedCost');
+      analysis.should.have.property('hasCache');
+      analysis.should.have.property('cacheHitRatio');
+      
+      analysis.totalOlderEntries.should.equal(12); // 15 total - 3 recent
+      analysis.needsSummaries.should.equal(12); // No cache, so all need summaries
+      analysis.estimatedCost.should.be.greaterThan(0);
+      analysis.hasCache.should.be.false;
+      analysis.cacheHitRatio.should.equal('0.0');
+    });
+
+    it('should handle empty entries in analysis', () => {
+      const analysis = service.analyzeSummarizationNeeds([]);
+      
+      analysis.needsSummaries.should.equal(0);
+      analysis.estimatedCost.should.equal(0);
+      analysis.hasCache.should.be.false;
+    });
+
+    it('should calculate cache hit ratio correctly', () => {
+      // Create some entries
+      const entries = Array.from({ length: 10 }, (_, i) => ({
+        id: String(i),
+        title: `Entry ${i}`,
+        content: `Content ${i}`,
+        timestamp: Date.now() - i * 1000
+      }));
+
+      // Cache summaries for half of the older entries
+      const cachedSummaries = {};
+      const olderEntries = entries.slice(3); // Skip 3 recent entries
+      olderEntries.slice(0, 3).forEach(entry => {
+        const key = service.generateCacheKey(entry);
+        cachedSummaries[key] = 'cached summary';
+      });
+      service.saveCachedSummaries(cachedSummaries);
+
+      const analysis = service.analyzeSummarizationNeeds(entries);
+      
+      analysis.totalOlderEntries.should.equal(7); // 10 total - 3 recent
+      analysis.needsSummaries.should.equal(4); // 7 older - 3 cached
+      parseFloat(analysis.cacheHitRatio).should.be.approximately(42.9, 0.1); // 3/7 ≈ 42.9%
+    });
   });
 
   describe('Error Handling', () => {

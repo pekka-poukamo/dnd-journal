@@ -190,10 +190,12 @@ The AI system uses intelligent nested summarization with smart caching to compre
 - **Recent entries** (last 3) are included in full detail
 - **Older entries** are compressed using AI-generated summaries
 - **Smart caching** - Summaries are stored locally and only regenerated when entries change
+- **Cost analysis** - Warns about potential costs when adding API key to existing large journals
+- **Progressive summarization** - Summaries generated on-demand and cached for future use
 - **Summary length scales** logarithmically with entry word count (10-100 words)
 - **Large datasets** are grouped and meta-summarized to reduce API costs
 - **Automatic cleanup** - Old cached summaries are periodically removed
-- **Cache management** - View statistics and manually clear cache in Settings
+- **Cache management** - View statistics, hit ratios, and manually clear cache in Settings
 - **Character information** is always included for personalized prompts
 - **Graceful fallback** when AI summarization fails
 

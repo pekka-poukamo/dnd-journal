@@ -150,6 +150,50 @@ class OpenAIService {
     }
   }
 
+  // Analyze entries to estimate summarization costs
+  analyzeSummarizationNeeds(entries) {
+    if (!entries || entries.length === 0) {
+      return { needsSummaries: 0, estimatedCost: 0, hasCache: false };
+    }
+
+    const cachedSummaries = this.loadCachedSummaries();
+    const sortedEntries = [...entries].sort((a, b) => b.timestamp - a.timestamp);
+    const olderEntries = sortedEntries.slice(3); // Skip recent entries
+
+    let needsSummaries = 0;
+    olderEntries.forEach(entry => {
+      const cacheKey = this.generateCacheKey(entry);
+      if (!cachedSummaries[cacheKey]) {
+        needsSummaries++;
+      }
+    });
+
+    // Rough cost estimation (very approximate)
+    // Individual entries: ~$0.001-0.002 each for GPT-3.5
+    // Group summaries: fewer calls but more tokens
+    let estimatedCost = 0;
+    if (olderEntries.length > 10) {
+      // Group summarization
+      const groups = this.groupEntriesForSummary(olderEntries);
+      const groupsNeedingSummaries = groups.filter(group => {
+        const groupKey = `group_${this.generateGroupCacheKey(group)}`;
+        return !cachedSummaries[groupKey];
+      });
+      estimatedCost = groupsNeedingSummaries.length * 0.003; // Rough estimate
+    } else {
+      estimatedCost = needsSummaries * 0.002; // Rough estimate for individual summaries
+    }
+
+    return {
+      needsSummaries,
+      totalOlderEntries: olderEntries.length,
+      estimatedCost: Math.round(estimatedCost * 100) / 100, // Round to 2 decimals
+      hasCache: Object.keys(cachedSummaries).length > 0,
+      cacheHitRatio: olderEntries.length > 0 ? 
+        ((olderEntries.length - needsSummaries) / olderEntries.length * 100).toFixed(1) : 0
+    };
+  }
+
   // Check if API key is configured
   isConfigured() {
     return this.apiKey && this.apiKey.trim().length > 0;
@@ -280,20 +324,38 @@ class OpenAIService {
     }
   }
 
-  // Get summaries for multiple entries with intelligent grouping
-  async getEntrySummaries(entries) {
+  // Get summaries for multiple entries with intelligent grouping and progressive loading
+  async getEntrySummaries(entries, progressCallback = null) {
     const summaries = [];
+    const cachedSummaries = this.loadCachedSummaries();
+    
+    // Check how many entries need new summaries
+    const entriesNeedingSummaries = entries.filter(entry => {
+      const cacheKey = this.generateCacheKey(entry);
+      return !cachedSummaries[cacheKey];
+    });
+    
+    // If many entries need summarization, warn user about potential costs
+    if (entriesNeedingSummaries.length > 20) {
+      console.warn(`About to generate ${entriesNeedingSummaries.length} new summaries. This may incur API costs.`);
+    }
     
     // If we have many entries, group them to avoid too many API calls
     if (entries.length > 10) {
       // Group entries and create meta-summaries
       const groups = this.groupEntriesForSummary(entries);
       
-      for (const group of groups) {
+      for (let i = 0; i < groups.length; i++) {
+        const group = groups[i];
         try {
           const groupSummary = await this.generateGroupSummary(group);
           if (groupSummary) {
             summaries.push(groupSummary);
+          }
+          
+          // Call progress callback if provided
+          if (progressCallback) {
+            progressCallback(i + 1, groups.length, 'group');
           }
         } catch (error) {
           console.warn('Failed to generate group summary:', error);
@@ -301,12 +363,20 @@ class OpenAIService {
       }
     } else {
       // Individual summaries for smaller sets
-      for (const entry of entries.slice(0, 8)) { // Limit to 8 to control costs
+      const entriesToProcess = entries.slice(0, 8); // Limit to 8 to control costs
+      
+      for (let i = 0; i < entriesToProcess.length; i++) {
+        const entry = entriesToProcess[i];
         try {
           const summary = await this.generateEntrySummary(entry);
           if (summary) {
             const date = new Date(entry.timestamp).toLocaleDateString();
             summaries.push(`${entry.title} (${date}): ${summary}`);
+          }
+          
+          // Call progress callback if provided
+          if (progressCallback) {
+            progressCallback(i + 1, entriesToProcess.length, 'individual');
           }
         } catch (error) {
           console.warn('Failed to generate summary:', error);
