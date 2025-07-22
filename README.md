@@ -3,6 +3,7 @@
 A minimal D&D journal application for documenting adventures. Built with vanilla JavaScript and CSS as a proof of concept.
 
 [![Deploy to Surge.sh](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-surge.yml/badge.svg)](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-surge.yml)
+[![Test Suite](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/test.yml/badge.svg)](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/test.yml)
 
 ## 🚀 Live App
 
@@ -67,8 +68,52 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
 ├── index.html      # Complete application
 ├── css/main.css    # Simple styles
 ├── js/app.js       # Application logic (~150 lines)
+├── test/           # Test suite
+│   ├── app.test.js         # Unit tests
+│   ├── integration.test.js # Integration tests
+│   ├── setup.js           # Test environment
+│   └── README.md          # Testing documentation
+├── scripts/        # Development scripts
+│   ├── setup-dev.sh       # Environment setup
+│   └── pre-commit.sh      # Pre-commit hooks
 └── README.md       # This file
 ```
+
+## 🧪 Testing
+
+This project uses **Mocha** + **Chai** with should notation for comprehensive testing.
+
+### **Running Tests**
+```bash
+# Install dependencies
+npm install
+
+# Run all tests
+npm test
+
+# Watch mode (auto-rerun on changes)
+npm run test:watch
+
+# Setup development environment
+./scripts/setup-dev.sh
+```
+
+### **Test Coverage**
+- ✅ **17 passing tests** - All core functionality tested
+- 🔧 **Unit Tests** - Pure functions, DOM manipulation, state management
+- 🎯 **Integration Tests** - Complete user workflows
+- 🚀 **Automated Testing** - GitHub Actions CI/CD
+- 🔄 **Pre-commit Hooks** - Prevent broken code
+
+### **Test Examples**
+```javascript
+// Should notation examples
+state.entries.should.have.length(3);
+character.name.should.equal('Aragorn');
+result.should.be.a('string');
+```
+
+See `test/README.md` for detailed testing documentation.
 
 ## 📦 Automatic Deployment
 

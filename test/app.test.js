@@ -12,14 +12,14 @@ function loadApp() {
   // Clear localStorage before each test
   localStorage.clear();
   
-  // Reset DOM
+  // Reset DOM with proper form elements
   document.body.innerHTML = `
-    <div id="character-name"></div>
-    <div id="character-race"></div>
-    <div id="character-class"></div>
-    <div id="entry-title"></div>
-    <div id="entry-content"></div>
-    <div id="entry-image"></div>
+    <input type="text" id="character-name" />
+    <input type="text" id="character-race" />
+    <input type="text" id="character-class" />
+    <input type="text" id="entry-title" />
+    <textarea id="entry-content"></textarea>
+    <input type="url" id="entry-image" />
     <div id="entries-list"></div>
   `;
   
