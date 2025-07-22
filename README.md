@@ -2,21 +2,23 @@
 
 A lightweight, static D&D journal app focused on core functionality: note-taking, character tracking, and AI-powered roleplay prompts. Built with vanilla JavaScript and CSS for maximum simplicity and minimal cost.
 
-## 🚀 Automated Deployment
+[![Deploy to GitHub Pages](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-pages.yml)
 
-This app now supports automated deployment from GitHub! Choose from three options:
+## 🚀 Live App
 
-### Quick Start (GitHub Pages - Recommended)
-1. Go to your repo Settings → Pages
-2. Under "Source", select "GitHub Actions"  
-3. Push to `main` branch - your app deploys automatically!
-4. Access at: `https://pekka-poukamo.github.io/dnd-journal`
+**🎲 [Open D&D Journal App](https://pekka-poukamo.github.io/dnd-journal) 🎲**
 
-### Other Options
-- **Surge.sh**: Original plan with custom domain support
-- **Netlify**: Advanced features and excellent performance
+## 📦 Automatic Deployment
 
-📖 **See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for complete setup instructions.**
+This app automatically deploys to GitHub Pages whenever you push to the `main` branch:
+
+### ⚡ Quick Setup (2 minutes)
+1. Go to **Settings** → **Pages** in this repository
+2. Under **Source**, select **"GitHub Actions"**
+3. Push changes to `main` branch
+4. Your app deploys automatically! ✨
+
+📖 **See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed instructions.**
 
 ## 🎯 Features
 

@@ -1,120 +1,140 @@
-# Automated Deployment Guide for D&D Journal App
+# GitHub Pages Deployment Guide for D&D Journal App
 
-This guide explains how to set up automated deployment for your D&D Journal static app from GitHub. I've created three different deployment options for you to choose from.
+This guide explains how to deploy your D&D Journal static app using GitHub Pages with automated deployment from GitHub Actions.
 
-## 🚀 Deployment Options
+## 🚀 Why GitHub Pages?
 
-### Option 1: GitHub Pages (Recommended - FREE & Easy)
+GitHub Pages is the perfect choice for this static D&D journal app because:
 
-**Advantages:**
-- ✅ Completely free
-- ✅ No external setup required
-- ✅ Automatic HTTPS
-- ✅ Custom domain support
-- ✅ Built into GitHub
+- ✅ **Completely FREE** - No hosting costs
+- ✅ **Zero external setup** - Built into GitHub
+- ✅ **Automatic HTTPS** - Secure by default
+- ✅ **Custom domain support** - Use your own domain if desired
+- ✅ **Fast CDN** - Global content delivery
+- ✅ **Automatic deployment** - Deploy on every push to main
 
-**Setup Steps:**
-1. Go to your GitHub repository settings
-2. Navigate to "Pages" in the left sidebar
-3. Under "Source", select "GitHub Actions"
-4. The workflow file `.github/workflows/deploy-pages.yml` is already created
-5. Push your code to the `main` branch and it will automatically deploy
+## 🎯 Quick Setup (2 minutes)
 
-**Access your app at:** `https://your-username.github.io/dnd-journal`
+### Step 1: Enable GitHub Pages
+1. Go to your GitHub repository: `https://github.com/pekka-poukamo/dnd-journal`
+2. Click **Settings** (in the repository menu)
+3. Scroll down and click **Pages** in the left sidebar
+4. Under **Source**, select **GitHub Actions**
+5. That's it! 🎉
 
-### Option 2: Surge.sh (Original Plan)
+### Step 2: Deploy Your App
+```bash
+# Make sure your changes are committed and pushed
+git add .
+git commit -m "Enable GitHub Pages deployment"
+git push origin main
+```
 
-**Advantages:**
-- ✅ Free for static sites
-- ✅ Custom domain support
-- ✅ Simple and fast
-- ✅ Good for static sites
+### Step 3: Access Your App
+- Go to the **Actions** tab in your GitHub repository
+- Watch the "Deploy D&D Journal to GitHub Pages" workflow complete (takes 1-2 minutes)
+- Your app will be live at: **`https://pekka-poukamo.github.io/dnd-journal`**
 
-**Setup Steps:**
-1. Create a Surge.sh account at [surge.sh](https://surge.sh)
-2. Install Surge CLI locally: `npm install -g surge`
-3. Run `surge login` and `surge whoami` to get your login email
-4. Get your Surge token by running: `surge token`
-5. Add these secrets to your GitHub repository:
-   - Go to Settings → Secrets and variables → Actions
-   - Add `SURGE_LOGIN` (your email)
-   - Add `SURGE_TOKEN` (from step 4)
-   - Add `SURGE_DOMAIN` (e.g., `your-dnd-journal.surge.sh`)
-6. Push to `main` branch to trigger deployment
+## 🔄 How Automatic Deployment Works
 
-### Option 3: Netlify
+The GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) automatically:
 
-**Advantages:**
-- ✅ Free tier available
-- ✅ Excellent performance
-- ✅ Advanced features (forms, functions)
-- ✅ Custom domain support
+1. **Triggers** on every push to the `main` branch
+2. **Checks out** your latest code
+3. **Configures** GitHub Pages settings
+4. **Uploads** all your static files (HTML, CSS, JS)
+5. **Deploys** to the GitHub Pages CDN
+6. **Reports** the deployment URL
 
-**Setup Steps:**
-1. Create a Netlify account at [netlify.com](https://netlify.com)
-2. Create a new site (you can do this manually first)
-3. Get your Site ID from Site settings → General → Site details
-4. Generate a Personal Access Token from User settings → Applications
-5. Add these secrets to your GitHub repository:
-   - `NETLIFY_AUTH_TOKEN` (your personal access token)
-   - `NETLIFY_SITE_ID` (your site ID)
-6. Push to `main` branch to trigger deployment
+**Deployment time:** Usually 1-3 minutes
+**Monitoring:** Watch progress in the "Actions" tab
 
-## 🔧 Current Workflow Files
+## 🛠 Local Development
 
-I've created three workflow files in `.github/workflows/`:
+Test your app locally before deploying:
 
-1. **`deploy-pages.yml`** - For GitHub Pages deployment
-2. **`deploy.yml`** - For Surge.sh deployment  
-3. **`deploy-netlify.yml`** - For Netlify deployment
+```bash
+# Start local development server
+npm start
 
-## 🎯 Quick Start (GitHub Pages - Recommended)
+# This opens http://localhost:3000
+# Test all functionality before pushing to main
+```
 
-Since GitHub Pages requires no external setup and is completely free, here's the fastest way to get started:
+## 🌐 Custom Domain (Optional)
 
-1. **Enable GitHub Pages:**
-   - Go to your repo settings
-   - Click "Pages" in sidebar
-   - Under "Source", select "GitHub Actions"
+To use your own domain instead of `pekka-poukamo.github.io/dnd-journal`:
 
-2. **Push your code:**
-   ```bash
-   git add .
-   git commit -m "Add automated deployment workflows"
-   git push origin main
-   ```
+### Step 1: Add CNAME file
+Create a file named `CNAME` (no extension) in your repository root:
+```
+your-dnd-journal.com
+```
 
-3. **Access your app:**
-   - Go to the "Actions" tab in your GitHub repo
-   - Watch the deployment process
-   - Once complete, your app will be available at:
-     `https://pekka-poukamo.github.io/dnd-journal`
+### Step 2: Configure DNS
+Add a CNAME record with your domain provider:
+```
+Type: CNAME
+Name: www (or @)
+Value: pekka-poukamo.github.io
+```
 
-## 🔄 How It Works
+### Step 3: Enable in GitHub
+1. Go to Settings → Pages
+2. Enter your custom domain
+3. Enable "Enforce HTTPS"
 
-- **Trigger:** Every push to the `main` branch automatically triggers deployment
-- **Process:** GitHub Actions runs the workflow, builds (if needed), and deploys your static files
-- **Time:** Usually takes 1-3 minutes for deployment to complete
-- **Monitoring:** You can watch progress in the "Actions" tab of your GitHub repository
+## 🔧 Advanced Configuration
 
-## 🛠 Customization
-
-### Custom Domain (GitHub Pages)
-1. Add a `CNAME` file to your repository root with your domain
-2. Configure DNS settings with your domain provider
-3. Enable custom domain in GitHub Pages settings
+### Manual Deployment Trigger
+You can manually trigger deployment without pushing code:
+1. Go to Actions tab
+2. Click "Deploy D&D Journal to GitHub Pages"
+3. Click "Run workflow"
 
 ### Environment Variables
-If your app needs environment variables (like API keys), you can add them as GitHub Secrets:
+If you need to add environment variables (like API keys):
 1. Go to Settings → Secrets and variables → Actions
 2. Add your secrets (e.g., `OPENAI_API_KEY`)
-3. Reference them in the workflow files as `${{ secrets.SECRET_NAME }}`
+3. Reference in your JavaScript: `process.env.OPENAI_API_KEY`
 
-## 📝 Notes
+### Deployment Status Badge
+Add this to your README.md to show deployment status:
+```markdown
+[![Deploy to GitHub Pages](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-pages.yml)
+```
 
-- All three options support custom domains
-- GitHub Pages is the most straightforward for personal projects
-- Surge.sh is great if you prefer the original plan from your architecture
-- Netlify offers more advanced features if you need them later
+## 🐛 Troubleshooting
 
-Choose the option that best fits your needs. GitHub Pages is recommended for simplicity and zero cost!
+### Common Issues
+
+**Deployment fails:**
+- Check the Actions tab for error messages
+- Ensure `index.html` exists in the repository root
+- Verify all file paths are correct (case-sensitive)
+
+**404 Page Not Found:**
+- Make sure you have an `index.html` file
+- Check that GitHub Pages is enabled with "GitHub Actions" source
+- Wait a few minutes for DNS propagation
+
+**JavaScript/CSS not loading:**
+- Use relative paths: `./css/main.css` instead of `/css/main.css`
+- Check browser console for 404 errors
+- Verify file names match exactly (case-sensitive)
+
+### Getting Help
+- Check the [GitHub Pages documentation](https://docs.github.com/en/pages)
+- View deployment logs in the Actions tab
+- Open an issue in your repository for specific problems
+
+## ✅ Final Checklist
+
+- [ ] GitHub Pages enabled with "GitHub Actions" source
+- [ ] `index.html` file exists in repository root
+- [ ] All assets use relative paths
+- [ ] Latest code pushed to `main` branch
+- [ ] Workflow completed successfully in Actions tab
+- [ ] App accessible at `https://pekka-poukamo.github.io/dnd-journal`
+
+Your D&D Journal app is now automatically deployed and will update every time you push changes to the main branch! 🎲✨

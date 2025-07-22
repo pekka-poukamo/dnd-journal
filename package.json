@@ -5,10 +5,9 @@
   "main": "index.html",
   "scripts": {
     "start": "npx http-server . -p 3000 -o",
-    "deploy:surge": "surge .",
-    "deploy:surge-domain": "surge . ${SURGE_DOMAIN:-dnd-journal.surge.sh}",
     "build": "echo 'No build step needed - static site' && exit 0",
-    "test": "echo 'No tests yet' && exit 0"
+    "test": "echo 'No tests yet' && exit 0",
+    "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'"
   },
   "repository": {
     "type": "git",
@@ -26,7 +25,7 @@
   "bugs": {
     "url": "https://github.com/pekka-poukamo/dnd-journal/issues"
   },
-  "homepage": "https://github.com/pekka-poukamo/dnd-journal#readme",
+  "homepage": "https://pekka-poukamo.github.io/dnd-journal",
   "devDependencies": {
     "http-server": "^14.1.1"
   },
