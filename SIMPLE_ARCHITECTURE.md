@@ -42,10 +42,10 @@ Static HTML/CSS/JS Site
 └── assets/ (Icons, images)
 ```
 
-### Backend (Val.town)
-- **Data Storage**: Simple JSON storage for syncing across devices
-- **AI Proxy**: Secure OpenAI API calls to avoid exposing keys
-- **Authentication**: Basic token-based auth for data sync
+### No Backend Needed
+- **Pure Static Site**: Everything runs in the browser
+- **Local Storage**: All data stored locally in browser
+- **Direct AI API**: OpenAI API called directly from frontend with user-provided key
 
 ## Data Storage Strategy
 
@@ -78,20 +78,23 @@ Static HTML/CSS/JS Site
   },
   "settings": {
     "currentCharacter": "char-id-1",
-    "syncEnabled": false,
-    "lastSync": null
+    "openaiApiKey": "sk-...", // Stored locally only
+    "preferences": {
+      "theme": "light",
+      "autoSave": true
+    }
   }
 }
 ```
 
-### Cloud Sync (Val.town)
-- Optional sync for backup and cross-device access
-- Simple REST API for CRUD operations
-- No complex authentication - just a user token
+### Export/Import for Backup
+- JSON export/import functionality for data backup
+- Manual sync across devices via file transfer
+- No cloud dependencies
 
-## Implementation Plan
+## Core Components
 
-### Phase 1: Core Static App (Week 1)
+### Main Pages
 ```html
 <!-- index.html - Dashboard -->
 <!DOCTYPE html>
@@ -377,202 +380,124 @@ class JournalEditor {
 
 ### AI Assistant Integration
 ```javascript
-// js/ai.js - AI integration via Val.town
+// js/ai.js - Direct OpenAI API integration
 class AIAssistant {
     constructor() {
         this.storage = new Storage();
-        this.apiEndpoint = 'https://your-username-dndai.val.run';
+        this.apiKey = this.getApiKey();
+    }
+    
+    getApiKey() {
+        // Get API key from settings or prompt user
+        const settings = this.storage.getSettings();
+        if (!settings.openaiApiKey) {
+            const key = prompt('Enter your OpenAI API key (will be stored locally):');
+            if (key) {
+                settings.openaiApiKey = key;
+                this.storage.updateSettings(settings);
+            }
+            return key;
+        }
+        return settings.openaiApiKey;
     }
     
     async generatePrompt(type, context, userInput = '') {
+        if (!this.apiKey) {
+            return { error: 'OpenAI API key required' };
+        }
+        
         const character = this.storage.getCharacter(this.storage.getSettings().currentCharacter);
         const recentEntries = this.storage.getRecentEntries(3);
         
-        const payload = {
-            type,
-            character,
-            recentEntries: recentEntries.map(entry => ({
-                title: entry.title,
-                content: entry.content.replace(/<[^>]*>/g, ''), // Strip HTML
-                type: entry.type,
-                date: entry.date
-            })),
-            userInput,
-            context
-        };
+        const prompt = this.buildPrompt(type, character, recentEntries, userInput);
         
         try {
-            const response = await fetch(`${this.apiEndpoint}/generate`, {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.apiKey}`
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a helpful D&D assistant that provides roleplay suggestions.'
+                        },
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    max_tokens: 300,
+                    temperature: 0.7
+                })
             });
             
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`API error: ${response.status}`);
             }
             
-            return await response.json();
+            const data = await response.json();
+            return { content: data.choices[0].message.content };
+            
         } catch (error) {
             console.error('AI generation failed:', error);
-            return { error: 'Failed to generate AI response. Please try again.' };
+            return { error: 'Failed to generate AI response. Check your API key.' };
         }
     }
     
-    displayResponse(response) {
-        const container = document.getElementById('ai-response');
-        
-        if (response.error) {
-            container.innerHTML = `<div class="error">${response.error}</div>`;
-            return;
-        }
-        
-        container.innerHTML = `
-            <div class="ai-response">
-                <h3>AI Suggestions</h3>
-                <div class="response-content">${response.content}</div>
-                ${response.suggestions ? this.renderSuggestions(response.suggestions) : ''}
-            </div>
-        `;
-    }
-    
-    renderSuggestions(suggestions) {
-        return `
-            <div class="suggestions">
-                <h4>Quick Actions:</h4>
-                ${suggestions.map(suggestion => `
-                    <button class="suggestion-btn" onclick="useAISuggestion('${suggestion}')">
-                        ${suggestion}
-                    </button>
-                `).join('')}
-            </div>
-        `;
-    }
-}
-```
-
-## Val.town Backend Setup
-
-### AI Proxy Endpoint
-```javascript
-// Val.town function for AI integration
-import { OpenAI } from "https://esm.sh/openai@4";
-
-const openai = new OpenAI({
-  apiKey: Deno.env.get("OPENAI_API_KEY"),
-});
-
-export async function handler(req: Request): Promise<Response> {
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
-  }
-  
-  try {
-    const { type, character, recentEntries, userInput, context } = await req.json();
-    
-    // Build prompt based on type and context
-    const prompt = buildPrompt(type, character, recentEntries, userInput, context);
-    
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful D&D assistant that provides roleplay suggestions based on character information and recent game events. Keep responses concise and actionable."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: 300,
-      temperature: 0.7,
-    });
-    
-    const response = completion.choices[0].message.content;
-    
-    return new Response(JSON.stringify({
-      content: response,
-      suggestions: extractSuggestions(response)
-    }), {
-      headers: { "Content-Type": "application/json" },
-    });
-    
-  } catch (error) {
-    console.error("AI generation error:", error);
-    return new Response(JSON.stringify({ error: "Failed to generate response" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-}
-
-function buildPrompt(type, character, recentEntries, userInput, context) {
-  const baseContext = `
+    buildPrompt(type, character, recentEntries, userInput) {
+        const context = `
 Character: ${character.name} (${character.race} ${character.class}, Level ${character.level})
-Traits: ${character.traits}
-Recent Events: ${recentEntries.map(e => `${e.title}: ${e.content.substring(0, 100)}`).join(' | ')}
-`;
-
-  const prompts = {
-    roleplay: `${baseContext}
-    
-Based on this character and recent events, suggest how ${character.name} would react to: ${userInput || context}
-Provide 2-3 specific roleplay suggestions.`,
-    
-    character: `${baseContext}
-    
-Suggest ways to develop ${character.name}'s character based on recent events. Focus on: ${userInput || 'personality growth, relationships, or backstory'}`,
-    
-    scenario: `${baseContext}
-    
-Generate an interesting scenario or challenge for ${character.name} based on their recent adventures and personality.`
-  };
-  
-  return prompts[type] || prompts.roleplay;
-}
-
-function extractSuggestions(response) {
-  // Simple regex to extract bullet points or numbered lists as suggestions
-  const suggestions = response.match(/[•\-\*]\s*(.+)|^\d+\.\s*(.+)/gm);
-  return suggestions ? suggestions.slice(0, 3).map(s => s.replace(/[•\-\*\d\.]\s*/, '').trim()) : [];
+Traits: ${character.traits || 'Not specified'}
+Recent Events: ${recentEntries.map(e => e.title).join(', ') || 'None'}
+        `;
+        
+        const prompts = {
+            roleplay: `${context}\nBased on this character, suggest how they would react to: ${userInput}`,
+            character: `${context}\nSuggest character development ideas for: ${userInput}`,
+            scenario: `${context}\nGenerate a scenario or challenge: ${userInput}`
+        };
+        
+        return prompts[type] || prompts.roleplay;
+    }
 }
 ```
 
-### Simple Data Sync (Optional)
+## Settings Management
+
+### API Key Storage
 ```javascript
-// Val.town function for basic data sync
-export async function dataSync(req: Request): Promise<Response> {
-  const url = new URL(req.url);
-  const userToken = url.searchParams.get("token");
-  
-  if (!userToken) {
-    return new Response("Missing token", { status: 401 });
+// Store OpenAI API key locally in browser
+const settings = {
+  openaiApiKey: null,
+  currentCharacter: null,
+  preferences: {
+    theme: 'light',
+    autoSave: true
   }
-  
-  // Simple token-based storage (use your val.town storage)
-  const storageKey = `dnd-journal-${userToken}`;
-  
-  if (req.method === "GET") {
-    // Retrieve data
-    const data = await Deno.env.get(storageKey);
-    return new Response(data || "{}", {
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-  
-  if (req.method === "POST") {
-    // Save data
-    const body = await req.text();
-    await Deno.env.set(storageKey, body);
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-  
-  return new Response("Method not allowed", { status: 405 });
+};
+
+// Simple settings UI in the app
+function showSettingsModal() {
+  const modal = document.createElement('div');
+  modal.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal">
+        <h3>Settings</h3>
+        <label>
+          OpenAI API Key:
+          <input type="password" id="api-key" placeholder="sk-...">
+        </label>
+        <div class="modal-actions">
+          <button onclick="saveSettings()">Save</button>
+          <button onclick="closeModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
 }
 ```
 
@@ -724,13 +649,14 @@ dnd-journal/
 └── CNAME (optional, for custom domain)
 ```
 
-This simplified architecture provides:
-- ✅ Pure static site hosted on Surge.sh
+This ultra-simple architecture provides:
+- ✅ Pure static site hosted on Surge.sh (FREE)
 - ✅ Local storage for offline functionality  
-- ✅ Optional cloud sync via Val.town
-- ✅ AI integration without exposing API keys
-- ✅ Minimal dependencies and complexity
+- ✅ Direct OpenAI API integration with user-provided key
+- ✅ No backend dependencies whatsoever
+- ✅ Minimal complexity - just HTML/CSS/JS
 - ✅ Mobile-friendly responsive design
 - ✅ Easy to maintain and extend
+- ✅ Export/Import for manual backup
 
-The total cost would be essentially free (Surge.sh free tier + Val.town free tier + minimal OpenAI API usage), perfect for a personal project with small usage.
+The total cost is essentially free hosting + your OpenAI API usage (typically $1-3/month for personal use).
