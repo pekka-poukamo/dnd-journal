@@ -1,0 +1,11 @@
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Test reports
+test-results/
+junit.xml
+
+# Node modules
+node_modules/

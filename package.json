@@ -6,7 +6,8 @@
   "scripts": {
     "start": "npx http-server . -p 3000 -o",
     "build": "echo 'No build step needed - static site' && exit 0",
-    "test": "echo 'No tests yet' && exit 0",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
     "deploy": "surge .",
     "deploy:domain": "surge . dnd-journal.surge.sh"
@@ -30,9 +31,23 @@
   "homepage": "https://dnd-journal.surge.sh",
   "devDependencies": {
     "http-server": "^14.1.1",
-    "surge": "^0.23.1"
+    "surge": "^0.23.1",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "should": "^13.2.3"
   },
   "engines": {
     "node": ">=16.0.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "js/**/*.js"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.js",
+      "**/*.test.js"
+    ]
   }
 }
