@@ -93,10 +93,14 @@ describe('functionName', () => {
 
 ## For AI Agents
 
+**REQUIRED READING:** Check `docs/adr/` for permanent architectural decisions.
+
 **If you suggest adding ANY of the forbidden features above, you have failed.**
 
 **If you write code without tests, you have failed.**
 
 **If you use classes, loops, or mutations, you have failed.**
+
+**If you violate any ADR, you have failed.**
 
 **Stay minimal. Stay functional. Test everything.**

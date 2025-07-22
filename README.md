@@ -28,8 +28,11 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies, one HTML file.
 
 ## For Developers & AI Agents
 
-**READ THE STYLE GUIDE FIRST**: `STYLE_GUIDE.md`
+**READ THESE FIRST:**
+- `STYLE_GUIDE.md` - Coding rules and anti-patterns
+- `docs/adr/` - Architecture decisions (PERMANENT)
 
+**Core Rules:**
 - **Tests are mandatory** - All features must have tests
 - **Keep it simple** - No feature bloat
 - **Pure functions only** - No mutations
