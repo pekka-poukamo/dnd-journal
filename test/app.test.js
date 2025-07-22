@@ -30,6 +30,9 @@ function loadApp() {
   delete global.loadData;
   delete global.saveData;
   delete global.createEntryElement;
+  delete global.enableEditMode;
+  delete global.saveEdit;
+  delete global.cancelEdit;
   delete global.renderEntries;
   delete global.addEntry;
   delete global.updateCharacter;
@@ -339,6 +342,169 @@ describe('D&D Journal App', function() {
       
       // Should not throw and should use default state
       (() => loadData()).should.not.throw();
+    });
+  });
+
+  describe('Edit Functionality', function() {
+    beforeEach(function() {
+      // Setup proper form elements
+      document.body.innerHTML = `
+        <input type="text" id="character-name" />
+        <input type="text" id="character-race" />
+        <input type="text" id="character-class" />
+        <input type="text" id="entry-title" />
+        <textarea id="entry-content"></textarea>
+        <input type="url" id="entry-image" />
+        <div id="entries-list"></div>
+      `;
+    });
+
+    it('should create entry element with edit button', function() {
+      const entry = {
+        id: '123',
+        title: 'Test Adventure',
+        content: 'A great quest!',
+        timestamp: Date.now()
+      };
+
+      const element = createEntryElement(entry);
+      
+      const editButton = element.querySelector('.button');
+      editButton.should.not.be.null;
+      editButton.textContent.should.equal('Edit');
+      editButton.className.should.include('button--secondary');
+      editButton.className.should.include('button--small');
+    });
+
+    it('should enable edit mode when edit button is clicked', function() {
+      const entry = {
+        id: '123',
+        title: 'Test Adventure',
+        content: 'A great quest!',
+        timestamp: Date.now()
+      };
+
+      const element = createEntryElement(entry);
+      const editButton = element.querySelector('.button');
+      
+      // Simulate edit button click
+      editButton.click();
+
+      // Should have input fields
+      const titleInput = element.querySelector('input');
+      const contentTextarea = element.querySelector('textarea');
+      
+      titleInput.should.not.be.null;
+      contentTextarea.should.not.be.null;
+      titleInput.value.should.equal('Test Adventure');
+      contentTextarea.value.should.equal('A great quest!');
+
+      // Should have save and cancel buttons
+      const buttons = element.querySelectorAll('.button');
+      buttons.should.have.length(2);
+      buttons[0].textContent.should.equal('Save');
+      buttons[1].textContent.should.equal('Cancel');
+    });
+
+    it('should save edit changes when save button is clicked', function() {
+      const entry = {
+        id: '123',
+        title: 'Original Title',
+        content: 'Original content',
+        timestamp: Date.now()
+      };
+
+      const element = createEntryElement(entry);
+      const editButton = element.querySelector('.button');
+      
+      // Enable edit mode
+      editButton.click();
+
+      // Update values
+      const titleInput = element.querySelector('input');
+      const contentTextarea = element.querySelector('textarea');
+      titleInput.value = 'Updated Title';
+      contentTextarea.value = 'Updated content';
+
+      // Click save
+      const saveButton = element.querySelector('.button');
+      saveButton.click();
+
+      // Entry should be updated
+      entry.title.should.equal('Updated Title');
+      entry.content.should.equal('Updated content');
+      entry.timestamp.should.be.above(Date.now() - 1000); // Should be recent
+    });
+
+    it('should not save edit changes when title or content is empty', function() {
+      const entry = {
+        id: '123',
+        title: 'Original Title',
+        content: 'Original content',
+        timestamp: Date.now()
+      };
+
+      const element = createEntryElement(entry);
+      const editButton = element.querySelector('.button');
+      
+      // Enable edit mode
+      editButton.click();
+
+      // Clear title
+      const titleInput = element.querySelector('input');
+      titleInput.value = '';
+
+      // Click save
+      const saveButton = element.querySelector('.button');
+      saveButton.click();
+
+      // Entry should not be updated
+      entry.title.should.equal('Original Title');
+      entry.content.should.equal('Original content');
+    });
+
+    it('should cancel edit and restore original view', function() {
+      const entry = {
+        id: '123',
+        title: 'Original Title',
+        content: 'Original content',
+        timestamp: Date.now()
+      };
+
+      const element = createEntryElement(entry);
+      const editButton = element.querySelector('.button');
+      
+      // Enable edit mode
+      editButton.click();
+
+      // Update values
+      const titleInput = element.querySelector('input');
+      const contentTextarea = element.querySelector('textarea');
+      titleInput.value = 'Changed Title';
+      contentTextarea.value = 'Changed content';
+
+      // Click cancel
+      const cancelButton = element.querySelectorAll('.button')[1];
+      cancelButton.click();
+
+      // Entry should not be updated
+      entry.title.should.equal('Original Title');
+      entry.content.should.equal('Original content');
+    });
+
+    it('should have entry actions container', function() {
+      const entry = {
+        id: '123',
+        title: 'Test Adventure',
+        content: 'A great quest!',
+        timestamp: Date.now()
+      };
+
+      const element = createEntryElement(entry);
+      
+      const actionsDiv = element.querySelector('.entry-actions');
+      actionsDiv.should.not.be.null;
+      actionsDiv.className.should.equal('entry-actions');
     });
   });
 });
