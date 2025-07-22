@@ -31,13 +31,32 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
 - Images display with entries
 - Graceful fallback if image fails to load
 
+### 🤖 **AI-Powered Roleplay Prompts**
+- **OpenAI Integration** - Generate creative prompts using GPT models
+- **Three Prompt Types**:
+  - **Introspective** - Character reflection and personal growth
+  - **Action** - Challenging decisions and critical moments
+  - **Surprise** - Unexpected, left-field encounters that challenge assumptions
+- **Smart Context Awareness** - Uses your character info and journal history
+- **Intelligent Compression** - Summarizes long journal histories for AI processing
+- **Configurable Models** - Choose between GPT-3.5 Turbo, GPT-4, or GPT-4 Turbo
+- **Local Storage** - API keys stored securely in your browser
+
 ## How to Use 🚀
 
 1. **Open `index.html`** in any modern web browser
 2. **Fill in your character** details (saves automatically)
-3. **Add journal entries** by typing a title and description
-4. **Add images** by pasting image URLs (optional)
-5. **Your data persists** automatically in your browser
+3. **Configure AI** (optional):
+   - Click **Settings** button in the header
+   - Enter your OpenAI API key
+   - Choose your preferred AI model
+4. **Generate AI prompts** for deeper roleplay:
+   - Click any of the three prompt generation buttons
+   - Use the generated prompt directly or regenerate for variety
+   - Click "Use This Prompt" to auto-fill a journal entry
+5. **Add journal entries** by typing a title and description
+6. **Add images** by pasting image URLs (optional)
+7. **Your data persists** automatically in your browser
 
 ## What's NOT Included (Simplified) 🚫
 
@@ -50,25 +69,28 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
 - ❌ Statistics or analytics
 - ❌ Manual save/load buttons
 - ❌ Keyboard shortcuts
-- ❌ AI assistant
 - ❌ Export/import features
 
 ## Technical Details 🔧
 
 - **Pure vanilla JavaScript** - No frameworks or build tools
+- **OpenAI API Integration** - Secure client-side API calls
 - **CSS custom properties** - Clean, modern styling
-- **LocalStorage** - All data stored in browser
+- **LocalStorage** - All data stored in browser (including API keys)
 - **Single HTML file** - Complete app in one page
 - **Mobile responsive** - Works on phones and tablets
+- **Smart Data Compression** - Nested summarization for large journal histories
 
 ## File Structure 📁
 
 ```
 /
-├── index.html      # Complete application
-├── css/main.css    # Simple styles
-├── js/app.js       # Application logic (~150 lines)
-├── test/           # Test suite
+├── index.html              # Complete application
+├── css/main.css            # Simple styles
+├── js/
+│   ├── app.js              # Application logic (~500 lines)
+│   └── openai-service.js   # AI integration service
+├── test/                   # Test suite
 │   ├── app.test.js         # Unit tests
 │   ├── integration.test.js # Integration tests
 │   ├── setup.js           # Test environment
@@ -140,6 +162,36 @@ npm run deploy
 
 📖 **See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed instructions.**
 
+## 🤖 Setting Up AI Features
+
+### **Getting an OpenAI API Key**
+
+1. **Sign up** at [OpenAI](https://platform.openai.com)
+2. **Navigate** to API section and create a new API key
+3. **Copy** your API key (starts with `sk-`)
+4. **In the app**, click **Settings** and paste your API key
+5. **Choose** your preferred model:
+   - **GPT-3.5 Turbo** - Fastest and most cost-effective
+   - **GPT-4** - More creative and nuanced responses
+   - **GPT-4 Turbo** - Best balance of speed and quality
+
+### **AI Prompt Types Explained**
+
+- **🧠 Introspective Prompts**: Help your character reflect on recent events, moral dilemmas, or personal growth. Perfect for character development entries.
+
+- **⚔️ Action Prompts**: Present challenging situations that require immediate decisions or actions. Great for adding tension and drama to your campaign.
+
+- **🌀 Surprise Prompts**: Completely unexpected scenarios that can include time travel, alternate dimensions, shocking revelations, or reality-bending encounters. These are designed to shake up your campaign in interesting ways!
+
+### **How Data Compression Works**
+
+The AI system intelligently compresses your journal history to provide context while staying within API limits:
+
+- **Recent entries** (last 5) are included in full detail
+- **Older entries** are summarized by extracting key themes and topics
+- **Character information** is always included for personalized prompts
+- This allows the AI to generate contextually relevant prompts even with extensive journal histories
+
 ## 🛠 Local Development
 
 ```bash
@@ -165,11 +217,22 @@ npm start
 2. Open `index.html` in your web browser
 3. Start creating your D&D character and entries!
 
-## Data Storage 💿
+## Data Storage & Privacy 💿
 
-All data is stored locally in your browser using localStorage. Your data will persist between sessions but is tied to the specific browser and device. 
+All data is stored locally in your browser using localStorage. Your data will persist between sessions but is tied to the specific browser and device.
 
-**Note**: Clearing browser data will remove your journal entries.
+### **What's Stored Locally:**
+- Character information and journal entries
+- OpenAI API key (encrypted in browser storage)
+- AI model preferences
+
+### **Privacy & Security:**
+- **Your API key never leaves your device** except to communicate directly with OpenAI
+- **No server involvement** - all AI requests go directly from your browser to OpenAI
+- **No tracking or analytics** - your data stays private
+- **Open source code** - you can verify exactly what the app does
+
+**Note**: Clearing browser data will remove your journal entries and stored API key.
 
 ## 📁 Architecture
 

@@ -9,7 +9,10 @@
 <body>
     <header>
         <div class="container">
-            <h1>D&D Journal</h1>
+            <div class="header-content">
+                <h1>D&D Journal</h1>
+                <button id="settings-btn" class="button button--secondary button--small">Settings</button>
+            </div>
         </div>
     </header>
     
@@ -31,6 +34,29 @@
                         <div class="form-group">
                             <label for="character-class" class="form-label">Class</label>
                             <input type="text" id="character-class" class="form-input" placeholder="e.g. Fighter">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AI Prompts Section -->
+            <section class="ai-prompts-section">
+                <h2>AI Roleplay Prompts</h2>
+                <div class="ai-prompts-content">
+                    <div id="api-key-warning" class="api-warning" style="display: none;">
+                        <p>⚠️ Please configure your OpenAI API key in Settings to use AI prompts.</p>
+                    </div>
+                    <div class="prompt-buttons">
+                        <button id="generate-introspective-btn" class="button button--secondary">Generate Introspective Prompt</button>
+                        <button id="generate-action-btn" class="button button--secondary">Generate Action Prompt</button>
+                        <button id="generate-surprise-btn" class="button button--secondary">Generate Surprise Prompt</button>
+                    </div>
+                    <div id="ai-prompt-result" class="ai-prompt-result" style="display: none;">
+                        <h3>AI Generated Prompt</h3>
+                        <div id="prompt-content" class="prompt-content"></div>
+                        <div class="prompt-actions">
+                            <button id="use-prompt-btn" class="button button--small">Use This Prompt</button>
+                            <button id="regenerate-prompt-btn" class="button button--secondary button--small">Regenerate</button>
                         </div>
                     </div>
                 </div>
@@ -66,6 +92,35 @@
         </div>
     </main>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button id="close-settings" class="button button--secondary button--small">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="openai-api-key" class="form-label">OpenAI API Key</label>
+                    <input type="password" id="openai-api-key" class="form-input" placeholder="sk-...">
+                    <small class="form-help">Your API key is stored locally and never sent to our servers.</small>
+                </div>
+                <div class="form-group">
+                    <label for="ai-model" class="form-label">AI Model</label>
+                    <select id="ai-model" class="form-input">
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Faster, Cheaper)</option>
+                        <option value="gpt-4">GPT-4 (More Creative, Expensive)</option>
+                        <option value="gpt-4-turbo">GPT-4 Turbo (Best Balance)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-settings" class="button">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/openai-service.js"></script>
     <script type="module" src="js/app.js"></script>
 </body>
 </html>

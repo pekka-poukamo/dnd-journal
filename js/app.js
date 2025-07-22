@@ -1,6 +1,9 @@
 // D&D Journal - Simple & Functional with In-Place Editing
 const STORAGE_KEY = 'simple-dnd-journal';
 
+// Initialize OpenAI service
+let openAIService = null;
+
 // Pure function for creating initial state
 const createInitialState = () => ({
   character: {
@@ -356,8 +359,179 @@ const init = () => {
   }
 };
 
+// AI Functionality
+let currentPromptType = null;
+
+// Initialize OpenAI service
+const initAI = () => {
+  if (typeof OpenAIService !== 'undefined') {
+    openAIService = new OpenAIService();
+    updateAIUI();
+  }
+};
+
+// Update AI UI based on configuration
+const updateAIUI = () => {
+  const apiWarning = document.getElementById('api-key-warning');
+  const promptButtons = document.querySelectorAll('.prompt-buttons button');
+  
+  if (openAIService && openAIService.isConfigured()) {
+    if (apiWarning) apiWarning.style.display = 'none';
+    promptButtons.forEach(btn => btn.disabled = false);
+  } else {
+    if (apiWarning) apiWarning.style.display = 'block';
+    promptButtons.forEach(btn => btn.disabled = true);
+  }
+};
+
+// Settings Modal Functions
+const openSettingsModal = () => {
+  const modal = document.getElementById('settings-modal');
+  const apiKeyInput = document.getElementById('openai-api-key');
+  const modelSelect = document.getElementById('ai-model');
+  
+  if (modal) modal.style.display = 'flex';
+  
+  // Populate current settings
+  if (openAIService) {
+    if (apiKeyInput) apiKeyInput.value = openAIService.apiKey || '';
+    if (modelSelect) modelSelect.value = openAIService.model || 'gpt-3.5-turbo';
+  }
+};
+
+const closeSettingsModal = () => {
+  const modal = document.getElementById('settings-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+const saveSettings = () => {
+  const apiKeyInput = document.getElementById('openai-api-key');
+  const modelSelect = document.getElementById('ai-model');
+  
+  if (openAIService && apiKeyInput && modelSelect) {
+    openAIService.saveSettings(apiKeyInput.value.trim(), modelSelect.value);
+    updateAIUI();
+    closeSettingsModal();
+  }
+};
+
+// AI Prompt Generation
+const generatePrompt = async (type) => {
+  if (!openAIService || !openAIService.isConfigured()) {
+    alert('Please configure your OpenAI API key in Settings first.');
+    return;
+  }
+
+  currentPromptType = type;
+  const promptButtons = document.querySelectorAll('.prompt-buttons button');
+  const resultDiv = document.getElementById('ai-prompt-result');
+  const contentDiv = document.getElementById('prompt-content');
+
+  // Disable buttons and show loading
+  promptButtons.forEach(btn => {
+    btn.disabled = true;
+    if (btn.id === `generate-${type}-btn`) {
+      btn.textContent = 'Generating...';
+    }
+  });
+
+  try {
+    const prompt = await openAIService.generatePrompt(type, state.character, state.entries);
+    
+    if (contentDiv) contentDiv.textContent = prompt;
+    if (resultDiv) resultDiv.style.display = 'block';
+    
+  } catch (error) {
+    console.error('Error generating prompt:', error);
+    alert(`Error generating prompt: ${error.message}`);
+  } finally {
+    // Re-enable buttons
+    promptButtons.forEach(btn => {
+      btn.disabled = false;
+      if (btn.id === `generate-${type}-btn`) {
+        const typeNames = {
+          'introspective': 'Introspective',
+          'action': 'Action',
+          'surprise': 'Surprise'
+        };
+        btn.textContent = `Generate ${typeNames[type]} Prompt`;
+      }
+    });
+  }
+};
+
+const regeneratePrompt = () => {
+  if (currentPromptType) {
+    generatePrompt(currentPromptType);
+  }
+};
+
+const usePrompt = () => {
+  const contentDiv = document.getElementById('prompt-content');
+  const titleInput = document.getElementById('entry-title');
+  const contentInput = document.getElementById('entry-content');
+  
+  if (contentDiv && titleInput && contentInput) {
+    const promptText = contentDiv.textContent;
+    
+    // Set title based on prompt type
+    const titles = {
+      'introspective': 'Character Reflection',
+      'action': 'Critical Decision',
+      'surprise': 'Unexpected Encounter'
+    };
+    
+    titleInput.value = titles[currentPromptType] || 'AI Generated Prompt';
+    contentInput.value = promptText;
+    
+    // Scroll to entry form
+    document.getElementById('entry-title').scrollIntoView({ behavior: 'smooth' });
+    contentInput.focus();
+  }
+};
+
+// Setup AI event listeners
+const setupAIEventListeners = () => {
+  // Settings modal
+  const settingsBtn = document.getElementById('settings-btn');
+  const closeSettingsBtn = document.getElementById('close-settings');
+  const saveSettingsBtn = document.getElementById('save-settings');
+  
+  if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
+  if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettingsModal);
+  if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettings);
+
+  // Close modal on background click
+  const settingsModal = document.getElementById('settings-modal');
+  if (settingsModal) {
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) closeSettingsModal();
+    });
+  }
+
+  // Prompt generation buttons
+  const introspectiveBtn = document.getElementById('generate-introspective-btn');
+  const actionBtn = document.getElementById('generate-action-btn');
+  const surpriseBtn = document.getElementById('generate-surprise-btn');
+  
+  if (introspectiveBtn) introspectiveBtn.addEventListener('click', () => generatePrompt('introspective'));
+  if (actionBtn) actionBtn.addEventListener('click', () => generatePrompt('action'));
+  if (surpriseBtn) surpriseBtn.addEventListener('click', () => generatePrompt('surprise'));
+
+  // Prompt actions
+  const usePromptBtn = document.getElementById('use-prompt-btn');
+  const regenerateBtn = document.getElementById('regenerate-prompt-btn');
+  
+  if (usePromptBtn) usePromptBtn.addEventListener('click', usePrompt);
+  if (regenerateBtn) regenerateBtn.addEventListener('click', regeneratePrompt);
+};
+
 // Start the app when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+  initAI();
+  setupAIEventListeners();
+});
 
 // Export functions for testing (only in test environment)
 if (typeof global !== 'undefined') {
@@ -375,4 +549,5 @@ if (typeof global !== 'undefined') {
   global.updateCharacter = updateCharacter;
   global.populateCharacterForm = populateCharacterForm;
   global.init = init;
+  global.openAIService = openAIService;
 }
