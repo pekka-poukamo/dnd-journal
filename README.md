@@ -38,7 +38,7 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
   - **Action** - Challenging decisions and critical moments
   - **Surprise** - Unexpected, left-field encounters that challenge assumptions
 - **Smart Context Awareness** - Uses your character info and journal history
-- **Intelligent Compression** - Summarizes long journal histories for AI processing
+- **AI-Powered Compression** - Uses nested AI summaries to compress long journal histories
 - **Configurable Models** - Choose between GPT-3.5 Turbo, GPT-4, or GPT-4 Turbo
 - **Local Storage** - API keys stored securely in your browser
 
@@ -79,7 +79,7 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
 - **LocalStorage** - All data stored in browser (including API keys)
 - **Single HTML file** - Complete app in one page
 - **Mobile responsive** - Works on phones and tablets
-- **Smart Data Compression** - Nested summarization for large journal histories
+- **AI-Powered Data Compression** - Nested AI summarization for large journal histories
 
 ## File Structure 📁
 
@@ -183,14 +183,18 @@ npm run deploy
 
 - **🌀 Surprise Prompts**: Completely unexpected scenarios that can include time travel, alternate dimensions, shocking revelations, or reality-bending encounters. These are designed to shake up your campaign in interesting ways!
 
-### **How Data Compression Works**
+### **How AI Compression Works**
 
-The AI system intelligently compresses your journal history to provide context while staying within API limits:
+The AI system uses intelligent nested summarization to compress your journal history while preserving context:
 
-- **Recent entries** (last 5) are included in full detail
-- **Older entries** are summarized by extracting key themes and topics
+- **Recent entries** (last 3) are included in full detail
+- **Older entries** are compressed using AI-generated summaries
+- **Summary length scales** logarithmically with entry word count (10-100 words)
+- **Large datasets** are grouped and meta-summarized to reduce API costs
 - **Character information** is always included for personalized prompts
-- This allows the AI to generate contextually relevant prompts even with extensive journal histories
+- **Graceful fallback** when AI summarization fails
+
+This approach maintains rich context while staying within API token limits, even for extensive journal histories.
 
 ## 🛠 Local Development
 
