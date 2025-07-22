@@ -8,6 +8,16 @@ find . -name "*.tmp" -delete 2>/dev/null || true
 find . -name "*.temp" -delete 2>/dev/null || true
 find . -name ".DS_Store" -delete 2>/dev/null || true
 
+# Verify node_modules is properly ignored
+if [ -d "node_modules" ]; then
+  if git ls-files | grep -q "node_modules"; then
+    echo "⚠️  Warning: node_modules is tracked by git (should be ignored)"
+    echo "    Run: git rm -r --cached node_modules"
+  else
+    echo "✅ node_modules properly ignored by git"
+  fi
+fi
+
 # Clean npm cache and reinstall if needed
 if [ -d "node_modules" ] && [ ! -f "package-lock.json" ]; then
   echo "Cleaning npm installation..."
