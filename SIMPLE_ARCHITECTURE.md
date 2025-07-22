@@ -964,14 +964,16 @@ button:hover {
 
 ### Surge.sh Deployment
 ```bash
-# Build and deploy
-npm install -g surge
+# Automatic deployment on push to main branch
+git add .
+git commit -m "Update D&D journal app"
+git push origin main
 
-# In your project directory
-surge
+# Manual deployment also available
+npm run deploy
 
-# Or specify domain
-surge . your-dnd-journal.surge.sh
+# Or deploy to specific domain
+surge . your-domain.surge.sh
 ```
 
 ### Project Structure for Deployment
@@ -997,6 +999,9 @@ dnd-journal/
 
 This ultra-simple architecture provides:
 - ✅ Pure static site hosted on Surge.sh (FREE)
+- ✅ Automatic deployment on git push
+- ✅ Custom domain support with Surge.sh
+- ✅ Works with private repositories
 - ✅ Local storage for offline functionality  
 - ✅ Direct OpenAI API integration with user-provided key
 - ✅ No backend dependencies whatsoever
@@ -1004,5 +1009,6 @@ This ultra-simple architecture provides:
 - ✅ Mobile-friendly responsive design
 - ✅ Easy to maintain and extend
 - ✅ Export/Import for manual backup
+- ✅ Built-in version control with Git
 
-The total cost is essentially free hosting + your OpenAI API usage (typically $1-3/month for personal use).
+The total cost is free hosting + your OpenAI API usage (typically $1-3/month for personal use).
