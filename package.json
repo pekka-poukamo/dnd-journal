@@ -1,0 +1,36 @@
+{
+  "name": "dnd-journal",
+  "version": "1.0.0",
+  "description": "A lightweight, static D&D journal app focused on core functionality: note-taking, character tracking, and AI-powered roleplay prompts.",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server . -p 3000 -o",
+    "deploy:surge": "surge .",
+    "deploy:surge-domain": "surge . ${SURGE_DOMAIN:-dnd-journal.surge.sh}",
+    "build": "echo 'No build step needed - static site' && exit 0",
+    "test": "echo 'No tests yet' && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pekka-poukamo/dnd-journal.git"
+  },
+  "keywords": [
+    "dnd",
+    "journal",
+    "static",
+    "roleplay",
+    "character-management"
+  ],
+  "author": "pekka-poukamo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pekka-poukamo/dnd-journal/issues"
+  },
+  "homepage": "https://github.com/pekka-poukamo/dnd-journal#readme",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
