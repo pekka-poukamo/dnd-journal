@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  SURGE_DOMAIN: dnd-journal.surge.sh
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -24,8 +27,8 @@ jobs:
     - name: Deploy to Surge.sh
       run: |
         echo "🚀 Deploying D&D Journal to Surge.sh..."
-        surge . ${{ secrets.SURGE_DOMAIN }} --token ${{ secrets.SURGE_TOKEN }}
+        surge . ${{ env.SURGE_DOMAIN }} --token ${{ secrets.SURGE_TOKEN }}
         echo "✅ Deployment complete!"
-        echo "📍 Your app is live at: https://${{ secrets.SURGE_DOMAIN }}"
+        echo "📍 Your app is live at: https://${{ env.SURGE_DOMAIN }}"
       env:
         SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}

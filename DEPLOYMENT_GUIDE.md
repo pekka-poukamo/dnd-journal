@@ -39,7 +39,8 @@ Surge.sh is perfect for this static D&D journal app because:
 3. Add these secrets by clicking **"New repository secret"**:
    - **`SURGE_LOGIN`**: Your Surge.sh email
    - **`SURGE_TOKEN`**: Your token from `surge token` command
-   - **`SURGE_DOMAIN`**: Your desired domain (e.g., `dnd-journal.surge.sh`)
+
+> **Note:** The domain (`dnd-journal.surge.sh`) is configured in the workflow file, not as a secret.
 
 ### Step 3: Deploy Your App
 ```bash
@@ -114,8 +115,9 @@ Choose any available subdomain like:
    - **A Record**: Point to `45.55.110.124`
    - **CNAME**: Point `www` to `na-west1.surge.sh`
 
-3. **Update GitHub secret:**
-   - Change `SURGE_DOMAIN` to your custom domain
+3. **Update the workflow configuration:**
+   - Edit `.github/workflows/deploy-surge.yml`
+   - Change the `SURGE_DOMAIN` environment variable to your custom domain
 
 ## 🔧 Advanced Configuration
 
@@ -138,9 +140,19 @@ Add this to your README.md to show deployment status:
 ```
 
 ### Multiple Environments
-You can set up different domains for different branches:
+You can set up different domains for different branches by modifying the `SURGE_DOMAIN` environment variable in the workflow:
 - `main` → `dnd-journal.surge.sh` (production)
 - `develop` → `dnd-journal-dev.surge.sh` (staging)
+
+### Changing the Domain
+To change the deployment domain:
+1. Edit `.github/workflows/deploy-surge.yml`
+2. Update the `SURGE_DOMAIN` environment variable:
+   ```yaml
+   env:
+     SURGE_DOMAIN: your-new-domain.surge.sh
+   ```
+3. Commit and push the changes
 
 ## 🐛 Troubleshooting
 
@@ -182,7 +194,7 @@ You can set up different domains for different branches:
 
 - [ ] Surge.sh account created
 - [ ] Surge CLI installed locally (`npm install -g surge`)
-- [ ] GitHub secrets configured (`SURGE_LOGIN`, `SURGE_TOKEN`, `SURGE_DOMAIN`)
+- [ ] GitHub secrets configured (`SURGE_LOGIN`, `SURGE_TOKEN`)
 - [ ] `index.html` file exists in repository root
 - [ ] Latest code pushed to `main` branch
 - [ ] Workflow completed successfully in Actions tab
@@ -192,7 +204,7 @@ Your D&D Journal app is now automatically deployed to Surge.sh and will update e
 
 ## 🚀 Next Steps
 
-1. **Choose your domain** (e.g., `epic-dnd-journal.surge.sh`)
-2. **Set up the GitHub secrets**
+1. **Set up the GitHub secrets** (`SURGE_LOGIN`, `SURGE_TOKEN`)
+2. **Optionally change the domain** in the workflow file
 3. **Push to main branch**
 4. **Start managing your D&D adventures!**
