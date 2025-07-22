@@ -13,16 +13,12 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
 
 ### 📝 **Character Management**
 - **Character Summary**: Quick overview on main page with basic info
-- **Storytelling-Focused Character Page**: Narrative-driven character development
-  - Basic overview (name, class & level, race & background)
-  - Character concept and personality
-  - Backstory and motivations
-  - Relationships and connections
-  - Character growth and development over time
-  - Key abilities and campaign notes
-  - Free-form notes for any additional details
+- **Radically Simple Character Page**: Dead simple character tracking
+  - Basic information: Name, Race, Class
+  - Backstory: Free-form character background
+  - Notes: Any additional character information
 - Automatically saves as you type
-- **Additive Design**: Focus on adding story elements rather than updating stats
+- **Pure Simplicity**: No complex forms, just the essentials for storytelling
 
 ### 📖 **Plain Text Journal Entries**
 - Title and content fields
@@ -43,7 +39,7 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
 ## How to Use 🚀
 
 1. **Open `index.html`** in any modern web browser
-2. **Create your character** by clicking "View Details" and developing their story, personality, and background
+2. **Create your character** by clicking "View Details" and entering name, race, class, and backstory
 3. **View character summary** on the main page for quick reference during play
 4. **Add journal entries** by typing a title and description
 5. **Add images** by pasting image URLs (optional)
@@ -92,7 +88,7 @@ test/
 ```
 
 ### Testing 🧪
-- **41 passing tests** focused on behavior and functionality
+- **38 passing tests** focused on behavior and functionality
 - **Unit Tests**: Pure function testing with isolated components
 - **Integration Tests**: End-to-end user workflow validation
 - **Behavioral Testing**: Function outputs, error handling, user interactions

@@ -32,8 +32,8 @@ describe('D&D Journal Integration Tests', function() {
     // 1. User creates a character (simulating data from character page)
     state.character = {
       name: 'Thorin',
-      race: 'Dwarf Noble',
-      class: 'Level 15 King'
+      race: 'Dwarf',
+      class: 'King'
     };
 
     // Save the character data
@@ -41,8 +41,8 @@ describe('D&D Journal Integration Tests', function() {
 
     // Character should be saved
     state.character.name.should.equal('Thorin');
-    state.character.race.should.equal('Dwarf Noble');
-    state.character.class.should.equal('Level 15 King');
+    state.character.race.should.equal('Dwarf');
+    state.character.class.should.equal('King');
 
     // 2. User adds multiple journal entries
     const titleInput = document.getElementById('entry-title');
@@ -92,8 +92,8 @@ describe('D&D Journal Integration Tests', function() {
     // Parse and verify the stored data directly
     const parsedStoredData = JSON.parse(storedData);
     parsedStoredData.character.name.should.equal('Thorin');
-    parsedStoredData.character.race.should.equal('Dwarf Noble');
-    parsedStoredData.character.class.should.equal('Level 15 King');
+    parsedStoredData.character.race.should.equal('Dwarf');
+    parsedStoredData.character.class.should.equal('King');
     parsedStoredData.entries.should.have.length(3);
 
     // Simulate fresh app load by resetting and reloading from storage
@@ -113,8 +113,8 @@ describe('D&D Journal Integration Tests', function() {
 
     // Character data should be restored
     freshState.character.name.should.equal('Thorin');
-    freshState.character.race.should.equal('Dwarf Noble');
-    freshState.character.class.should.equal('Level 15 King');
+    freshState.character.race.should.equal('Dwarf');
+    freshState.character.class.should.equal('King');
 
     // Entries should be restored
     freshState.entries.should.have.length(3);

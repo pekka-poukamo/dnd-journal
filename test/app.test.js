@@ -297,8 +297,8 @@ describe('D&D Journal App', function() {
       // Update state with character data
       state.character = {
         name: 'Legolas',
-        race: 'Elf Outlander',
-        class: 'Level 3 Archer'
+        race: 'Elf',
+        class: 'Archer'
       };
 
       displayCharacterSummary();
@@ -307,7 +307,7 @@ describe('D&D Journal App', function() {
       const detailsElement = document.getElementById('summary-details');
 
       nameElement.textContent.should.equal('Legolas');
-      detailsElement.textContent.should.equal('Level 3 • Elf • Archer');
+      detailsElement.textContent.should.equal('Elf • Archer');
     });
 
     it('should display character summary for minimal character data', function() {
@@ -539,19 +539,19 @@ describe('D&D Journal App', function() {
     it('should create character summary with complete info', function() {
       const character = { 
         name: 'Thorin', 
-        race: 'Dwarf Noble', 
-        class: 'Level 10 Fighter'
+        race: 'Dwarf', 
+        class: 'Fighter'
       };
       const summary = createCharacterSummary(character);
       
       summary.name.should.equal('Thorin');
-      summary.details.should.equal('Level 10 • Dwarf • Fighter');
+      summary.details.should.equal('Dwarf • Fighter');
     });
 
     it('should create character summary with partial info', function() {
       const character = { 
         name: 'Bilbo', 
-        race: 'Halfling Burglar',
+        race: 'Halfling',
         class: ''
       };
       const summary = createCharacterSummary(character);
@@ -563,20 +563,20 @@ describe('D&D Journal App', function() {
     it('should handle unnamed character gracefully', function() {
       const character = { 
         name: '', 
-        race: 'Human Criminal', 
-        class: 'Level 3 Rogue'
+        race: 'Human', 
+        class: 'Rogue'
       };
       const summary = createCharacterSummary(character);
       
       summary.name.should.equal('Unnamed Character');
-      summary.details.should.equal('Level 3 • Human • Rogue');
+      summary.details.should.equal('Human • Rogue');
     });
 
     it('should display character summary in DOM', function() {
       state.character = {
         name: 'Aragorn',
-        race: 'Human Outlander',
-        class: 'Level 5 Ranger'
+        race: 'Human',
+        class: 'Ranger'
       };
 
       displayCharacterSummary();
@@ -585,7 +585,7 @@ describe('D&D Journal App', function() {
       const detailsElement = document.getElementById('summary-details');
 
       nameElement.textContent.should.equal('Aragorn');
-      detailsElement.textContent.should.equal('Level 5 • Human • Ranger');
+      detailsElement.textContent.should.equal('Human • Ranger');
     });
 
     it('should handle missing DOM elements gracefully', function() {

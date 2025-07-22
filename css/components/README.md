@@ -50,15 +50,13 @@ Component for displaying character information on the main journal page.
 ```
 
 ### Character Form (`character-form.css`)
-Storytelling-focused character creation and editing form for the character page.
+Radically simple character creation and editing form for the character page.
 
 **Classes:**
 - `.character-form` - Main form container
 - `.character-form__section` - Form section wrapper
-- `.character-form__section--basic` - Basic character overview section
-- `.character-form__section--concept` - Character concept and personality section
-- `.character-form__section--story` - Story development and relationships section
-- `.character-form__section--campaign` - Campaign notes and abilities section
+- `.character-form__section--basic` - Basic character information section
+- `.character-form__section--story` - Story and notes section
 - `.character-form__title` - Section titles
 - `.character-form__grid` - General form grid layout
 - `.character-form__backstory` - Backstory textarea styling
@@ -68,7 +66,7 @@ Storytelling-focused character creation and editing form for the character page.
 ```html
 <div class="character-form">
   <section class="character-form__section character-form__section--basic">
-    <h2 class="character-form__title">Character Overview</h2>
+    <h2 class="character-form__title">Basic Information</h2>
     <div class="character-form__grid">
       <!-- Form fields -->
     </div>
@@ -87,13 +85,11 @@ Storytelling-focused character creation and editing form for the character page.
 ## Color Coding
 
 Different form sections use color-coded left borders for visual organization:
-- Basic Overview: Primary blue (`--color-primary`)
-- Character Concept: Red (`#e74c3c`)
-- Story Development: Green (`#27ae60`)
-- Campaign Notes: Orange (`#f39c12`)
+- Basic Information: Primary blue (`--color-primary`)
+- Story & Notes: Green (`#27ae60`)
 
 ## Responsive Breakpoints
 
 - Mobile: `max-width: 767px`
 
-All components are designed to work seamlessly across devices with appropriate layout adjustments for storytelling-focused content.
+All components are designed to work seamlessly across devices with radically simple, clean layouts.

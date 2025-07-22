@@ -4,19 +4,10 @@ const STORAGE_KEY = 'simple-dnd-journal';
 // Pure function for creating initial state
 const createInitialState = () => ({
   character: {
-    // Basic info
     name: '',
     race: '',
     class: '',
-    
-    // Story elements
-    concept: '',
     backstory: '',
-    personality: '',
-    goals: '',
-    relationships: '',
-    growth: '',
-    abilities: '',
     notes: ''
   },
   entries: []
@@ -275,23 +266,6 @@ const focusEntryTitle = () => {
   if (titleInput) titleInput.focus();
 };
 
-// Pure function to extract level from class field
-const extractLevel = (classText) => {
-  const levelMatch = classText.match(/level\s*(\d+)/i);
-  return levelMatch ? `Level ${levelMatch[1]}` : '';
-};
-
-// Pure function to extract class name (without level)
-const extractClassName = (classText) => {
-  return classText.replace(/level\s*\d+\s*/i, '').trim();
-};
-
-// Pure function to extract race name (first word)
-const extractRaceName = (raceText) => {
-  const parts = raceText.split(/\s+/);
-  return parts[0] || raceText;
-};
-
 // Pure function to create character summary data
 const createCharacterSummary = (character) => {
   if (!character.name && !character.race && !character.class) {
@@ -302,18 +276,8 @@ const createCharacterSummary = (character) => {
   }
   
   const details = [];
-  
-  // Extract level from class field
-  const level = extractLevel(character.class);
-  if (level) details.push(level);
-  
-  // Extract race (first word before background)
-  const race = extractRaceName(character.race);
-  if (race) details.push(race);
-  
-  // Extract class name (without level)
-  const className = extractClassName(character.class);
-  if (className) details.push(className);
+  if (character.race) details.push(character.race);
+  if (character.class) details.push(character.class);
   
   return {
     name: character.name || 'Unnamed Character',

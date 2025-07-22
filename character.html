@@ -22,67 +22,33 @@
         <div class="character-form">
             <!-- Basic Information -->
             <section class="character-form__section character-form__section--basic">
-                <h2 class="character-form__title">Character Overview</h2>
+                <h2 class="character-form__title">Basic Information</h2>
                 <div class="character-form__grid">
                     <div class="form-group">
-                        <label for="character-name" class="form-label">Character Name</label>
-                        <input type="text" id="character-name" class="form-input" placeholder="Enter character name">
+                        <label for="character-name" class="form-label">Name</label>
+                        <input type="text" id="character-name" class="form-input" placeholder="Character name">
                     </div>
                     <div class="form-group">
-                        <label for="character-class" class="form-label">Class & Level</label>
-                        <input type="text" id="character-class" class="form-input" placeholder="e.g. Level 3 Fighter, Wizard, etc.">
+                        <label for="character-race" class="form-label">Race</label>
+                        <input type="text" id="character-race" class="form-input" placeholder="e.g. Human">
                     </div>
                     <div class="form-group">
-                        <label for="character-race" class="form-label">Race & Background</label>
-                        <input type="text" id="character-race" class="form-input" placeholder="e.g. Human Noble, Elven Outlander">
+                        <label for="character-class" class="form-label">Class</label>
+                        <input type="text" id="character-class" class="form-input" placeholder="e.g. Fighter">
                     </div>
-                </div>
-            </section>
-
-            <!-- Character Concept -->
-            <section class="character-form__section character-form__section--concept">
-                <h2 class="character-form__title">Character Concept</h2>
-                <div class="form-group">
-                    <label for="character-concept" class="form-label">One-Line Concept</label>
-                    <input type="text" id="character-concept" class="form-input" placeholder="e.g. A gruff dwarf seeking redemption for past mistakes">
-                </div>
-                <div class="form-group">
-                    <label for="character-backstory" class="form-label">Backstory</label>
-                    <textarea id="character-backstory" class="form-input character-form__backstory" rows="6" placeholder="Tell your character's story - their origins, important life events, and what brought them to adventure..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="character-personality" class="form-label">Personality & Quirks</label>
-                    <textarea id="character-personality" class="form-input" rows="4" placeholder="How does your character act? What are their quirks, habits, and mannerisms?"></textarea>
                 </div>
             </section>
 
             <!-- Story Notes -->
             <section class="character-form__section character-form__section--story">
-                <h2 class="character-form__title">Story & Development</h2>
+                <h2 class="character-form__title">Character Notes</h2>
                 <div class="form-group">
-                    <label for="character-goals" class="form-label">Goals & Motivations</label>
-                    <textarea id="character-goals" class="form-input" rows="4" placeholder="What drives your character? What are they trying to achieve?"></textarea>
+                    <label for="character-backstory" class="form-label">Backstory</label>
+                    <textarea id="character-backstory" class="form-input character-form__backstory" rows="6" placeholder="Character's background, personality, and story..."></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="character-relationships" class="form-label">Relationships & Connections</label>
-                    <textarea id="character-relationships" class="form-input" rows="4" placeholder="Important NPCs, party dynamics, allies, enemies, family..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="character-growth" class="form-label">Character Growth & Changes</label>
-                    <textarea id="character-growth" class="form-input" rows="6" placeholder="How has your character changed throughout the campaign? New abilities, personality development, lessons learned..."></textarea>
-                </div>
-            </section>
-
-            <!-- Campaign Notes -->
-            <section class="character-form__section character-form__section--campaign">
-                <h2 class="character-form__title">Campaign Notes</h2>
-                <div class="form-group">
-                    <label for="character-abilities" class="form-label">Key Abilities & Skills</label>
-                    <textarea id="character-abilities" class="form-input" rows="4" placeholder="Notable abilities, spells, skills, or items your character has gained..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="character-notes" class="form-label">Free-form Notes</label>
-                    <textarea id="character-notes" class="form-input" rows="6" placeholder="Any other important information, reminders, or thoughts about your character..."></textarea>
+                    <label for="character-notes" class="form-label">Additional Notes</label>
+                    <textarea id="character-notes" class="form-input" rows="6" placeholder="Goals, relationships, abilities, equipment, or any other notes..."></textarea>
                 </div>
             </section>
         </div>
