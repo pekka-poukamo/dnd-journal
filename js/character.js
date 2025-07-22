@@ -1,46 +1,23 @@
-// Character Page - Extended Character Management
+// Character Page - Storytelling-focused Character Management
 // Following functional programming patterns from style guide
 
 const STORAGE_KEY = 'simple-dnd-journal';
 
-// Pure function for creating initial character state
+// Pure function for creating initial character state (simplified for storytelling)
 const createInitialCharacterState = () => ({
   // Basic info
   name: '',
   race: '',
   class: '',
-  level: '',
-  subclass: '',
-  background: '',
-  alignment: '',
   
-  // Backstory
+  // Story elements
+  concept: '',
   backstory: '',
-  goals: '',
-  
-  // Appearance
-  age: '',
-  height: '',
-  weight: '',
-  eyes: '',
-  hair: '',
-  skin: '',
-  appearance: '',
   personality: '',
-  
-  // Stats
-  str: '',
-  dex: '',
-  con: '',
-  int: '',
-  wis: '',
-  cha: '',
-  ac: '',
-  hp: '',
-  speed: '',
-  
-  // Equipment & Notes
-  equipment: '',
+  goals: '',
+  relationships: '',
+  growth: '',
+  abilities: '',
   notes: ''
 });
 
@@ -84,15 +61,11 @@ const saveCharacterData = (characterData) => {
   }
 };
 
-// Pure function to get all form field IDs
+// Pure function to get all form field IDs (simplified)
 const getFormFieldIds = () => [
-  'character-name', 'character-race', 'character-class', 'character-level',
-  'character-subclass', 'character-background', 'character-alignment',
-  'character-backstory', 'character-goals', 'character-age', 'character-height',
-  'character-weight', 'character-eyes', 'character-hair', 'character-skin',
-  'character-appearance', 'character-personality', 'character-str', 'character-dex',
-  'character-con', 'character-int', 'character-wis', 'character-cha',
-  'character-ac', 'character-hp', 'character-speed', 'character-equipment',
+  'character-name', 'character-race', 'character-class', 'character-concept',
+  'character-backstory', 'character-personality', 'character-goals',
+  'character-relationships', 'character-growth', 'character-abilities',
   'character-notes'
 ];
 
@@ -122,13 +95,6 @@ const populateForm = (character) => {
       element.value = character[propertyName] || '';
     }
   });
-};
-
-// Pure function to calculate ability modifier
-const getAbilityModifier = (score) => {
-  const num = parseInt(score);
-  if (isNaN(num)) return '';
-  return Math.floor((num - 10) / 2);
 };
 
 // Pure function to create save indicator element
@@ -197,40 +163,6 @@ const setupAutoSave = () => {
   });
 };
 
-// Pure function to create modifier display element
-const createModifierDisplay = (modifier) => {
-  const span = document.createElement('span');
-  span.className = 'character-form__ability-modifier';
-  span.textContent = modifier !== '' ? `(${modifier >= 0 ? '+' : ''}${modifier})` : '';
-  return span;
-};
-
-// Setup ability score modifiers display
-const setupAbilityModifiers = () => {
-  const abilityIds = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-  
-  abilityIds.forEach(ability => {
-    const input = document.getElementById(`character-${ability}`);
-    if (!input) return;
-    
-    const updateModifier = () => {
-      const modifier = getAbilityModifier(input.value);
-      
-      // Find or create modifier display
-      let modifierSpan = input.parentNode.querySelector('.character-form__ability-modifier');
-      if (modifierSpan) {
-        modifierSpan.remove();
-      }
-      
-      const newModifierSpan = createModifierDisplay(modifier);
-      input.parentNode.appendChild(newModifierSpan);
-    };
-    
-    input.addEventListener('input', updateModifier);
-    updateModifier(); // Initialize
-  });
-};
-
 // Setup keyboard shortcuts
 const setupKeyboardShortcuts = () => {
   const handleKeydown = (e) => {
@@ -251,12 +183,29 @@ const setupKeyboardShortcuts = () => {
   document.addEventListener('keydown', handleKeydown);
 };
 
+// Pure function to extract level from class field for summary
+const extractLevel = (classText) => {
+  const levelMatch = classText.match(/level\s*(\d+)/i);
+  return levelMatch ? `Level ${levelMatch[1]}` : '';
+};
+
+// Pure function to extract race from race field for summary
+const extractRace = (raceText) => {
+  const parts = raceText.split(/\s+/);
+  return parts[0] || raceText; // First word is usually the race
+};
+
+// Pure function to extract class from class field for summary
+const extractClass = (classText) => {
+  // Remove level information to get just the class
+  return classText.replace(/level\s*\d+\s*/i, '').trim();
+};
+
 // Initialize character page
 const init = () => {
   const character = loadCharacterData();
   populateForm(character);
   setupAutoSave();
-  setupAbilityModifiers();
   setupKeyboardShortcuts();
   
   // Focus on character name if empty
@@ -279,6 +228,8 @@ if (typeof global !== 'undefined') {
   global.saveCharacterData = saveCharacterData;
   global.getCharacterFromForm = getCharacterFromForm;
   global.populateForm = populateForm;
-  global.getAbilityModifier = getAbilityModifier;
   global.debounce = debounce;
+  global.extractLevel = extractLevel;
+  global.extractRace = extractRace;
+  global.extractClass = extractClass;
 }

@@ -50,29 +50,25 @@ Component for displaying character information on the main journal page.
 ```
 
 ### Character Form (`character-form.css`)
-Comprehensive character creation and editing form for the character page.
+Storytelling-focused character creation and editing form for the character page.
 
 **Classes:**
 - `.character-form` - Main form container
 - `.character-form__section` - Form section wrapper
-- `.character-form__section--basic` - Basic information section
-- `.character-form__section--background` - Background/backstory section
-- `.character-form__section--appearance` - Appearance section
-- `.character-form__section--stats` - Stats/abilities section
-- `.character-form__section--equipment` - Equipment section
+- `.character-form__section--basic` - Basic character overview section
+- `.character-form__section--concept` - Character concept and personality section
+- `.character-form__section--story` - Story development and relationships section
+- `.character-form__section--campaign` - Campaign notes and abilities section
 - `.character-form__title` - Section titles
 - `.character-form__grid` - General form grid layout
-- `.character-form__stats-grid` - Stats-specific grid layout
 - `.character-form__backstory` - Backstory textarea styling
-- `.character-form__stat-input` - Ability score input styling
-- `.character-form__ability-modifier` - Ability modifier display
 - `.character-form__save-indicator` - Auto-save feedback
 
 **Usage:**
 ```html
 <div class="character-form">
   <section class="character-form__section character-form__section--basic">
-    <h2 class="character-form__title">Basic Information</h2>
+    <h2 class="character-form__title">Character Overview</h2>
     <div class="character-form__grid">
       <!-- Form fields -->
     </div>
@@ -91,15 +87,13 @@ Comprehensive character creation and editing form for the character page.
 ## Color Coding
 
 Different form sections use color-coded left borders for visual organization:
-- Basic Info: Primary blue (`--color-primary`)
-- Background: Red (`#e74c3c`)
-- Appearance: Green (`#27ae60`)
-- Stats: Purple (`#9b59b6`)
-- Equipment: Orange (`#f39c12`)
+- Basic Overview: Primary blue (`--color-primary`)
+- Character Concept: Red (`#e74c3c`)
+- Story Development: Green (`#27ae60`)
+- Campaign Notes: Orange (`#f39c12`)
 
 ## Responsive Breakpoints
 
 - Mobile: `max-width: 767px`
-- Small Mobile: `max-width: 480px` (for stats grid)
 
-All components are designed to work seamlessly across devices with appropriate layout adjustments.
+All components are designed to work seamlessly across devices with appropriate layout adjustments for storytelling-focused content.

@@ -18,22 +18,17 @@
   border-left: 4px solid var(--color-primary);
 }
 
-.character-form__section--background {
+.character-form__section--concept {
   background: linear-gradient(135deg, var(--color-surface) 0%, #f8f0f4 100%);
   border-left: 4px solid #e74c3c;
 }
 
-.character-form__section--appearance {
+.character-form__section--story {
   background: linear-gradient(135deg, var(--color-surface) 0%, #f0f8f4 100%);
   border-left: 4px solid #27ae60;
 }
 
-.character-form__section--stats {
-  background: linear-gradient(135deg, var(--color-surface) 0%, #f4f0f8 100%);
-  border-left: 4px solid #9b59b6;
-}
-
-.character-form__section--equipment {
+.character-form__section--campaign {
   background: linear-gradient(135deg, var(--color-surface) 0%, #f8f4f0 100%);
   border-left: 4px solid #f39c12;
 }
@@ -51,27 +46,8 @@
   gap: var(--space-md);
 }
 
-.character-form__stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--space-md);
-}
-
 .character-form__backstory {
   min-height: 120px;
-}
-
-.character-form__stat-input {
-  text-align: center;
-  font-weight: 600;
-}
-
-.character-form__ability-modifier {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--color-text-light);
-  text-align: center;
-  margin-top: 2px;
 }
 
 /* Save indicator */
@@ -99,13 +75,4 @@
     grid-template-columns: 1fr;
   }
   
-  .character-form__stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 480px) {
-  .character-form__stats-grid {
-    grid-template-columns: 1fr;
-  }
 }

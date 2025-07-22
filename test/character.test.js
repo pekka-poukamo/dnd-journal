@@ -12,38 +12,18 @@ function loadCharacterPage() {
   // Clear localStorage before each test
   localStorage.clear();
   
-  // Reset DOM with proper character form elements
+  // Reset DOM with proper character form elements (simplified)
   document.body.innerHTML = `
     <input type="text" id="character-name" />
     <input type="text" id="character-race" />
     <input type="text" id="character-class" />
-    <input type="number" id="character-level" />
-    <input type="text" id="character-subclass" />
-    <input type="text" id="character-background" />
-    <select id="character-alignment">
-      <option value="">Select Alignment</option>
-      <option value="Lawful Good">Lawful Good</option>
-    </select>
+    <input type="text" id="character-concept" />
     <textarea id="character-backstory"></textarea>
-    <textarea id="character-goals"></textarea>
-    <input type="text" id="character-age" />
-    <input type="text" id="character-height" />
-    <input type="text" id="character-weight" />
-    <input type="text" id="character-eyes" />
-    <input type="text" id="character-hair" />
-    <input type="text" id="character-skin" />
-    <textarea id="character-appearance"></textarea>
     <textarea id="character-personality"></textarea>
-    <input type="number" id="character-str" />
-    <input type="number" id="character-dex" />
-    <input type="number" id="character-con" />
-    <input type="number" id="character-int" />
-    <input type="number" id="character-wis" />
-    <input type="number" id="character-cha" />
-    <input type="number" id="character-ac" />
-    <input type="number" id="character-hp" />
-    <input type="text" id="character-speed" />
-    <textarea id="character-equipment"></textarea>
+    <textarea id="character-goals"></textarea>
+    <textarea id="character-relationships"></textarea>
+    <textarea id="character-growth"></textarea>
+    <textarea id="character-abilities"></textarea>
     <textarea id="character-notes"></textarea>
   `;
   
@@ -54,8 +34,10 @@ function loadCharacterPage() {
   delete global.saveCharacterData;
   delete global.getCharacterFromForm;
   delete global.populateForm;
-  delete global.getAbilityModifier;
   delete global.debounce;
+  delete global.extractLevel;
+  delete global.extractRace;
+  delete global.extractClass;
   
   // Evaluate the character code in the global context
   eval(characterContent);
@@ -67,8 +49,10 @@ function loadCharacterPage() {
     saveCharacterData: global.saveCharacterData,
     getCharacterFromForm: global.getCharacterFromForm,
     populateForm: global.populateForm,
-    getAbilityModifier: global.getAbilityModifier,
-    debounce: global.debounce
+    debounce: global.debounce,
+    extractLevel: global.extractLevel,
+    extractRace: global.extractRace,
+    extractClass: global.extractClass
   };
 }
 
@@ -114,20 +98,28 @@ describe('Character Page', function() {
     });
   });
 
-  describe('getAbilityModifier', function() {
-    it('should calculate ability modifiers correctly', function() {
-      getAbilityModifier('10').should.equal(0);
-      getAbilityModifier('8').should.equal(-1);
-      getAbilityModifier('12').should.equal(1);
-      getAbilityModifier('16').should.equal(3);
-      getAbilityModifier('20').should.equal(5);
-      getAbilityModifier('3').should.equal(-4);
+  describe('Text Parsing Functions', function() {
+    it('should extract level from class text', function() {
+      extractLevel('Level 5 Fighter').should.equal('Level 5');
+      extractLevel('Fighter Level 3').should.equal('Level 3');
+      extractLevel('level 10 wizard').should.equal('Level 10');
+      extractLevel('Fighter').should.equal('');
+      extractLevel('').should.equal('');
     });
 
-    it('should handle invalid input', function() {
-      getAbilityModifier('').should.equal('');
-      getAbilityModifier('abc').should.equal('');
-      getAbilityModifier(null).should.equal('');
+    it('should extract race from race text', function() {
+      extractRace('Human Noble').should.equal('Human');
+      extractRace('Elven Outlander').should.equal('Elven');
+      extractRace('Dwarf').should.equal('Dwarf');
+      extractRace('').should.equal('');
+    });
+
+    it('should extract class name without level', function() {
+      extractClass('Level 5 Fighter').should.equal('Fighter');
+      extractClass('Fighter Level 3').should.equal('Fighter');
+      extractClass('level 10 wizard').should.equal('wizard');
+      extractClass('Fighter').should.equal('Fighter');
+      extractClass('').should.equal('');
     });
   });
 
@@ -135,43 +127,41 @@ describe('Character Page', function() {
     it('should populate form with character data', function() {
       const testCharacter = {
         name: 'Legolas',
-        race: 'Elf',
-        class: 'Ranger',
-        level: '5',
-        str: '14',
-        dex: '18',
-        backstory: 'A woodland elf from Mirkwood'
+        race: 'Elf Outlander',
+        class: 'Level 5 Ranger',
+        concept: 'A skilled archer seeking adventure',
+        backstory: 'A woodland elf from Mirkwood',
+        personality: 'Proud and observant'
       };
 
       populateForm(testCharacter);
 
       document.getElementById('character-name').value.should.equal('Legolas');
-      document.getElementById('character-race').value.should.equal('Elf');
-      document.getElementById('character-class').value.should.equal('Ranger');
-      document.getElementById('character-level').value.should.equal('5');
-      document.getElementById('character-str').value.should.equal('14');
-      document.getElementById('character-dex').value.should.equal('18');
+      document.getElementById('character-race').value.should.equal('Elf Outlander');
+      document.getElementById('character-class').value.should.equal('Level 5 Ranger');
+      document.getElementById('character-concept').value.should.equal('A skilled archer seeking adventure');
       document.getElementById('character-backstory').value.should.equal('A woodland elf from Mirkwood');
+      document.getElementById('character-personality').value.should.equal('Proud and observant');
     });
 
     it('should get character data from form', function() {
       // Set form values
       document.getElementById('character-name').value = 'Gimli';
-      document.getElementById('character-race').value = 'Dwarf';
-      document.getElementById('character-class').value = 'Fighter';
-      document.getElementById('character-level').value = '6';
-      document.getElementById('character-str').value = '16';
-      document.getElementById('character-con').value = '15';
+      document.getElementById('character-race').value = 'Dwarf Noble';
+      document.getElementById('character-class').value = 'Level 6 Fighter';
+      document.getElementById('character-concept').value = 'A proud warrior';
+      document.getElementById('character-goals').value = 'Reclaim the homeland';
+      document.getElementById('character-notes').value = 'Carries a family axe';
 
       const character = getCharacterFromForm();
 
       // Test that form data is correctly extracted
       character.name.should.equal('Gimli');
-      character.race.should.equal('Dwarf');
-      character.class.should.equal('Fighter');
-      character.level.should.equal('6');
-      character.str.should.equal('16');
-      character.con.should.equal('15');
+      character.race.should.equal('Dwarf Noble');
+      character.class.should.equal('Level 6 Fighter');
+      character.concept.should.equal('A proud warrior');
+      character.goals.should.equal('Reclaim the homeland');
+      character.notes.should.equal('Carries a family axe');
     });
 
     it('should handle empty form gracefully', function() {
@@ -186,9 +176,9 @@ describe('Character Page', function() {
     it('should save and load character data', function() {
       const testCharacter = {
         name: 'Gandalf',
-        race: 'Maia',
-        class: 'Wizard',
-        level: '20',
+        race: 'Maia Hermit',
+        class: 'Level 20 Wizard',
+        concept: 'A wise and powerful guide',
         backstory: 'A wise wizard of great power'
       };
 
@@ -199,9 +189,9 @@ describe('Character Page', function() {
       // Load character data and verify it was saved correctly
       const loadedCharacter = loadCharacterData();
       loadedCharacter.name.should.equal('Gandalf');
-      loadedCharacter.race.should.equal('Maia');
-      loadedCharacter.class.should.equal('Wizard');
-      loadedCharacter.level.should.equal('20');
+      loadedCharacter.race.should.equal('Maia Hermit');
+      loadedCharacter.class.should.equal('Level 20 Wizard');
+      loadedCharacter.concept.should.equal('A wise and powerful guide');
       loadedCharacter.backstory.should.equal('A wise wizard of great power');
     });
 
