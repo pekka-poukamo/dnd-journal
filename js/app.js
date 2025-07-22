@@ -396,6 +396,52 @@ const openSettingsModal = () => {
   if (openAIService) {
     if (apiKeyInput) apiKeyInput.value = openAIService.apiKey || '';
     if (modelSelect) modelSelect.value = openAIService.model || 'gpt-3.5-turbo';
+    
+    // Update cache statistics
+    updateCacheStats();
+  }
+};
+
+// Update cache statistics display
+const updateCacheStats = () => {
+  const cacheStatsDiv = document.getElementById('cache-stats');
+  if (!cacheStatsDiv || !openAIService) return;
+  
+  const stats = openAIService.getCacheStats();
+  const sizeKB = Math.round(stats.cacheSize / 1024 * 100) / 100;
+  
+  cacheStatsDiv.innerHTML = `
+    <div class="cache-stat-item">
+      <span>Individual Summaries:</span>
+      <span>${stats.individualSummaries}</span>
+    </div>
+    <div class="cache-stat-item">
+      <span>Group Summaries:</span>
+      <span>${stats.groupSummaries}</span>
+    </div>
+    <div class="cache-stat-item">
+      <span>Total Cached:</span>
+      <span>${stats.totalEntries}</span>
+    </div>
+    <div class="cache-stat-item">
+      <span>Cache Size:</span>
+      <span>${sizeKB} KB</span>
+    </div>
+  `;
+};
+
+// Clear summary cache
+const clearSummaryCache = () => {
+  if (!openAIService) return;
+  
+  if (confirm('Are you sure you want to clear all cached summaries? This will require regenerating summaries on the next prompt request.')) {
+    const success = openAIService.clearSummaryCache();
+    if (success) {
+      updateCacheStats();
+      alert('Summary cache cleared successfully.');
+    } else {
+      alert('Failed to clear summary cache.');
+    }
   }
 };
 
@@ -496,10 +542,12 @@ const setupAIEventListeners = () => {
   const settingsBtn = document.getElementById('settings-btn');
   const closeSettingsBtn = document.getElementById('close-settings');
   const saveSettingsBtn = document.getElementById('save-settings');
+  const clearCacheBtn = document.getElementById('clear-cache-btn');
   
   if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
   if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettingsModal);
   if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettings);
+  if (clearCacheBtn) clearCacheBtn.addEventListener('click', clearSummaryCache);
 
   // Close modal on background click
   const settingsModal = document.getElementById('settings-modal');

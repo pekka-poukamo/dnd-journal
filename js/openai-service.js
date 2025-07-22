@@ -20,6 +20,90 @@ class OpenAIService {
     }
   }
 
+  // Load cached summaries from localStorage
+  loadCachedSummaries() {
+    try {
+      const cached = localStorage.getItem('dnd-journal-ai-summaries');
+      return cached ? JSON.parse(cached) : {};
+    } catch (error) {
+      console.error('Failed to load cached summaries:', error);
+      return {};
+    }
+  }
+
+  // Save cached summaries to localStorage
+  saveCachedSummaries(summaries) {
+    try {
+      localStorage.setItem('dnd-journal-ai-summaries', JSON.stringify(summaries));
+    } catch (error) {
+      console.error('Failed to save cached summaries:', error);
+    }
+  }
+
+  // Generate cache key for an entry
+  generateCacheKey(entry) {
+    // Use entry ID, title, content hash, and timestamp to detect changes
+    const contentHash = this.simpleHash(entry.title + entry.content);
+    return `${entry.id}_${contentHash}_${entry.timestamp}`;
+  }
+
+  // Simple hash function for cache keys
+  simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  // Generate cache key for a group of entries
+  generateGroupCacheKey(entryGroup) {
+    const groupHash = entryGroup.map(entry => this.generateCacheKey(entry)).join('_');
+    return this.simpleHash(groupHash);
+  }
+
+  // Clean up old cached summaries to prevent localStorage bloat
+  cleanupOldSummaries(currentEntries) {
+    try {
+      const cachedSummaries = this.loadCachedSummaries();
+      const currentCacheKeys = new Set();
+      
+      // Generate all current valid cache keys
+      currentEntries.forEach(entry => {
+        currentCacheKeys.add(this.generateCacheKey(entry));
+      });
+      
+      // Generate group cache keys for current groupings
+      if (currentEntries.length > 10) {
+        const groups = this.groupEntriesForSummary(currentEntries.slice(3)); // Skip recent entries
+        groups.forEach(group => {
+          currentCacheKeys.add(`group_${this.generateGroupCacheKey(group)}`);
+        });
+      }
+      
+      // Remove cached summaries that are no longer valid
+      let cleanedCount = 0;
+      const cleanedSummaries = {};
+      
+      Object.keys(cachedSummaries).forEach(key => {
+        if (currentCacheKeys.has(key) || currentCacheKeys.has(key.replace('group_', ''))) {
+          cleanedSummaries[key] = cachedSummaries[key];
+        } else {
+          cleanedCount++;
+        }
+      });
+      
+      if (cleanedCount > 0) {
+        this.saveCachedSummaries(cleanedSummaries);
+        console.log(`Cleaned up ${cleanedCount} old cached summaries`);
+      }
+    } catch (error) {
+      console.warn('Failed to cleanup old summaries:', error);
+    }
+  }
+
   // Save settings to localStorage
   saveSettings(apiKey, model) {
     this.apiKey = apiKey;
@@ -34,6 +118,38 @@ class OpenAIService {
     }
   }
 
+  // Clear all cached summaries
+  clearSummaryCache() {
+    try {
+      localStorage.removeItem('dnd-journal-ai-summaries');
+      console.log('Cleared all cached summaries');
+      return true;
+    } catch (error) {
+      console.error('Failed to clear summary cache:', error);
+      return false;
+    }
+  }
+
+  // Get cache statistics
+  getCacheStats() {
+    try {
+      const cachedSummaries = this.loadCachedSummaries();
+      const totalEntries = Object.keys(cachedSummaries).length;
+      const groupSummaries = Object.keys(cachedSummaries).filter(key => key.startsWith('group_')).length;
+      const individualSummaries = totalEntries - groupSummaries;
+      
+      return {
+        totalEntries,
+        individualSummaries,
+        groupSummaries,
+        cacheSize: JSON.stringify(cachedSummaries).length
+      };
+    } catch (error) {
+      console.error('Failed to get cache stats:', error);
+      return { totalEntries: 0, individualSummaries: 0, groupSummaries: 0, cacheSize: 0 };
+    }
+  }
+
   // Check if API key is configured
   isConfigured() {
     return this.apiKey && this.apiKey.trim().length > 0;
@@ -45,6 +161,11 @@ class OpenAIService {
 
     // Sort entries by date (newest first)
     const sortedEntries = [...entries].sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Clean up old cached summaries periodically (every 10th call)
+    if (Math.random() < 0.1) {
+      this.cleanupOldSummaries(sortedEntries);
+    }
     
     // Take last 3 entries in full detail (reduced to save tokens)
     const recentEntries = sortedEntries.slice(0, 3);
@@ -100,8 +221,17 @@ class OpenAIService {
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   }
 
-  // Generate AI summary for a single entry
+  // Generate AI summary for a single entry (with caching)
   async generateEntrySummary(entry) {
+    // Check cache first
+    const cacheKey = this.generateCacheKey(entry);
+    const cachedSummaries = this.loadCachedSummaries();
+    
+    if (cachedSummaries[cacheKey]) {
+      console.log('Using cached summary for entry:', entry.title);
+      return cachedSummaries[cacheKey];
+    }
+
     const wordCount = this.getWordCount(entry.content);
     const summaryLength = this.calculateSummaryLength(wordCount);
     
@@ -134,7 +264,16 @@ class OpenAIService {
       }
 
       const data = await response.json();
-      return data.choices[0]?.message?.content?.trim() || null;
+      const summary = data.choices[0]?.message?.content?.trim() || null;
+      
+      // Cache the summary
+      if (summary) {
+        cachedSummaries[cacheKey] = summary;
+        this.saveCachedSummaries(cachedSummaries);
+        console.log('Generated and cached new summary for entry:', entry.title);
+      }
+      
+      return summary;
     } catch (error) {
       console.warn('Failed to generate summary for entry:', entry.title, error);
       return null;
@@ -190,8 +329,17 @@ class OpenAIService {
     return groups;
   }
 
-  // Generate summary for a group of entries
+  // Generate summary for a group of entries (with caching)
   async generateGroupSummary(entryGroup) {
+    // Check cache first
+    const cacheKey = `group_${this.generateGroupCacheKey(entryGroup)}`;
+    const cachedSummaries = this.loadCachedSummaries();
+    
+    if (cachedSummaries[cacheKey]) {
+      console.log('Using cached group summary for', entryGroup.length, 'entries');
+      return cachedSummaries[cacheKey];
+    }
+
     const groupText = entryGroup.map(entry => 
       `${entry.title}: ${entry.content.substring(0, 200)}${entry.content.length > 200 ? '...' : ''}`
     ).join('\n\n');
@@ -230,7 +378,14 @@ class OpenAIService {
       if (summary) {
         const startDate = new Date(entryGroup[entryGroup.length - 1].timestamp).toLocaleDateString();
         const endDate = new Date(entryGroup[0].timestamp).toLocaleDateString();
-        return `${startDate} to ${endDate}: ${summary}`;
+        const fullSummary = `${startDate} to ${endDate}: ${summary}`;
+        
+        // Cache the group summary
+        cachedSummaries[cacheKey] = fullSummary;
+        this.saveCachedSummaries(cachedSummaries);
+        console.log('Generated and cached new group summary for', entryGroup.length, 'entries');
+        
+        return fullSummary;
       }
       
       return null;

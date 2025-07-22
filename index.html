@@ -113,6 +113,14 @@
                         <option value="gpt-4-turbo">GPT-4 Turbo (Best Balance)</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Summary Cache</label>
+                    <div id="cache-stats" class="cache-stats">
+                        <p>Loading cache statistics...</p>
+                    </div>
+                    <button type="button" id="clear-cache-btn" class="button button--secondary button--small">Clear Summary Cache</button>
+                    <small class="form-help">Cached summaries reduce API costs by avoiding regeneration of unchanged entries.</small>
+                </div>
             </div>
             <div class="modal-footer">
                 <button id="save-settings" class="button">Save Settings</button>

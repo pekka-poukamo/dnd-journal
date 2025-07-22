@@ -38,7 +38,7 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
   - **Action** - Challenging decisions and critical moments
   - **Surprise** - Unexpected, left-field encounters that challenge assumptions
 - **Smart Context Awareness** - Uses your character info and journal history
-- **AI-Powered Compression** - Uses nested AI summaries to compress long journal histories
+- **AI-Powered Compression** - Uses cached nested AI summaries to compress long journal histories
 - **Configurable Models** - Choose between GPT-3.5 Turbo, GPT-4, or GPT-4 Turbo
 - **Local Storage** - API keys stored securely in your browser
 
@@ -185,16 +185,19 @@ npm run deploy
 
 ### **How AI Compression Works**
 
-The AI system uses intelligent nested summarization to compress your journal history while preserving context:
+The AI system uses intelligent nested summarization with smart caching to compress your journal history while preserving context:
 
 - **Recent entries** (last 3) are included in full detail
 - **Older entries** are compressed using AI-generated summaries
+- **Smart caching** - Summaries are stored locally and only regenerated when entries change
 - **Summary length scales** logarithmically with entry word count (10-100 words)
 - **Large datasets** are grouped and meta-summarized to reduce API costs
+- **Automatic cleanup** - Old cached summaries are periodically removed
+- **Cache management** - View statistics and manually clear cache in Settings
 - **Character information** is always included for personalized prompts
 - **Graceful fallback** when AI summarization fails
 
-This approach maintains rich context while staying within API token limits, even for extensive journal histories.
+This approach maintains rich context while minimizing API costs and staying within token limits, even for extensive journal histories.
 
 ## 🛠 Local Development
 

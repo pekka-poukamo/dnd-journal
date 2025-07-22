@@ -337,6 +337,31 @@ textarea {
   color: var(--color-text-light);
 }
 
+/* Cache Stats */
+.cache-stats {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  font-size: 0.875rem;
+}
+
+.cache-stats p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.cache-stat-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.cache-stat-item:last-child {
+  margin-bottom: 0;
+}
+
 /* Responsive Design */
 @media (max-width: 767px) {
   .container {

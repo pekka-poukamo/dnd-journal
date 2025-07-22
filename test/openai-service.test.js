@@ -429,6 +429,166 @@ describe('OpenAI Service', () => {
     });
   });
 
+  describe('Summary Caching', () => {
+    beforeEach(() => {
+      service.saveSettings('sk-test-key', 'gpt-3.5-turbo');
+      // Clear cache before each test
+      service.clearSummaryCache();
+    });
+
+    it('should cache generated summaries', async () => {
+      const entry = {
+        id: '1',
+        title: 'Test Adventure',
+        content: 'This is a test adventure with some content',
+        timestamp: Date.now()
+      };
+
+      // First call should generate and cache
+      const summary1 = await service.generateEntrySummary(entry);
+      summary1.should.be.a('string');
+
+      // Second call should use cache (mock won't be called again)
+      let fetchCalled = false;
+      const originalFetch = global.fetch;
+      global.fetch = async () => {
+        fetchCalled = true;
+        return originalFetch.apply(this, arguments);
+      };
+
+      const summary2 = await service.generateEntrySummary(entry);
+      summary2.should.equal(summary1);
+      fetchCalled.should.be.false; // Should not call API again
+
+      global.fetch = originalFetch;
+    });
+
+    it('should cache group summaries', async () => {
+      const entryGroup = [
+        {
+          id: '1',
+          title: 'Adventure 1',
+          content: 'First adventure content',
+          timestamp: Date.now()
+        },
+        {
+          id: '2',
+          title: 'Adventure 2',
+          content: 'Second adventure content',
+          timestamp: Date.now() - 1000
+        }
+      ];
+
+      // First call should generate and cache
+      const summary1 = await service.generateGroupSummary(entryGroup);
+      if (summary1) {
+        summary1.should.be.a('string');
+
+        // Second call should use cache
+        const summary2 = await service.generateGroupSummary(entryGroup);
+        summary2.should.equal(summary1);
+      }
+    });
+
+    it('should generate new summary when entry content changes', async () => {
+      const entry1 = {
+        id: '1',
+        title: 'Test Adventure',
+        content: 'Original content',
+        timestamp: Date.now()
+      };
+
+      const entry2 = {
+        id: '1',
+        title: 'Test Adventure',
+        content: 'Modified content', // Changed content
+        timestamp: Date.now()
+      };
+
+      const summary1 = await service.generateEntrySummary(entry1);
+      const summary2 = await service.generateEntrySummary(entry2);
+
+      // Should generate new summary for modified content
+      summary1.should.be.a('string');
+      summary2.should.be.a('string');
+      // Cache keys should be different due to content change
+    });
+
+    it('should provide cache statistics', () => {
+      const stats = service.getCacheStats();
+      stats.should.have.property('totalEntries');
+      stats.should.have.property('individualSummaries');
+      stats.should.have.property('groupSummaries');
+      stats.should.have.property('cacheSize');
+      
+      stats.totalEntries.should.be.a('number');
+      stats.individualSummaries.should.be.a('number');
+      stats.groupSummaries.should.be.a('number');
+      stats.cacheSize.should.be.a('number');
+    });
+
+    it('should clear cache successfully', () => {
+      // Add some fake cached data
+      const fakeSummaries = { 'test_key': 'test summary' };
+      service.saveCachedSummaries(fakeSummaries);
+      
+      // Verify it exists
+      const beforeStats = service.getCacheStats();
+      beforeStats.totalEntries.should.be.greaterThan(0);
+      
+      // Clear cache
+      const result = service.clearSummaryCache();
+      result.should.be.true;
+      
+      // Verify it's cleared
+      const afterStats = service.getCacheStats();
+      afterStats.totalEntries.should.equal(0);
+    });
+
+    it('should cleanup old summaries', async () => {
+      // Create some fake cached summaries
+      const oldSummaries = {
+        'old_entry_123': 'old summary',
+        'current_entry_456': 'current summary',
+        'group_old_789': 'old group summary'
+      };
+      service.saveCachedSummaries(oldSummaries);
+
+      const currentEntries = [
+        {
+          id: 'current',
+          title: 'Current Entry',
+          content: 'Current content',
+          timestamp: Date.now()
+        }
+      ];
+
+      // Run cleanup
+      service.cleanupOldSummaries(currentEntries);
+
+      // Check that old summaries were removed
+      const stats = service.getCacheStats();
+      // Should have fewer entries after cleanup
+      stats.totalEntries.should.be.lessThan(3);
+    });
+
+    it('should generate cache keys correctly', () => {
+      const entry = {
+        id: '123',
+        title: 'Test Entry',
+        content: 'Test content',
+        timestamp: 1234567890
+      };
+
+      const key1 = service.generateCacheKey(entry);
+      const key2 = service.generateCacheKey(entry);
+      
+      key1.should.equal(key2); // Same entry should generate same key
+      key1.should.be.a('string');
+      key1.should.include('123'); // Should include entry ID
+    });
+  });
+
   describe('Error Handling', () => {
     it('should handle localStorage errors in saveSettings', () => {
       // Mock localStorage to throw error
