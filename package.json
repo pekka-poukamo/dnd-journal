@@ -9,8 +9,8 @@
     "test": "mocha test/**/*.test.js --timeout 5000",
     "test:watch": "mocha test/**/*.test.js --watch --timeout 5000",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
-    "deploy": "echo 'Deploy manually to your preferred static hosting service'",
-    "deploy:github": "echo 'Push to main branch for GitHub Pages deployment'"
+    "deploy": "surge .",
+    "deploy:domain": "surge . dnd-journal.surge.sh"
   },
   "repository": {
     "type": "git",
@@ -31,8 +31,10 @@
   "homepage": "https://dnd-journal.surge.sh",
   "devDependencies": {
     "http-server": "^14.1.1",
+    "surge": "^0.23.1",
     "mocha": "^10.2.0",
-    "chai": "^4.3.10"
+    "chai": "^4.3.10",
+    "jsdom": "^23.0.0"
   },
   "engines": {
     "node": ">=16.0.0"
