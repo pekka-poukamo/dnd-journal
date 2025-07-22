@@ -26,17 +26,19 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies, one HTML file.
 3. Add journal entries
 4. Done
 
-## For Developers & AI Agents
+## ⚠️ For Developers & AI Agents
 
-**READ THESE FIRST:**
-- `STYLE_GUIDE.md` - Coding rules and anti-patterns
-- `docs/adr/` - Architecture decisions (PERMANENT)
+**🚨 MANDATORY READING:**
+1. **[Architecture Decisions](docs/adr/)** - PERMANENT boundaries (NON-NEGOTIABLE)
+2. **[Style Guide](STYLE_GUIDE.md)** - Coding rules and forbidden patterns
 
-**Core Rules:**
+**Core Rules (violations = failure):**
 - **Tests are mandatory** - All features must have tests
-- **Keep it simple** - No feature bloat
-- **Pure functions only** - No mutations
-- **Vanilla JS/CSS only** - No frameworks
+- **Keep it simple** - No feature bloat (see ADR-0007)
+- **Pure functions only** - No mutations (see ADR-0002)
+- **Vanilla JS/CSS only** - No frameworks (see ADR-0001)
+- **Single HTML file** - No routing/SPA complexity (see ADR-0003)
+- **Surge.sh deployment** - No complex hosting (see ADR-0008)
 
 ### Run Tests
 ```bash

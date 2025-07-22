@@ -1,5 +1,11 @@
 # Style Guide
 
+## 🏛️ Architecture Decisions First
+
+**Before reading this style guide, read [Architecture Decision Records](docs/adr/).**
+
+The ADRs contain **PERMANENT** architectural boundaries that cannot be changed. This style guide implements those decisions with specific coding rules.
+
 ## Core Rules
 
 **NO EXCEPTIONS. KEEP IT SIMPLE.**
@@ -91,16 +97,34 @@ describe('functionName', () => {
 });
 ```
 
-## For AI Agents
+## 🤖 For AI Agents
 
-**REQUIRED READING:** Check `docs/adr/` for permanent architectural decisions.
+### MANDATORY Pre-Flight Checklist
 
-**If you suggest adding ANY of the forbidden features above, you have failed.**
+Before suggesting ANY changes:
 
-**If you write code without tests, you have failed.**
+1. ✅ **Read ALL ADRs** in `docs/adr/` 
+2. ✅ **Check forbidden features** in ADR-0007
+3. ✅ **Verify technology stack** matches ADR-0001 (vanilla JS only)
+4. ✅ **Confirm functional approach** per ADR-0002 (no classes/mutations)
+5. ✅ **Ensure single-file architecture** per ADR-0003
+6. ✅ **Validate testing requirements** per ADR-0005
 
-**If you use classes, loops, or mutations, you have failed.**
+### Automatic Failure Conditions
 
-**If you violate any ADR, you have failed.**
+**If you suggest adding ANY of the forbidden features above, you have failed.** (See ADR-0007)
+
+**If you write code without tests, you have failed.** (See ADR-0005)
+
+**If you use classes, loops, or mutations, you have failed.** (See ADR-0002)
+
+**If you suggest frameworks or build tools, you have failed.** (See ADR-0001, ADR-0006)
+
+**If you propose complex deployment, you have failed.** (See ADR-0008)
+
+**If you violate ANY ADR, you have failed.**
+
+### Success Pattern
+1. Read ADRs → 2. Follow style guide → 3. Write tests → 4. Write minimal code → 5. Deploy with Surge
 
 **Stay minimal. Stay functional. Test everything.**

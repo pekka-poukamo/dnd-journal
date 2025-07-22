@@ -50,6 +50,9 @@ We establish **hard boundaries** on features that can never be added to this pro
 - Keyboard shortcuts
 - Accessibility beyond semantic HTML
 - Internationalization (i18n)
+- Complex deployment pipelines (beyond Surge.sh)
+- Container-based deployment (Docker, Kubernetes)
+- Server-side rendering or hosting
 
 **ALLOWED ADDITIONS (if needed):**
 - Basic bug fixes

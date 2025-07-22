@@ -19,6 +19,7 @@ This directory contains Architecture Decision Records (ADRs) that document the k
 | [ADR-0005](0005-mandatory-testing.md) | Mandatory Testing for All Code | Accepted |
 | [ADR-0006](0006-no-build-tools.md) | No Build Tools or Bundlers | Accepted |
 | [ADR-0007](0007-feature-freeze-boundaries.md) | Feature Freeze Boundaries | Accepted |
+| [ADR-0008](0008-surge-deployment-only.md) | Surge.sh Deployment Only | Accepted |
 
 ## For AI Agents
 
