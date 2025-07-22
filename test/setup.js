@@ -1,21 +1,57 @@
-const { JSDOM } = require('jsdom');
 const chai = require('chai');
 
 // Enable should syntax
 chai.should();
 
-// Setup DOM environment
-const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-  url: 'http://localhost',
-  pretendToBeVisual: true,
-  resources: 'usable'
-});
+// Lightweight DOM mocking without JSDOM
+global.document = {
+  createElement: (tag) => ({
+    tagName: tag.toUpperCase(),
+    className: '',
+    textContent: '',
+    children: [],
+    appendChild: function(child) { this.children.push(child); },
+    querySelector: function(selector) { 
+      return this.children.find(child => 
+        child.className === selector.replace('.', '') ||
+        child.id === selector.replace('#', '')
+      ) || null;
+    },
+    querySelectorAll: function(selector) {
+      return this.children.filter(child => 
+        child.className === selector.replace('.', '') ||
+        child.id === selector.replace('#', '')
+      );
+    },
+    setAttribute: function(name, value) { this[name] = value; },
+    id: '',
+    src: '',
+    alt: '',
+    style: { display: '' },
+    value: '',
+    addEventListener: () => {},
+    focus: () => {}
+  }),
+  getElementById: (id) => ({
+    id,
+    value: '',
+    textContent: '',
+    innerHTML: '',
+    className: '',
+    appendChild: () => {},
+    replaceChildren: () => {},
+    addEventListener: () => {},
+    focus: () => {}
+  }),
+  body: {
+    innerHTML: '',
+    appendChild: () => {},
+    replaceChildren: () => {}
+  }
+};
 
-// Make DOM globals available
-global.window = dom.window;
-global.document = dom.window.document;
-global.navigator = dom.window.navigator;
-global.HTMLElement = dom.window.HTMLElement;
+global.window = { document: global.document };
+global.HTMLElement = function() {};
 global.localStorage = {
   data: {},
   getItem(key) {
