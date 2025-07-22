@@ -133,6 +133,55 @@ textarea {
   min-height: 100px;
 }
 
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-radius: var(--border-radius);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.btn--primary:hover {
+  background: #357abd;
+}
+
+.btn--secondary {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.btn--secondary:hover {
+  background: #d1d5db;
+}
+
+.btn--small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Button spacing */
+.btn + .btn {
+  margin-left: var(--space-sm);
+}
+
 /* Entry Cards */
 .entry-card {
   background: var(--color-surface);
@@ -142,17 +191,27 @@ textarea {
   margin-bottom: var(--space-md);
 }
 
+.entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
 .entry-title {
   color: var(--color-primary);
   font-size: var(--font-size-lg);
   font-weight: 600;
-  margin-bottom: var(--space-sm);
+  margin: 0;
+  flex: 1;
 }
 
 .entry-date {
   color: var(--color-text-light);
   font-size: 0.875rem;
-  margin-bottom: var(--space-md);
+  margin: 0;
 }
 
 .entry-content {

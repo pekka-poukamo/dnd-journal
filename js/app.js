@@ -50,6 +50,10 @@ const formatDate = (timestamp) => {
 const createEntryElement = (entry) => {
   const entryDiv = document.createElement('div');
   entryDiv.className = 'entry-card';
+  entryDiv.dataset.entryId = entry.id;
+  
+  const headerDiv = document.createElement('div');
+  headerDiv.className = 'entry-header';
   
   const titleDiv = document.createElement('div');
   titleDiv.className = 'entry-title';
@@ -59,12 +63,20 @@ const createEntryElement = (entry) => {
   dateDiv.className = 'entry-date';
   dateDiv.textContent = formatDate(entry.timestamp);
   
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn btn--small btn--secondary';
+  editBtn.textContent = 'Edit';
+  editBtn.onclick = () => editEntry(entry.id);
+  
+  headerDiv.appendChild(titleDiv);
+  headerDiv.appendChild(dateDiv);
+  headerDiv.appendChild(editBtn);
+  
   const contentDiv = document.createElement('div');
   contentDiv.className = 'entry-content';
   contentDiv.textContent = entry.content;
   
-  entryDiv.appendChild(titleDiv);
-  entryDiv.appendChild(dateDiv);
+  entryDiv.appendChild(headerDiv);
   entryDiv.appendChild(contentDiv);
   
   // Add image if present
@@ -134,6 +146,104 @@ const addEntry = () => {
   titleInput.focus();
 };
 
+// Edit entry
+const editEntry = (entryId) => {
+  const entry = state.entries.find(e => e.id === entryId);
+  if (!entry) return;
+  
+  // Populate form with entry data
+  const titleInput = document.getElementById('entry-title');
+  const contentInput = document.getElementById('entry-content');
+  const imageInput = document.getElementById('entry-image');
+  const addBtn = document.getElementById('add-entry-btn');
+  const cancelBtn = document.getElementById('cancel-edit-btn');
+  
+  titleInput.value = entry.title;
+  contentInput.value = entry.content;
+  imageInput.value = entry.image || '';
+  
+  // Change button text and functionality
+  addBtn.textContent = 'Update Entry';
+  addBtn.onclick = () => updateEntry(entryId);
+  
+  // Show cancel button
+  cancelBtn.style.display = 'inline-block';
+  cancelBtn.onclick = () => cancelEdit();
+  
+  // Store original onclick for cancel functionality
+  addBtn.dataset.originalOnclick = 'addEntry';
+  
+  // Focus on title
+  titleInput.focus();
+};
+
+// Cancel edit and reset form
+const cancelEdit = () => {
+  const titleInput = document.getElementById('entry-title');
+  const contentInput = document.getElementById('entry-content');
+  const imageInput = document.getElementById('entry-image');
+  const addBtn = document.getElementById('add-entry-btn');
+  const cancelBtn = document.getElementById('cancel-edit-btn');
+  
+  // Clear form
+  titleInput.value = '';
+  contentInput.value = '';
+  imageInput.value = '';
+  
+  // Reset button
+  addBtn.textContent = 'Add Entry';
+  addBtn.onclick = addEntry;
+  
+  // Hide cancel button
+  cancelBtn.style.display = 'none';
+  
+  // Focus back to title for next entry
+  titleInput.focus();
+};
+
+// Update existing entry
+const updateEntry = (entryId) => {
+  const titleInput = document.getElementById('entry-title');
+  const contentInput = document.getElementById('entry-content');
+  const imageInput = document.getElementById('entry-image');
+  const addBtn = document.getElementById('add-entry-btn');
+  const cancelBtn = document.getElementById('cancel-edit-btn');
+  
+  const title = titleInput.value.trim();
+  const content = contentInput.value.trim();
+  const image = imageInput.value.trim();
+  
+  if (!title || !content) return;
+  
+  const entryIndex = state.entries.findIndex(e => e.id === entryId);
+  if (entryIndex === -1) return;
+  
+  // Update entry
+  state.entries[entryIndex] = {
+    ...state.entries[entryIndex],
+    title,
+    content,
+    image,
+    timestamp: Date.now() // Update timestamp to show it was edited
+  };
+  
+  saveData();
+  renderEntries();
+  
+  // Reset form and button
+  titleInput.value = '';
+  contentInput.value = '';
+  imageInput.value = '';
+  addBtn.textContent = 'Add Entry';
+  addBtn.onclick = addEntry;
+  
+  // Hide cancel button
+  cancelBtn.style.display = 'none';
+  
+  // Focus back to title for next entry
+  titleInput.focus();
+};
+
 // Update character
 const updateCharacter = () => {
   const nameInput = document.getElementById('character-name');
@@ -160,34 +270,30 @@ const setupAutoUpdates = () => {
     }
   });
   
-  // Entry inputs - add entry when both title and content have values
+  // Add entry button
+  const addBtn = document.getElementById('add-entry-btn');
+  if (addBtn) {
+    addBtn.addEventListener('click', addEntry);
+  }
+  
+  // Entry inputs - allow Enter key to submit
   const titleInput = document.getElementById('entry-title');
   const contentInput = document.getElementById('entry-content');
   
-  const checkAndAddEntry = () => {
-    const title = titleInput.value.trim();
-    const content = contentInput.value.trim();
-    
-    // Only auto-add if both title and content are present
-    if (title && content) {
-      // Small delay to ensure user is done typing
-      setTimeout(() => {
-        if (titleInput.value.trim() === title && contentInput.value.trim() === content) {
-          addEntry();
-        }
-      }, 1000);
-    }
-  };
-  
   if (titleInput && contentInput) {
-    titleInput.addEventListener('blur', checkAndAddEntry);
-    contentInput.addEventListener('blur', checkAndAddEntry);
-    
-    // Also add on Enter in title field
+    // Enter in title field moves to content
     titleInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         contentInput.focus();
+      }
+    });
+    
+    // Enter in content field submits the form
+    contentInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) {
+        e.preventDefault();
+        addEntry();
       }
     });
   }
