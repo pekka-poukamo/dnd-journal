@@ -7,9 +7,43 @@ let openAIService = null;
 // Pure function for creating initial state
 const createInitialState = () => ({
   character: {
+    // Basic info
     name: '',
     race: '',
-    class: ''
+    class: '',
+    level: '',
+    subclass: '',
+    background: '',
+    alignment: '',
+    
+    // Backstory
+    backstory: '',
+    goals: '',
+    
+    // Appearance
+    age: '',
+    height: '',
+    weight: '',
+    eyes: '',
+    hair: '',
+    skin: '',
+    appearance: '',
+    personality: '',
+    
+    // Stats
+    str: '',
+    dex: '',
+    con: '',
+    int: '',
+    wis: '',
+    cha: '',
+    ac: '',
+    hp: '',
+    speed: '',
+    
+    // Equipment & Notes
+    equipment: '',
+    notes: ''
   },
   entries: []
 });
@@ -267,40 +301,32 @@ const focusEntryTitle = () => {
   if (titleInput) titleInput.focus();
 };
 
-// Pure function to get character form data
-const getCharacterFormData = () => {
-  const nameElement = document.getElementById('character-name');
-  const raceElement = document.getElementById('character-race');
-  const classElement = document.getElementById('character-class');
+// Display character summary on main page
+const displayCharacterSummary = () => {
+  const nameElement = document.getElementById('summary-name');
+  const detailsElement = document.getElementById('summary-details');
   
-  return {
-    name: nameElement ? nameElement.value.trim() : '',
-    race: raceElement ? raceElement.value.trim() : '',
-    class: classElement ? classElement.value.trim() : ''
-  };
+  if (!nameElement || !detailsElement) return;
+  
+  const character = state.character;
+  
+  if (character.name && (character.race || character.class)) {
+    nameElement.textContent = character.name;
+    
+    const details = [];
+    if (character.level) details.push(`Level ${character.level}`);
+    if (character.race) details.push(character.race);
+    if (character.class) details.push(character.class);
+    
+    detailsElement.textContent = details.join(' • ') || 'Click "View Details" to add more information';
+  } else {
+    nameElement.textContent = 'No character created yet';
+    detailsElement.textContent = 'Click "View Details" to create your character';
+  }
 };
 
-// Update character - now with immutable state update
-const updateCharacter = () => {
-  const characterData = getCharacterFormData();
-  
-  // Update state (keeping mutation for now to maintain test compatibility)  
-  state.character = characterData;
-  
-  saveData();
-};
-
-// Setup auto-updating inputs for character only
-const setupAutoUpdates = () => {
-  // Character inputs - auto-save on input
-  const characterInputs = ['character-name', 'character-race', 'character-class'];
-  characterInputs.forEach(id => {
-    const input = document.getElementById(id);
-    if (input) {
-      input.addEventListener('input', updateCharacter);
-    }
-  });
-  
+// Setup event handlers for journal entries
+const setupEventHandlers = () => {
   // Entry inputs - manual save via button
   const titleInput = document.getElementById('entry-title');
   const contentInput = document.getElementById('entry-content');
@@ -330,31 +356,16 @@ const setupAutoUpdates = () => {
   }
 };
 
-// Populate character form
-const populateCharacterForm = () => {
-  const nameInput = document.getElementById('character-name');
-  const raceInput = document.getElementById('character-race');
-  const classInput = document.getElementById('character-class');
-  
-  if (nameInput) nameInput.value = state.character.name || '';
-  if (raceInput) raceInput.value = state.character.race || '';
-  if (classInput) classInput.value = state.character.class || '';
-};
-
 // Initialize app
 const init = () => {
   loadData();
-  populateCharacterForm();
+  displayCharacterSummary();
   renderEntries();
-  setupAutoUpdates();
+  setupEventHandlers();
   
-  // Focus on character name if empty, otherwise focus on entry title
-  const nameInput = document.getElementById('character-name');
+  // Focus on entry title
   const titleInput = document.getElementById('entry-title');
-  
-  if (nameInput && !state.character.name) {
-    nameInput.focus();
-  } else if (titleInput) {
+  if (titleInput) {
     titleInput.focus();
   }
 };
@@ -648,8 +659,7 @@ if (typeof global !== 'undefined') {
   global.cancelEdit = cancelEdit;
   global.renderEntries = renderEntries;
   global.addEntry = addEntry;
-  global.updateCharacter = updateCharacter;
-  global.populateCharacterForm = populateCharacterForm;
+  global.displayCharacterSummary = displayCharacterSummary;
   global.init = init;
   global.openAIService = openAIService;
 }

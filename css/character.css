@@ -1,0 +1,104 @@
+/* Character-specific styles */
+
+/* Header Navigation */
+.header-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+    color: #357abd;
+}
+
+/* Character Layout */
+.character-layout {
+    display: grid;
+    gap: var(--space-xl);
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Form Grids */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-md);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--space-md);
+}
+
+/* Character-specific form styling */
+.character-backstory {
+    min-height: 120px;
+}
+
+.stat-input {
+    text-align: center;
+    font-weight: 600;
+}
+
+/* Character sections */
+.character-basic {
+    background: linear-gradient(135deg, var(--color-surface) 0%, #f0f4f8 100%);
+    border-left: 4px solid var(--color-primary);
+}
+
+.character-background {
+    background: linear-gradient(135deg, var(--color-surface) 0%, #f8f0f4 100%);
+    border-left: 4px solid #e74c3c;
+}
+
+.character-appearance {
+    background: linear-gradient(135deg, var(--color-surface) 0%, #f0f8f4 100%);
+    border-left: 4px solid #27ae60;
+}
+
+.character-stats {
+    background: linear-gradient(135deg, var(--color-surface) 0%, #f4f0f8 100%);
+    border-left: 4px solid #9b59b6;
+}
+
+.character-equipment {
+    background: linear-gradient(135deg, var(--color-surface) 0%, #f8f4f0 100%);
+    border-left: 4px solid #f39c12;
+}
+
+/* Select styling */
+select.form-input {
+    cursor: pointer;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+    .header-nav {
+        flex-direction: column;
+        gap: var(--space-sm);
+        text-align: center;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -233,8 +233,15 @@ textarea {
   border-radius: var(--border-radius);
 }
 
-/* Character Form */
-.character-form {
+/* Character Summary */
+.character-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.character-summary {
   background: var(--color-background);
   padding: var(--space-lg);
   border-radius: var(--border-radius);
@@ -362,6 +369,22 @@ textarea {
   margin-bottom: 0;
 }
 
+.character-quick-info {
+  text-align: center;
+}
+
+.character-name {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.character-details {
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+}
+
 /* Responsive Design */
 @media (max-width: 767px) {
   .container {
@@ -397,5 +420,11 @@ textarea {
   .modal-content {
     width: 95%;
     margin: var(--space-md);
+  }
+  
+  .character-header {
+    flex-direction: column;
+    gap: var(--space-sm);
+    text-align: center;
   }
 }
