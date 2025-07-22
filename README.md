@@ -90,11 +90,16 @@ test/
 ```
 
 ### Testing 🧪
-- **51 passing tests** covering all functionality
+- **40 passing tests** focused on behavior and functionality
 - **Unit Tests**: Pure function testing with isolated components
 - **Integration Tests**: End-to-end user workflow validation
-- **CSS Tests**: Component structure and BEM compliance verification
-- **Error Handling**: Comprehensive edge case coverage
+- **Behavioral Testing**: Function outputs, error handling, user interactions
+- **Edge Case Coverage**: Empty states, invalid input, error conditions
+
+**Testing Philosophy**: Focus on behavior over implementation details
+- ✅ Test what functions do, not how they're structured
+- ✅ Test user workflows and data flow
+- ❌ Don't test CSS classes, object properties, or code style
 
 Run tests with: `npm test`
 

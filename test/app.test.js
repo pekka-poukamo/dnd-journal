@@ -83,14 +83,14 @@ describe('D&D Journal App', function() {
 
   describe('State Management', function() {
     it('should initialize with default state', function() {
-      state.should.have.property('character');
-      state.should.have.property('entries');
-      
-      state.character.should.have.property('name').that.equals('');
-      state.character.should.have.property('race').that.equals('');
-      state.character.should.have.property('class').that.equals('');
-      
+      // Test that the state is properly initialized for the app to function
+      state.should.be.an('object');
+      state.character.should.be.an('object');
       state.entries.should.be.an('array').that.is.empty;
+      
+      // Test that default character values work with the character summary
+      const summary = createCharacterSummary(state.character);
+      summary.name.should.equal('No character created yet');
     });
 
     it('should save and load data from localStorage', function() {
@@ -533,11 +533,11 @@ describe('D&D Journal App', function() {
       const emptyCharacter = { name: '', race: '', class: '' };
       const summary = createCharacterSummary(emptyCharacter);
       
-      summary.should.have.property('name', 'No character created yet');
-      summary.should.have.property('details', 'Click "View Details" to create your character');
+      summary.name.should.equal('No character created yet');
+      summary.details.should.equal('Click "View Details" to create your character');
     });
 
-    it('should create character summary with basic info', function() {
+    it('should create character summary with complete info', function() {
       const character = { 
         name: 'Thorin', 
         race: 'Dwarf', 
@@ -546,8 +546,8 @@ describe('D&D Journal App', function() {
       };
       const summary = createCharacterSummary(character);
       
-      summary.should.have.property('name', 'Thorin');
-      summary.should.have.property('details', 'Level 10 • Dwarf • Fighter');
+      summary.name.should.equal('Thorin');
+      summary.details.should.equal('Level 10 • Dwarf • Fighter');
     });
 
     it('should create character summary with partial info', function() {
@@ -557,11 +557,11 @@ describe('D&D Journal App', function() {
       };
       const summary = createCharacterSummary(character);
       
-      summary.should.have.property('name', 'Bilbo');
-      summary.should.have.property('details', 'Halfling');
+      summary.name.should.equal('Bilbo');
+      summary.details.should.equal('Halfling');
     });
 
-    it('should handle unnamed character', function() {
+    it('should handle unnamed character gracefully', function() {
       const character = { 
         name: '', 
         race: 'Human', 
@@ -569,8 +569,8 @@ describe('D&D Journal App', function() {
       };
       const summary = createCharacterSummary(character);
       
-      summary.should.have.property('name', 'Unnamed Character');
-      summary.should.have.property('details', 'Human • Rogue');
+      summary.name.should.equal('Unnamed Character');
+      summary.details.should.equal('Human • Rogue');
     });
 
     it('should display character summary in DOM', function() {
