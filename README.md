@@ -2,19 +2,19 @@
 
 A lightweight, static D&D journal app focused on core functionality: note-taking, character tracking, and AI-powered roleplay prompts. Built with vanilla JavaScript and CSS for maximum simplicity and minimal cost.
 
-[![Deploy to GitHub Pages](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-pages.yml)
+[![Deploy to Surge.sh](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-surge.yml/badge.svg)](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-surge.yml)
 
 ## 🚀 Live App
 
-**🎲 [Open D&D Journal App](https://pekka-poukamo.github.io/dnd-journal) 🎲**
+**🎲 [Open D&D Journal App](https://dnd-journal.surge.sh) 🎲**
 
 ## 📦 Automatic Deployment
 
-This app automatically deploys to GitHub Pages whenever you push to the `main` branch:
+This app automatically deploys to Surge.sh whenever you push to the `main` branch:
 
-### ⚡ Quick Setup (2 minutes)
-1. Go to **Settings** → **Pages** in this repository
-2. Under **Source**, select **"GitHub Actions"**
+### ⚡ Quick Setup (5 minutes)
+1. Create a **Surge.sh account** and get your credentials
+2. Add **GitHub secrets** (`SURGE_LOGIN`, `SURGE_TOKEN`, `SURGE_DOMAIN`)
 3. Push changes to `main` branch
 4. Your app deploys automatically! ✨
 

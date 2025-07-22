@@ -1,112 +1,159 @@
-# GitHub Pages Deployment Guide for D&D Journal App
+# Surge.sh Deployment Guide for D&D Journal App
 
-This guide explains how to deploy your D&D Journal static app using GitHub Pages with automated deployment from GitHub Actions.
+This guide explains how to deploy your D&D Journal static app using Surge.sh with automated deployment from GitHub Actions.
 
-## 🚀 Why GitHub Pages?
+## 🚀 Why Surge.sh?
 
-GitHub Pages is the perfect choice for this static D&D journal app because:
+Surge.sh is perfect for this static D&D journal app because:
 
-- ✅ **Completely FREE** - No hosting costs
-- ✅ **Zero external setup** - Built into GitHub
-- ✅ **Automatic HTTPS** - Secure by default
-- ✅ **Custom domain support** - Use your own domain if desired
+- ✅ **Completely FREE** for static sites
+- ✅ **Custom domain support** - Use your own domain
 - ✅ **Fast CDN** - Global content delivery
-- ✅ **Automatic deployment** - Deploy on every push to main
+- ✅ **Simple setup** - Just a few commands
+- ✅ **HTTPS by default** - Secure hosting
+- ✅ **Works with private repos** - No GitHub Pages limitations
 
-## 🎯 Quick Setup (2 minutes)
+## 🎯 Quick Setup (5 minutes)
 
-### Step 1: Enable GitHub Pages
+### Step 1: Create Surge.sh Account
+1. Go to [surge.sh](https://surge.sh) and create a free account
+2. Install Surge CLI locally:
+   ```bash
+   npm install -g surge
+   ```
+3. Login to get your credentials:
+   ```bash
+   surge login
+   # Enter your email and password
+   
+   surge whoami
+   # Shows your login email
+   
+   surge token
+   # Shows your authentication token (save this!)
+   ```
+
+### Step 2: Configure GitHub Secrets
 1. Go to your GitHub repository: `https://github.com/pekka-poukamo/dnd-journal`
-2. Click **Settings** (in the repository menu)
-3. Scroll down and click **Pages** in the left sidebar
-4. Under **Source**, select **GitHub Actions**
-5. That's it! 🎉
+2. Click **Settings** → **Secrets and variables** → **Actions**
+3. Add these secrets by clicking **"New repository secret"**:
+   - **`SURGE_LOGIN`**: Your Surge.sh email
+   - **`SURGE_TOKEN`**: Your token from `surge token` command
+   - **`SURGE_DOMAIN`**: Your desired domain (e.g., `dnd-journal.surge.sh`)
 
-### Step 2: Deploy Your App
+### Step 3: Deploy Your App
 ```bash
 # Make sure your changes are committed and pushed
 git add .
-git commit -m "Enable GitHub Pages deployment"
+git commit -m "Enable Surge.sh deployment"
 git push origin main
 ```
 
-### Step 3: Access Your App
+### Step 4: Access Your App
 - Go to the **Actions** tab in your GitHub repository
-- Watch the "Deploy D&D Journal to GitHub Pages" workflow complete (takes 1-2 minutes)
-- Your app will be live at: **`https://pekka-poukamo.github.io/dnd-journal`**
+- Watch the "Deploy D&D Journal to Surge.sh" workflow complete (takes 1-2 minutes)
+- Your app will be live at your chosen domain (e.g., `https://dnd-journal.surge.sh`)
 
 ## 🔄 How Automatic Deployment Works
 
-The GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) automatically:
+The GitHub Actions workflow (`.github/workflows/deploy-surge.yml`) automatically:
 
 1. **Triggers** on every push to the `main` branch
 2. **Checks out** your latest code
-3. **Configures** GitHub Pages settings
-4. **Uploads** all your static files (HTML, CSS, JS)
-5. **Deploys** to the GitHub Pages CDN
-6. **Reports** the deployment URL
+3. **Installs** Surge CLI
+4. **Deploys** to your Surge.sh domain using your stored credentials
+5. **Reports** the deployment URL
 
-**Deployment time:** Usually 1-3 minutes
+**Deployment time:** Usually 1-2 minutes
 **Monitoring:** Watch progress in the "Actions" tab
 
-## 🛠 Local Development
+## 🛠 Local Development & Manual Deployment
 
-Test your app locally before deploying:
-
+### Local Development
 ```bash
 # Start local development server
 npm start
+# Opens http://localhost:3000
 
-# This opens http://localhost:3000
 # Test all functionality before pushing to main
 ```
 
-## 🌐 Custom Domain (Optional)
+### Manual Deployment (Alternative)
+If you prefer to deploy manually instead of using GitHub Actions:
 
-To use your own domain instead of `pekka-poukamo.github.io/dnd-journal`:
+```bash
+# Install Surge globally
+npm install -g surge
 
-### Step 1: Add CNAME file
-Create a file named `CNAME` (no extension) in your repository root:
-```
-your-dnd-journal.com
+# Deploy from your project directory
+npm run deploy
+
+# Or deploy to a specific domain
+npm run deploy:domain
+# Uses SURGE_DOMAIN environment variable or defaults to dnd-journal.surge.sh
+
+# Or use Surge directly
+surge . your-custom-domain.surge.sh
 ```
 
-### Step 2: Configure DNS
-Add a CNAME record with your domain provider:
-```
-Type: CNAME
-Name: www (or @)
-Value: pekka-poukamo.github.io
-```
+## 🌐 Custom Domain Setup
 
-### Step 3: Enable in GitHub
-1. Go to Settings → Pages
-2. Enter your custom domain
-3. Enable "Enforce HTTPS"
+### Using Surge Subdomain (Free)
+Choose any available subdomain like:
+- `your-dnd-journal.surge.sh`
+- `epic-adventures.surge.sh`
+- `dungeon-master-notes.surge.sh`
+
+### Using Your Own Domain
+1. **Set up domain in Surge:**
+   ```bash
+   surge . yourdomain.com
+   ```
+
+2. **Configure DNS with your domain provider:**
+   - **A Record**: Point to `45.55.110.124`
+   - **CNAME**: Point `www` to `na-west1.surge.sh`
+
+3. **Update GitHub secret:**
+   - Change `SURGE_DOMAIN` to your custom domain
 
 ## 🔧 Advanced Configuration
 
 ### Manual Deployment Trigger
 You can manually trigger deployment without pushing code:
 1. Go to Actions tab
-2. Click "Deploy D&D Journal to GitHub Pages"
+2. Click "Deploy D&D Journal to Surge.sh"
 3. Click "Run workflow"
 
 ### Environment Variables
 If you need to add environment variables (like API keys):
 1. Go to Settings → Secrets and variables → Actions
 2. Add your secrets (e.g., `OPENAI_API_KEY`)
-3. Reference in your JavaScript: `process.env.OPENAI_API_KEY`
+3. Reference in your workflow if needed
 
 ### Deployment Status Badge
 Add this to your README.md to show deployment status:
 ```markdown
-[![Deploy to GitHub Pages](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-pages.yml)
+[![Deploy to Surge.sh](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-surge.yml/badge.svg)](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-surge.yml)
 ```
+
+### Multiple Environments
+You can set up different domains for different branches:
+- `main` → `dnd-journal.surge.sh` (production)
+- `develop` → `dnd-journal-dev.surge.sh` (staging)
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
+
+**Authentication fails:**
+- Verify `SURGE_LOGIN` and `SURGE_TOKEN` secrets are correct
+- Make sure you ran `surge login` locally first
+- Check that your Surge.sh account is active
+
+**Domain already taken:**
+- Choose a different subdomain
+- Check if you already own the domain with `surge list`
 
 **Deployment fails:**
 - Check the Actions tab for error messages
@@ -115,26 +162,37 @@ Add this to your README.md to show deployment status:
 
 **404 Page Not Found:**
 - Make sure you have an `index.html` file
-- Check that GitHub Pages is enabled with "GitHub Actions" source
-- Wait a few minutes for DNS propagation
-
-**JavaScript/CSS not loading:**
-- Use relative paths: `./css/main.css` instead of `/css/main.css`
-- Check browser console for 404 errors
-- Verify file names match exactly (case-sensitive)
+- Check that the domain is correctly configured
+- Wait a few minutes for DNS propagation (custom domains)
 
 ### Getting Help
-- Check the [GitHub Pages documentation](https://docs.github.com/en/pages)
+- Check the [Surge.sh documentation](https://surge.sh/help)
 - View deployment logs in the Actions tab
+- Run `surge --help` for CLI commands
 - Open an issue in your repository for specific problems
+
+## 💰 Pricing
+
+- **Free tier**: Perfect for static sites like this D&D journal
+- **Custom domains**: Free with basic setup
+- **Bandwidth**: Generous free allowance
+- **SSL**: Included automatically
 
 ## ✅ Final Checklist
 
-- [ ] GitHub Pages enabled with "GitHub Actions" source
+- [ ] Surge.sh account created
+- [ ] Surge CLI installed locally (`npm install -g surge`)
+- [ ] GitHub secrets configured (`SURGE_LOGIN`, `SURGE_TOKEN`, `SURGE_DOMAIN`)
 - [ ] `index.html` file exists in repository root
-- [ ] All assets use relative paths
 - [ ] Latest code pushed to `main` branch
 - [ ] Workflow completed successfully in Actions tab
-- [ ] App accessible at `https://pekka-poukamo.github.io/dnd-journal`
+- [ ] App accessible at your Surge.sh domain
 
-Your D&D Journal app is now automatically deployed and will update every time you push changes to the main branch! 🎲✨
+Your D&D Journal app is now automatically deployed to Surge.sh and will update every time you push changes to the main branch! 🎲✨
+
+## 🚀 Next Steps
+
+1. **Choose your domain** (e.g., `epic-dnd-journal.surge.sh`)
+2. **Set up the GitHub secrets**
+3. **Push to main branch**
+4. **Start managing your D&D adventures!**

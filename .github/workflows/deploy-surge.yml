@@ -1,0 +1,31 @@
+name: Deploy D&D Journal to Surge.sh
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install Surge
+      run: npm install -g surge
+      
+    - name: Deploy to Surge.sh
+      run: |
+        echo "🚀 Deploying D&D Journal to Surge.sh..."
+        surge . ${{ secrets.SURGE_DOMAIN }} --token ${{ secrets.SURGE_TOKEN }}
+        echo "✅ Deployment complete!"
+        echo "📍 Your app is live at: https://${{ secrets.SURGE_DOMAIN }}"
+      env:
+        SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}

@@ -1,7 +1,7 @@
 # D&D Journal App - Simplified Static Architecture
 
 ## Overview
-A lightweight, static D&D journal app focused on core functionality: note-taking, character tracking, and AI-powered roleplay prompts. Built with vanilla JavaScript and CSS, hosted on GitHub Pages for maximum simplicity and zero cost.
+A lightweight, static D&D journal app focused on core functionality: note-taking, character tracking, and AI-powered roleplay prompts. Built with vanilla JavaScript and CSS, hosted on Surge.sh for maximum simplicity and minimal cost.
 
 ## Core Features (Simplified)
 
@@ -962,15 +962,18 @@ button:hover {
 
 ## Deployment
 
-### GitHub Pages Deployment
+### Surge.sh Deployment
 ```bash
 # Automatic deployment on push to main branch
 git add .
 git commit -m "Update D&D journal app"
 git push origin main
 
-# Manual deployment trigger available via GitHub Actions UI
-# No build step needed - pure static files
+# Manual deployment also available
+npm run deploy
+
+# Or deploy to specific domain
+surge . your-domain.surge.sh
 ```
 
 ### Project Structure for Deployment
@@ -995,8 +998,10 @@ dnd-journal/
 ```
 
 This ultra-simple architecture provides:
-- ✅ Pure static site hosted on GitHub Pages (FREE)
+- ✅ Pure static site hosted on Surge.sh (FREE)
 - ✅ Automatic deployment on git push
+- ✅ Custom domain support with Surge.sh
+- ✅ Works with private repositories
 - ✅ Local storage for offline functionality  
 - ✅ Direct OpenAI API integration with user-provided key
 - ✅ No backend dependencies whatsoever
@@ -1006,4 +1011,4 @@ This ultra-simple architecture provides:
 - ✅ Export/Import for manual backup
 - ✅ Built-in version control with Git
 
-The total cost is completely free hosting + your OpenAI API usage (typically $1-3/month for personal use).
+The total cost is free hosting + your OpenAI API usage (typically $1-3/month for personal use).
