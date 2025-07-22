@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Details - D&D Journal</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/character.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-nav">
+                <h1>Character Details</h1>
+                <nav>
+                    <a href="index.html" class="nav-link">← Back to Journal</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div class="character-layout">
+            <!-- Basic Information -->
+            <section class="character-basic">
+                <h2>Basic Information</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="character-name" class="form-label">Character Name</label>
+                        <input type="text" id="character-name" class="form-input" placeholder="Enter character name">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-level" class="form-label">Level</label>
+                        <input type="number" id="character-level" class="form-input" placeholder="1" min="1" max="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-race" class="form-label">Race</label>
+                        <input type="text" id="character-race" class="form-input" placeholder="e.g. Human, Elf, Dwarf">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-class" class="form-label">Class</label>
+                        <input type="text" id="character-class" class="form-input" placeholder="e.g. Fighter, Wizard, Rogue">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-subclass" class="form-label">Subclass</label>
+                        <input type="text" id="character-subclass" class="form-input" placeholder="e.g. Champion, Battle Master">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-alignment" class="form-label">Alignment</label>
+                        <select id="character-alignment" class="form-input">
+                            <option value="">Select Alignment</option>
+                            <option value="Lawful Good">Lawful Good</option>
+                            <option value="Neutral Good">Neutral Good</option>
+                            <option value="Chaotic Good">Chaotic Good</option>
+                            <option value="Lawful Neutral">Lawful Neutral</option>
+                            <option value="True Neutral">True Neutral</option>
+                            <option value="Chaotic Neutral">Chaotic Neutral</option>
+                            <option value="Lawful Evil">Lawful Evil</option>
+                            <option value="Neutral Evil">Neutral Evil</option>
+                            <option value="Chaotic Evil">Chaotic Evil</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Background & Backstory -->
+            <section class="character-background">
+                <h2>Background & Backstory</h2>
+                <div class="form-group">
+                    <label for="character-background" class="form-label">Background</label>
+                    <input type="text" id="character-background" class="form-input" placeholder="e.g. Noble, Criminal, Folk Hero">
+                </div>
+                <div class="form-group">
+                    <label for="character-backstory" class="form-label">Backstory</label>
+                    <textarea id="character-backstory" class="form-input character-backstory" rows="6" placeholder="Tell your character's story - their origins, motivations, and important life events..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="character-goals" class="form-label">Goals & Motivations</label>
+                    <textarea id="character-goals" class="form-input" rows="4" placeholder="What drives your character? What are they trying to achieve?"></textarea>
+                </div>
+            </section>
+
+            <!-- Appearance & Personality -->
+            <section class="character-appearance">
+                <h2>Appearance & Personality</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="character-age" class="form-label">Age</label>
+                        <input type="text" id="character-age" class="form-input" placeholder="e.g. 25 years">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-height" class="form-label">Height</label>
+                        <input type="text" id="character-height" class="form-input" placeholder="e.g. 5'8\"">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-weight" class="form-label">Weight</label>
+                        <input type="text" id="character-weight" class="form-input" placeholder="e.g. 160 lbs">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-eyes" class="form-label">Eye Color</label>
+                        <input type="text" id="character-eyes" class="form-input" placeholder="e.g. Brown, Blue, Green">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-hair" class="form-label">Hair</label>
+                        <input type="text" id="character-hair" class="form-input" placeholder="e.g. Long black hair">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-skin" class="form-label">Skin</label>
+                        <input type="text" id="character-skin" class="form-input" placeholder="e.g. Pale, Tan, Dark">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="character-appearance" class="form-label">Physical Description</label>
+                    <textarea id="character-appearance" class="form-input" rows="4" placeholder="Describe your character's overall appearance, distinguishing features, clothing style, etc."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="character-personality" class="form-label">Personality Traits</label>
+                    <textarea id="character-personality" class="form-input" rows="4" placeholder="How does your character act? What are their quirks, habits, and mannerisms?"></textarea>
+                </div>
+            </section>
+
+            <!-- Stats & Game Info -->
+            <section class="character-stats">
+                <h2>Abilities & Stats</h2>
+                <div class="stats-grid">
+                    <div class="form-group">
+                        <label for="character-str" class="form-label">Strength</label>
+                        <input type="number" id="character-str" class="form-input stat-input" min="1" max="30" placeholder="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-dex" class="form-label">Dexterity</label>
+                        <input type="number" id="character-dex" class="form-input stat-input" min="1" max="30" placeholder="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-con" class="form-label">Constitution</label>
+                        <input type="number" id="character-con" class="form-input stat-input" min="1" max="30" placeholder="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-int" class="form-label">Intelligence</label>
+                        <input type="number" id="character-int" class="form-input stat-input" min="1" max="30" placeholder="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-wis" class="form-label">Wisdom</label>
+                        <input type="number" id="character-wis" class="form-input stat-input" min="1" max="30" placeholder="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-cha" class="form-label">Charisma</label>
+                        <input type="number" id="character-cha" class="form-input stat-input" min="1" max="30" placeholder="10">
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="character-ac" class="form-label">Armor Class</label>
+                        <input type="number" id="character-ac" class="form-input" min="1" placeholder="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-hp" class="form-label">Hit Points</label>
+                        <input type="number" id="character-hp" class="form-input" min="1" placeholder="8">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-speed" class="form-label">Speed</label>
+                        <input type="text" id="character-speed" class="form-input" placeholder="30 ft">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Equipment & Notes -->
+            <section class="character-equipment">
+                <h2>Equipment & Notes</h2>
+                <div class="form-group">
+                    <label for="character-equipment" class="form-label">Equipment & Inventory</label>
+                    <textarea id="character-equipment" class="form-input" rows="6" placeholder="List your character's weapons, armor, items, and other equipment..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="character-notes" class="form-label">Additional Notes</label>
+                    <textarea id="character-notes" class="form-input" rows="4" placeholder="Any other important information about your character..."></textarea>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script type="module" src="js/character.js"></script>
+</body>
+</html>
