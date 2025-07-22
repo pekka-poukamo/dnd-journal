@@ -10,13 +10,26 @@ A lightweight, static D&D journal app focused on core functionality: note-taking
 
 ## 📦 Automatic Deployment
 
-This app automatically deploys to Surge.sh whenever you push to the `main` branch:
+This app automatically deploys to Surge.sh whenever you push to the `main` branch (if configured):
+
+### 🔧 **Deployment Status**
+- **✅ With credentials**: Auto-deploys to `https://dnd-journal.surge.sh`
+- **⏭️ Without credentials**: Deployment skipped (no errors), manual deployment available
 
 ### ⚡ Quick Setup (5 minutes)
-1. Create a **Surge.sh account** and get your credentials
-2. Add **GitHub secrets** (`SURGE_LOGIN`, `SURGE_TOKEN`, `SURGE_DOMAIN`)
-3. Push changes to `main` branch
-4. Your app deploys automatically! ✨
+1. **Create Surge.sh account**: Go to [surge.sh](https://surge.sh) and sign up
+2. **Get credentials**: Run `surge login` and `surge token` locally
+3. **Add GitHub secrets**: 
+   - Go to **Settings** → **Secrets and variables** → **Actions**
+   - Add `SURGE_LOGIN` (your email) and `SURGE_TOKEN`
+4. **Push to main**: Your app deploys automatically! ✨
+
+### 🚀 **Alternative: Manual Deployment**
+No setup needed - deploy anytime:
+```bash
+npm install -g surge
+npm run deploy
+```
 
 📖 **See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed instructions.**
 

@@ -61,9 +61,15 @@ The GitHub Actions workflow (`.github/workflows/deploy-surge.yml`) automatically
 
 1. **Triggers** on every push to the `main` branch
 2. **Checks out** your latest code
-3. **Installs** Surge CLI
-4. **Deploys** to your Surge.sh domain using your stored credentials
-5. **Reports** the deployment URL
+3. **Checks for credentials** - if missing, skips deployment gracefully
+4. **Installs** Surge CLI (if credentials found)
+5. **Deploys** to your Surge.sh domain using stored credentials
+6. **Reports** the deployment URL
+
+### **Conditional Deployment:**
+- **✅ With secrets**: Full automatic deployment
+- **⏭️ Without secrets**: Deployment skipped, helpful instructions shown
+- **🚫 Never fails**: Missing secrets won't break your workflow
 
 **Deployment time:** Usually 1-2 minutes
 **Monitoring:** Watch progress in the "Actions" tab

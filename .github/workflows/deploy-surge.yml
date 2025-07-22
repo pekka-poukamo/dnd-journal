@@ -21,10 +21,27 @@ jobs:
       with:
         node-version: '18'
         
+    - name: Check Surge credentials
+      id: check-secrets
+      run: |
+        if [ -z "${{ secrets.SURGE_LOGIN }}" ] || [ -z "${{ secrets.SURGE_TOKEN }}" ]; then
+          echo "has-secrets=false" >> $GITHUB_OUTPUT
+          echo "🔧 Surge credentials not found - deployment will be skipped"
+          echo "ℹ️  To enable automatic deployment:"
+          echo "   1. Go to Settings → Secrets and variables → Actions"
+          echo "   2. Add SURGE_LOGIN (your Surge.sh email)"
+          echo "   3. Add SURGE_TOKEN (run 'surge token' to get it)"
+        else
+          echo "has-secrets=true" >> $GITHUB_OUTPUT
+          echo "✅ Surge credentials found - proceeding with deployment"
+        fi
+        
     - name: Install Surge
+      if: steps.check-secrets.outputs.has-secrets == 'true'
       run: npm install -g surge
       
     - name: Deploy to Surge.sh
+      if: steps.check-secrets.outputs.has-secrets == 'true'
       run: |
         echo "🚀 Deploying D&D Journal to Surge.sh..."
         surge . ${{ env.SURGE_DOMAIN }} --token ${{ secrets.SURGE_TOKEN }}
@@ -32,3 +49,10 @@ jobs:
         echo "📍 Your app is live at: https://${{ env.SURGE_DOMAIN }}"
       env:
         SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
+        
+    - name: Deployment skipped notice
+      if: steps.check-secrets.outputs.has-secrets == 'false'
+      run: |
+        echo "⏭️  Deployment to Surge.sh was skipped"
+        echo "📖 See README.md for setup instructions"
+        echo "🔗 Manual deployment: npm run deploy"
