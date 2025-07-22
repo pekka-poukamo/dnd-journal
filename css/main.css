@@ -227,12 +227,7 @@ textarea {
   border-radius: var(--border-radius);
 }
 
-/* Character Form */
-.character-form {
-  background: var(--color-background);
-  padding: var(--space-lg);
-  border-radius: var(--border-radius);
-}
+
 
 /* Responsive Design */
 @media (max-width: 767px) {

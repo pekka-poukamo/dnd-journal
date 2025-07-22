@@ -35,8 +35,8 @@ function loadApp() {
   delete global.cancelEdit;
   delete global.renderEntries;
   delete global.addEntry;
-  delete global.updateCharacter;
-  delete global.populateCharacterForm;
+  delete global.createCharacterSummary;
+  delete global.displayCharacterSummary;
   
   // Evaluate the app code in the global context
   eval(appContent);
@@ -83,14 +83,14 @@ describe('D&D Journal App', function() {
 
   describe('State Management', function() {
     it('should initialize with default state', function() {
-      state.should.have.property('character');
-      state.should.have.property('entries');
-      
-      state.character.should.have.property('name').that.equals('');
-      state.character.should.have.property('race').that.equals('');
-      state.character.should.have.property('class').that.equals('');
-      
+      // Test that the state is properly initialized for the app to function
+      state.should.be.an('object');
+      state.character.should.be.an('object');
       state.entries.should.be.an('array').that.is.empty;
+      
+      // Test that default character values work with the character summary
+      const summary = createCharacterSummary(state.character);
+      summary.name.should.equal('No character created yet');
     });
 
     it('should save and load data from localStorage', function() {
@@ -287,38 +287,49 @@ describe('D&D Journal App', function() {
       state.entries.should.have.length(initialLength);
     });
 
-    it('should update character information', function() {
-      const nameInput = document.getElementById('character-name');
-      const raceInput = document.getElementById('character-race');
-      const classInput = document.getElementById('character-class');
+    it('should update character summary when character data changes', function() {
+      // Setup DOM elements for character summary
+      document.body.innerHTML += `
+        <div class="character-summary__name" id="summary-name"></div>
+        <div class="character-summary__details" id="summary-details"></div>
+      `;
 
-      nameInput.value = 'Legolas';
-      raceInput.value = 'Elf';
-      classInput.value = 'Archer';
+      // Update state with character data
+      state.character = {
+        name: 'Legolas',
+        race: 'Elf',
+        class: 'Archer'
+      };
 
-      updateCharacter();
+      displayCharacterSummary();
 
-      state.character.name.should.equal('Legolas');
-      state.character.race.should.equal('Elf');
-      state.character.class.should.equal('Archer');
+      const nameElement = document.getElementById('summary-name');
+      const detailsElement = document.getElementById('summary-details');
+
+      nameElement.textContent.should.equal('Legolas');
+      detailsElement.textContent.should.equal('Elf • Archer');
     });
 
-    it('should populate character form from state', function() {
+    it('should display character summary for minimal character data', function() {
+      // Setup DOM elements for character summary
+      document.body.innerHTML += `
+        <div class="character-summary__name" id="summary-name"></div>
+        <div class="character-summary__details" id="summary-details"></div>
+      `;
+
       state.character = {
         name: 'Gimli',
         race: 'Dwarf',
         class: 'Warrior'
       };
 
-      populateCharacterForm();
+      displayCharacterSummary();
 
-      const nameInput = document.getElementById('character-name');
-      const raceInput = document.getElementById('character-race');
-      const classInput = document.getElementById('character-class');
+      const nameElement = document.getElementById('summary-name');
+      const detailsElement = document.getElementById('summary-details');
 
-      nameInput.value.should.equal('Gimli');
-      raceInput.value.should.equal('Dwarf');
-      classInput.value.should.equal('Warrior');
+      nameElement.textContent.should.equal('Gimli');
+      detailsElement.textContent.should.equal('Dwarf • Warrior');
     });
   });
 
@@ -505,6 +516,85 @@ describe('D&D Journal App', function() {
       const actionsDiv = element.querySelector('.entry-actions');
       actionsDiv.should.not.be.null;
       actionsDiv.className.should.equal('entry-actions');
+    });
+  });
+
+  describe('Character Summary', function() {
+    beforeEach(function() {
+      // Setup DOM with character summary elements
+      document.body.innerHTML += `
+        <div class="character-summary__name" id="summary-name"></div>
+        <div class="character-summary__details" id="summary-details"></div>
+      `;
+    });
+
+    it('should create character summary for empty character', function() {
+      const emptyCharacter = { name: '', race: '', class: '' };
+      const summary = createCharacterSummary(emptyCharacter);
+      
+      summary.name.should.equal('No character created yet');
+      summary.details.should.equal('Click "View Details" to create your character');
+    });
+
+    it('should create character summary with complete info', function() {
+      const character = { 
+        name: 'Thorin', 
+        race: 'Dwarf', 
+        class: 'Fighter'
+      };
+      const summary = createCharacterSummary(character);
+      
+      summary.name.should.equal('Thorin');
+      summary.details.should.equal('Dwarf • Fighter');
+    });
+
+    it('should create character summary with partial info', function() {
+      const character = { 
+        name: 'Bilbo', 
+        race: 'Halfling',
+        class: ''
+      };
+      const summary = createCharacterSummary(character);
+      
+      summary.name.should.equal('Bilbo');
+      summary.details.should.equal('Halfling');
+    });
+
+    it('should handle unnamed character gracefully', function() {
+      const character = { 
+        name: '', 
+        race: 'Human', 
+        class: 'Rogue'
+      };
+      const summary = createCharacterSummary(character);
+      
+      summary.name.should.equal('Unnamed Character');
+      summary.details.should.equal('Human • Rogue');
+    });
+
+    it('should display character summary in DOM', function() {
+      state.character = {
+        name: 'Aragorn',
+        race: 'Human',
+        class: 'Ranger'
+      };
+
+      displayCharacterSummary();
+
+      const nameElement = document.getElementById('summary-name');
+      const detailsElement = document.getElementById('summary-details');
+
+      nameElement.textContent.should.equal('Aragorn');
+      detailsElement.textContent.should.equal('Human • Ranger');
+    });
+
+    it('should handle missing DOM elements gracefully', function() {
+      // Remove the elements
+      document.getElementById('summary-name').remove();
+      document.getElementById('summary-details').remove();
+
+      // Should not throw an error
+      (() => displayCharacterSummary()).should.not.throw();
     });
   });
 });

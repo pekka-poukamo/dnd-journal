@@ -6,7 +6,9 @@ const createInitialState = () => ({
   character: {
     name: '',
     race: '',
-    class: ''
+    class: '',
+    backstory: '',
+    notes: ''
   },
   entries: []
 });
@@ -264,40 +266,39 @@ const focusEntryTitle = () => {
   if (titleInput) titleInput.focus();
 };
 
-// Pure function to get character form data
-const getCharacterFormData = () => {
-  const nameElement = document.getElementById('character-name');
-  const raceElement = document.getElementById('character-race');
-  const classElement = document.getElementById('character-class');
+// Pure function to create character summary data
+const createCharacterSummary = (character) => {
+  if (!character.name && !character.race && !character.class) {
+    return {
+      name: 'No character created yet',
+      details: 'Click "View Details" to create your character'
+    };
+  }
+  
+  const details = [];
+  if (character.race) details.push(character.race);
+  if (character.class) details.push(character.class);
   
   return {
-    name: nameElement ? nameElement.value.trim() : '',
-    race: raceElement ? raceElement.value.trim() : '',
-    class: classElement ? classElement.value.trim() : ''
+    name: character.name || 'Unnamed Character',
+    details: details.join(' • ') || 'Click "View Details" to add more information'
   };
 };
 
-// Update character - now with immutable state update
-const updateCharacter = () => {
-  const characterData = getCharacterFormData();
+// Display character summary on main page
+const displayCharacterSummary = () => {
+  const nameElement = document.getElementById('summary-name');
+  const detailsElement = document.getElementById('summary-details');
   
-  // Update state (keeping mutation for now to maintain test compatibility)  
-  state.character = characterData;
+  if (!nameElement || !detailsElement) return;
   
-  saveData();
+  const summary = createCharacterSummary(state.character);
+  nameElement.textContent = summary.name;
+  detailsElement.textContent = summary.details;
 };
 
-// Setup auto-updating inputs for character only
-const setupAutoUpdates = () => {
-  // Character inputs - auto-save on input
-  const characterInputs = ['character-name', 'character-race', 'character-class'];
-  characterInputs.forEach(id => {
-    const input = document.getElementById(id);
-    if (input) {
-      input.addEventListener('input', updateCharacter);
-    }
-  });
-  
+// Setup event handlers for journal entries
+const setupEventHandlers = () => {
   // Entry inputs - manual save via button
   const titleInput = document.getElementById('entry-title');
   const contentInput = document.getElementById('entry-content');
@@ -327,31 +328,16 @@ const setupAutoUpdates = () => {
   }
 };
 
-// Populate character form
-const populateCharacterForm = () => {
-  const nameInput = document.getElementById('character-name');
-  const raceInput = document.getElementById('character-race');
-  const classInput = document.getElementById('character-class');
-  
-  if (nameInput) nameInput.value = state.character.name || '';
-  if (raceInput) raceInput.value = state.character.race || '';
-  if (classInput) classInput.value = state.character.class || '';
-};
-
 // Initialize app
 const init = () => {
   loadData();
-  populateCharacterForm();
+  displayCharacterSummary();
   renderEntries();
-  setupAutoUpdates();
+  setupEventHandlers();
   
-  // Focus on character name if empty, otherwise focus on entry title
-  const nameInput = document.getElementById('character-name');
+  // Focus on entry title
   const titleInput = document.getElementById('entry-title');
-  
-  if (nameInput && !state.character.name) {
-    nameInput.focus();
-  } else if (titleInput) {
+  if (titleInput) {
     titleInput.focus();
   }
 };
@@ -372,7 +358,7 @@ if (typeof global !== 'undefined') {
   global.cancelEdit = cancelEdit;
   global.renderEntries = renderEntries;
   global.addEntry = addEntry;
-  global.updateCharacter = updateCharacter;
-  global.populateCharacterForm = populateCharacterForm;
+  global.createCharacterSummary = createCharacterSummary;
+  global.displayCharacterSummary = displayCharacterSummary;
   global.init = init;
 }

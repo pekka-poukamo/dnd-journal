@@ -11,9 +11,14 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
 
 ## Features ✨
 
-### 📝 **Single Character**
-- Simple character form (name, race, class)
+### 📝 **Character Management**
+- **Character Summary**: Quick overview on main page with basic info
+- **Radically Simple Character Page**: Dead simple character tracking
+  - Basic information: Name, Race, Class
+  - Backstory: Free-form character background
+  - Notes: Any additional character information
 - Automatically saves as you type
+- **Pure Simplicity**: No complex forms, just the essentials for storytelling
 
 ### 📖 **Plain Text Journal Entries**
 - Title and content fields
@@ -34,10 +39,67 @@ A minimal D&D journal application for documenting adventures. Built with vanilla
 ## How to Use 🚀
 
 1. **Open `index.html`** in any modern web browser
-2. **Fill in your character** details (saves automatically)
-3. **Add journal entries** by typing a title and description
-4. **Add images** by pasting image URLs (optional)
-5. **Your data persists** automatically in your browser
+2. **Create your character** by clicking "View Details" and entering name, race, class, and backstory
+3. **View character summary** on the main page for quick reference during play
+4. **Add journal entries** by typing a title and description
+5. **Add images** by pasting image URLs (optional)
+6. **Your data persists** automatically in your browser
+
+### Navigation
+- **Main Page (`index.html`)**: Character summary and journal entries
+- **Character Page (`character.html`)**: Detailed character creation and editing
+
+## Code Architecture 🏗️
+
+This project follows a **functional programming approach** with **component-based CSS architecture**:
+
+### JavaScript Style
+- **Pure Functions**: All functions avoid side effects where possible
+- **Functional Programming**: Uses `map`, `filter`, `reduce` over loops
+- **Immutable Patterns**: Creates new objects instead of mutating existing ones
+- **Error Handling**: Graceful error handling with `safeParseJSON` pattern
+- **Debounced Auto-save**: Efficient data persistence
+
+### CSS Architecture
+- **BEM Methodology**: Block__Element--Modifier naming convention
+- **Component-Based**: Modular CSS in `/css/components/`
+- **CSS Custom Properties**: Consistent theming with CSS variables
+- **Mobile-First**: Responsive design from mobile up
+- **Shared Components**: Reusable navigation, forms, and UI elements
+
+### File Organization
+```
+css/
+├── components/
+│   ├── navigation.css       # Shared navigation component
+│   ├── character-summary.css # Character summary component
+│   └── character-form.css    # Character form component
+└── main.css                 # Base styles and utilities
+
+js/
+├── app.js                   # Main application logic
+└── character.js             # Character page functionality
+
+test/
+├── app.test.js              # Main app tests
+├── character.test.js        # Character functionality tests
+├── components.test.js       # CSS component tests
+└── integration.test.js      # End-to-end tests
+```
+
+### Testing 🧪
+- **38 passing tests** focused on behavior and functionality
+- **Unit Tests**: Pure function testing with isolated components
+- **Integration Tests**: End-to-end user workflow validation
+- **Behavioral Testing**: Function outputs, error handling, user interactions
+- **Edge Case Coverage**: Empty states, invalid input, error conditions
+
+**Testing Philosophy**: Focus on behavior over implementation details
+- ✅ Test what functions do, not how they're structured
+- ✅ Test user workflows and data flow
+- ❌ Don't test CSS classes, object properties, or code style
+
+Run tests with: `npm test`
 
 ## What's NOT Included (Simplified) 🚫
 

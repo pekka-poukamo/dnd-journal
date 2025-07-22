@@ -1,0 +1,59 @@
+/* Navigation Component - Shared across pages */
+
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.navigation__title {
+  color: var(--color-primary);
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  margin: 0;
+}
+
+.navigation__link {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--border-radius);
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.navigation__link:hover {
+  background: var(--color-background);
+  border-color: var(--color-border);
+  transform: translateY(-1px);
+}
+
+.navigation__link:active {
+  transform: translateY(0);
+}
+
+.navigation__link--primary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.navigation__link--primary:hover {
+  background: #357abd;
+  border-color: #357abd;
+}
+
+/* Responsive navigation */
+@media (max-width: 767px) {
+  .navigation {
+    flex-direction: column;
+    gap: var(--space-sm);
+    text-align: center;
+  }
+  
+  .navigation__title {
+    font-size: var(--font-size-lg);
+  }
+}

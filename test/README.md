@@ -2,12 +2,26 @@
 
 This test suite uses **Mocha** and **Chai** with should notation for testing the D&D Journal application.
 
+## Testing Philosophy
+
+Our tests focus on **behavior and functionality** rather than implementation details:
+
+✅ **Test behaviors**: How functions work, what they return, error handling
+✅ **Test user workflows**: Complete user interactions from start to finish  
+✅ **Test data flow**: Input → processing → output validation
+✅ **Test edge cases**: Error conditions, empty states, invalid input
+
+❌ **Don't test implementation**: CSS class names, object structure, variable names
+❌ **Don't test framework details**: DOM structure specifics, internal APIs
+❌ **Don't test style/conventions**: These are enforced by code review and linting
+
 ## Test Structure
 
 ```
 test/
 ├── setup.js           # Test environment configuration
-├── app.test.js        # Unit tests for core functionality
+├── app.test.js        # Unit tests for core journal functionality
+├── character.test.js  # Unit tests for character management
 ├── integration.test.js # Integration tests for user workflows
 └── README.md          # This file
 ```
