@@ -6,6 +6,13 @@ describe('Settings Module', () => {
   beforeEach(() => {
     // Clear localStorage before each test
     global.localStorage.clear();
+    
+    // Setup window object for utils
+    global.window = global.window || {};
+    // Load utils for the settings module
+    const utilsPath = require('path').join(__dirname, '../js/utils.js');
+    const utilsContent = require('fs').readFileSync(utilsPath, 'utf8');
+    eval(utilsContent);
   });
 
   describe('Settings Data Management', () => {

@@ -1,20 +1,11 @@
 // AI Module - OpenAI Integration for Introspection and Summarization
-const SETTINGS_KEY = 'simple-dnd-journal-settings';
-const SUMMARIES_KEY = 'simple-dnd-journal-summaries';
 
 // Pure function to load settings
 const loadAISettings = () => {
-  try {
-    const stored = localStorage.getItem(SETTINGS_KEY);
-    if (stored) {
-      const parseResult = JSON.parse(stored);
-      return parseResult;
-    }
-    return { apiKey: '', enableAIFeatures: false };
-  } catch (error) {
-    console.error('Failed to load AI settings:', error);
-    return { apiKey: '', enableAIFeatures: false };
-  }
+  return window.Utils.loadDataWithFallback(
+    window.Utils.STORAGE_KEYS.SETTINGS, 
+    window.Utils.createInitialSettings()
+  );
 };
 
 // Pure function to check if AI features are available
@@ -114,10 +105,7 @@ const generateIntrospectionPrompt = async (character, entries) => {
   }
 };
 
-// Pure function to calculate word count
-const getWordCount = (text) => {
-  return text.trim().split(/\s+/).filter(word => word.length > 0).length;
-};
+
 
 // Generate entry summary
 const generateEntrySummary = async (entry) => {
@@ -126,7 +114,7 @@ const generateEntrySummary = async (entry) => {
   }
 
   try {
-    const wordCount = getWordCount(entry.content);
+    const wordCount = window.Utils.getWordCount(entry.content);
     const targetLength = Math.max(10, Math.floor(wordCount * 0.3)); // 30% of original length
     
     const prompt = `Summarize this D&D journal entry in approximately ${targetLength} words. Keep the key events, emotions, and character development:
@@ -140,7 +128,7 @@ Content: ${entry.content}`;
       id: entry.id,
       originalWordCount: wordCount,
       summary: summary,
-      summaryWordCount: getWordCount(summary),
+      summaryWordCount: window.Utils.getWordCount(summary),
       timestamp: Date.now()
     };
   } catch (error) {
@@ -151,25 +139,12 @@ Content: ${entry.content}`;
 
 // Load stored summaries
 const loadStoredSummaries = () => {
-  try {
-    const stored = localStorage.getItem(SUMMARIES_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    return {};
-  } catch (error) {
-    console.error('Failed to load summaries:', error);
-    return {};
-  }
+  return window.Utils.loadDataWithFallback(window.Utils.STORAGE_KEYS.SUMMARIES, {});
 };
 
 // Save summaries to localStorage
 const saveStoredSummaries = (summaries) => {
-  try {
-    localStorage.setItem(SUMMARIES_KEY, JSON.stringify(summaries));
-  } catch (error) {
-    console.error('Failed to save summaries:', error);
-  }
+  window.Utils.safeSetToStorage(window.Utils.STORAGE_KEYS.SUMMARIES, summaries);
 };
 
 // Get or generate summary for an entry
@@ -210,7 +185,6 @@ if (typeof module !== 'undefined' && module.exports) {
   global.generateIntrospectionPrompt = generateIntrospectionPrompt;
   global.generateEntrySummary = generateEntrySummary;
   global.getEntrySummary = getEntrySummary;
-  global.getWordCount = getWordCount;
 } else {
   // For browser
   window.AI = {
@@ -220,7 +194,6 @@ if (typeof module !== 'undefined' && module.exports) {
     generateIntrospectionPrompt,
     generateEntrySummary,
     getEntrySummary,
-    getWordCount,
     callOpenAI
   };
 }

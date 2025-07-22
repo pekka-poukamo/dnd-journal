@@ -3,8 +3,10 @@ const fs = require('fs');
 require('./setup');
 const { should } = require('chai');
 
-// Load the app.js file as a module
+// Load the utils and app files as modules
+const utilsPath = path.join(__dirname, '../js/utils.js');
 const appPath = path.join(__dirname, '../js/app.js');
+const utilsContent = fs.readFileSync(utilsPath, 'utf8');
 const appContent = fs.readFileSync(appPath, 'utf8');
 
 // Create a proper module context
@@ -25,8 +27,6 @@ function loadApp() {
   
   // Clear any existing globals
   delete global.state;
-  delete global.generateId;
-  delete global.formatDate;
   delete global.loadData;
   delete global.saveData;
   delete global.createEntryElement;
@@ -38,12 +38,16 @@ function loadApp() {
   delete global.createCharacterSummary;
   delete global.displayCharacterSummary;
   
+  // Setup window object for utils
+  global.window = global.window || {};
+  
+  // Evaluate the utils code first to setup window.Utils
+  eval(utilsContent);
+  
   // Evaluate the app code in the global context
   eval(appContent);
   
   return {
-    generateId: global.generateId,
-    formatDate: global.formatDate,
     loadData: global.loadData,
     saveData: global.saveData,
     state: global.state
@@ -55,31 +59,7 @@ describe('D&D Journal App', function() {
     loadApp();
   });
 
-  describe('generateId', function() {
-    it('should generate a unique string ID', function() {
-      const id1 = generateId();
-      // Small delay to ensure different timestamps
-      const start = Date.now();
-      while (Date.now() === start) {
-        // wait for next millisecond
-      }
-      const id2 = generateId();
-      
-      id1.should.be.a('string');
-      id2.should.be.a('string');
-      id1.should.not.equal(id2);
-    });
-  });
 
-  describe('formatDate', function() {
-    it('should format timestamp into readable date', function() {
-      const timestamp = 1640995200000; // Jan 1, 2022
-      const formatted = formatDate(timestamp);
-      
-      formatted.should.be.a('string');
-      formatted.should.include('2022');
-    });
-  });
 
   describe('State Management', function() {
     it('should initialize with default state', function() {

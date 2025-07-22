@@ -1,48 +1,16 @@
 // Settings Page - AI Configuration & Data Management
-const STORAGE_KEY = 'simple-dnd-journal';
-const SETTINGS_KEY = 'simple-dnd-journal-settings';
-
-// Pure function for creating initial settings state
-const createInitialSettings = () => ({
-  apiKey: '',
-  enableAIFeatures: false
-});
-
-// Pure function for safe JSON parsing
-const safeParseJSON = (jsonString) => {
-  try {
-    return { success: true, data: JSON.parse(jsonString) };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-};
 
 // Load settings from localStorage
 const loadSettings = () => {
-  try {
-    const stored = localStorage.getItem(SETTINGS_KEY);
-    if (stored) {
-      const parseResult = safeParseJSON(stored);
-      if (parseResult.success) {
-        return { ...createInitialSettings(), ...parseResult.data };
-      }
-    }
-    return createInitialSettings();
-  } catch (error) {
-    console.error('Failed to load settings:', error);
-    return createInitialSettings();
-  }
+  return window.Utils.loadDataWithFallback(
+    window.Utils.STORAGE_KEYS.SETTINGS, 
+    window.Utils.createInitialSettings()
+  );
 };
 
 // Save settings to localStorage
 const saveSettings = (settings) => {
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to save settings:', error);
-    return { success: false, error: error.message };
-  }
+  return window.Utils.safeSetToStorage(window.Utils.STORAGE_KEYS.SETTINGS, settings);
 };
 
 
@@ -279,7 +247,6 @@ document.addEventListener('DOMContentLoaded', init);
 
 // Export functions for testing
 if (typeof global !== 'undefined') {
-  global.createInitialSettings = createInitialSettings;
   global.loadSettings = loadSettings;
   global.saveSettings = saveSettings;
   global.testApiKey = testApiKey;

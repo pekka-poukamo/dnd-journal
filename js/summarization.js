@@ -1,7 +1,4 @@
 // Summarization Management - Smart handling of entry summaries
-const STORAGE_KEY = 'simple-dnd-journal';
-const SUMMARIES_KEY = 'simple-dnd-journal-summaries';
-const META_SUMMARIES_KEY = 'simple-dnd-journal-meta-summaries';
 
 // Configuration for meta-summarization
 const META_SUMMARY_CONFIG = {
@@ -12,62 +9,30 @@ const META_SUMMARY_CONFIG = {
 
 // Pure function to load journal data
 const loadJournalData = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    return { character: {}, entries: [] };
-  } catch (error) {
-    console.error('Failed to load journal data:', error);
-    return { character: {}, entries: [] };
-  }
+  return window.Utils.loadDataWithFallback(
+    window.Utils.STORAGE_KEYS.JOURNAL, 
+    window.Utils.createInitialJournalState()
+  );
 };
 
 // Pure function to load stored summaries
 const loadStoredSummaries = () => {
-  try {
-    const stored = localStorage.getItem(SUMMARIES_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    return {};
-  } catch (error) {
-    console.error('Failed to load summaries:', error);
-    return {};
-  }
+  return window.Utils.loadDataWithFallback(window.Utils.STORAGE_KEYS.SUMMARIES, {});
 };
 
 // Save summaries to localStorage
 const saveStoredSummaries = (summaries) => {
-  try {
-    localStorage.setItem(SUMMARIES_KEY, JSON.stringify(summaries));
-  } catch (error) {
-    console.error('Failed to save summaries:', error);
-  }
+  window.Utils.safeSetToStorage(window.Utils.STORAGE_KEYS.SUMMARIES, summaries);
 };
 
 // Pure function to load stored meta-summaries
 const loadStoredMetaSummaries = () => {
-  try {
-    const stored = localStorage.getItem(META_SUMMARIES_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    return {};
-  } catch (error) {
-    console.error('Failed to load meta-summaries:', error);
-    return {};
-  }
+  return window.Utils.loadDataWithFallback(window.Utils.STORAGE_KEYS.META_SUMMARIES, {});
 };
 
 // Save meta-summaries to localStorage
 const saveStoredMetaSummaries = (metaSummaries) => {
-  try {
-    localStorage.setItem(META_SUMMARIES_KEY, JSON.stringify(metaSummaries));
-  } catch (error) {
-    console.error('Failed to save meta-summaries:', error);
-  }
+  window.Utils.safeSetToStorage(window.Utils.STORAGE_KEYS.META_SUMMARIES, metaSummaries);
 };
 
 // Pure function to determine which entries need summaries
@@ -111,7 +76,7 @@ ${summariesText}`;
       entryCount: summaryGroup.length,
       timeRange: timeRange,
       originalWordCount: summaryGroup.reduce((total, s) => total + s.summaryWordCount, 0),
-      metaSummaryWordCount: window.AI.getWordCount(metaSummary),
+      metaSummaryWordCount: window.Utils.getWordCount(metaSummary),
       timestamp: Date.now()
     };
   } catch (error) {
