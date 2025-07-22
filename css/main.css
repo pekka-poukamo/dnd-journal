@@ -133,6 +133,51 @@ textarea {
   min-height: 100px;
 }
 
+/* Buttons */
+.button {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  font-family: var(--font-family);
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.button:hover:not(:disabled) {
+  background: #357abd;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.button:disabled {
+  background: var(--color-text-light);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.button--secondary {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.button--secondary:hover {
+  background: var(--color-background);
+}
+
+.button--small {
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.875rem;
+}
+
 /* Entry Cards */
 .entry-card {
   background: var(--color-surface);
@@ -158,6 +203,12 @@ textarea {
 .entry-content {
   margin-bottom: var(--space-md);
   white-space: pre-wrap;
+}
+
+.entry-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
 }
 
 .entry-image {

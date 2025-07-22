@@ -1,4 +1,4 @@
-// Simple D&D Journal POC - All data automatically saved
+// Simple D&D Journal POC - Manual save with in-place editing
 const STORAGE_KEY = 'simple-dnd-journal';
 
 // Simple state management
@@ -46,11 +46,13 @@ const formatDate = (timestamp) => {
   });
 };
 
-// Create entry element
+// Create entry element with edit functionality
 const createEntryElement = (entry) => {
   const entryDiv = document.createElement('div');
   entryDiv.className = 'entry-card';
+  entryDiv.dataset.entryId = entry.id;
   
+  // Create view mode elements
   const titleDiv = document.createElement('div');
   titleDiv.className = 'entry-title';
   titleDiv.textContent = entry.title;
@@ -63,9 +65,20 @@ const createEntryElement = (entry) => {
   contentDiv.className = 'entry-content';
   contentDiv.textContent = entry.content;
   
+  const actionsDiv = document.createElement('div');
+  actionsDiv.className = 'entry-actions';
+  
+  const editButton = document.createElement('button');
+  editButton.className = 'button button--secondary button--small';
+  editButton.textContent = 'Edit';
+  editButton.onclick = () => enableEditMode(entryDiv, entry);
+  
+  actionsDiv.appendChild(editButton);
+  
   entryDiv.appendChild(titleDiv);
   entryDiv.appendChild(dateDiv);
   entryDiv.appendChild(contentDiv);
+  entryDiv.appendChild(actionsDiv);
   
   // Add image if present
   if (entry.image && entry.image.trim()) {
@@ -80,6 +93,73 @@ const createEntryElement = (entry) => {
   }
   
   return entryDiv;
+};
+
+// Enable edit mode for an entry
+const enableEditMode = (entryDiv, entry) => {
+  const titleDiv = entryDiv.querySelector('.entry-title');
+  const contentDiv = entryDiv.querySelector('.entry-content');
+  const actionsDiv = entryDiv.querySelector('.entry-actions');
+  
+  // Create edit inputs
+  const titleInput = document.createElement('input');
+  titleInput.type = 'text';
+  titleInput.className = 'form-input';
+  titleInput.value = entry.title;
+  
+  const contentTextarea = document.createElement('textarea');
+  contentTextarea.className = 'form-input';
+  contentTextarea.rows = 4;
+  contentTextarea.value = entry.content;
+  
+  // Create save/cancel buttons
+  const saveButton = document.createElement('button');
+  saveButton.className = 'button button--small';
+  saveButton.textContent = 'Save';
+  saveButton.onclick = () => saveEdit(entryDiv, entry, titleInput.value, contentTextarea.value);
+  
+  const cancelButton = document.createElement('button');
+  cancelButton.className = 'button button--secondary button--small';
+  cancelButton.textContent = 'Cancel';
+  cancelButton.onclick = () => cancelEdit(entryDiv, entry);
+  
+  // Replace content with edit form
+  titleDiv.replaceWith(titleInput);
+  contentDiv.replaceWith(contentTextarea);
+  
+  // Update actions
+  actionsDiv.innerHTML = '';
+  actionsDiv.appendChild(saveButton);
+  actionsDiv.appendChild(cancelButton);
+  
+  // Focus on title input
+  titleInput.focus();
+};
+
+// Save edit changes
+const saveEdit = (entryDiv, entry, newTitle, newContent) => {
+  const title = newTitle.trim();
+  const content = newContent.trim();
+  
+  if (!title || !content) return;
+  
+  // Update entry data
+  entry.title = title;
+  entry.content = content;
+  entry.timestamp = Date.now(); // Update timestamp to show it was edited
+  
+  // Save to storage
+  saveData();
+  
+  // Re-render the entry
+  const newEntryElement = createEntryElement(entry);
+  entryDiv.replaceWith(newEntryElement);
+};
+
+// Cancel edit and restore original view
+const cancelEdit = (entryDiv, entry) => {
+  const newEntryElement = createEntryElement(entry);
+  entryDiv.replaceWith(newEntryElement);
 };
 
 // Render entries
@@ -149,9 +229,9 @@ const updateCharacter = () => {
   saveData();
 };
 
-// Setup auto-updating inputs
+// Setup auto-updating inputs for character only
 const setupAutoUpdates = () => {
-  // Character inputs
+  // Character inputs - auto-save on input
   const characterInputs = ['character-name', 'character-race', 'character-class'];
   characterInputs.forEach(id => {
     const input = document.getElementById(id);
@@ -160,36 +240,32 @@ const setupAutoUpdates = () => {
     }
   });
   
-  // Entry inputs - add entry when both title and content have values
+  // Entry inputs - manual save via button
   const titleInput = document.getElementById('entry-title');
   const contentInput = document.getElementById('entry-content');
-  
-  const checkAndAddEntry = () => {
-    const title = titleInput.value.trim();
-    const content = contentInput.value.trim();
-    
-    // Only auto-add if both title and content are present
-    if (title && content) {
-      // Small delay to ensure user is done typing
-      setTimeout(() => {
-        if (titleInput.value.trim() === title && contentInput.value.trim() === content) {
-          addEntry();
-        }
-      }, 1000);
-    }
-  };
+  const addEntryBtn = document.getElementById('add-entry-btn');
   
   if (titleInput && contentInput) {
-    titleInput.addEventListener('blur', checkAndAddEntry);
-    contentInput.addEventListener('blur', checkAndAddEntry);
-    
-    // Also add on Enter in title field
+    // Add entry on Enter in title field
     titleInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         contentInput.focus();
       }
     });
+    
+    // Add entry on Enter in content field
+    contentInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) {
+        e.preventDefault();
+        addEntry();
+      }
+    });
+  }
+  
+  // Add entry button click handler
+  if (addEntryBtn) {
+    addEntryBtn.addEventListener('click', addEntry);
   }
 };
 
