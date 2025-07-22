@@ -1,186 +1,64 @@
-# D&D Journal - Simple POC
+# D&D Journal
 
-A minimal D&D journal application for documenting adventures. Built with vanilla JavaScript and CSS as a proof of concept.
+A minimal D&D journal app. Vanilla JavaScript, zero dependencies, one HTML file.
 
-[![Deploy to Surge.sh](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-surge.yml/badge.svg)](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/deploy-surge.yml)
-[![Test Suite](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/test.yml/badge.svg)](https://github.com/pekka-poukamo/dnd-journal/actions/workflows/test.yml)
+🎲 **[Live App](https://dnd-journal.surge.sh)** 🎲
 
-## 🚀 Live App
+## What It Does
 
-**🎲 [Open D&D Journal App](https://dnd-journal.surge.sh) 🎲**
+- **Character**: Name, race, class (auto-save)
+- **Journal Entries**: Title + content (auto-save)
+- **Images**: URL support
+- **Storage**: Browser localStorage
 
-## Features ✨
+## What It Doesn't Do
 
-### 📝 **Single Character**
-- Simple character form (name, race, class)
-- Automatically saves as you type
+❌ Multiple characters  
+❌ Rich text editing  
+❌ Themes or customization  
+❌ Export/import  
+❌ Advanced features  
 
-### 📖 **Plain Text Journal Entries**
-- Title and content fields
-- Optional image URLs
-- Automatic saving when you move to the next field
-- Chronological list of all entries
+## Quick Start
 
-### 💾 **Automatic Data Persistence**
-- Everything saves automatically to localStorage
-- No save buttons or manual actions needed
-- Works completely offline
+1. Open `index.html` in browser
+2. Fill character details
+3. Add journal entries
+4. Done
 
-### 🖼️ **Image Support**
-- Add images via URL
-- Images display with entries
-- Graceful fallback if image fails to load
+## For Developers & AI Agents
 
-## How to Use 🚀
+**READ THE STYLE GUIDE FIRST**: `STYLE_GUIDE.md`
 
-1. **Open `index.html`** in any modern web browser
-2. **Fill in your character** details (saves automatically)
-3. **Add journal entries** by typing a title and description
-4. **Add images** by pasting image URLs (optional)
-5. **Your data persists** automatically in your browser
+- **Tests are mandatory** - All features must have tests
+- **Keep it simple** - No feature bloat
+- **Pure functions only** - No mutations
+- **Vanilla JS/CSS only** - No frameworks
 
-## What's NOT Included (Simplified) 🚫
-
-- ❌ Multiple characters (one character only)
-- ❌ Rich text editor (plain text only)
-- ❌ Tags or categories
-- ❌ Links or advanced formatting
-- ❌ Reading time or word counts
-- ❌ Themes or appearance settings
-- ❌ Statistics or analytics
-- ❌ Manual save/load buttons
-- ❌ Keyboard shortcuts
-- ❌ AI assistant
-- ❌ Export/import features
-
-## Technical Details 🔧
-
-- **Pure vanilla JavaScript** - No frameworks or build tools
-- **CSS custom properties** - Clean, modern styling
-- **LocalStorage** - All data stored in browser
-- **Single HTML file** - Complete app in one page
-- **Mobile responsive** - Works on phones and tablets
-
-## File Structure 📁
-
-```
-/
-├── index.html      # Complete application
-├── css/main.css    # Simple styles
-├── js/app.js       # Application logic (~150 lines)
-├── test/           # Test suite
-│   ├── app.test.js         # Unit tests
-│   ├── integration.test.js # Integration tests
-│   ├── setup.js           # Test environment
-│   └── README.md          # Testing documentation
-├── scripts/        # Development scripts
-│   ├── setup-dev.sh       # Environment setup
-│   └── pre-commit.sh      # Pre-commit hooks
-└── README.md       # This file
-```
-
-## 🧪 Testing
-
-This project uses **Mocha** + **Chai** with should notation for comprehensive testing.
-
-### **Running Tests**
+### Run Tests
 ```bash
-# Install dependencies
 npm install
-
-# Run all tests
 npm test
-
-# Watch mode (auto-rerun on changes)
-npm run test:watch
-
-# Setup development environment
-./scripts/setup-dev.sh
 ```
 
-### **Test Coverage**
-- ✅ **17 passing tests** - All core functionality tested
-- 🔧 **Unit Tests** - Pure functions, DOM manipulation, state management
-- 🎯 **Integration Tests** - Complete user workflows
-- 🚀 **Automated Testing** - GitHub Actions CI/CD
-- 🔄 **Pre-commit Hooks** - Prevent broken code
-
-### **Test Examples**
-```javascript
-// Should notation examples
-state.entries.should.have.length(3);
-character.name.should.equal('Aragorn');
-result.should.be.a('string');
-```
-
-See `test/README.md` for detailed testing documentation.
-
-## 📦 Automatic Deployment
-
-This app automatically deploys to Surge.sh whenever you push to the `main` branch (if configured):
-
-### 🔧 **Deployment Status**
-- **✅ With credentials**: Auto-deploys to `https://dnd-journal.surge.sh`
-- **⏭️ Without credentials**: Deployment skipped (no errors), manual deployment available
-
-### ⚡ Quick Setup (5 minutes)
-1. **Create Surge.sh account**: Go to [surge.sh](https://surge.sh) and sign up
-2. **Get credentials**: Run `surge login` and `surge token` locally
-3. **Add GitHub secrets**: 
-   - Go to **Settings** → **Secrets and variables** → **Actions**
-   - Add `SURGE_LOGIN` (your email) and `SURGE_TOKEN`
-4. **Push to main**: Your app deploys automatically! ✨
-
-### 🚀 **Alternative: Manual Deployment**
-No setup needed - deploy anytime:
+### Deploy
 ```bash
-npm install -g surge
 npm run deploy
 ```
 
-📖 **See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed instructions.**
-
-## 🛠 Local Development
-
-```bash
-# Clone the repository
-git clone https://github.com/pekka-poukamo/dnd-journal.git
-cd dnd-journal
-
-# Start local server
-npm start
-# Opens http://localhost:3000
+## File Structure
+```
+index.html          # Complete app
+css/main.css        # Styles
+js/app.js          # Logic (~150 lines)
+test/              # Test suite
 ```
 
-## Browser Compatibility 🌐
-
-- Chrome 50+
-- Firefox 50+
-- Safari 10+
-- Edge 79+
-
-## Getting Started 🎯
-
-1. Download or clone this repository
-2. Open `index.html` in your web browser
-3. Start creating your D&D character and entries!
-
-## Data Storage 💿
-
-All data is stored locally in your browser using localStorage. Your data will persist between sessions but is tied to the specific browser and device. 
-
-**Note**: Clearing browser data will remove your journal entries.
-
-## 📁 Architecture
-
-See [SIMPLE_ARCHITECTURE.md](SIMPLE_ARCHITECTURE.md) for detailed technical documentation.
-
-## 📋 License
-
-MIT License - see the full architecture document for more details.
+## Browser Support
+Modern browsers only (Chrome 50+, Firefox 50+, Safari 10+, Edge 79+)
 
 ---
 
-**Perfect for**: Quick D&D session notes, character tracking, and simple adventure logging without any complexity.
+**Perfect for**: Quick D&D session notes without complexity.
 
-Built as a minimal POC following functional programming principles with vanilla web technologies.
+**Built with**: Functional programming principles, vanilla web technologies.
