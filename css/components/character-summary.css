@@ -1,0 +1,54 @@
+/* Character Summary Component */
+
+.character-summary {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.character-summary__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.character-summary__title {
+  color: var(--color-primary);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin: 0;
+}
+
+.character-summary__content {
+  background: var(--color-background);
+  padding: var(--space-lg);
+  border-radius: var(--border-radius);
+}
+
+.character-summary__info {
+  text-align: center;
+}
+
+.character-summary__name {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.character-summary__details {
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+}
+
+/* Responsive character summary */
+@media (max-width: 767px) {
+  .character-summary__header {
+    flex-direction: column;
+    gap: var(--space-sm);
+    text-align: center;
+  }
+}

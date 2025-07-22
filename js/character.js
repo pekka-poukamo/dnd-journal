@@ -1,7 +1,9 @@
 // Character Page - Extended Character Management
+// Following functional programming patterns from style guide
+
 const STORAGE_KEY = 'simple-dnd-journal';
 
-// Extended character state structure
+// Pure function for creating initial character state
 const createInitialCharacterState = () => ({
   // Basic info
   name: '',
@@ -42,38 +44,47 @@ const createInitialCharacterState = () => ({
   notes: ''
 });
 
-// Load character data from localStorage
-const loadCharacterData = () => {
+// Pure function for safe JSON parsing
+const safeParseJSON = (jsonString) => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const data = JSON.parse(stored);
-      return data.character || createInitialCharacterState();
-    }
+    return { success: true, data: JSON.parse(jsonString) };
   } catch (error) {
-    console.error('Failed to load character data:', error);
+    return { success: false, error: error.message };
   }
-  return createInitialCharacterState();
 };
 
-// Save character data to localStorage
+// Pure function to load character data from localStorage
+const loadCharacterData = () => {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (!stored) return createInitialCharacterState();
+  
+  const parseResult = safeParseJSON(stored);
+  if (!parseResult.success) return createInitialCharacterState();
+  
+  return parseResult.data.character || createInitialCharacterState();
+};
+
+// Pure function to save character data to localStorage
 const saveCharacterData = (characterData) => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    let data = { character: createInitialCharacterState(), entries: [] };
+    const currentData = stored ? safeParseJSON(stored).data : {};
     
-    if (stored) {
-      data = JSON.parse(stored);
-    }
+    const updatedData = {
+      character: createInitialCharacterState(),
+      entries: [],
+      ...currentData,
+      character: characterData
+    };
     
-    data.character = characterData;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedData));
+    return { success: true };
   } catch (error) {
-    console.error('Failed to save character data:', error);
+    return { success: false, error: error.message };
   }
 };
 
-// Get all form field IDs
+// Pure function to get all form field IDs
 const getFormFieldIds = () => [
   'character-name', 'character-race', 'character-class', 'character-level',
   'character-subclass', 'character-background', 'character-alignment',
@@ -85,27 +96,24 @@ const getFormFieldIds = () => [
   'character-notes'
 ];
 
-// Convert form field ID to character property name
-const getPropertyName = (fieldId) => {
-  return fieldId.replace('character-', '');
-};
+// Pure function to convert form field ID to character property name
+const getPropertyName = (fieldId) => fieldId.replace('character-', '');
 
-// Get current character data from form
+// Pure function to get current character data from form
 const getCharacterFromForm = () => {
   const character = createInitialCharacterState();
   
-  getFormFieldIds().forEach(fieldId => {
+  return getFormFieldIds().reduce((acc, fieldId) => {
     const element = document.getElementById(fieldId);
     if (element) {
       const propertyName = getPropertyName(fieldId);
-      character[propertyName] = element.value.trim();
+      acc[propertyName] = element.value.trim();
     }
-  });
-  
-  return character;
+    return acc;
+  }, character);
 };
 
-// Populate form with character data
+// Pure function to populate form with character data
 const populateForm = (character) => {
   getFormFieldIds().forEach(fieldId => {
     const element = document.getElementById(fieldId);
@@ -116,82 +124,85 @@ const populateForm = (character) => {
   });
 };
 
-// Auto-save character data
-const autoSave = () => {
-  const character = getCharacterFromForm();
-  saveCharacterData(character);
-  
-  // Visual feedback for save
-  showSaveIndicator();
+// Pure function to calculate ability modifier
+const getAbilityModifier = (score) => {
+  const num = parseInt(score);
+  if (isNaN(num)) return '';
+  return Math.floor((num - 10) / 2);
 };
 
-// Show save indicator
+// Pure function to create save indicator element
+const createSaveIndicator = () => {
+  const indicator = document.createElement('div');
+  indicator.className = 'character-form__save-indicator';
+  indicator.textContent = 'Saved';
+  return indicator;
+};
+
+// Pure function to show save feedback
 const showSaveIndicator = () => {
   // Remove any existing indicator
-  const existing = document.querySelector('.save-indicator');
-  if (existing) {
-    existing.remove();
-  }
+  const existing = document.querySelector('.character-form__save-indicator');
+  if (existing) existing.remove();
   
-  // Create new save indicator
-  const indicator = document.createElement('div');
-  indicator.className = 'save-indicator';
-  indicator.textContent = 'Saved';
-  indicator.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: var(--color-primary);
-    color: white;
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--border-radius);
-    font-size: 0.875rem;
-    z-index: 1000;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  `;
-  
+  // Create and show new indicator
+  const indicator = createSaveIndicator();
   document.body.appendChild(indicator);
   
   // Animate in
   setTimeout(() => {
-    indicator.style.opacity = '1';
+    indicator.classList.add('character-form__save-indicator--visible');
   }, 10);
   
   // Remove after delay
   setTimeout(() => {
-    indicator.style.opacity = '0';
+    indicator.classList.remove('character-form__save-indicator--visible');
     setTimeout(() => {
-      if (indicator.parentNode) {
-        indicator.remove();
-      }
+      if (indicator.parentNode) indicator.remove();
     }, 300);
   }, 2000);
 };
 
-// Setup auto-save on all form inputs
+// Function to auto-save character data (with side effects)
+const autoSave = () => {
+  const character = getCharacterFromForm();
+  const result = saveCharacterData(character);
+  
+  if (result.success) {
+    showSaveIndicator();
+  } else {
+    console.error('Failed to save character:', result.error);
+  }
+};
+
+// Pure function to create debounced function
+const debounce = (fn, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+};
+
+// Setup auto-save with debouncing
 const setupAutoSave = () => {
+  const debouncedAutoSave = debounce(autoSave, 500);
+  
   getFormFieldIds().forEach(fieldId => {
     const element = document.getElementById(fieldId);
     if (element) {
-      // Add debounced auto-save
-      let timeoutId;
-      element.addEventListener('input', () => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(autoSave, 500); // Save 500ms after user stops typing
-      });
-      
-      // Also save on blur (when user leaves the field)
+      element.addEventListener('input', debouncedAutoSave);
       element.addEventListener('blur', autoSave);
     }
   });
 };
 
-// Calculate ability modifier
-const getAbilityModifier = (score) => {
-  const num = parseInt(score);
-  if (isNaN(num)) return '';
-  return Math.floor((num - 10) / 2);
+// Pure function to create modifier display element
+const createModifierDisplay = (modifier) => {
+  const span = document.createElement('span');
+  span.className = 'character-form__ability-modifier';
+  span.textContent = modifier !== '' ? `(${modifier >= 0 ? '+' : ''}${modifier})` : '';
+  return span;
 };
 
 // Setup ability score modifiers display
@@ -200,38 +211,29 @@ const setupAbilityModifiers = () => {
   
   abilityIds.forEach(ability => {
     const input = document.getElementById(`character-${ability}`);
-    if (input) {
-      const updateModifier = () => {
-        const modifier = getAbilityModifier(input.value);
-        const modifierText = modifier >= 0 ? `+${modifier}` : `${modifier}`;
-        
-        // Find or create modifier display
-        let modifierSpan = input.parentNode.querySelector('.ability-modifier');
-        if (!modifierSpan) {
-          modifierSpan = document.createElement('span');
-          modifierSpan.className = 'ability-modifier';
-          modifierSpan.style.cssText = `
-            display: block;
-            font-size: 0.75rem;
-            color: var(--color-text-light);
-            text-align: center;
-            margin-top: 2px;
-          `;
-          input.parentNode.appendChild(modifierSpan);
-        }
-        
-        modifierSpan.textContent = modifier !== '' ? `(${modifierText})` : '';
-      };
+    if (!input) return;
+    
+    const updateModifier = () => {
+      const modifier = getAbilityModifier(input.value);
       
-      input.addEventListener('input', updateModifier);
-      updateModifier(); // Initialize
-    }
+      // Find or create modifier display
+      let modifierSpan = input.parentNode.querySelector('.character-form__ability-modifier');
+      if (modifierSpan) {
+        modifierSpan.remove();
+      }
+      
+      const newModifierSpan = createModifierDisplay(modifier);
+      input.parentNode.appendChild(newModifierSpan);
+    };
+    
+    input.addEventListener('input', updateModifier);
+    updateModifier(); // Initialize
   });
 };
 
 // Setup keyboard shortcuts
 const setupKeyboardShortcuts = () => {
-  document.addEventListener('keydown', (e) => {
+  const handleKeydown = (e) => {
     // Ctrl/Cmd + S to save
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
@@ -244,7 +246,9 @@ const setupKeyboardShortcuts = () => {
         window.location.href = 'index.html';
       }
     }
-  });
+  };
+  
+  document.addEventListener('keydown', handleKeydown);
 };
 
 // Initialize character page
@@ -269,9 +273,12 @@ document.addEventListener('DOMContentLoaded', init);
 
 // Export for testing
 if (typeof global !== 'undefined') {
+  global.createInitialCharacterState = createInitialCharacterState;
+  global.safeParseJSON = safeParseJSON;
   global.loadCharacterData = loadCharacterData;
   global.saveCharacterData = saveCharacterData;
   global.getCharacterFromForm = getCharacterFromForm;
   global.populateForm = populateForm;
   global.getAbilityModifier = getAbilityModifier;
+  global.debounce = debounce;
 }

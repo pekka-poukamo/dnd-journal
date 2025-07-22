@@ -5,26 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Character Details - D&D Journal</title>
     <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/character.css">
+    <link rel="stylesheet" href="css/components/navigation.css">
+    <link rel="stylesheet" href="css/components/character-form.css">
 </head>
 <body>
     <header>
         <div class="container">
-            <div class="header-nav">
-                <h1>Character Details</h1>
-                <nav>
-                    <a href="index.html" class="nav-link">← Back to Journal</a>
-                </nav>
-            </div>
+            <nav class="navigation">
+                <h1 class="navigation__title">Character Details</h1>
+                <a href="index.html" class="navigation__link">← Back to Journal</a>
+            </nav>
         </div>
     </header>
     
     <main class="container">
-        <div class="character-layout">
+        <div class="character-form">
             <!-- Basic Information -->
-            <section class="character-basic">
-                <h2>Basic Information</h2>
-                <div class="form-grid">
+            <section class="character-form__section character-form__section--basic">
+                <h2 class="character-form__title">Basic Information</h2>
+                <div class="character-form__grid">
                     <div class="form-group">
                         <label for="character-name" class="form-label">Character Name</label>
                         <input type="text" id="character-name" class="form-input" placeholder="Enter character name">
@@ -64,15 +63,15 @@
             </section>
 
             <!-- Background & Backstory -->
-            <section class="character-background">
-                <h2>Background & Backstory</h2>
+            <section class="character-form__section character-form__section--background">
+                <h2 class="character-form__title">Background & Backstory</h2>
                 <div class="form-group">
                     <label for="character-background" class="form-label">Background</label>
                     <input type="text" id="character-background" class="form-input" placeholder="e.g. Noble, Criminal, Folk Hero">
                 </div>
                 <div class="form-group">
                     <label for="character-backstory" class="form-label">Backstory</label>
-                    <textarea id="character-backstory" class="form-input character-backstory" rows="6" placeholder="Tell your character's story - their origins, motivations, and important life events..."></textarea>
+                    <textarea id="character-backstory" class="form-input character-form__backstory" rows="6" placeholder="Tell your character's story - their origins, motivations, and important life events..."></textarea>
                 </div>
                 <div class="form-group">
                     <label for="character-goals" class="form-label">Goals & Motivations</label>
@@ -81,9 +80,9 @@
             </section>
 
             <!-- Appearance & Personality -->
-            <section class="character-appearance">
-                <h2>Appearance & Personality</h2>
-                <div class="form-grid">
+            <section class="character-form__section character-form__section--appearance">
+                <h2 class="character-form__title">Appearance & Personality</h2>
+                <div class="character-form__grid">
                     <div class="form-group">
                         <label for="character-age" class="form-label">Age</label>
                         <input type="text" id="character-age" class="form-input" placeholder="e.g. 25 years">
@@ -120,35 +119,35 @@
             </section>
 
             <!-- Stats & Game Info -->
-            <section class="character-stats">
-                <h2>Abilities & Stats</h2>
-                <div class="stats-grid">
+            <section class="character-form__section character-form__section--stats">
+                <h2 class="character-form__title">Abilities & Stats</h2>
+                <div class="character-form__stats-grid">
                     <div class="form-group">
                         <label for="character-str" class="form-label">Strength</label>
-                        <input type="number" id="character-str" class="form-input stat-input" min="1" max="30" placeholder="10">
+                        <input type="number" id="character-str" class="form-input character-form__stat-input" min="1" max="30" placeholder="10">
                     </div>
                     <div class="form-group">
                         <label for="character-dex" class="form-label">Dexterity</label>
-                        <input type="number" id="character-dex" class="form-input stat-input" min="1" max="30" placeholder="10">
+                        <input type="number" id="character-dex" class="form-input character-form__stat-input" min="1" max="30" placeholder="10">
                     </div>
                     <div class="form-group">
                         <label for="character-con" class="form-label">Constitution</label>
-                        <input type="number" id="character-con" class="form-input stat-input" min="1" max="30" placeholder="10">
+                        <input type="number" id="character-con" class="form-input character-form__stat-input" min="1" max="30" placeholder="10">
                     </div>
                     <div class="form-group">
                         <label for="character-int" class="form-label">Intelligence</label>
-                        <input type="number" id="character-int" class="form-input stat-input" min="1" max="30" placeholder="10">
+                        <input type="number" id="character-int" class="form-input character-form__stat-input" min="1" max="30" placeholder="10">
                     </div>
                     <div class="form-group">
                         <label for="character-wis" class="form-label">Wisdom</label>
-                        <input type="number" id="character-wis" class="form-input stat-input" min="1" max="30" placeholder="10">
+                        <input type="number" id="character-wis" class="form-input character-form__stat-input" min="1" max="30" placeholder="10">
                     </div>
                     <div class="form-group">
                         <label for="character-cha" class="form-label">Charisma</label>
-                        <input type="number" id="character-cha" class="form-input stat-input" min="1" max="30" placeholder="10">
+                        <input type="number" id="character-cha" class="form-input character-form__stat-input" min="1" max="30" placeholder="10">
                     </div>
                 </div>
-                <div class="form-grid">
+                <div class="character-form__grid">
                     <div class="form-group">
                         <label for="character-ac" class="form-label">Armor Class</label>
                         <input type="number" id="character-ac" class="form-input" min="1" placeholder="10">
@@ -165,8 +164,8 @@
             </section>
 
             <!-- Equipment & Notes -->
-            <section class="character-equipment">
-                <h2>Equipment & Notes</h2>
+            <section class="character-form__section character-form__section--equipment">
+                <h2 class="character-form__title">Equipment & Notes</h2>
                 <div class="form-group">
                     <label for="character-equipment" class="form-label">Equipment & Inventory</label>
                     <textarea id="character-equipment" class="form-input" rows="6" placeholder="List your character's weapons, armor, items, and other equipment..."></textarea>

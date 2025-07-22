@@ -29,16 +29,16 @@ describe('D&D Journal Integration Tests', function() {
   });
 
   it('should complete full user workflow', function() {
-    // 1. User creates a character
-    const nameInput = document.getElementById('character-name');
-    const raceInput = document.getElementById('character-race');
-    const classInput = document.getElementById('character-class');
+    // 1. User creates a character (simulating data from character page)
+    state.character = {
+      name: 'Thorin',
+      race: 'Dwarf',
+      class: 'King',
+      level: '150'
+    };
 
-    nameInput.value = 'Thorin';
-    raceInput.value = 'Dwarf';
-    classInput.value = 'King';
-    
-    updateCharacter();
+    // Save the character data
+    saveData();
 
     // Character should be saved
     state.character.name.should.equal('Thorin');
@@ -139,15 +139,19 @@ describe('D&D Journal Integration Tests', function() {
     const entriesContainer = document.getElementById('entries-list');
     entriesContainer.innerHTML.should.include('No entries yet');
     
-    populateCharacterForm();
+    // Setup DOM for character summary test
+    document.body.innerHTML += `
+      <div class="character-summary__name" id="summary-name"></div>
+      <div class="character-summary__details" id="summary-details"></div>
+    `;
     
-    const nameInput = document.getElementById('character-name');
-    const raceInput = document.getElementById('character-race');
-    const classInput = document.getElementById('character-class');
+    displayCharacterSummary();
     
-    nameInput.value.should.equal('');
-    raceInput.value.should.equal('');
-    classInput.value.should.equal('');
+    const nameElement = document.getElementById('summary-name');
+    const detailsElement = document.getElementById('summary-details');
+    
+    nameElement.textContent.should.equal('No character created yet');
+    detailsElement.textContent.should.equal('Click "View Details" to create your character');
   });
 
   it('should maintain data integrity through multiple operations', function() {
@@ -179,10 +183,9 @@ describe('D&D Journal Integration Tests', function() {
     // Should have 3 total entries
     state.entries.should.have.length(3);
 
-    // Update character
-    const nameInput = document.getElementById('character-name');
-    nameInput.value = 'Frodo Baggins';
-    updateCharacter();
+    // Update character (simulating character page update)
+    state.character.name = 'Frodo Baggins';
+    saveData();
 
     // Verify everything is still consistent
     state.character.name.should.equal('Frodo Baggins');
