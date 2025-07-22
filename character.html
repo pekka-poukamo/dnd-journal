@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Details - D&D Journal</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components/navigation.css">
+    <link rel="stylesheet" href="css/components/character-form.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav class="navigation">
+                <h1 class="navigation__title">Character Details</h1>
+                <a href="index.html" class="navigation__link">← Back to Journal</a>
+            </nav>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div class="character-form">
+            <!-- Basic Information -->
+            <section class="character-form__section character-form__section--basic">
+                <h2 class="character-form__title">Basic Information</h2>
+                <div class="character-form__grid">
+                    <div class="form-group">
+                        <label for="character-name" class="form-label">Name</label>
+                        <input type="text" id="character-name" class="form-input" placeholder="Character name">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-race" class="form-label">Race</label>
+                        <input type="text" id="character-race" class="form-input" placeholder="e.g. Human">
+                    </div>
+                    <div class="form-group">
+                        <label for="character-class" class="form-label">Class</label>
+                        <input type="text" id="character-class" class="form-input" placeholder="e.g. Fighter">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Story Notes -->
+            <section class="character-form__section character-form__section--story">
+                <h2 class="character-form__title">Character Notes</h2>
+                <div class="form-group">
+                    <label for="character-backstory" class="form-label">Backstory</label>
+                    <textarea id="character-backstory" class="form-input character-form__backstory" rows="6" placeholder="Character's background, personality, and story..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="character-notes" class="form-label">Additional Notes</label>
+                    <textarea id="character-notes" class="form-input" rows="6" placeholder="Goals, relationships, abilities, equipment, or any other notes..."></textarea>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script type="module" src="js/character.js"></script>
+</body>
+</html>

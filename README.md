@@ -17,7 +17,7 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies.
 ❌ Rich text editing  
 ❌ Themes or customization  
 ❌ Export/import  
-❌ Advanced features  
+❌ Advanced features
 
 ## Quick Start
 
@@ -53,10 +53,16 @@ npm run deploy
 
 ## File Structure
 ```
-index.html          # Complete app
-css/main.css        # Styles
-js/app.js          # Logic (~150 lines)
-test/              # Test suite
+index.html          # Main app
+character.html      # Character page
+css/
+├── main.css        # Base styles
+└── components/     # Modular CSS
+js/
+├── app.js          # Main logic
+└── character.js    # Character logic
+test/               # Test suite
+docs/adr/          # Architecture decisions
 ```
 
 ## Browser Support

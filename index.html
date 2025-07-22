@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D Journal - Simple</title>
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components/character-summary.css">
 </head>
 <body>
     <header>
@@ -15,23 +16,16 @@
     
     <main class="container">
         <div class="grid gap-lg">
-            <!-- Character Section -->
-            <section class="character-section">
-                <h2>Your Character</h2>
-                <div id="character-form" class="character-form">
-                    <div class="form-group">
-                        <label for="character-name" class="form-label">Name</label>
-                        <input type="text" id="character-name" class="form-input" placeholder="Enter character name">
-                    </div>
-                    <div class="grid grid--two-col gap-md">
-                        <div class="form-group">
-                            <label for="character-race" class="form-label">Race</label>
-                            <input type="text" id="character-race" class="form-input" placeholder="e.g. Human">
-                        </div>
-                        <div class="form-group">
-                            <label for="character-class" class="form-label">Class</label>
-                            <input type="text" id="character-class" class="form-input" placeholder="e.g. Fighter">
-                        </div>
+            <!-- Character Summary Section -->
+            <section class="character-summary">
+                <div class="character-summary__header">
+                    <h2 class="character-summary__title">Your Character</h2>
+                    <a href="character.html" class="button button--secondary">View Details</a>
+                </div>
+                <div class="character-summary__content">
+                    <div class="character-summary__info">
+                        <div class="character-summary__name" id="summary-name">No character created yet</div>
+                        <div class="character-summary__details" id="summary-details">Click "View Details" to create your character</div>
                     </div>
                 </div>
             </section>
