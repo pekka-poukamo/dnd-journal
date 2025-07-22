@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Journal</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="flex justify-between items-center">
+                <h1>D&D Journal</h1>
+                <nav class="flex gap-md">
+                    <a href="journal.html" class="button button--secondary">New Entry</a>
+                    <a href="character.html" class="button button--secondary">Characters</a>
+                    <a href="ai-assistant.html" class="button button--secondary">AI Assistant</a>
+                    <button id="settings-btn" class="button button--secondary">Settings</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div class="grid grid--two-col gap-lg">
+            <section class="recent-entries">
+                <div class="flex justify-between items-center">
+                    <h2>Recent Entries</h2>
+                    <a href="journal.html" class="button">Add Entry</a>
+                </div>
+                <div id="entries-list" class="entries-container"></div>
+            </section>
+            
+            <aside>
+                <section class="character-summary">
+                    <div class="flex justify-between items-center">
+                        <h2>Current Character</h2>
+                        <a href="character.html" class="button button--secondary">Manage</a>
+                    </div>
+                    <div id="current-character"></div>
+                </section>
+                
+                <section class="quick-stats">
+                    <h3>Quick Stats</h3>
+                    <div id="stats-container">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Entries:</span>
+                            <span id="total-entries" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Characters:</span>
+                            <span id="total-characters" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">This Week:</span>
+                            <span id="week-entries" class="stat-value">0</span>
+                        </div>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </main>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Settings</h3>
+                    <button id="close-settings" class="button button--secondary">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="api-key" class="form-label">OpenAI API Key:</label>
+                        <input type="password" id="api-key" class="form-input" placeholder="sk-...">
+                        <small class="form-help">Stored locally in your browser only</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="theme-select" class="form-label">Theme:</label>
+                        <select id="theme-select" class="form-input">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="auto-save" checked>
+                            Enable auto-save
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="save-settings" class="button">Save Settings</button>
+                    <button id="export-data" class="button button--secondary">Export Data</button>
+                    <button id="import-data" class="button button--secondary">Import Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal hidden">
+        <div class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Import Data</h3>
+                    <button id="close-import" class="button button--secondary">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="import-file" class="form-label">Select JSON file:</label>
+                        <input type="file" id="import-file" accept=".json" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="import-text" class="form-label">Or paste JSON data:</label>
+                        <textarea id="import-text" class="form-input" rows="10" placeholder="Paste your exported data here..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="confirm-import" class="button">Import</button>
+                    <button id="cancel-import" class="button button--secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
