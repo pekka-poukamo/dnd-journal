@@ -233,8 +233,6 @@ textarea {
   border-radius: var(--border-radius);
 }
 
-
-<<<<<<< HEAD
 .character-summary {
   background: var(--color-background);
   padding: var(--space-lg);
@@ -378,8 +376,6 @@ textarea {
   color: var(--color-text-light);
   font-size: 0.9rem;
 }
-=======
->>>>>>> 876ce5b (Refactor: Implement component-based architecture with BEM CSS)
 
 /* Responsive Design */
 @media (max-width: 767px) {
@@ -398,7 +394,6 @@ textarea {
   section {
     padding: var(--space-md);
   }
-<<<<<<< HEAD
   
   .prompt-buttons {
     flex-direction: column;
@@ -424,6 +419,4 @@ textarea {
     gap: var(--space-sm);
     text-align: center;
   }
-=======
->>>>>>> 876ce5b (Refactor: Implement component-based architecture with BEM CSS)
 }
