@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Journal - Simple</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>D&D Journal</h1>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div class="grid gap-lg">
+            <!-- Character Section -->
+            <section class="character-section">
+                <h2>Your Character</h2>
+                <div id="character-form" class="character-form">
+                    <div class="form-group">
+                        <label for="character-name" class="form-label">Name</label>
+                        <input type="text" id="character-name" class="form-input" placeholder="Enter character name">
+                    </div>
+                    <div class="grid grid--two-col gap-md">
+                        <div class="form-group">
+                            <label for="character-race" class="form-label">Race</label>
+                            <input type="text" id="character-race" class="form-input" placeholder="e.g. Human">
+                        </div>
+                        <div class="form-group">
+                            <label for="character-class" class="form-label">Class</label>
+                            <input type="text" id="character-class" class="form-input" placeholder="e.g. Fighter">
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- New Entry Section -->
+            <section class="entry-section">
+                <h2>Add Entry</h2>
+                <div class="entry-form">
+                    <div class="form-group">
+                        <label for="entry-title" class="form-label">Title</label>
+                        <input type="text" id="entry-title" class="form-input" placeholder="What happened?">
+                    </div>
+                    <div class="form-group">
+                        <label for="entry-content" class="form-label">Notes</label>
+                        <textarea id="entry-content" class="form-input" rows="4" placeholder="Write your notes here..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="entry-image" class="form-label">Image URL (optional)</label>
+                        <input type="url" id="entry-image" class="form-input" placeholder="https://example.com/image.jpg">
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Journal Entries -->
+            <section class="entries-section">
+                <h2>Journal Entries</h2>
+                <div id="entries-list" class="entries-list"></div>
+            </section>
+        </div>
+    </main>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
