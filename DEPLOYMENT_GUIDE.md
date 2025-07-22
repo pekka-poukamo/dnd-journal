@@ -160,6 +160,24 @@ To change the deployment domain:
    ```
 3. Commit and push the changes
 
+## 📋 **What to Expect**
+
+### **First Push (No Secrets Configured)**
+When you first push to `main` without setting up Surge secrets:
+
+1. **Workflow runs successfully** ✅
+2. **Shows helpful message**: "Surge credentials not found - deployment will be skipped"
+3. **Provides setup instructions** in the Actions log
+4. **No deployment occurs** (but no errors either)
+5. **Manual deployment available**: You can still run `npm run deploy` locally
+
+### **After Setting Up Secrets**
+Once you add `SURGE_LOGIN` and `SURGE_TOKEN`:
+
+1. **Next push automatically deploys** 🚀
+2. **App goes live** at `https://dnd-journal.surge.sh`
+3. **All future pushes auto-deploy**
+
 ## 🐛 Troubleshooting
 
 ### Common Issues
