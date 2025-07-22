@@ -135,335 +135,681 @@ Static HTML/CSS/JS Site
 
 ### Core JavaScript Structure
 ```javascript
-// js/app.js - Main application
-class DNDJournal {
-    constructor() {
-        this.storage = new Storage();
-        this.currentCharacter = null;
-        this.init();
-    }
-    
-    init() {
-        this.loadCurrentCharacter();
-        this.renderDashboard();
-        this.setupEventListeners();
-    }
-    
-    loadCurrentCharacter() {
-        const settings = this.storage.getSettings();
-        if (settings.currentCharacter) {
-            this.currentCharacter = this.storage.getCharacter(settings.currentCharacter);
-        }
-    }
-    
-    renderDashboard() {
-        this.renderRecentEntries();
-        this.renderCharacterSummary();
-    }
-    
-    renderRecentEntries() {
-        const entries = this.storage.getRecentEntries(5);
-        const container = document.getElementById('entries-list');
-        
-        container.innerHTML = entries.map(entry => `
-            <div class="entry-card" onclick="editEntry('${entry.id}')">
-                <h3>${entry.title}</h3>
-                <p class="entry-meta">${entry.type} • ${new Date(entry.date).toLocaleDateString()}</p>
-                <p class="entry-preview">${entry.content.substring(0, 100)}...</p>
-                <div class="tags">
-                    ${entry.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-                </div>
-            </div>
-        `).join('');
-    }
-    
-    renderCharacterSummary() {
-        if (!this.currentCharacter) return;
-        
-        const container = document.getElementById('current-character');
-        container.innerHTML = `
-            <div class="character-card">
-                <h3>${this.currentCharacter.name}</h3>
-                <p>Level ${this.currentCharacter.level} ${this.currentCharacter.race} ${this.currentCharacter.class}</p>
-                <p class="traits">${this.currentCharacter.traits}</p>
-            </div>
-        `;
-    }
-}
+// js/app.js - Functional dashboard implementation
+import { getStorage } from './utils/storage.js';
+import { createEntryCard, createCharacterCard } from './components/Cards.js';
+import { escapeHtml, formatDate, stripHtml } from './utils/formatters.js';
 
-// Initialize app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    window.app = new DNDJournal();
-});
+// Pure functions for data selection
+const getCurrentCharacter = (state) => 
+  state.characters[state.settings.currentCharacter];
+
+const getRecentEntries = (state, limit = 5) => 
+  Object.values(state.entries)
+    .sort((a, b) => b.created - a.created)
+    .slice(0, limit);
+
+// Pure rendering functions
+const renderEntries = (entries, container) => {
+  const entryElements = entries.length > 0 
+    ? entries.map(createEntryCard)
+    : [createEmptyState('No entries yet. Create your first entry!')];
+  
+  container.replaceChildren(...entryElements);
+};
+
+const renderCharacterSummary = (character, container) => {
+  const element = character 
+    ? createCharacterCard(character)
+    : createEmptyState('No character selected. Create a character!');
+  
+  container.replaceChildren(element);
+};
+
+const createEmptyState = (message) => {
+  const div = document.createElement('div');
+  div.className = 'empty-state';
+  div.innerHTML = `<p>${message}</p>`;
+  return div;
+};
+
+// Main dashboard initialization
+const initDashboard = () => {
+  const state = getStorage().getData();
+  const entriesContainer = document.getElementById('entries-list');
+  const characterContainer = document.getElementById('current-character');
+  
+  if (!entriesContainer || !characterContainer) return;
+  
+  const recentEntries = getRecentEntries(state);
+  const currentCharacter = getCurrentCharacter(state);
+  
+  renderEntries(recentEntries, entriesContainer);
+  renderCharacterSummary(currentCharacter, characterContainer);
+};
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', initDashboard);
 ```
 
 ### Storage System
 ```javascript
-// js/storage.js - Local storage management
-class Storage {
-    constructor() {
-        this.storageKey = 'dnd-journal-data';
-        this.data = this.loadData();
+// js/utils/storage.js - Functional storage management
+const STORAGE_KEY = 'dnd-journal-data';
+
+// Default state structure
+const createDefaultState = () => ({
+  characters: {},
+  entries: {},
+  settings: {
+    currentCharacter: null,
+    openaiApiKey: null,
+    preferences: {
+      theme: 'light',
+      autoSave: true
     }
-    
-    loadData() {
-        const stored = localStorage.getItem(this.storageKey);
-        return stored ? JSON.parse(stored) : {
-            characters: {},
-            entries: {},
-            settings: {
-                currentCharacter: null,
-                syncEnabled: false,
-                lastSync: null
-            }
-        };
+  }
+});
+
+// Pure functions for data access
+const loadData = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : createDefaultState();
+  } catch (error) {
+    console.error('Failed to load data:', error);
+    return createDefaultState();
+  }
+};
+
+const saveData = (data) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return { success: true, data };
+  } catch (error) {
+    console.error('Failed to save data:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Pure utility functions
+const generateId = () => 
+  Date.now().toString(36) + Math.random().toString(36).substr(2);
+
+const addTimestamp = (item) => ({
+  ...item,
+  id: item.id || generateId(),
+  created: item.created || Date.now()
+});
+
+// Character operations (pure functions)
+const addCharacter = (state, character) => ({
+  ...state,
+  characters: {
+    ...state.characters,
+    [character.id]: addTimestamp(character)
+  }
+});
+
+const updateCharacter = (state, id, updates) => ({
+  ...state,
+  characters: {
+    ...state.characters,
+    [id]: { ...state.characters[id], ...updates }
+  }
+});
+
+const deleteCharacter = (state, id) => {
+  const { [id]: deleted, ...remainingCharacters } = state.characters;
+  return {
+    ...state,
+    characters: remainingCharacters,
+    settings: state.settings.currentCharacter === id 
+      ? { ...state.settings, currentCharacter: null }
+      : state.settings
+  };
+};
+
+// Entry operations (pure functions)
+const addEntry = (state, entry) => ({
+  ...state,
+  entries: {
+    ...state.entries,
+    [entry.id]: addTimestamp(entry)
+  }
+});
+
+const updateEntry = (state, id, updates) => ({
+  ...state,
+  entries: {
+    ...state.entries,
+    [id]: { ...state.entries[id], ...updates }
+  }
+});
+
+const deleteEntry = (state, id) => {
+  const { [id]: deleted, ...remainingEntries } = state.entries;
+  return {
+    ...state,
+    entries: remainingEntries
+  };
+};
+
+// Settings operations (pure functions)
+const updateSettings = (state, updates) => ({
+  ...state,
+  settings: {
+    ...state.settings,
+    ...updates,
+    preferences: {
+      ...state.settings.preferences,
+      ...updates.preferences
     }
-    
-    saveData() {
-        localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+  }
+});
+
+// Data selectors (pure functions)
+const getCharacter = (state, id) => state.characters[id];
+const getAllCharacters = (state) => Object.values(state.characters);
+const getEntry = (state, id) => state.entries[id];
+const getAllEntries = (state) => Object.values(state.entries);
+const getSettings = (state) => state.settings;
+
+const getRecentEntries = (state, limit = 10) => 
+  getAllEntries(state)
+    .sort((a, b) => b.created - a.created)
+    .slice(0, limit);
+
+const getEntriesForCharacter = (state, characterId) => 
+  getAllEntries(state)
+    .filter(entry => entry.characterId === characterId)
+    .sort((a, b) => b.created - a.created);
+
+// Export/Import functions
+const exportData = (state) => JSON.stringify(state, null, 2);
+
+const importData = (jsonString) => {
+  try {
+    const imported = JSON.parse(jsonString);
+    return { success: true, data: imported };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// Storage API factory
+const createStorage = () => {
+  let currentState = loadData();
+  
+  const updateState = (updateFn) => {
+    const newState = updateFn(currentState);
+    const saveResult = saveData(newState);
+    if (saveResult.success) {
+      currentState = newState;
     }
+    return saveResult;
+  };
+  
+  return {
+    // Data access
+    getData: () => currentState,
     
-    // Character methods
-    saveCharacter(character) {
-        if (!character.id) {
-            character.id = this.generateId();
+    // Character operations
+    saveCharacter: (character) => updateState(state => addCharacter(state, character)),
+    updateCharacter: (id, updates) => updateState(state => updateCharacter(state, id, updates)),
+    deleteCharacter: (id) => updateState(state => deleteCharacter(state, id)),
+    
+    // Entry operations
+    saveEntry: (entry) => updateState(state => addEntry(state, entry)),
+    updateEntry: (id, updates) => updateState(state => updateEntry(state, id, updates)),
+    deleteEntry: (id) => updateState(state => deleteEntry(state, id)),
+    
+    // Settings
+    updateSettings: (updates) => updateState(state => updateSettings(state, updates)),
+    
+    // Import/Export
+    exportData: () => exportData(currentState),
+    importData: (jsonString) => {
+      const result = importData(jsonString);
+      if (result.success) {
+        const saveResult = saveData(result.data);
+        if (saveResult.success) {
+          currentState = result.data;
         }
-        this.data.characters[character.id] = character;
-        this.saveData();
-        return character;
+        return saveResult;
+      }
+      return result;
     }
-    
-    getCharacter(id) {
-        return this.data.characters[id];
-    }
-    
-    getAllCharacters() {
-        return Object.values(this.data.characters);
-    }
-    
-    // Entry methods
-    saveEntry(entry) {
-        if (!entry.id) {
-            entry.id = this.generateId();
-        }
-        entry.created = entry.created || Date.now();
-        this.data.entries[entry.id] = entry;
-        this.saveData();
-        return entry;
-    }
-    
-    getEntry(id) {
-        return this.data.entries[id];
-    }
-    
-    getRecentEntries(limit = 10) {
-        return Object.values(this.data.entries)
-            .sort((a, b) => b.created - a.created)
-            .slice(0, limit);
-    }
-    
-    getEntriesForCharacter(characterId) {
-        return Object.values(this.data.entries)
-            .filter(entry => entry.characterId === characterId)
-            .sort((a, b) => b.created - a.created);
-    }
-    
-    // Utility methods
-    generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2);
-    }
-    
-    getSettings() {
-        return this.data.settings;
-    }
-    
-    updateSettings(updates) {
-        Object.assign(this.data.settings, updates);
-        this.saveData();
-    }
-    
-    // Export/Import for backup
-    exportData() {
-        return JSON.stringify(this.data, null, 2);
-    }
-    
-    importData(jsonString) {
-        try {
-            const imported = JSON.parse(jsonString);
-            this.data = imported;
-            this.saveData();
-            return true;
-        } catch (error) {
-            console.error('Failed to import data:', error);
-            return false;
-        }
-    }
-}
+  };
+};
+
+// Singleton storage instance
+let storageInstance = null;
+export const getStorage = () => {
+  if (!storageInstance) {
+    storageInstance = createStorage();
+  }
+  return storageInstance;
+};
 ```
 
 ### Journal Editor
 ```javascript
-// js/journal.js - Journal entry functionality
-class JournalEditor {
-    constructor() {
-        this.storage = new Storage();
-        this.currentEntry = null;
-        this.init();
+// js/pages/Journal.js - Functional journal editor
+import { getStorage } from '../utils/storage.js';
+import { debounce } from '../utils/helpers.js';
+import { showNotification } from '../utils/notifications.js';
+
+// Pure functions for form data processing
+const parseFormData = (form) => {
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData.entries());
+  
+  return {
+    title: data.title.trim() || 'Untitled Entry',
+    content: document.getElementById('editor').innerHTML,
+    type: data.type,
+    tags: parseTags(data.tags),
+    characterId: data.characterId || null,
+    date: new Date().toISOString().split('T')[0]
+  };
+};
+
+const parseTags = (tagString) => 
+  tagString.split(',')
+    .map(tag => tag.trim())
+    .filter(tag => tag.length > 0);
+
+// Pure functions for editor commands
+const formatText = (command) => () => {
+  document.execCommand(command, false, null);
+  document.getElementById('editor').focus();
+};
+
+const createToolbarHandlers = () => ({
+  bold: formatText('bold'),
+  italic: formatText('italic'),
+  heading: () => {
+    document.execCommand('formatBlock', false, '<h3>');
+    document.getElementById('editor').focus();
+  }
+});
+
+// Form validation
+const validateEntry = (entry) => {
+  const errors = [];
+  
+  if (!entry.title.trim()) {
+    errors.push('Title is required');
+  }
+  
+  if (!entry.content.trim()) {
+    errors.push('Content is required');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+// Entry operations
+const saveEntry = (entryData, currentEntryId = null) => {
+  const validation = validateEntry(entryData);
+  
+  if (!validation.isValid) {
+    return { success: false, errors: validation.errors };
+  }
+  
+  const entry = {
+    ...entryData,
+    id: currentEntryId || undefined
+  };
+  
+  const storage = getStorage();
+  const result = currentEntryId 
+    ? storage.updateEntry(currentEntryId, entry)
+    : storage.saveEntry(entry);
+  
+  return result;
+};
+
+// Form population
+const populateForm = (entry) => {
+  if (!entry) return;
+  
+  document.getElementById('title').value = entry.title;
+  document.getElementById('type').value = entry.type;
+  document.getElementById('tags').value = entry.tags.join(', ');
+  document.getElementById('character-select').value = entry.characterId || '';
+  document.getElementById('editor').innerHTML = entry.content;
+};
+
+const loadCharacterOptions = () => {
+  const storage = getStorage();
+  const state = storage.getData();
+  const characters = Object.values(state.characters);
+  const select = document.getElementById('character-select');
+  
+  select.innerHTML = '<option value="">Select Character</option>';
+  
+  characters.forEach(character => {
+    const option = document.createElement('option');
+    option.value = character.id;
+    option.textContent = character.name;
+    if (character.id === state.settings.currentCharacter) {
+      option.selected = true;
     }
+    select.appendChild(option);
+  });
+};
+
+// Auto-save functionality
+const createAutoSave = (getCurrentEntry) => {
+  let hasChanges = false;
+  
+  const markChanged = () => { hasChanges = true; };
+  const markSaved = () => { hasChanges = false; };
+  
+  const autoSave = debounce(() => {
+    if (hasChanges) {
+      const form = document.getElementById('entry-form');
+      const entryData = parseFormData(form);
+      const currentEntry = getCurrentEntry();
+      
+      saveEntry(entryData, currentEntry?.id);
+      markSaved();
+    }
+  }, 2000);
+  
+  return { markChanged, autoSave };
+};
+
+// Main initialization
+const initJournalEditor = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const entryId = urlParams.get('id');
+  
+  let currentEntry = null;
+  
+  // Load existing entry if editing
+  if (entryId) {
+    const storage = getStorage();
+    const state = storage.getData();
+    currentEntry = state.entries[entryId];
+    if (currentEntry) {
+      populateForm(currentEntry);
+    }
+  }
+  
+  // Load character options
+  loadCharacterOptions();
+  
+  // Setup toolbar handlers
+  const toolbarHandlers = createToolbarHandlers();
+  document.getElementById('bold-btn').onclick = toolbarHandlers.bold;
+  document.getElementById('italic-btn').onclick = toolbarHandlers.italic;
+  document.getElementById('heading-btn').onclick = toolbarHandlers.heading;
+  
+  // Setup auto-save
+  const { markChanged, autoSave } = createAutoSave(() => currentEntry);
+  document.getElementById('editor').addEventListener('input', () => {
+    markChanged();
+    autoSave();
+  });
+  
+  // Setup form submission
+  document.getElementById('entry-form').addEventListener('submit', (event) => {
+    event.preventDefault();
     
-    init() {
-        this.setupEditor();
-        this.loadEntryFromURL();
-    }
+    const entryData = parseFormData(event.target);
+    const result = saveEntry(entryData, currentEntry?.id);
     
-    setupEditor() {
-        // Simple rich text editing with basic formatting
-        const editor = document.getElementById('editor');
-        
-        // Add formatting buttons
-        document.getElementById('bold-btn').onclick = () => this.formatText('bold');
-        document.getElementById('italic-btn').onclick = () => this.formatText('italic');
-        
-        // Auto-save functionality
-        editor.addEventListener('input', this.debounce(() => this.autoSave(), 1000));
+    if (result.success) {
+      showNotification('Entry saved successfully!');
+      setTimeout(() => window.location.href = 'index.html', 1000);
+    } else {
+      showNotification('Failed to save: ' + result.errors.join(', '), 'error');
     }
-    
-    formatText(command) {
-        document.execCommand(command, false, null);
-        document.getElementById('editor').focus();
-    }
-    
-    saveEntry() {
-        const title = document.getElementById('title').value;
-        const content = document.getElementById('editor').innerHTML;
-        const type = document.getElementById('type').value;
-        const tags = this.parseTags(document.getElementById('tags').value);
-        
-        const entry = {
-            id: this.currentEntry?.id,
-            title: title || 'Untitled Entry',
-            content,
-            type,
-            tags,
-            characterId: this.getCurrentCharacterId(),
-            date: new Date().toISOString().split('T')[0],
-            created: this.currentEntry?.created || Date.now()
-        };
-        
-        this.storage.saveEntry(entry);
-        this.showSaveConfirmation();
-    }
-    
-    parseTags(tagString) {
-        return tagString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-    }
-    
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-    
-    autoSave() {
-        if (this.hasUnsavedChanges()) {
-            this.saveEntry();
-        }
-    }
-}
+  });
+};
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', initJournalEditor);
 ```
 
 ### AI Assistant Integration
 ```javascript
-// js/ai.js - Direct OpenAI API integration
-class AIAssistant {
-    constructor() {
-        this.storage = new Storage();
-        this.apiKey = this.getApiKey();
-    }
-    
-    getApiKey() {
-        // Get API key from settings or prompt user
-        const settings = this.storage.getSettings();
-        if (!settings.openaiApiKey) {
-            const key = prompt('Enter your OpenAI API key (will be stored locally):');
-            if (key) {
-                settings.openaiApiKey = key;
-                this.storage.updateSettings(settings);
-            }
-            return key;
-        }
-        return settings.openaiApiKey;
-    }
-    
-    async generatePrompt(type, context, userInput = '') {
-        if (!this.apiKey) {
-            return { error: 'OpenAI API key required' };
-        }
-        
-        const character = this.storage.getCharacter(this.storage.getSettings().currentCharacter);
-        const recentEntries = this.storage.getRecentEntries(3);
-        
-        const prompt = this.buildPrompt(type, character, recentEntries, userInput);
-        
-        try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.apiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'You are a helpful D&D assistant that provides roleplay suggestions.'
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    max_tokens: 300,
-                    temperature: 0.7
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`API error: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            return { content: data.choices[0].message.content };
-            
-        } catch (error) {
-            console.error('AI generation failed:', error);
-            return { error: 'Failed to generate AI response. Check your API key.' };
-        }
-    }
-    
-    buildPrompt(type, character, recentEntries, userInput) {
-        const context = `
+// js/pages/AIAssistant.js - Functional AI integration
+import { getStorage } from '../utils/storage.js';
+import { showNotification } from '../utils/notifications.js';
+
+// Pure functions for API key management
+const getApiKey = () => {
+  const storage = getStorage();
+  const state = storage.getData();
+  return state.settings.openaiApiKey;
+};
+
+const setApiKey = (apiKey) => {
+  const storage = getStorage();
+  return storage.updateSettings({ openaiApiKey: apiKey });
+};
+
+const promptForApiKey = () => {
+  const key = prompt('Enter your OpenAI API key (will be stored locally):');
+  if (key) {
+    setApiKey(key);
+    return key;
+  }
+  return null;
+};
+
+// Pure functions for prompt building
+const buildCharacterContext = (character) => 
+  character ? `
 Character: ${character.name} (${character.race} ${character.class}, Level ${character.level})
 Traits: ${character.traits || 'Not specified'}
-Recent Events: ${recentEntries.map(e => e.title).join(', ') || 'None'}
-        `;
-        
-        const prompts = {
-            roleplay: `${context}\nBased on this character, suggest how they would react to: ${userInput}`,
-            character: `${context}\nSuggest character development ideas for: ${userInput}`,
-            scenario: `${context}\nGenerate a scenario or challenge: ${userInput}`
-        };
-        
-        return prompts[type] || prompts.roleplay;
+Backstory: ${character.backstory ? character.backstory.substring(0, 200) + '...' : 'None'}
+` : 'No character selected';
+
+const buildRecentEventsContext = (entries) => 
+  entries.length > 0 
+    ? `Recent Events: ${entries.map(e => e.title).join(', ')}`
+    : 'Recent Events: None';
+
+const createPromptTemplate = (type) => {
+  const templates = {
+    roleplay: (context, userInput) => 
+      `${context}\n\nBased on this character, suggest how they would react to: ${userInput}\n\nProvide 2-3 specific roleplay suggestions with dialogue options.`,
+    
+    character: (context, userInput) => 
+      `${context}\n\nSuggest character development ideas focusing on: ${userInput}\n\nInclude personality growth, relationships, and backstory elements.`,
+    
+    scenario: (context, userInput) => 
+      `${context}\n\nGenerate an interesting scenario or challenge: ${userInput}\n\nInclude potential obstacles, choices, and consequences.`
+  };
+  
+  return templates[type] || templates.roleplay;
+};
+
+const buildPrompt = (type, character, recentEntries, userInput) => {
+  const characterContext = buildCharacterContext(character);
+  const eventsContext = buildRecentEventsContext(recentEntries);
+  const fullContext = characterContext + eventsContext;
+  
+  const templateFn = createPromptTemplate(type);
+  return templateFn(fullContext, userInput);
+};
+
+// API interaction
+const callOpenAI = async (prompt, apiKey) => {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful D&D assistant that provides creative roleplay suggestions. Keep responses concise and actionable.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 400,
+      temperature: 0.7
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data.choices[0].message.content;
+};
+
+// Main AI generation function
+const generateAIResponse = async (type, characterId, userInput) => {
+  try {
+    let apiKey = getApiKey();
+    
+    if (!apiKey) {
+      apiKey = promptForApiKey();
+      if (!apiKey) {
+        return { success: false, error: 'API key required' };
+      }
     }
-}
+    
+    const storage = getStorage();
+    const state = storage.getData();
+    
+    const character = state.characters[characterId];
+    if (!character) {
+      return { success: false, error: 'Character not found' };
+    }
+    
+    const recentEntries = Object.values(state.entries)
+      .filter(entry => entry.characterId === characterId)
+      .sort((a, b) => b.created - a.created)
+      .slice(0, 3);
+    
+    const prompt = buildPrompt(type, character, recentEntries, userInput);
+    const content = await callOpenAI(prompt, apiKey);
+    
+    return { success: true, content };
+    
+  } catch (error) {
+    console.error('AI generation failed:', error);
+    
+    if (error.message.includes('401')) {
+      return { success: false, error: 'Invalid API key. Please check your OpenAI API key.' };
+    }
+    
+    return { success: false, error: 'Failed to generate response. Please try again.' };
+  }
+};
+
+// UI helper functions
+const createLoadingState = () => {
+  const div = document.createElement('div');
+  div.className = 'ai-response loading';
+  div.innerHTML = '<p>🤔 Generating suggestions...</p>';
+  return div;
+};
+
+const createErrorState = (error) => {
+  const div = document.createElement('div');
+  div.className = 'ai-response error';
+  div.innerHTML = `<p>❌ ${error}</p>`;
+  return div;
+};
+
+const createSuccessState = (content, type) => {
+  const div = document.createElement('div');
+  div.className = 'ai-response success';
+  div.innerHTML = `
+    <h3>🤖 AI Suggestions (${type})</h3>
+    <div class="response-content">${content.replace(/\n/g, '<br>')}</div>
+  `;
+  return div;
+};
+
+// Form management
+const loadCharacterOptions = () => {
+  const storage = getStorage();
+  const state = storage.getData();
+  const characters = Object.values(state.characters);
+  const select = document.getElementById('ai-character-select');
+  
+  select.innerHTML = '<option value="">Select Character</option>';
+  
+  characters.forEach(character => {
+    const option = document.createElement('option');
+    option.value = character.id;
+    option.textContent = character.name;
+    if (character.id === state.settings.currentCharacter) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+  });
+  
+  updateGenerateButton();
+};
+
+const updateGenerateButton = () => {
+  const characterSelected = document.getElementById('ai-character-select').value;
+  const button = document.getElementById('generate-btn');
+  button.disabled = !characterSelected;
+};
+
+// Main initialization
+const initAIAssistant = () => {
+  loadCharacterOptions();
+  
+  // Setup event listeners
+  document.getElementById('ai-character-select').addEventListener('change', updateGenerateButton);
+  document.getElementById('user-input').addEventListener('input', updateGenerateButton);
+  
+  document.getElementById('generate-btn').addEventListener('click', async () => {
+    const characterId = document.getElementById('ai-character-select').value;
+    const promptType = document.getElementById('prompt-type').value;
+    const userInput = document.getElementById('user-input').value.trim();
+    const container = document.getElementById('ai-response');
+    
+    if (!characterId) {
+      showNotification('Please select a character first.', 'error');
+      return;
+    }
+    
+    if (!userInput) {
+      showNotification('Please enter a description or question.', 'error');
+      return;
+    }
+    
+    // Show loading state
+    container.replaceChildren(createLoadingState());
+    
+    // Generate response
+    const result = await generateAIResponse(promptType, characterId, userInput);
+    
+    // Show result
+    if (result.success) {
+      container.replaceChildren(createSuccessState(result.content, promptType));
+    } else {
+      container.replaceChildren(createErrorState(result.error));
+    }
+  });
+};
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', initAIAssistant);
 ```
 
 ## Settings Management
