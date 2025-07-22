@@ -50,7 +50,7 @@ We will use **no build tools** - direct development with native browser features
 
 ## Implementation
 - Direct `<script>` and `<link>` tags in HTML
-- ES6 import/export if needed (but prefer single files)
+- ES6 import/export if needed
 - CSS custom properties instead of SCSS variables
 - Native browser APIs only
 - Files served directly by web server

@@ -107,7 +107,7 @@ Before suggesting ANY changes:
 2. ✅ **Check forbidden features** in ADR-0007
 3. ✅ **Verify technology stack** matches ADR-0001 (vanilla JS only)
 4. ✅ **Confirm functional approach** per ADR-0002 (no classes/mutations)
-5. ✅ **Ensure single-file architecture** per ADR-0003
+5. ✅ **Validate data persistence** per ADR-0004 (localStorage only)
 6. ✅ **Validate testing requirements** per ADR-0005
 
 ### Automatic Failure Conditions

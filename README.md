@@ -1,6 +1,6 @@
 # D&D Journal
 
-A minimal D&D journal app. Vanilla JavaScript, zero dependencies, one HTML file.
+A minimal D&D journal app. Vanilla JavaScript, zero dependencies.
 
 🎲 **[Live App](https://dnd-journal.surge.sh)** 🎲
 
@@ -37,7 +37,7 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies, one HTML file.
 - **Keep it simple** - No feature bloat (see ADR-0007)
 - **Pure functions only** - No mutations (see ADR-0002)
 - **Vanilla JS/CSS only** - No frameworks (see ADR-0001)
-- **Single HTML file** - No routing/SPA complexity (see ADR-0003)
+- **localStorage only** - No databases/APIs (see ADR-0004)
 - **Surge.sh deployment** - No complex hosting (see ADR-0008)
 
 ### Run Tests

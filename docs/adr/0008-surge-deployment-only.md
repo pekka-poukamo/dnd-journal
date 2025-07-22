@@ -22,7 +22,7 @@ We will use **Surge.sh only** for deployment with manual deployment as fallback.
 ### Positive
 - Instant deployment from any directory
 - No configuration files needed
-- Works perfectly with our single HTML file approach
+- Works perfectly with static HTML/CSS/JS files
 - Simple automation with GitHub Actions
 - No vendor lock-in (can copy files anywhere)
 
