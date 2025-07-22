@@ -224,3 +224,18 @@ const init = () => {
 
 // Start the app when DOM is ready
 document.addEventListener('DOMContentLoaded', init);
+
+// Export functions for testing (only in test environment)
+if (typeof global !== 'undefined') {
+  global.state = state;
+  global.generateId = generateId;
+  global.formatDate = formatDate;
+  global.loadData = loadData;
+  global.saveData = saveData;
+  global.createEntryElement = createEntryElement;
+  global.renderEntries = renderEntries;
+  global.addEntry = addEntry;
+  global.updateCharacter = updateCharacter;
+  global.populateCharacterForm = populateCharacterForm;
+  global.init = init;
+}

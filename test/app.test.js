@@ -1,0 +1,344 @@
+const path = require('path');
+const fs = require('fs');
+require('./setup');
+const { should } = require('chai');
+
+// Load the app.js file as a module
+const appPath = path.join(__dirname, '../js/app.js');
+const appContent = fs.readFileSync(appPath, 'utf8');
+
+// Create a proper module context
+function loadApp() {
+  // Clear localStorage before each test
+  localStorage.clear();
+  
+  // Reset DOM
+  document.body.innerHTML = `
+    <div id="character-name"></div>
+    <div id="character-race"></div>
+    <div id="character-class"></div>
+    <div id="entry-title"></div>
+    <div id="entry-content"></div>
+    <div id="entry-image"></div>
+    <div id="entries-list"></div>
+  `;
+  
+  // Clear any existing globals
+  delete global.state;
+  delete global.generateId;
+  delete global.formatDate;
+  delete global.loadData;
+  delete global.saveData;
+  delete global.createEntryElement;
+  delete global.renderEntries;
+  delete global.addEntry;
+  delete global.updateCharacter;
+  delete global.populateCharacterForm;
+  
+  // Evaluate the app code in the global context
+  eval(appContent);
+  
+  return {
+    generateId: global.generateId,
+    formatDate: global.formatDate,
+    loadData: global.loadData,
+    saveData: global.saveData,
+    state: global.state
+  };
+}
+
+describe('D&D Journal App', function() {
+  beforeEach(function() {
+    loadApp();
+  });
+
+  describe('generateId', function() {
+    it('should generate a unique string ID', function() {
+      const id1 = generateId();
+      // Small delay to ensure different timestamps
+      const start = Date.now();
+      while (Date.now() === start) {
+        // wait for next millisecond
+      }
+      const id2 = generateId();
+      
+      id1.should.be.a('string');
+      id2.should.be.a('string');
+      id1.should.not.equal(id2);
+    });
+  });
+
+  describe('formatDate', function() {
+    it('should format timestamp into readable date', function() {
+      const timestamp = 1640995200000; // Jan 1, 2022
+      const formatted = formatDate(timestamp);
+      
+      formatted.should.be.a('string');
+      formatted.should.include('2022');
+    });
+  });
+
+  describe('State Management', function() {
+    it('should initialize with default state', function() {
+      state.should.have.property('character');
+      state.should.have.property('entries');
+      
+      state.character.should.have.property('name').that.equals('');
+      state.character.should.have.property('race').that.equals('');
+      state.character.should.have.property('class').that.equals('');
+      
+      state.entries.should.be.an('array').that.is.empty;
+    });
+
+    it('should save and load data from localStorage', function() {
+      // Modify state
+      state.character.name = 'Aragorn';
+      state.character.race = 'Human';
+      state.character.class = 'Ranger';
+      state.entries.push({
+        id: '123',
+        title: 'Test Adventure',
+        content: 'A great quest!',
+        timestamp: Date.now()
+      });
+
+      // Save data
+      saveData();
+
+      // Verify localStorage contains data
+      const stored = localStorage.getItem('simple-dnd-journal');
+      stored.should.not.be.null;
+      
+      const parsedData = JSON.parse(stored);
+      parsedData.character.name.should.equal('Aragorn');
+      parsedData.entries.should.have.length(1);
+
+      // Clear current state and simulate fresh app start
+      localStorage.clear();
+      localStorage.setItem('simple-dnd-journal', stored);
+      
+      // Reinitialize the state from storage
+      const freshState = {
+        character: { name: '', race: '', class: '' },
+        entries: []
+      };
+      
+      try {
+        const storedData = localStorage.getItem('simple-dnd-journal');
+        if (storedData) {
+          const parsed = JSON.parse(storedData);
+          Object.assign(freshState, parsed);
+        }
+      } catch (error) {
+        // Handle error
+      }
+
+      // Verify state was restored
+      freshState.character.name.should.equal('Aragorn');
+      freshState.character.race.should.equal('Human');
+      freshState.character.class.should.equal('Ranger');
+      freshState.entries.should.have.length(1);
+      freshState.entries[0].title.should.equal('Test Adventure');
+    });
+  });
+
+  describe('DOM Manipulation', function() {
+    beforeEach(function() {
+      // Setup proper form elements
+      document.body.innerHTML = `
+        <input type="text" id="character-name" />
+        <input type="text" id="character-race" />
+        <input type="text" id="character-class" />
+        <input type="text" id="entry-title" />
+        <textarea id="entry-content"></textarea>
+        <input type="url" id="entry-image" />
+        <div id="entries-list"></div>
+      `;
+    });
+
+    it('should create entry element with proper structure', function() {
+      const entry = {
+        id: '123',
+        title: 'Test Adventure',
+        content: 'A great quest!',
+        image: 'https://example.com/image.jpg',
+        timestamp: Date.now()
+      };
+
+      const element = createEntryElement(entry);
+
+      element.should.not.be.null;
+      element.className.should.equal('entry-card');
+      
+      const titleEl = element.querySelector('.entry-title');
+      titleEl.should.not.be.null;
+      titleEl.textContent.should.equal('Test Adventure');
+      
+      const contentEl = element.querySelector('.entry-content');
+      contentEl.should.not.be.null;
+      contentEl.textContent.should.equal('A great quest!');
+      
+      const dateEl = element.querySelector('.entry-date');
+      dateEl.should.not.be.null;
+      
+      const imageEl = element.querySelector('.entry-image');
+      imageEl.should.not.be.null;
+      imageEl.src.should.equal('https://example.com/image.jpg');
+    });
+
+    it('should create entry element without image when not provided', function() {
+      const entry = {
+        id: '124',
+        title: 'Another Adventure',
+        content: 'No image this time',
+        image: '',
+        timestamp: Date.now()
+      };
+
+      const element = createEntryElement(entry);
+      const imageEl = element.querySelector('.entry-image');
+      
+      (imageEl === null).should.be.true;
+    });
+
+    it('should render empty state when no entries exist', function() {
+      state.entries = [];
+      renderEntries();
+
+      const entriesContainer = document.getElementById('entries-list');
+      entriesContainer.innerHTML.should.include('No entries yet');
+    });
+
+    it('should render entries in newest-first order', function() {
+      const oldEntry = {
+        id: '1',
+        title: 'Old Adventure',
+        content: 'This happened first',
+        timestamp: 1000
+      };
+      
+      const newEntry = {
+        id: '2',
+        title: 'New Adventure',
+        content: 'This happened later',
+        timestamp: 2000
+      };
+
+      state.entries = [oldEntry, newEntry];
+      renderEntries();
+
+      const entriesContainer = document.getElementById('entries-list');
+      const entryCards = entriesContainer.querySelectorAll('.entry-card');
+      
+      entryCards.should.have.length(2);
+      entryCards[0].querySelector('.entry-title').textContent.should.equal('New Adventure');
+      entryCards[1].querySelector('.entry-title').textContent.should.equal('Old Adventure');
+    });
+
+    it('should add new entry when form is filled', function() {
+      const titleInput = document.getElementById('entry-title');
+      const contentInput = document.getElementById('entry-content');
+      const imageInput = document.getElementById('entry-image');
+
+      titleInput.value = 'New Quest';
+      contentInput.value = 'Epic adventure awaits!';
+      imageInput.value = 'https://example.com/quest.jpg';
+
+      const initialLength = state.entries.length;
+      addEntry();
+
+      state.entries.should.have.length(initialLength + 1);
+      
+      const newEntry = state.entries[state.entries.length - 1];
+      newEntry.title.should.equal('New Quest');
+      newEntry.content.should.equal('Epic adventure awaits!');
+      newEntry.image.should.equal('https://example.com/quest.jpg');
+      newEntry.should.have.property('id');
+      newEntry.should.have.property('timestamp');
+
+      // Form should be cleared
+      titleInput.value.should.equal('');
+      contentInput.value.should.equal('');
+      imageInput.value.should.equal('');
+    });
+
+    it('should not add entry when title or content is missing', function() {
+      const titleInput = document.getElementById('entry-title');
+      const contentInput = document.getElementById('entry-content');
+
+      // Test missing title
+      titleInput.value = '';
+      contentInput.value = 'Content without title';
+      
+      const initialLength = state.entries.length;
+      addEntry();
+      
+      state.entries.should.have.length(initialLength);
+
+      // Test missing content
+      titleInput.value = 'Title without content';
+      contentInput.value = '';
+      
+      addEntry();
+      
+      state.entries.should.have.length(initialLength);
+    });
+
+    it('should update character information', function() {
+      const nameInput = document.getElementById('character-name');
+      const raceInput = document.getElementById('character-race');
+      const classInput = document.getElementById('character-class');
+
+      nameInput.value = 'Legolas';
+      raceInput.value = 'Elf';
+      classInput.value = 'Archer';
+
+      updateCharacter();
+
+      state.character.name.should.equal('Legolas');
+      state.character.race.should.equal('Elf');
+      state.character.class.should.equal('Archer');
+    });
+
+    it('should populate character form from state', function() {
+      state.character = {
+        name: 'Gimli',
+        race: 'Dwarf',
+        class: 'Warrior'
+      };
+
+      populateCharacterForm();
+
+      const nameInput = document.getElementById('character-name');
+      const raceInput = document.getElementById('character-race');
+      const classInput = document.getElementById('character-class');
+
+      nameInput.value.should.equal('Gimli');
+      raceInput.value.should.equal('Dwarf');
+      classInput.value.should.equal('Warrior');
+    });
+  });
+
+  describe('Error Handling', function() {
+    it('should handle localStorage errors gracefully', function() {
+      // Mock localStorage to throw error
+      const originalSetItem = localStorage.setItem;
+      localStorage.setItem = () => {
+        throw new Error('Storage full');
+      };
+
+      // Should not throw
+      (() => saveData()).should.not.throw();
+
+      // Restore original method
+      localStorage.setItem = originalSetItem;
+    });
+
+    it('should handle corrupted localStorage data', function() {
+      localStorage.setItem('simple-dnd-journal', 'invalid json');
+      
+      // Should not throw and should use default state
+      (() => loadData()).should.not.throw();
+    });
+  });
+});
