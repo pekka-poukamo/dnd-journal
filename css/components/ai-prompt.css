@@ -33,6 +33,13 @@
   margin: 0;
 }
 
+.ai-prompt__text strong {
+  font-weight: 600;
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.1em;
+}
+
 .ai-prompt__text::before {
   content: '"';
   font-size: 1.5em;
