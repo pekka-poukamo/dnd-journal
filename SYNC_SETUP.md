@@ -21,26 +21,59 @@ The app works out-of-the-box with free public relay servers:
 
 For faster local sync and full control:
 
-### 1. Install on Pi
+### Option 1: One-Command Deployment ⭐ *Easiest*
+```bash
+# From your computer, deploy to Pi automatically
+npm run deploy:pi
+```
+This script will:
+- Connect to your Pi via SSH
+- Install Node.js if needed
+- Upload server files
+- Install dependencies
+- Configure PM2 auto-start
+- Give you the configuration URL
+
+### Option 2: Manual Setup on Pi
+```bash
+# On your Pi, clone this repo and run:
+npm run setup:pi
+```
+
+### Option 3: Traditional Setup
 ```bash
 # Install Node.js (if not already installed)
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
-# Install Yjs WebSocket server globally
-sudo npm install -g y-websocket
+# Install dependencies and start server
+npm install --production
+npm start
 
-# Start the server (runs on port 1234)
-y-websocket-server --port 1234
-
-# Optional: Make it run on boot
+# Optional: Make it run on boot with PM2
 sudo npm install -g pm2
-pm2 start y-websocket-server -- --port 1234
-pm2 startup
-pm2 save
+npm run pi:start
 ```
 
-### 2. Configure Your App
+### Pi Management Commands
+
+Once your Pi server is running:
+
+```bash
+# Check server status
+npm run pi:status
+
+# View server logs  
+npm run pi:logs
+
+# Restart server
+npm run pi:restart
+
+# Stop server
+npm run pi:stop
+```
+
+### Configure Your App
 
 **Option A: URL Parameter (Easy)**
 Visit your app with: `https://your-app-url.surge.sh?pi=192.168.1.100`

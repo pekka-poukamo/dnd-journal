@@ -57,7 +57,7 @@ let state = utils.createInitialJournalState();
 // Initialize Yjs sync enhancement (ADR-0003)
 let yjsSync = null;
 try {
-  yjsSync = new YjsSync();
+  yjsSync = createYjsSync();
 } catch (e) {
   console.log('📱 Yjs sync not available, using localStorage-only mode');
 }
