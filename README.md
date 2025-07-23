@@ -21,10 +21,12 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies.
 
 ## Sync Setup (Optional)
 
-For cross-device synchronization:
+**Users**: Nothing to configure! Automatic sync via free public servers.
 
-1. Install: `npm install -g y-websocket && y-websocket-server --port 1234`
-2. Configure in Settings: `ws://your-ip:1234`
+**Developers**: Set your Pi server in `js/sync-config.js` then run:
+```bash
+npm install -g y-websocket && y-websocket-server --port 1234
+```
 
 See [SYNC_SETUP.md](SYNC_SETUP.md) for details.
 

@@ -2,31 +2,34 @@
 
 Simple cross-device synchronization for your D&D Journal.
 
-## Quick Setup
+## For Users
 
-### 1. Install Yjs Server (Optional)
+**Nothing to configure!** The app automatically syncs via free public servers.
 
-On your Raspberry Pi or computer:
+## For Developers
+
+### 1. Optional: Add Your Pi Server
+
+Edit `js/sync-config.js` and set your Pi server:
+
+```javascript
+const SYNC_CONFIG = {
+  piServer: 'ws://192.168.1.100:1234', // Your Pi's IP
+  // ... rest stays the same
+};
+```
+
+### 2. Start Your Pi Server
 
 ```bash
-# Install the sync server
+# Install and start
 npm install -g y-websocket
-
-# Start the server
 y-websocket-server --port 1234
 ```
 
 Or from this repo:
 ```bash
-npm install
 npm run sync-server
-```
-
-### 2. Configure in App
-
-Go to Settings → Sync Settings and enter your server URL:
-```
-ws://192.168.1.100:1234
 ```
 
 ## How It Works

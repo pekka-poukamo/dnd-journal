@@ -55,15 +55,13 @@ describe('Yjs Sync (Functional)', () => {
   });
 
   describe('Configuration Management', () => {
-    it('should handle Pi server configuration', () => {
-      // Clear storage
-      global.testStorage = {};
-      
+    it('should use repo-level configuration', () => {
       const sync = createYjsSync();
       
-      // Test that configuration doesn't crash
-      expect(() => sync.configurePiServer('ws://test.server:1234')).to.not.throw;
-      expect(() => sync.configurePiServer(null)).to.not.throw;
+      // Test that sync initializes without configuration needed
+      expect(sync.isAvailable).to.be.false; // Yjs not available in test
+      expect(() => sync.getData()).to.not.throw;
+      expect(() => sync.setData({})).to.not.throw;
     });
 
     it('should generate and persist device IDs', () => {
@@ -78,17 +76,16 @@ describe('Yjs Sync (Functional)', () => {
       expect(deviceId1.length).to.be.greaterThan(10); // Reasonable length check
     });
 
-    it('should handle configuration changes', () => {
+    it('should provide status and helper methods', () => {
       const sync = createYjsSync();
       
-      // Test that configurePiServer doesn't crash
-      expect(() => {
-        sync.configurePiServer('ws://192.168.1.100:1234');
-      }).to.not.throw;
+      // Test that public API methods work
+      expect(typeof sync.getStatus).to.equal('function');
+      expect(typeof sync.getDeviceId).to.equal('function');
+      expect(typeof sync.teardown).to.equal('function');
       
-      expect(() => {
-        sync.configurePiServer(null);
-      }).to.not.throw;
+      expect(() => sync.getStatus()).to.not.throw;
+      expect(() => sync.getDeviceId()).to.not.throw;
     });
   });
 
@@ -118,12 +115,12 @@ describe('Yjs Sync (Functional)', () => {
       }).to.not.throw;
     });
 
-    it('should provide configuration helpers', () => {
+    it('should provide helper functions', () => {
       const sync = createYjsSync();
       
-      expect(typeof sync.configurePiServer).to.equal('function');
       expect(typeof sync.getStatus).to.equal('function');
       expect(typeof sync.teardown).to.equal('function');
+      expect(typeof sync.getDeviceId).to.equal('function');
     });
   });
 

@@ -81,19 +81,22 @@ const setupNetworking = (state) => {
   if (!state.isAvailable || !state.ydoc) return state;
   
   const providers = [];
+  const config = window.SYNC_CONFIG || {};
   
-  // Try Pi server configuration
-  const piServer = getPiServerConfig();
-  if (piServer) {
+  // Try configured Pi server first
+  if (config.piServer) {
     try {
-      providers.push(new window.WebsocketProvider(piServer, 'dnd-journal', state.ydoc));
+      providers.push(new window.WebsocketProvider(config.piServer, 'dnd-journal', state.ydoc));
+      console.log(`🔧 Connecting to configured Pi server: ${config.piServer}`);
     } catch (e) {
-      console.warn('⚠️ Pi server connection failed:', e);
+      console.warn('⚠️ Configured Pi server connection failed:', e);
     }
   }
   
+
+  
   // Add public relay servers as fallback
-  const publicRelays = [
+  const publicRelays = config.publicRelays || [
     'wss://demos.yjs.dev',
     'wss://y-websocket.herokuapp.com'
   ];
@@ -143,14 +146,7 @@ const setupObservers = (state) => {
   return state;
 };
 
-// Get Pi server configuration
-const getPiServerConfig = () => {
-  try {
-    return window.localStorage.getItem('dnd-journal-pi-server');
-  } catch (e) {
-    return null;
-  }
-};
+
 
 // Get current data from Yjs
 const getSyncData = () => {
@@ -235,24 +231,7 @@ const getDeviceId = () => {
   }
 };
 
-// Configure Pi server
-const configurePiServer = (serverUrl) => {
-  try {
-    if (serverUrl) {
-      window.localStorage.setItem('dnd-journal-pi-server', serverUrl);
-    } else {
-      window.localStorage.removeItem('dnd-journal-pi-server');
-    }
-    
-    // Restart sync with new configuration
-    if (syncState.isAvailable) {
-      teardownSync();
-      syncState = initializeSync();
-    }
-  } catch (e) {
-    console.warn('⚠️ Failed to configure Pi server:', e);
-  }
-};
+
 
 // Clean shutdown
 const teardownSync = () => {
@@ -297,7 +276,6 @@ const createYjsSync = () => {
     onChange: onSyncChange,
     getStatus: getSyncStatus,
     getDeviceId,
-    configurePiServer,
     teardown: teardownSync,
     
     // Internal for testing
