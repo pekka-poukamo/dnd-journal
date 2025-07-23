@@ -10,14 +10,22 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies.
 - **Journal Entries**: Title + content (auto-save)
 - **Images**: URL support
 - **Storage**: Browser localStorage
+- **Sync**: Optional cross-device sync via Yjs (ADR-0003)
 
 ## What It Doesn't Do
 
 ❌ Multiple characters  
 ❌ Rich text editing  
 ❌ Themes or customization  
-❌ Export/import  
 ❌ Advanced features
+
+## Sync Setup (Optional)
+
+For cross-device synchronization, see [SYNC_SETUP.md](SYNC_SETUP.md)
+
+- **Free**: Works with public relay servers
+- **Pi Server**: Enhanced performance with Raspberry Pi
+- **Local-First**: Maintains offline-first principles
 
 ## Quick Start
 

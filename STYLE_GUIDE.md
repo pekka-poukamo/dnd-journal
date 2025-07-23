@@ -107,7 +107,8 @@ Before suggesting ANY changes:
 3. ✅ **Verify technology stack** matches ADR-0001 (vanilla JS only)
 4. ✅ **Confirm functional approach** per ADR-0002 (no classes/mutations)
 5. ✅ **Validate data persistence** per ADR-0004 (localStorage only)
-6. ✅ **Validate testing requirements** per ADR-0005
+6. ✅ **Check sync enhancement** per ADR-0003 (optional Yjs sync)
+7. ✅ **Validate testing requirements** per ADR-0005
 
 ### Automatic Failure Conditions
 
