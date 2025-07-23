@@ -1,40 +1,39 @@
 {
   "name": "dnd-journal",
   "version": "1.0.0",
-  "description": "A lightweight, static D&D journal app focused on core functionality: note-taking, character tracking, and AI-powered roleplay prompts.",
+  "description": "Simple D&D journal with localStorage persistence and optional Yjs sync",
   "main": "index.html",
   "scripts": {
-    "start": "npx http-server . -p 3000 -o",
-    "build": "echo 'No build step needed - static site' && exit 0",
     "test": "mocha test/**/*.test.js --timeout 5000",
-    "test:watch": "mocha test/**/*.test.js --watch --timeout 5000",
-    "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
-    "deploy": "surge .",
-    "deploy:domain": "surge . dnd-journal.surge.sh"
+    "start": "node server/sync-server.js",
+    "server": "node server/sync-server.js",
+    "server:dev": "nodemon server/sync-server.js",
+    "deploy:pi": "node scripts/deploy-to-pi.js",
+    "setup:pi": "node scripts/setup-pi.js",
+    "pi:start": "pm2 start server/sync-server.js --name dnd-journal-sync",
+    "pi:stop": "pm2 stop dnd-journal-sync",
+    "pi:restart": "pm2 restart dnd-journal-sync",
+    "pi:logs": "pm2 logs dnd-journal-sync",
+    "pi:status": "pm2 status dnd-journal-sync"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/pekka-poukamo/dnd-journal.git"
-  },
-  "keywords": [
-    "dnd",
-    "journal",
-    "static",
-    "roleplay",
-    "character-management"
-  ],
-  "author": "pekka-poukamo",
+  "keywords": ["dnd", "journal", "local-first", "yjs", "sync"],
+  "author": "",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/pekka-poukamo/dnd-journal/issues"
-  },
-  "homepage": "https://dnd-journal.surge.sh",
   "devDependencies": {
-    "http-server": "^14.1.1",
-    "surge": "^0.23.1",
-    "mocha": "^10.2.0",
-    "chai": "^4.3.10",
-    "jsdom": "^23.0.0"
+    "chai": "^4.3.4",
+    "mocha": "^8.4.0",
+    "nodemon": "^3.0.2"
+  },
+  "dependencies": {
+    "y-websocket": "^1.5.0",
+    "yjs": "^13.6.10",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "ws": "^8.14.2",
+    "chalk": "^4.1.2",
+    "inquirer": "^8.2.5",
+    "node-ssh": "^13.1.0",
+    "pm2": "^5.3.0"
   },
   "engines": {
     "node": ">=16.0.0"
