@@ -199,7 +199,7 @@ if (typeof module !== 'undefined' && module.exports) {
     generateIntrospectionPrompt,
     generateEntrySummary,
     getEntrySummary,
-    getWordCount
+    callOpenAI
   };
 } else if (typeof global !== 'undefined') {
   // For testing
@@ -209,6 +209,7 @@ if (typeof module !== 'undefined' && module.exports) {
   global.generateIntrospectionPrompt = generateIntrospectionPrompt;
   global.generateEntrySummary = generateEntrySummary;
   global.getEntrySummary = getEntrySummary;
+  global.callOpenAI = callOpenAI;
 } else {
   // For browser
   window.AI = {

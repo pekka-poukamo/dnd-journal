@@ -148,20 +148,7 @@ describe('AI Module', () => {
     });
   });
 
-  describe('getWordCount', () => {
-    it('should count words correctly', () => {
-      expect(AI.getWordCount('hello world')).to.equal(2);
-      expect(AI.getWordCount('  hello   world  ')).to.equal(2);
-      expect(AI.getWordCount('')).to.equal(0);
-      expect(AI.getWordCount('   ')).to.equal(0);
-      expect(AI.getWordCount('single')).to.equal(1);
-    });
-
-    it('should handle special characters', () => {
-      expect(AI.getWordCount('hello, world!')).to.equal(2);
-      expect(AI.getWordCount('one-two three')).to.equal(2);
-    });
-  });
+  // getWordCount is now in utils module, tested in utils.test.js
 
   describe('generateEntrySummary', () => {
     beforeEach(() => {
