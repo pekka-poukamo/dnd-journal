@@ -76,41 +76,31 @@ const setupPersistence = (state) => {
   }
 };
 
-// Dead simple sync configuration - no build tools allowed per ADR-0006
+// Simple sync configuration
 const getSyncConfig = () => {
-  const sources = [
-    // 1. URL parameter (for testing: ?sync=ws://192.168.1.100:1234)
-    () => {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        return params.get('sync');
-      } catch (e) {
-        return null;
-      }
-    },
-    
-    // 2. Simple global variable (manually set if needed)
-    () => {
-      try {
-        return window.SYNC_SERVER || null;
-      } catch (e) {
-        return null;
-      }
+  const servers = [];
+  
+  // 1. URL parameter (for testing: ?sync=ws://192.168.1.100:1234)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const urlSync = params.get('sync');
+    if (urlSync) return [urlSync];
+  } catch (e) {}
+  
+  // 2. Config file setting
+  try {
+    if (window.SYNC_CONFIG && window.SYNC_CONFIG.server) {
+      servers.push(window.SYNC_CONFIG.server);
     }
-  ];
+  } catch (e) {}
   
-  for (const source of sources) {
-    const result = source();
-    if (result) return [result];
-  }
-  
-  // Default: try common local servers, then use public relays
+  // 3. Auto-detect common local servers
   const hostname = window.location.hostname;
   if (hostname === 'localhost' || hostname.startsWith('192.168.') || hostname.startsWith('10.0.')) {
-    return ['ws://localhost:1234', 'ws://raspberrypi.local:1234'];
+    servers.push('ws://localhost:1234', 'ws://raspberrypi.local:1234');
   }
   
-  return [];
+  return servers;
 };
 
 // Setup network providers
@@ -131,12 +121,12 @@ const setupNetworking = (state) => {
   });
   
   // Add public relay servers as fallback
-  const publicRelays = [
+  const relays = (window.SYNC_CONFIG && window.SYNC_CONFIG.relays) || [
     'wss://demos.yjs.dev',
     'wss://y-websocket.herokuapp.com'
   ];
   
-  publicRelays.forEach(url => {
+  relays.forEach(url => {
     try {
       providers.push(new window.WebsocketProvider(url, 'dnd-journal', state.ydoc));
     } catch (e) {

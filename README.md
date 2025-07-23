@@ -21,17 +21,26 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies.
 
 ## Sync Setup (Optional)
 
+Cross-device sync for your journal entries.
+
 **Users**: Nothing to configure! Auto-detects local servers + free public fallback.
 
-**Developers**: Dead simple - just start your server:
+**Developers**: 
 ```bash
+# Start sync server
 npm run sync-server
-# Auto-detects ws://localhost:1234
+
+# To customize: copy sync-config.template.js to sync-config.js
+# Then edit: server: 'ws://192.168.1.100:1234'
 ```
 
-Or set manually: `<script>window.SYNC_SERVER = 'ws://pi.local:1234';</script>`
+**How it works:**
+1. Tries URL parameter: `?sync=ws://test:1234` 
+2. Uses `sync-config.js` setting
+3. Auto-detects `ws://localhost:1234`, `ws://raspberrypi.local:1234`
+4. Falls back to free public servers
 
-See [SYNC_SETUP.md](SYNC_SETUP.md) for details. Zero build tools per ADR-0006.
+Zero build tools, just edit the config file if needed.
 
 ## Quick Start
 

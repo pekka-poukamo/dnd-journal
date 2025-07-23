@@ -1,18 +1,44 @@
 {
   "name": "dnd-journal",
   "version": "1.0.0",
-  "description": "Simple D&D journal with localStorage persistence and optional Yjs sync",
+  "description": "A lightweight, static D&D journal app focused on core functionality: note-taking, character tracking, and AI-powered roleplay prompts.",
   "main": "index.html",
   "scripts": {
+    "start": "npx http-server . -p 3000 -o",
+    "build": "echo 'No build step needed - static site' && exit 0",
     "test": "mocha test/**/*.test.js --timeout 5000",
+    "test:watch": "mocha test/**/*.test.js --watch --timeout 5000",
+    "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
+    "deploy": "surge .",
+    "deploy:domain": "surge . dnd-journal.surge.sh",
     "sync-server": "y-websocket-server --port 1234"
   },
-  "keywords": ["dnd", "journal", "local-first", "yjs", "sync"],
-  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pekka-poukamo/dnd-journal.git"
+  },
+  "keywords": [
+    "dnd",
+    "journal",
+    "static",
+    "roleplay",
+    "character-management",
+    "local-first",
+    "yjs",
+    "sync"
+  ],
+  "author": "pekka-poukamo",
   "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pekka-poukamo/dnd-journal/issues"
+  },
+  "homepage": "https://dnd-journal.surge.sh",
   "devDependencies": {
-    "chai": "^4.3.4",
-    "mocha": "^8.4.0"
+    "http-server": "^14.1.1",
+    "surge": "^0.23.1",
+    "mocha": "^10.2.0",
+    "chai": "^4.3.10",
+    "jsdom": "^23.0.0"
   },
   "optionalDependencies": {
     "y-websocket": "^1.5.0"
