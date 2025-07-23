@@ -96,7 +96,7 @@ const callOpenAI = async (prompt, maxTokens = 150) => {
     const data = await response.json();
     return data.choices[0]?.message?.content?.trim() || 'Unable to generate response';
   } catch (error) {
-    console.error('OpenAI API error:', error);
+          console.error('Failed to call OpenAI API:', error);
     throw error;
   }
 };

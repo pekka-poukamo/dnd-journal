@@ -330,7 +330,7 @@ const initializeSummarization = async () => {
   try {
     const result = await generateMissingSummaries();
     if (result && result.generated > 0) {
-      console.log(`Generated ${result.generated} summaries, ${result.remaining} remaining`);
+      // Summarization completed
     }
   } catch (error) {
     console.error('Failed to initialize summarization:', error);

@@ -7,7 +7,7 @@ let Utils;
 try {
   Utils = require('../js/utils.js');
 } catch (e) {
-  console.error('Could not load utils module:', e);
+  // Utils module not available in test environment
 }
 
 describe('D&D Journal Integration Tests', function() {
