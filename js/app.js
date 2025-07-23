@@ -341,7 +341,9 @@ const displayAIPrompt = async () => {
     const prompt = await window.AI.generateIntrospectionPrompt(state.character, state.entries);
     
     if (prompt) {
-      promptText.textContent = prompt;
+      // Format the prompt for proper display
+      const formattedPrompt = formatAIPrompt(prompt);
+      promptText.innerHTML = formattedPrompt;
       promptText.classList.remove('loading');
     } else {
       promptSection.style.display = 'none';
@@ -350,6 +352,27 @@ const displayAIPrompt = async () => {
     console.error('Failed to generate AI prompt:', error);
     promptSection.style.display = 'none';
   }
+};
+
+// Format AI prompt text for display
+const formatAIPrompt = (prompt) => {
+  if (!prompt) return '';
+  
+  // Convert markdown-like formatting to HTML
+  let formatted = prompt
+    // Convert **bold text** to <strong>
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Convert line breaks to <br>
+    .replace(/\n/g, '<br>')
+    // Format numbered lists with proper spacing (add break before if not already there)
+    .replace(/<br>(\d+\.\s)/g, '<br><br>$1')
+    // Add extra spacing after section headers (but avoid triple breaks)
+    .replace(/(<strong>.*?<\/strong>)<br><br><br>/g, '$1<br><br>')
+    .replace(/(<strong>.*?<\/strong>)<br>(?!<br>)/g, '$1<br><br>')
+    // Clean up extra breaks at the beginning
+    .replace(/^<br>+/, '');
+  
+  return formatted;
 };
 
 // Setup event handlers for journal entries
@@ -424,5 +447,6 @@ if (typeof global !== 'undefined') {
   global.createCharacterSummary = createCharacterSummary;
   global.displayCharacterSummary = displayCharacterSummary;
   global.displayAIPrompt = displayAIPrompt;
+  global.formatAIPrompt = formatAIPrompt;
   global.init = init;
 }

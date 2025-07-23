@@ -652,4 +652,44 @@ describe('D&D Journal App', function() {
       promptSection.style.display.should.equal('none');
     });
   });
+
+  describe('formatAIPrompt', function() {
+         it('should format bold text correctly', function() {
+       const input = '**Core Narrative Questions (1-3):**\n1. Test question';
+       const expected = '<strong>Core Narrative Questions (1-3):</strong><br><br>1. Test question';
+       
+       const result = formatAIPrompt(input);
+       result.should.equal(expected);
+     });
+
+    it('should convert line breaks correctly', function() {
+      const input = 'Question 1\nQuestion 2\nQuestion 3';
+      const expected = 'Question 1<br>Question 2<br>Question 3';
+      
+      const result = formatAIPrompt(input);
+      result.should.equal(expected);
+    });
+
+         it('should format numbered lists with proper spacing', function() {
+       const input = '1. First question\n2. Second question';
+       const expected = '1. First question<br><br>2. Second question';
+       
+       const result = formatAIPrompt(input);
+       result.should.equal(expected);
+     });
+
+    it('should handle empty or null input', function() {
+      formatAIPrompt('').should.equal('');
+      formatAIPrompt(null).should.equal('');
+      formatAIPrompt(undefined).should.equal('');
+    });
+
+         it('should format complete AI prompt correctly', function() {
+       const input = '**Core Narrative Questions (1-3):**\n1. Puoskari, can you share a pivotal memory?\n2. What current internal conflict?\n\n**The Third Choice (4):**\nA surprising question';
+       const expected = '<strong>Core Narrative Questions (1-3):</strong><br><br>1. Puoskari, can you share a pivotal memory?<br><br>2. What current internal conflict?<br><br><strong>The Third Choice (4):</strong><br><br>A surprising question';
+       
+       const result = formatAIPrompt(input);
+       result.should.equal(expected);
+     });
+  });
 });
