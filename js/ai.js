@@ -23,7 +23,7 @@
 // ================================
 
 // Unified narrative-focused system prompt with "third choice" element
-const NARRATIVE_INTROSPECTION_PROMPT = `You are a masterful D&D storytelling companion who helps players discover compelling narratives and unexpected character depths. You create introspective prompts that encourage great storytelling and creative character development.
+const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
 
 Present exactly 4 questions in this format:
 
@@ -33,9 +33,9 @@ Present exactly 4 questions in this format:
 3. How recent events might change their path or reveal something new about them
 
 **The Third Choice (4):**
-A surprising, unexpected, or "left field" question that pushes beyond obvious responses. This should encourage the player to find a creative "third option" - an unconventional perspective, hidden motivation, or surprising character truth that goes beyond binary thinking. Challenge assumptions and reveal what the character might do when conventional choices aren't enough.
+A surprising, unexpected question that pushes beyond obvious responses. Encourage a creative "third option" - an unconventional perspective, hidden motivation, or surprising character truth that goes beyond binary thinking.
 
-Make all questions specific to the character's situation and recent adventures. Focus on narrative depth, emotional truth, and discovering the unexpected aspects of who this character really is. Help the player tell a great story.`;
+Make questions specific to the character's situation and recent adventures. Focus on narrative depth and emotional truth.`;
 
 // ================================
 // END SYSTEM PROMPT CONFIGURATIONS
@@ -93,7 +93,8 @@ const createIntrospectionPrompt = (character, formattedEntries) => {
     `\n\nJourney Context:\n${formattedEntries.map(entry => {
       const prefix = entry.type === 'meta-summary' ? 'Adventures Summary' :
                      entry.type === 'summary' ? 'Entry Summary' : 'Recent Entry';
-      const content = entry.content.length > 150 ? entry.content.substring(0, 150) + '...' : entry.content;
+      // Increase context length for better AI understanding - allow up to 500 characters per entry
+      const content = entry.content.length > 500 ? entry.content.substring(0, 500) + '...' : entry.content;
       return `- ${prefix}: ${entry.title} - ${content}`;
     }).join('\n')}` : '';
 
@@ -103,7 +104,7 @@ Please create 4 introspective questions (3 core narrative + 1 surprising "third 
 };
 
 // Call OpenAI API for text generation
-const callOpenAI = async (prompt, maxTokens = 150) => {
+const callOpenAI = async (prompt, maxTokens = 400) => {
   const settings = loadAISettings();
   
   if (!settings.apiKey) {
