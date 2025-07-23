@@ -91,7 +91,7 @@ describe('AI Module', () => {
       const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
       
       expect(prompt).to.include('your character');
-      expect(prompt).to.include('Please ask three introspective questions');
+      expect(prompt).to.include('Please create 4 introspective questions');
     });
 
     it('should create prompt with character details', () => {

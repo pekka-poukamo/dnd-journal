@@ -1,15 +1,15 @@
 // AI Module - OpenAI Integration for Introspection and Summarization
 
 // ================================
-// SYSTEM PROMPT CONFIGURATIONS
+// NARRATIVE INTROSPECTION SYSTEM
 // ================================
 //
-// This module provides three different approaches to AI-generated character introspection.
-// Each system prompt creates three questions that help players explore different aspects
-// of their D&D character's development and inner world.
+// This module provides a unified approach to AI-generated character introspection
+// focused on great storytelling and finding the "third choice" in character development.
 //
-// TO CHANGE THE ACTIVE PROMPT: 
-// Simply modify the ACTIVE_SYSTEM_PROMPT constant below to use a different option.
+// FORMAT: 3+1 Questions
+// - 3 Core Narrative Questions: Pivotal moments, current conflicts, future paths
+// - 1 "Third Choice" Question: Surprising, left-field prompt for creative thinking
 //
 // INTEGRATION WITH SUMMARIES:
 // The AI automatically uses generated summaries when available, providing context from:
@@ -17,45 +17,25 @@
 // - Individual entry summaries (older entries)  
 // - Meta-summaries (grouped summaries of many older entries)
 //
-// This ensures the AI has relevant context while keeping prompts concise.
+// This ensures the AI has relevant context while encouraging compelling narratives
+// and helping players discover unexpected character depths.
 //
 // ================================
 
-// Three different system prompt options for character introspection
-const SYSTEM_PROMPT_OPTIONS = {
-  // Option 1: Philosophical & Introspective
-  PHILOSOPHICAL: `You are a wise D&D companion helping with deep character introspection. You ask three thoughtful questions that help the player explore their character's inner world. 
+// Unified narrative-focused system prompt with "third choice" element
+const NARRATIVE_INTROSPECTION_PROMPT = `You are a masterful D&D storytelling companion who helps players discover compelling narratives and unexpected character depths. You create introspective prompts that encourage great storytelling and creative character development.
 
-Present exactly three questions that encourage reflection on:
-1. The character's emotional state and internal conflicts
-2. Their growth, goals, or changing perspectives  
-3. Their relationships, values, or place in the world
+Present exactly 4 questions in this format:
 
-Format as numbered questions (1., 2., 3.) and keep each question concise but meaningful. Focus on the character's internal experience rather than external actions.`,
+**Core Narrative Questions (1-3):**
+1. A pivotal moment, memory, or relationship that has shaped who they are
+2. A current internal conflict, dilemma, or aspiration they're wrestling with  
+3. How recent events might change their path or reveal something new about them
 
-  // Option 2: Narrative & Story-Driven  
-  NARRATIVE: `You are a storytelling D&D companion helping players deepen their character's narrative. You present three engaging questions that build character depth through story exploration.
+**The Third Choice (4):**
+A surprising, unexpected, or "left field" question that pushes beyond obvious responses. This should encourage the player to find a creative "third option" - an unconventional perspective, hidden motivation, or surprising character truth that goes beyond binary thinking. Challenge assumptions and reveal what the character might do when conventional choices aren't enough.
 
-Present exactly three questions that explore:
-1. A pivotal moment or memory that shaped the character
-2. A current challenge, dilemma, or aspiration they face
-3. How recent events might change their future path
-
-Format as numbered questions (1., 2., 3.) and make them specific to the character's recent adventures. Help the player discover untold stories and motivations.`,
-
-  // Option 3: Practical & Character Development
-  PRACTICAL: `You are a helpful D&D companion focused on practical character development. You ask three targeted questions that help players understand and develop their character.
-
-Present exactly three questions about:
-1. How the character is feeling about their recent experiences
-2. What they've learned or how they've changed recently
-3. What they're planning, hoping for, or worried about next
-
-Format as numbered questions (1., 2., 3.) and make them relevant to the character's current situation. Keep questions accessible and easy to answer.`
-};
-
-// Current active system prompt (easily changeable)
-const ACTIVE_SYSTEM_PROMPT = SYSTEM_PROMPT_OPTIONS.PHILOSOPHICAL;
+Make all questions specific to the character's situation and recent adventures. Focus on narrative depth, emotional truth, and discovering the unexpected aspects of who this character really is. Help the player tell a great story.`;
 
 // ================================
 // END SYSTEM PROMPT CONFIGURATIONS
@@ -119,7 +99,7 @@ const createIntrospectionPrompt = (character, formattedEntries) => {
 
   return `Character: ${characterInfo}${backstoryContext}${entriesContext}
 
-Please ask three introspective questions that would help the player deepen their understanding of this character's inner world and development.`;
+Please create 4 introspective questions (3 core narrative + 1 surprising "third choice") that would help this player discover compelling stories and unexpected depths in their character.`;
 };
 
 // Call OpenAI API for text generation
@@ -142,7 +122,7 @@ const callOpenAI = async (prompt, maxTokens = 150) => {
         messages: [
           {
             role: 'system',
-            content: ACTIVE_SYSTEM_PROMPT
+            content: NARRATIVE_INTROSPECTION_PROMPT
           },
           {
             role: 'user',
@@ -256,22 +236,9 @@ const getEntrySummary = async (entry) => {
   return summary;
 };
 
-// Helper functions for system prompt management
-const getAvailablePromptOptions = () => Object.keys(SYSTEM_PROMPT_OPTIONS);
-const getCurrentPromptType = () => {
-  // Find which prompt option is currently active
-  for (const [key, value] of Object.entries(SYSTEM_PROMPT_OPTIONS)) {
-    if (value === ACTIVE_SYSTEM_PROMPT) return key;
-  }
-  return 'CUSTOM';
-};
-const getPromptDescription = (promptType) => {
-  const descriptions = {
-    PHILOSOPHICAL: 'Deep introspection focused on emotions, growth, and values',
-    NARRATIVE: 'Story-driven questions exploring character development through narrative',
-    PRACTICAL: 'Accessible questions about feelings, learning, and future plans'
-  };
-  return descriptions[promptType] || 'Custom prompt configuration';
+// Helper function for prompt information
+const getPromptDescription = () => {
+  return 'Narrative-focused introspection with 3 core questions + 1 surprising "third choice" prompt';
 };
 
 // Export functions
@@ -284,9 +251,6 @@ if (typeof module !== 'undefined' && module.exports) {
     generateEntrySummary,
     getEntrySummary,
     callOpenAI,
-    SYSTEM_PROMPT_OPTIONS,
-    getAvailablePromptOptions,
-    getCurrentPromptType,
     getPromptDescription
   };
 } else if (typeof global !== 'undefined') {
@@ -298,9 +262,6 @@ if (typeof module !== 'undefined' && module.exports) {
   global.generateEntrySummary = generateEntrySummary;
   global.getEntrySummary = getEntrySummary;
   global.callOpenAI = callOpenAI;
-  global.SYSTEM_PROMPT_OPTIONS = SYSTEM_PROMPT_OPTIONS;
-  global.getAvailablePromptOptions = getAvailablePromptOptions;
-  global.getCurrentPromptType = getCurrentPromptType;
   global.getPromptDescription = getPromptDescription;
 } else {
   // For browser
@@ -312,9 +273,6 @@ if (typeof module !== 'undefined' && module.exports) {
     generateEntrySummary,
     getEntrySummary,
     callOpenAI,
-    SYSTEM_PROMPT_OPTIONS,
-    getAvailablePromptOptions,
-    getCurrentPromptType,
     getPromptDescription
   };
 }
