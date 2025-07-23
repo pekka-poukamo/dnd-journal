@@ -76,7 +76,6 @@ class EntryManager { /* ... */ }
 - ❌ Multiple file uploads
 - ❌ Advanced form validation
 - ❌ Notifications/alerts
-- ❌ Settings/preferences
 - ❌ Plugins or extensions
 
 ### Required Testing Patterns
