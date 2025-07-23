@@ -86,12 +86,12 @@ describe('AI Module', () => {
   describe('createIntrospectionPrompt', () => {
     it('should create prompt for unnamed character', () => {
       const character = { name: '', race: '', class: '' };
-      const entries = [];
+      const formattedEntries = [];
 
-      const prompt = AI.createIntrospectionPrompt(character, entries);
+      const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
       
       expect(prompt).to.include('your character');
-      expect(prompt).to.include('What thoughts, emotions, or realizations');
+      expect(prompt).to.include('Please ask three introspective questions');
     });
 
     it('should create prompt with character details', () => {
@@ -101,46 +101,49 @@ describe('AI Module', () => {
         class: 'Ranger',
         backstory: 'Heir to the throne of Gondor'
       };
-      const entries = [];
+      const formattedEntries = [];
 
-      const prompt = AI.createIntrospectionPrompt(character, entries);
+      const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
       
       expect(prompt).to.include('Aragorn');
       expect(prompt).to.include('Human Ranger');
       expect(prompt).to.include('Heir to the throne of Gondor');
     });
 
-    it('should include recent entries in prompt', () => {
+    it('should include formatted entries in prompt', () => {
       const character = { name: 'Aragorn', race: 'Human', class: 'Ranger' };
-      const entries = [
+      const formattedEntries = [
         {
           title: 'Battle at Helms Deep',
-          content: 'We fought valiantly against the orc army'
+          content: 'We fought valiantly against the orc army',
+          type: 'full'
         },
         {
           title: 'Meeting Legolas',
-          content: 'Formed an unlikely friendship with the elf'
+          content: 'Formed an unlikely friendship with the elf',
+          type: 'summary'
         }
       ];
 
-      const prompt = AI.createIntrospectionPrompt(character, entries);
+      const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
       
       expect(prompt).to.include('Battle at Helms Deep');
       expect(prompt).to.include('Meeting Legolas');
-      expect(prompt).to.include('Recent Adventures');
+      expect(prompt).to.include('Journey Context');
     });
 
     it('should truncate long entry content', () => {
       const character = { name: 'Test', race: 'Human', class: 'Fighter' };
-      const longContent = 'A'.repeat(150);
-      const entries = [
+      const longContent = 'A'.repeat(200);
+      const formattedEntries = [
         {
           title: 'Long Entry',
-          content: longContent
+          content: longContent,
+          type: 'full'
         }
       ];
 
-      const prompt = AI.createIntrospectionPrompt(character, entries);
+      const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
       
       expect(prompt).to.include('Long Entry');
       expect(prompt).to.include('...');

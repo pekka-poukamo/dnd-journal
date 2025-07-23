@@ -1,5 +1,66 @@
 // AI Module - OpenAI Integration for Introspection and Summarization
 
+// ================================
+// SYSTEM PROMPT CONFIGURATIONS
+// ================================
+//
+// This module provides three different approaches to AI-generated character introspection.
+// Each system prompt creates three questions that help players explore different aspects
+// of their D&D character's development and inner world.
+//
+// TO CHANGE THE ACTIVE PROMPT: 
+// Simply modify the ACTIVE_SYSTEM_PROMPT constant below to use a different option.
+//
+// INTEGRATION WITH SUMMARIES:
+// The AI automatically uses generated summaries when available, providing context from:
+// - Recent full entries (most recent adventures)
+// - Individual entry summaries (older entries)  
+// - Meta-summaries (grouped summaries of many older entries)
+//
+// This ensures the AI has relevant context while keeping prompts concise.
+//
+// ================================
+
+// Three different system prompt options for character introspection
+const SYSTEM_PROMPT_OPTIONS = {
+  // Option 1: Philosophical & Introspective
+  PHILOSOPHICAL: `You are a wise D&D companion helping with deep character introspection. You ask three thoughtful questions that help the player explore their character's inner world. 
+
+Present exactly three questions that encourage reflection on:
+1. The character's emotional state and internal conflicts
+2. Their growth, goals, or changing perspectives  
+3. Their relationships, values, or place in the world
+
+Format as numbered questions (1., 2., 3.) and keep each question concise but meaningful. Focus on the character's internal experience rather than external actions.`,
+
+  // Option 2: Narrative & Story-Driven  
+  NARRATIVE: `You are a storytelling D&D companion helping players deepen their character's narrative. You present three engaging questions that build character depth through story exploration.
+
+Present exactly three questions that explore:
+1. A pivotal moment or memory that shaped the character
+2. A current challenge, dilemma, or aspiration they face
+3. How recent events might change their future path
+
+Format as numbered questions (1., 2., 3.) and make them specific to the character's recent adventures. Help the player discover untold stories and motivations.`,
+
+  // Option 3: Practical & Character Development
+  PRACTICAL: `You are a helpful D&D companion focused on practical character development. You ask three targeted questions that help players understand and develop their character.
+
+Present exactly three questions about:
+1. How the character is feeling about their recent experiences
+2. What they've learned or how they've changed recently
+3. What they're planning, hoping for, or worried about next
+
+Format as numbered questions (1., 2., 3.) and make them relevant to the character's current situation. Keep questions accessible and easy to answer.`
+};
+
+// Current active system prompt (easily changeable)
+const ACTIVE_SYSTEM_PROMPT = SYSTEM_PROMPT_OPTIONS.PHILOSOPHICAL;
+
+// ================================
+// END SYSTEM PROMPT CONFIGURATIONS
+// ================================
+
 // Get utils reference - works in both browser and test environment
 const getUtils = () => {
   if (typeof window !== 'undefined' && window.Utils) return window.Utils;
@@ -39,7 +100,7 @@ const isAIEnabled = () => {
 };
 
 // Pure function to create introspection prompt
-const createIntrospectionPrompt = (character, recentEntries) => {
+const createIntrospectionPrompt = (character, formattedEntries) => {
   const characterInfo = character.name ? 
     `${character.name}, a ${character.race || 'character'} ${character.class || 'adventurer'}` :
     'your character';
@@ -47,13 +108,18 @@ const createIntrospectionPrompt = (character, recentEntries) => {
   const backstoryContext = character.backstory ? 
     `\n\nCharacter Background: ${character.backstory}` : '';
     
-  const entriesContext = recentEntries.length > 0 ? 
-    `\n\nRecent Adventures:\n${recentEntries.map(entry => `- ${entry.title}: ${entry.content.substring(0, 100)}${entry.content.length > 100 ? '...' : ''}`).join('\n')}` :
-    '';
+  // Format entries using the summarization system's formatted entries
+  const entriesContext = formattedEntries.length > 0 ? 
+    `\n\nJourney Context:\n${formattedEntries.map(entry => {
+      const prefix = entry.type === 'meta-summary' ? 'Adventures Summary' :
+                     entry.type === 'summary' ? 'Entry Summary' : 'Recent Entry';
+      const content = entry.content.length > 150 ? entry.content.substring(0, 150) + '...' : entry.content;
+      return `- ${prefix}: ${entry.title} - ${content}`;
+    }).join('\n')}` : '';
 
-  return `Based on the journey of ${characterInfo}${backstoryContext}${entriesContext}
+  return `Character: ${characterInfo}${backstoryContext}${entriesContext}
 
-What thoughts, emotions, or realizations might ${character.name || 'your character'} be having right now? What internal conflicts, growth, or questions about their path forward could they be pondering?`;
+Please ask three introspective questions that would help the player deepen their understanding of this character's inner world and development.`;
 };
 
 // Call OpenAI API for text generation
@@ -76,7 +142,7 @@ const callOpenAI = async (prompt, maxTokens = 150) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a thoughtful D&D companion helping with character introspection. Respond in character voice, first person, as if the character is reflecting internally. Keep responses concise but meaningful.'
+            content: ACTIVE_SYSTEM_PROMPT
           },
           {
             role: 'user',
@@ -190,6 +256,24 @@ const getEntrySummary = async (entry) => {
   return summary;
 };
 
+// Helper functions for system prompt management
+const getAvailablePromptOptions = () => Object.keys(SYSTEM_PROMPT_OPTIONS);
+const getCurrentPromptType = () => {
+  // Find which prompt option is currently active
+  for (const [key, value] of Object.entries(SYSTEM_PROMPT_OPTIONS)) {
+    if (value === ACTIVE_SYSTEM_PROMPT) return key;
+  }
+  return 'CUSTOM';
+};
+const getPromptDescription = (promptType) => {
+  const descriptions = {
+    PHILOSOPHICAL: 'Deep introspection focused on emotions, growth, and values',
+    NARRATIVE: 'Story-driven questions exploring character development through narrative',
+    PRACTICAL: 'Accessible questions about feelings, learning, and future plans'
+  };
+  return descriptions[promptType] || 'Custom prompt configuration';
+};
+
 // Export functions
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -199,7 +283,11 @@ if (typeof module !== 'undefined' && module.exports) {
     generateIntrospectionPrompt,
     generateEntrySummary,
     getEntrySummary,
-    callOpenAI
+    callOpenAI,
+    SYSTEM_PROMPT_OPTIONS,
+    getAvailablePromptOptions,
+    getCurrentPromptType,
+    getPromptDescription
   };
 } else if (typeof global !== 'undefined') {
   // For testing
@@ -210,6 +298,10 @@ if (typeof module !== 'undefined' && module.exports) {
   global.generateEntrySummary = generateEntrySummary;
   global.getEntrySummary = getEntrySummary;
   global.callOpenAI = callOpenAI;
+  global.SYSTEM_PROMPT_OPTIONS = SYSTEM_PROMPT_OPTIONS;
+  global.getAvailablePromptOptions = getAvailablePromptOptions;
+  global.getCurrentPromptType = getCurrentPromptType;
+  global.getPromptDescription = getPromptDescription;
 } else {
   // For browser
   window.AI = {
@@ -219,6 +311,10 @@ if (typeof module !== 'undefined' && module.exports) {
     generateIntrospectionPrompt,
     generateEntrySummary,
     getEntrySummary,
-    callOpenAI
+    callOpenAI,
+    SYSTEM_PROMPT_OPTIONS,
+    getAvailablePromptOptions,
+    getCurrentPromptType,
+    getPromptDescription
   };
 }
