@@ -76,27 +76,75 @@ const setupPersistence = (state) => {
   }
 };
 
+// Get sync configuration from environment/runtime
+const getSyncConfig = () => {
+  // Try different sources for Pi server config
+  const sources = [
+    // 1. URL parameter (for easy testing: ?sync=ws://192.168.1.100:1234)
+    () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('sync');
+      } catch (e) {
+        return null;
+      }
+    },
+    
+    // 2. Meta tag (set by server/build process)
+    () => {
+      try {
+        if (typeof document !== 'undefined') {
+          const meta = document.querySelector('meta[name="sync-server"]');
+          return meta ? meta.getAttribute('content') : null;
+        }
+        return null;
+      } catch (e) {
+        return null;
+      }
+    },
+    
+    // 3. Auto-detect common local servers
+    () => {
+      // Return array of common local server URLs to try
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost' || hostname.startsWith('192.168.') || hostname.startsWith('10.0.')) {
+        return [
+          `ws://${hostname}:1234`,
+          'ws://localhost:1234',
+          'ws://raspberrypi.local:1234'
+        ];
+      }
+      return null;
+    }
+  ];
+  
+  for (const source of sources) {
+    const result = source();
+    if (result) return Array.isArray(result) ? result : [result];
+  }
+  
+  return [];
+};
+
 // Setup network providers
 const setupNetworking = (state) => {
   if (!state.isAvailable || !state.ydoc) return state;
   
   const providers = [];
-  const config = window.SYNC_CONFIG || {};
   
-  // Try configured Pi server first
-  if (config.piServer) {
+  // Try configured/detected servers first
+  const piServers = getSyncConfig();
+  piServers.forEach(serverUrl => {
     try {
-      providers.push(new window.WebsocketProvider(config.piServer, 'dnd-journal', state.ydoc));
-      console.log(`🔧 Connecting to configured Pi server: ${config.piServer}`);
+      providers.push(new window.WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc));
+      console.log(`🔧 Trying server: ${serverUrl}`);
     } catch (e) {
-      console.warn('⚠️ Configured Pi server connection failed:', e);
+      console.warn(`⚠️ Server ${serverUrl} failed:`, e);
     }
-  }
-  
-
+  });
   
   // Add public relay servers as fallback
-  const publicRelays = config.publicRelays || [
+  const publicRelays = [
     'wss://demos.yjs.dev',
     'wss://y-websocket.herokuapp.com'
   ];
