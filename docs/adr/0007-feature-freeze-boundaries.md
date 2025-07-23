@@ -45,7 +45,6 @@ We establish **hard boundaries** on features that can never be added to this pro
 - AI assistant integration
 - Social features (sharing, comments)
 - Analytics/tracking
-- Settings/preferences panels
 - Print formatting
 - Keyboard shortcuts
 - Accessibility beyond semantic HTML
@@ -59,6 +58,7 @@ We establish **hard boundaries** on features that can never be added to this pro
 - Performance optimizations that don't add complexity
 - Minor UI polish within existing CSS structure
 - Additional test coverage
+- Basic settings/preferences for AI configuration (minimal, essential settings only)
 
 ## Implementation
 - Any suggestion for forbidden features should be immediately rejected
@@ -68,3 +68,13 @@ We establish **hard boundaries** on features that can never be added to this pro
 
 **Exception Process:**
 None. These boundaries are permanent to maintain project integrity.
+
+## Revision History
+
+### 2024-12-19: Allow Basic Settings
+**Rationale:** The AI features require API key storage and basic configuration. A minimal settings interface is essential for:
+- OpenAI API key configuration
+- Enabling/disabling AI features
+- Data export/import for backup
+
+**Constraints:** Settings must remain minimal and focused solely on essential configuration. No themes, customization, or complex preferences beyond AI configuration and data management.
