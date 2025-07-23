@@ -76,11 +76,11 @@ const setupPersistence = (state) => {
   }
 };
 
-// Get sync configuration from environment/runtime
+// Get sync configuration from build-time/deployment sources
 const getSyncConfig = () => {
-  // Try different sources for Pi server config
+  // Try different sources for server config
   const sources = [
-    // 1. URL parameter (for easy testing: ?sync=ws://192.168.1.100:1234)
+    // 1. URL parameter (for testing: ?sync=ws://192.168.1.100:1234)
     () => {
       try {
         const params = new URLSearchParams(window.location.search);
@@ -90,7 +90,7 @@ const getSyncConfig = () => {
       }
     },
     
-    // 2. Meta tag (set by server/build process)
+    // 2. Meta tag (injected during build/deployment)
     () => {
       try {
         if (typeof document !== 'undefined') {
@@ -103,7 +103,16 @@ const getSyncConfig = () => {
       }
     },
     
-    // 3. Auto-detect common local servers
+    // 3. Build-time global (set during build process)
+    () => {
+      try {
+        return window.SYNC_SERVER_URL || null;
+      } catch (e) {
+        return null;
+      }
+    },
+    
+    // 4. Auto-detect common local servers
     () => {
       // Return array of common local server URLs to try
       const hostname = window.location.hostname;

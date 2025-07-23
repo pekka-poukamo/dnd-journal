@@ -23,12 +23,16 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies.
 
 **Users**: Nothing to configure! Auto-detects local servers + free public fallback.
 
-**Developers**: Add `<meta name="sync-server" content="ws://your-pi:1234">` then run:
+**Developers**: Use build-time injection to set sync server:
 ```bash
+# Inject during build
+sed -i 's|</head>|<meta name="sync-server" content="ws://your-pi:1234"></head>|' index.html
+
+# Start server
 npm install -g y-websocket && y-websocket-server --port 1234
 ```
 
-See [SYNC_SETUP.md](SYNC_SETUP.md) for details.
+See [SYNC_SETUP.md](SYNC_SETUP.md) for build-time injection examples.
 
 ## Quick Start
 
