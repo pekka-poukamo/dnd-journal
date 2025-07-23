@@ -76,9 +76,8 @@ const setupPersistence = (state) => {
   }
 };
 
-// Get sync configuration from build-time/deployment sources
+// Dead simple sync configuration - no build tools allowed per ADR-0006
 const getSyncConfig = () => {
-  // Try different sources for server config
   const sources = [
     // 1. URL parameter (for testing: ?sync=ws://192.168.1.100:1234)
     () => {
@@ -90,46 +89,25 @@ const getSyncConfig = () => {
       }
     },
     
-    // 2. Meta tag (injected during build/deployment)
+    // 2. Simple global variable (manually set if needed)
     () => {
       try {
-        if (typeof document !== 'undefined') {
-          const meta = document.querySelector('meta[name="sync-server"]');
-          return meta ? meta.getAttribute('content') : null;
-        }
-        return null;
+        return window.SYNC_SERVER || null;
       } catch (e) {
         return null;
       }
-    },
-    
-    // 3. Build-time global (set during build process)
-    () => {
-      try {
-        return window.SYNC_SERVER_URL || null;
-      } catch (e) {
-        return null;
-      }
-    },
-    
-    // 4. Auto-detect common local servers
-    () => {
-      // Return array of common local server URLs to try
-      const hostname = window.location.hostname;
-      if (hostname === 'localhost' || hostname.startsWith('192.168.') || hostname.startsWith('10.0.')) {
-        return [
-          `ws://${hostname}:1234`,
-          'ws://localhost:1234',
-          'ws://raspberrypi.local:1234'
-        ];
-      }
-      return null;
     }
   ];
   
   for (const source of sources) {
     const result = source();
-    if (result) return Array.isArray(result) ? result : [result];
+    if (result) return [result];
+  }
+  
+  // Default: try common local servers, then use public relays
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname.startsWith('192.168.') || hostname.startsWith('10.0.')) {
+    return ['ws://localhost:1234', 'ws://raspberrypi.local:1234'];
   }
   
   return [];

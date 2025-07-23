@@ -5,9 +5,7 @@
   "main": "index.html",
   "scripts": {
     "test": "mocha test/**/*.test.js --timeout 5000",
-    "sync-server": "y-websocket-server --port 1234",
-    "inject-sync": "node scripts/inject-sync-config.js",
-    "build:with-sync": "npm run inject-sync && echo 'Build complete with sync configuration'"
+    "sync-server": "y-websocket-server --port 1234"
   },
   "keywords": ["dnd", "journal", "local-first", "yjs", "sync"],
   "author": "",
