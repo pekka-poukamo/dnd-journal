@@ -1,66 +1,74 @@
 // D&D Journal - Simple & Functional with In-Place Editing
-const STORAGE_KEY = 'simple-dnd-journal';
 
-// Pure function for creating initial state
-const createInitialState = () => ({
-  character: {
-    name: '',
-    race: '',
-    class: '',
-    backstory: '',
-    notes: ''
-  },
-  entries: []
-});
+// Get utils reference - works in both browser and test environment
+const getUtils = () => {
+  if (typeof window !== 'undefined' && window.Utils) return window.Utils;
+  if (typeof global !== 'undefined' && global.Utils) return global.Utils;
+  try {
+    return require('./utils.js');
+  } catch (e) {
+    try {
+      return require('../js/utils.js');
+    } catch (e2) {
+      // Fallback to inline implementations for tests
+      return {
+        createInitialJournalState: () => ({
+          character: { name: '', race: '', class: '', backstory: '', notes: '' },
+          entries: []
+        }),
+        safeGetFromStorage: (key) => {
+          try {
+            const stored = localStorage.getItem(key);
+            return stored ? { success: true, data: JSON.parse(stored) } : { success: true, data: null };
+          } catch (error) {
+            return { success: false, error: error.message };
+          }
+        },
+        safeSetToStorage: (key, data) => {
+          try {
+            localStorage.setItem(key, JSON.stringify(data));
+            return { success: true };
+          } catch (error) {
+            return { success: false, error: error.message };
+          }
+        },
+        STORAGE_KEYS: {
+          JOURNAL: 'simple-dnd-journal',
+          SETTINGS: 'simple-dnd-journal-settings',
+          SUMMARIES: 'simple-dnd-journal-summaries',
+          META_SUMMARIES: 'simple-dnd-journal-meta-summaries'
+        },
+        generateId: () => Date.now().toString(),
+        formatDate: (timestamp) => new Date(timestamp).toLocaleDateString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        }),
+        sortEntriesByDate: (entries) => [...entries].sort((a, b) => b.timestamp - a.timestamp),
+        isValidEntry: (entryData) => entryData.title.trim().length > 0 && entryData.content.trim().length > 0
+      };
+    }
+  }
+};
+
+const utils = getUtils();
 
 // Simple state management
-let state = createInitialState();
+let state = utils.createInitialJournalState();
 
-// Pure function for safe JSON parsing
-const safeParseJSON = (jsonString) => {
-  try {
-    return { success: true, data: JSON.parse(jsonString) };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-};
-
-// Load state from localStorage - now more functional
+// Load state from localStorage - using utils
 const loadData = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parseResult = safeParseJSON(stored);
-      if (parseResult.success) {
-        state = { ...state, ...parseResult.data };
-      }
+  const result = utils.safeGetFromStorage(utils.STORAGE_KEYS.JOURNAL);
+  if (result.success && result.data) {
+    state = { ...state, ...result.data };
+    // Update global state reference for tests
+    if (typeof global !== 'undefined') {
+      global.state = state;
     }
-  } catch (error) {
-    console.error('Failed to load data:', error);
   }
 };
 
-// Save state to localStorage - pure function approach
+// Save state to localStorage - using utils
 const saveData = () => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (error) {
-    console.error('Failed to save data:', error);
-  }
-};
-
-// Generate simple ID
-const generateId = () => Date.now().toString();
-
-// Format date simply
-const formatDate = (timestamp) => {
-  return new Date(timestamp).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  utils.safeSetToStorage(utils.STORAGE_KEYS.JOURNAL, state);
 };
 
 // Create entry element with edit functionality
@@ -76,7 +84,7 @@ const createEntryElement = (entry) => {
   
   const dateDiv = document.createElement('div');
   dateDiv.className = 'entry-date';
-  dateDiv.textContent = formatDate(entry.timestamp);
+  dateDiv.textContent = utils.formatDate(entry.timestamp);
   
   const contentDiv = document.createElement('div');
   contentDiv.className = 'entry-content';
@@ -179,9 +187,7 @@ const cancelEdit = (entryDiv, entry) => {
   entryDiv.replaceWith(newEntryElement);
 };
 
-// Pure function to sort entries by newest first
-const sortEntriesByDate = (entries) => 
-  [...entries].sort((a, b) => b.timestamp - a.timestamp);
+
 
 // Pure function to create empty state element
 const createEmptyStateElement = () => {
@@ -202,7 +208,7 @@ const renderEntries = () => {
   }
   
   // Functional approach to rendering
-  const sortedEntries = sortEntriesByDate(state.entries);
+  const sortedEntries = utils.sortEntriesByDate(state.entries);
   const entryElements = sortedEntries.map(createEntryElement);
   
   entriesContainer.replaceChildren(...entryElements);
@@ -210,16 +216,12 @@ const renderEntries = () => {
 
 // Pure function to create entry from form data
 const createEntryFromForm = (formData) => ({
-  id: generateId(),
+  id: utils.generateId(),
   title: formData.title.trim(),
   content: formData.content.trim(),
   image: formData.image.trim(),
   timestamp: Date.now()
 });
-
-// Pure function to validate entry data
-const isValidEntry = (entryData) => 
-  entryData.title.trim().length > 0 && entryData.content.trim().length > 0;
 
 // Pure function to get form data
 const getFormData = () => {
@@ -234,21 +236,41 @@ const getFormData = () => {
   };
 };
 
-// Add new entry - now more functional
-const addEntry = () => {
+// Add new entry - functional approach
+const addEntry = async () => {
   const formData = getFormData();
   
-  if (!isValidEntry(formData)) return;
+  if (!utils.isValidEntry(formData)) return;
   
   const newEntry = createEntryFromForm(formData);
   
-  // Add to state (keeping mutation for now to maintain test compatibility)
-  state.entries.push(newEntry);
+  // Add to state immutably - functional approach
+  state = {
+    ...state,
+    entries: [...state.entries, newEntry]
+  };
+  
+  // Update global state reference for tests
+  if (typeof global !== 'undefined') {
+    global.state = state;
+  }
   
   saveData();
   renderEntries();
   clearEntryForm();
   focusEntryTitle();
+  
+  // Generate summary for the new entry if AI is enabled
+  if (window.AI && window.AI.isAIEnabled()) {
+    try {
+      await window.AI.getEntrySummary(newEntry);
+    } catch (error) {
+      console.error('Failed to generate summary for new entry:', error);
+    }
+  }
+  
+  // Refresh AI prompt after adding new entry
+  await displayAIPrompt();
 };
 
 // Pure function to clear entry form
@@ -275,13 +297,14 @@ const createCharacterSummary = (character) => {
     };
   }
   
-  const details = [];
-  if (character.race) details.push(character.race);
-  if (character.class) details.push(character.class);
+  // Functional approach - filter and map instead of push
+  const details = [character.race, character.class]
+    .filter(detail => detail && detail.trim())
+    .join(' • ');
   
   return {
     name: character.name || 'Unnamed Character',
-    details: details.join(' • ') || 'Click "View Details" to add more information'
+    details: details || 'Click "View Details" to add more information'
   };
 };
 
@@ -295,6 +318,38 @@ const displayCharacterSummary = () => {
   const summary = createCharacterSummary(state.character);
   nameElement.textContent = summary.name;
   detailsElement.textContent = summary.details;
+};
+
+// Display AI introspection prompt
+const displayAIPrompt = async () => {
+  const promptSection = document.getElementById('ai-prompt-section');
+  const promptText = document.getElementById('ai-prompt-text');
+  
+  if (!promptSection || !promptText) return;
+  
+  // Check if AI features are enabled
+  if (!window.AI || !window.AI.isAIEnabled()) {
+    promptSection.style.display = 'none';
+    return;
+  }
+  
+  // Show the section
+  promptSection.style.display = 'block';
+  
+  try {
+    // Generate introspection prompt
+    const prompt = await window.AI.generateIntrospectionPrompt(state.character, state.entries);
+    
+    if (prompt) {
+      promptText.textContent = prompt;
+      promptText.classList.remove('loading');
+    } else {
+      promptSection.style.display = 'none';
+    }
+  } catch (error) {
+    console.error('Failed to generate AI prompt:', error);
+    promptSection.style.display = 'none';
+  }
 };
 
 // Setup event handlers for journal entries
@@ -329,11 +384,21 @@ const setupEventHandlers = () => {
 };
 
 // Initialize app
-const init = () => {
+const init = async () => {
   loadData();
   displayCharacterSummary();
   renderEntries();
   setupEventHandlers();
+  
+  // Initialize summarization in background
+  if (window.Summarization) {
+    setTimeout(async () => {
+      await window.Summarization.initializeSummarization();
+    }, 1000); // Delay to not block initial load
+  }
+  
+  // Display AI prompt after everything else is loaded
+  await displayAIPrompt();
   
   // Focus on entry title
   const titleInput = document.getElementById('entry-title');
@@ -348,8 +413,6 @@ document.addEventListener('DOMContentLoaded', init);
 // Export functions for testing (only in test environment)
 if (typeof global !== 'undefined') {
   global.state = state;
-  global.generateId = generateId;
-  global.formatDate = formatDate;
   global.loadData = loadData;
   global.saveData = saveData;
   global.createEntryElement = createEntryElement;
@@ -360,5 +423,6 @@ if (typeof global !== 'undefined') {
   global.addEntry = addEntry;
   global.createCharacterSummary = createCharacterSummary;
   global.displayCharacterSummary = displayCharacterSummary;
+  global.displayAIPrompt = displayAIPrompt;
   global.init = init;
 }

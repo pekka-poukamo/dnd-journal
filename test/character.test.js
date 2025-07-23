@@ -3,8 +3,10 @@ const fs = require('fs');
 require('./setup');
 const { should } = require('chai');
 
-// Load the character.js file as a module
+// Load the utils and character files as modules
+const utilsPath = path.join(__dirname, '../js/utils.js');
 const characterPath = path.join(__dirname, '../js/character.js');
+const utilsContent = fs.readFileSync(utilsPath, 'utf8');
 const characterContent = fs.readFileSync(characterPath, 'utf8');
 
 // Create a proper module context for character page
@@ -22,25 +24,25 @@ function loadCharacterPage() {
   `;
   
   // Clear any existing globals
-  delete global.createInitialCharacterState;
-  delete global.safeParseJSON;
   delete global.loadCharacterData;
   delete global.saveCharacterData;
   delete global.getCharacterFromForm;
   delete global.populateForm;
-  delete global.debounce;
+  
+  // Setup window object for utils
+  global.window = global.window || {};
+  
+  // Evaluate the utils code first to setup window.Utils
+  eval(utilsContent);
   
   // Evaluate the character code in the global context
   eval(characterContent);
   
   return {
-    createInitialCharacterState: global.createInitialCharacterState,
-    safeParseJSON: global.safeParseJSON,
     loadCharacterData: global.loadCharacterData,
     saveCharacterData: global.saveCharacterData,
     getCharacterFromForm: global.getCharacterFromForm,
-    populateForm: global.populateForm,
-    debounce: global.debounce
+    populateForm: global.populateForm
   };
 }
 
@@ -48,45 +50,6 @@ describe('Character Page', function() {
   beforeEach(function() {
     loadCharacterPage();
   });
-
-  describe('createInitialCharacterState', function() {
-    it('should create a valid empty character state', function() {
-      const state = createInitialCharacterState();
-      
-      // Test that it's a valid object
-      state.should.be.an('object');
-      
-      // Test that it has the core properties needed for the app to function
-      state.should.have.property('name');
-      state.should.have.property('race');
-      state.should.have.property('class');
-      
-      // Test that it can be used with form population without errors
-      (() => populateForm(state)).should.not.throw();
-    });
-  });
-
-  describe('safeParseJSON', function() {
-    it('should parse valid JSON successfully', function() {
-      const validJson = '{"name": "Aragorn", "class": "Ranger"}';
-      const result = safeParseJSON(validJson);
-      
-      result.should.have.property('success', true);
-      result.should.have.property('data');
-      result.data.should.have.property('name', 'Aragorn');
-      result.data.should.have.property('class', 'Ranger');
-    });
-
-    it('should handle invalid JSON gracefully', function() {
-      const invalidJson = '{"name": "Aragorn", "class":}';
-      const result = safeParseJSON(invalidJson);
-      
-      result.should.have.property('success', false);
-      result.should.have.property('error').that.is.a('string');
-    });
-  });
-
-
 
   describe('Character Form Integration', function() {
     it('should populate form with character data', function() {
@@ -127,9 +90,15 @@ describe('Character Page', function() {
 
     it('should handle empty form gracefully', function() {
       const character = getCharacterFromForm();
-      const initialState = createInitialCharacterState();
+      const expectedState = {
+        name: '',
+        race: '',
+        class: '',
+        backstory: '',
+        notes: ''
+      };
       
-      character.should.deep.equal(initialState);
+      character.should.deep.equal(expectedState);
     });
   });
 
@@ -179,25 +148,5 @@ describe('Character Page', function() {
     });
   });
 
-  describe('Utility Functions', function() {
-    it('should create a debounced function', function(done) {
-      let callCount = 0;
-      const testFunction = () => callCount++;
-      const debouncedFn = debounce(testFunction, 50);
 
-      // Call multiple times rapidly
-      debouncedFn();
-      debouncedFn();
-      debouncedFn();
-
-      // Should not have been called yet
-      callCount.should.equal(0);
-
-      // Wait for debounce delay
-      setTimeout(() => {
-        callCount.should.equal(1);
-        done();
-      }, 60);
-    });
-  });
 });

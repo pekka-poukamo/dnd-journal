@@ -2,6 +2,14 @@ require('./setup');
 const path = require('path');
 const fs = require('fs');
 
+// Load utils module
+let Utils;
+try {
+  Utils = require('../js/utils.js');
+} catch (e) {
+  // Utils module not available in test environment
+}
+
 describe('D&D Journal Integration Tests', function() {
   let appContent;
   
@@ -158,7 +166,7 @@ describe('D&D Journal Integration Tests', function() {
     state.character = { name: 'Frodo', race: 'Hobbit', class: 'Burglar' };
     state.entries = [
       {
-        id: generateId(),
+        id: Utils.generateId(),
         title: 'Initial Entry',
         content: 'Starting the journey',
         timestamp: Date.now() - 1000
