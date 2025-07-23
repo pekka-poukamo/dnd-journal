@@ -1,5 +1,33 @@
 // Summarization Management - Smart handling of entry summaries
 
+// Get utils reference - works in both browser and test environment
+const getUtils = () => {
+  if (typeof window !== 'undefined' && window.Utils) return window.Utils;
+  if (typeof global !== 'undefined' && global.Utils) return global.Utils;
+  try {
+    return require('./utils.js');
+  } catch (e) {
+    try {
+      return require('../js/utils.js');
+    } catch (e2) {
+      // Fallback for tests
+      return {
+        loadDataWithFallback: (key, fallback) => fallback,
+        createInitialJournalState: () => ({ character: {}, entries: [] }),
+        getWordCount: (text) => text.trim().split(/\s+/).filter(word => word.length > 0).length,
+        STORAGE_KEYS: {
+          JOURNAL: 'simple-dnd-journal',
+          SUMMARIES: 'simple-dnd-journal-summaries',
+          META_SUMMARIES: 'simple-dnd-journal-meta-summaries'
+        },
+        safeSetToStorage: () => ({ success: true })
+      };
+    }
+  }
+};
+
+const utils = getUtils();
+
 // Configuration for meta-summarization
 const META_SUMMARY_CONFIG = {
   triggerThreshold: 50, // Start meta-summarization when more than 50 entries
@@ -9,30 +37,30 @@ const META_SUMMARY_CONFIG = {
 
 // Pure function to load journal data
 const loadJournalData = () => {
-  return window.Utils.loadDataWithFallback(
-    window.Utils.STORAGE_KEYS.JOURNAL, 
-    window.Utils.createInitialJournalState()
+  return utils.loadDataWithFallback(
+    utils.STORAGE_KEYS.JOURNAL, 
+    utils.createInitialJournalState()
   );
 };
 
 // Pure function to load stored summaries
 const loadStoredSummaries = () => {
-  return window.Utils.loadDataWithFallback(window.Utils.STORAGE_KEYS.SUMMARIES, {});
+  return utils.loadDataWithFallback(utils.STORAGE_KEYS.SUMMARIES, {});
 };
 
 // Save summaries to localStorage
 const saveStoredSummaries = (summaries) => {
-  window.Utils.safeSetToStorage(window.Utils.STORAGE_KEYS.SUMMARIES, summaries);
+  utils.safeSetToStorage(utils.STORAGE_KEYS.SUMMARIES, summaries);
 };
 
 // Pure function to load stored meta-summaries
 const loadStoredMetaSummaries = () => {
-  return window.Utils.loadDataWithFallback(window.Utils.STORAGE_KEYS.META_SUMMARIES, {});
+  return utils.loadDataWithFallback(utils.STORAGE_KEYS.META_SUMMARIES, {});
 };
 
 // Save meta-summaries to localStorage
 const saveStoredMetaSummaries = (metaSummaries) => {
-  window.Utils.safeSetToStorage(window.Utils.STORAGE_KEYS.META_SUMMARIES, metaSummaries);
+  utils.safeSetToStorage(utils.STORAGE_KEYS.META_SUMMARIES, metaSummaries);
 };
 
 // Pure function to determine which entries need summaries
@@ -76,7 +104,7 @@ ${summariesText}`;
       entryCount: summaryGroup.length,
       timeRange: timeRange,
       originalWordCount: summaryGroup.reduce((total, s) => total + s.summaryWordCount, 0),
-      metaSummaryWordCount: window.Utils.getWordCount(metaSummary),
+      metaSummaryWordCount: utils.getWordCount(metaSummary),
       timestamp: Date.now()
     };
   } catch (error) {

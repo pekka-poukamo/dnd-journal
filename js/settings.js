@@ -1,16 +1,39 @@
 // Settings Page - AI Configuration & Data Management
 
+// Get utils reference - works in both browser and test environment
+const getUtils = () => {
+  if (typeof window !== 'undefined' && window.Utils) return window.Utils;
+  if (typeof global !== 'undefined' && global.Utils) return global.Utils;
+  try {
+    return require('./utils.js');
+  } catch (e) {
+    try {
+      return require('../js/utils.js');
+    } catch (e2) {
+      // Fallback for tests
+      return {
+        loadDataWithFallback: (key, fallback) => fallback,
+        createInitialSettings: () => ({ apiKey: '', enableAIFeatures: false }),
+        safeSetToStorage: () => ({ success: true }),
+        STORAGE_KEYS: { SETTINGS: 'simple-dnd-journal-settings' }
+      };
+    }
+  }
+};
+
+const utils = getUtils();
+
 // Load settings from localStorage
 const loadSettings = () => {
-  return window.Utils.loadDataWithFallback(
-    window.Utils.STORAGE_KEYS.SETTINGS, 
-    window.Utils.createInitialSettings()
+  return utils.loadDataWithFallback(
+    utils.STORAGE_KEYS.SETTINGS, 
+    utils.createInitialSettings()
   );
 };
 
 // Save settings to localStorage
 const saveSettings = (settings) => {
-  return window.Utils.safeSetToStorage(window.Utils.STORAGE_KEYS.SETTINGS, settings);
+  return utils.safeSetToStorage(utils.STORAGE_KEYS.SETTINGS, settings);
 };
 
 

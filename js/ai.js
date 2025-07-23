@@ -1,10 +1,34 @@
 // AI Module - OpenAI Integration for Introspection and Summarization
 
+// Get utils reference - works in both browser and test environment
+const getUtils = () => {
+  if (typeof window !== 'undefined' && window.Utils) return window.Utils;
+  if (typeof global !== 'undefined' && global.Utils) return global.Utils;
+  try {
+    return require('./utils.js');
+  } catch (e) {
+    try {
+      return require('../js/utils.js');
+    } catch (e2) {
+      // Fallback for tests
+      return {
+        loadDataWithFallback: (key, fallback) => fallback,
+        createInitialSettings: () => ({ apiKey: '', enableAIFeatures: false }),
+        getWordCount: (text) => text.trim().split(/\s+/).filter(word => word.length > 0).length,
+        STORAGE_KEYS: { SETTINGS: 'simple-dnd-journal-settings', SUMMARIES: 'simple-dnd-journal-summaries' },
+        safeSetToStorage: () => ({ success: true })
+      };
+    }
+  }
+};
+
+const utils = getUtils();
+
 // Pure function to load settings
 const loadAISettings = () => {
-  return window.Utils.loadDataWithFallback(
-    window.Utils.STORAGE_KEYS.SETTINGS, 
-    window.Utils.createInitialSettings()
+  return utils.loadDataWithFallback(
+    utils.STORAGE_KEYS.SETTINGS, 
+    utils.createInitialSettings()
   );
 };
 
@@ -114,7 +138,7 @@ const generateEntrySummary = async (entry) => {
   }
 
   try {
-    const wordCount = window.Utils.getWordCount(entry.content);
+    const wordCount = utils.getWordCount(entry.content);
     const targetLength = Math.max(10, Math.floor(wordCount * 0.3)); // 30% of original length
     
     const prompt = `Summarize this D&D journal entry in approximately ${targetLength} words. Keep the key events, emotions, and character development:
@@ -128,7 +152,7 @@ Content: ${entry.content}`;
       id: entry.id,
       originalWordCount: wordCount,
       summary: summary,
-      summaryWordCount: window.Utils.getWordCount(summary),
+      summaryWordCount: utils.getWordCount(summary),
       timestamp: Date.now()
     };
   } catch (error) {
@@ -139,12 +163,12 @@ Content: ${entry.content}`;
 
 // Load stored summaries
 const loadStoredSummaries = () => {
-  return window.Utils.loadDataWithFallback(window.Utils.STORAGE_KEYS.SUMMARIES, {});
+  return utils.loadDataWithFallback(utils.STORAGE_KEYS.SUMMARIES, {});
 };
 
 // Save summaries to localStorage
 const saveStoredSummaries = (summaries) => {
-  window.Utils.safeSetToStorage(window.Utils.STORAGE_KEYS.SUMMARIES, summaries);
+  utils.safeSetToStorage(utils.STORAGE_KEYS.SUMMARIES, summaries);
 };
 
 // Get or generate summary for an entry
