@@ -1,5 +1,46 @@
 // AI Module - OpenAI Integration for Introspection and Summarization
 
+// ================================
+// NARRATIVE INTROSPECTION SYSTEM
+// ================================
+//
+// This module provides a unified approach to AI-generated character introspection
+// focused on great storytelling and finding the "third choice" in character development.
+//
+// FORMAT: 3+1 Questions
+// - 3 Core Narrative Questions: Pivotal moments, current conflicts, future paths
+// - 1 "Third Choice" Question: Surprising, left-field prompt for creative thinking
+//
+// INTEGRATION WITH SUMMARIES:
+// The AI automatically uses generated summaries when available, providing context from:
+// - Recent full entries (most recent adventures)
+// - Individual entry summaries (older entries)  
+// - Meta-summaries (grouped summaries of many older entries)
+//
+// This ensures the AI has relevant context while encouraging compelling narratives
+// and helping players discover unexpected character depths.
+//
+// ================================
+
+// Unified narrative-focused system prompt with "third choice" element
+const NARRATIVE_INTROSPECTION_PROMPT = `You are a masterful D&D storytelling companion who helps players discover compelling narratives and unexpected character depths. You create introspective prompts that encourage great storytelling and creative character development.
+
+Present exactly 4 questions in this format:
+
+**Core Narrative Questions (1-3):**
+1. A pivotal moment, memory, or relationship that has shaped who they are
+2. A current internal conflict, dilemma, or aspiration they're wrestling with  
+3. How recent events might change their path or reveal something new about them
+
+**The Third Choice (4):**
+A surprising, unexpected, or "left field" question that pushes beyond obvious responses. This should encourage the player to find a creative "third option" - an unconventional perspective, hidden motivation, or surprising character truth that goes beyond binary thinking. Challenge assumptions and reveal what the character might do when conventional choices aren't enough.
+
+Make all questions specific to the character's situation and recent adventures. Focus on narrative depth, emotional truth, and discovering the unexpected aspects of who this character really is. Help the player tell a great story.`;
+
+// ================================
+// END SYSTEM PROMPT CONFIGURATIONS
+// ================================
+
 // Get utils reference - works in both browser and test environment
 const getUtils = () => {
   if (typeof window !== 'undefined' && window.Utils) return window.Utils;
@@ -39,7 +80,7 @@ const isAIEnabled = () => {
 };
 
 // Pure function to create introspection prompt
-const createIntrospectionPrompt = (character, recentEntries) => {
+const createIntrospectionPrompt = (character, formattedEntries) => {
   const characterInfo = character.name ? 
     `${character.name}, a ${character.race || 'character'} ${character.class || 'adventurer'}` :
     'your character';
@@ -47,13 +88,18 @@ const createIntrospectionPrompt = (character, recentEntries) => {
   const backstoryContext = character.backstory ? 
     `\n\nCharacter Background: ${character.backstory}` : '';
     
-  const entriesContext = recentEntries.length > 0 ? 
-    `\n\nRecent Adventures:\n${recentEntries.map(entry => `- ${entry.title}: ${entry.content.substring(0, 100)}${entry.content.length > 100 ? '...' : ''}`).join('\n')}` :
-    '';
+  // Format entries using the summarization system's formatted entries
+  const entriesContext = formattedEntries.length > 0 ? 
+    `\n\nJourney Context:\n${formattedEntries.map(entry => {
+      const prefix = entry.type === 'meta-summary' ? 'Adventures Summary' :
+                     entry.type === 'summary' ? 'Entry Summary' : 'Recent Entry';
+      const content = entry.content.length > 150 ? entry.content.substring(0, 150) + '...' : entry.content;
+      return `- ${prefix}: ${entry.title} - ${content}`;
+    }).join('\n')}` : '';
 
-  return `Based on the journey of ${characterInfo}${backstoryContext}${entriesContext}
+  return `Character: ${characterInfo}${backstoryContext}${entriesContext}
 
-What thoughts, emotions, or realizations might ${character.name || 'your character'} be having right now? What internal conflicts, growth, or questions about their path forward could they be pondering?`;
+Please create 4 introspective questions (3 core narrative + 1 surprising "third choice") that would help this player discover compelling stories and unexpected depths in their character.`;
 };
 
 // Call OpenAI API for text generation
@@ -76,7 +122,7 @@ const callOpenAI = async (prompt, maxTokens = 150) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a thoughtful D&D companion helping with character introspection. Respond in character voice, first person, as if the character is reflecting internally. Keep responses concise but meaningful.'
+            content: NARRATIVE_INTROSPECTION_PROMPT
           },
           {
             role: 'user',
@@ -190,6 +236,11 @@ const getEntrySummary = async (entry) => {
   return summary;
 };
 
+// Helper function for prompt information
+const getPromptDescription = () => {
+  return 'Narrative-focused introspection with 3 core questions + 1 surprising "third choice" prompt';
+};
+
 // Export functions
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -199,7 +250,8 @@ if (typeof module !== 'undefined' && module.exports) {
     generateIntrospectionPrompt,
     generateEntrySummary,
     getEntrySummary,
-    callOpenAI
+    callOpenAI,
+    getPromptDescription
   };
 } else if (typeof global !== 'undefined') {
   // For testing
@@ -210,6 +262,7 @@ if (typeof module !== 'undefined' && module.exports) {
   global.generateEntrySummary = generateEntrySummary;
   global.getEntrySummary = getEntrySummary;
   global.callOpenAI = callOpenAI;
+  global.getPromptDescription = getPromptDescription;
 } else {
   // For browser
   window.AI = {
@@ -219,6 +272,7 @@ if (typeof module !== 'undefined' && module.exports) {
     generateIntrospectionPrompt,
     generateEntrySummary,
     getEntrySummary,
-    callOpenAI
+    callOpenAI,
+    getPromptDescription
   };
 }
