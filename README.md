@@ -21,11 +21,12 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies.
 
 ## Sync Setup (Optional)
 
-For cross-device synchronization, see [SYNC_SETUP.md](SYNC_SETUP.md)
+For cross-device synchronization:
 
-- **Free**: Works with public relay servers
-- **Pi Server**: Enhanced performance with Raspberry Pi
-- **Local-First**: Maintains offline-first principles
+1. Install: `npm install -g y-websocket && y-websocket-server --port 1234`
+2. Configure in Settings: `ws://your-ip:1234`
+
+See [SYNC_SETUP.md](SYNC_SETUP.md) for details.
 
 ## Quick Start
 

@@ -146,28 +146,10 @@ const setupObservers = (state) => {
 // Get Pi server configuration
 const getPiServerConfig = () => {
   try {
-    // Check stored configuration first
-    const stored = window.localStorage.getItem('dnd-journal-pi-server');
-    if (stored) {
-      return stored;
-    }
-    
-    // Check URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const piParam = urlParams.get('pi');
-    if (piParam) {
-      const hasPort = piParam.includes(':');
-      const server = hasPort ? `ws://${piParam}` : `ws://${piParam}:1234`;
-      
-      // Save for future use
-      window.localStorage.setItem('dnd-journal-pi-server', server);
-      return server;
-    }
+    return window.localStorage.getItem('dnd-journal-pi-server');
   } catch (e) {
-    console.log('URL parameter check failed, continuing without Pi config');
+    return null;
   }
-  
-  return null;
 };
 
 // Get current data from Yjs

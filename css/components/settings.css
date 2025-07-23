@@ -163,6 +163,21 @@
   transition: width 0.3s ease;
 }
 
+/* Sync Status */
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-text-light);
+}
+
+.sync-status-indicator {
+  font-size: 1rem;
+  font-weight: bold;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .settings-content {

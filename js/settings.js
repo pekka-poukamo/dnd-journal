@@ -259,10 +259,86 @@ const populateForm = () => {
   updateSummaryStats();
 };
 
+// Sync settings functions
+const loadSyncSettings = () => {
+  const piServerInput = document.getElementById('pi-server');
+  const syncIndicator = document.getElementById('sync-indicator');
+  const syncText = document.getElementById('sync-text');
+  
+  if (!piServerInput) return;
+  
+  try {
+    const piServer = localStorage.getItem('dnd-journal-pi-server');
+    if (piServer) {
+      piServerInput.value = piServer;
+      
+      // Check if sync is available and connected
+      if (typeof createYjsSync === 'function') {
+        const sync = createYjsSync();
+        const status = sync.getStatus();
+        
+        if (status.available && status.connected) {
+          syncIndicator.textContent = '●';
+          syncIndicator.style.color = '#22c55e';
+          syncText.textContent = 'Connected';
+        } else if (status.available) {
+          syncIndicator.textContent = '●';
+          syncIndicator.style.color = '#f59e0b';
+          syncText.textContent = 'Configured but not connected';
+        } else {
+          syncIndicator.textContent = '○';
+          syncIndicator.style.color = '#6b7280';
+          syncText.textContent = 'Configured (Yjs not loaded)';
+        }
+      } else {
+        syncIndicator.textContent = '○';
+        syncIndicator.style.color = '#6b7280';
+        syncText.textContent = 'Configured (Yjs not loaded)';
+      }
+    } else {
+      syncIndicator.textContent = '○';
+      syncIndicator.style.color = '#6b7280';
+      syncText.textContent = 'Not configured';
+    }
+  } catch (e) {
+    console.warn('Error loading sync settings:', e);
+  }
+};
+
+const setupSyncEventHandlers = () => {
+  const piServerInput = document.getElementById('pi-server');
+  
+  if (!piServerInput) return;
+  
+  piServerInput.addEventListener('input', () => {
+    const value = piServerInput.value.trim();
+    
+    try {
+      if (value) {
+        localStorage.setItem('dnd-journal-pi-server', value);
+      } else {
+        localStorage.removeItem('dnd-journal-pi-server');
+      }
+      
+      // Reconfigure sync if available
+      if (typeof createYjsSync === 'function' && window.yjsSync) {
+        window.yjsSync.configurePiServer(value || null);
+      }
+      
+      // Update status
+      setTimeout(loadSyncSettings, 100);
+    } catch (e) {
+      console.warn('Error saving Pi server config:', e);
+    }
+  });
+};
+
 // Initialize settings page
 const init = () => {
   populateForm();
   setupEventHandlers();
+  loadSyncSettings();
+  setupSyncEventHandlers();
 };
 
 // Start when DOM is ready
