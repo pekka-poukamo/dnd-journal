@@ -51,9 +51,8 @@ pm2 status
 ```
 
 **How it works:**
-1. URL parameter for testing: `?sync=ws://test:1234` 
-2. Uses `sync-config.js` server setting
-3. Falls back to free public servers (demos.yjs.dev, etc.)
+1. Uses `sync-config.js` server setting if configured
+2. Falls back to free public servers (demos.yjs.dev, etc.)
 
 Simple: set your server in the config or use the defaults.
 

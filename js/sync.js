@@ -78,21 +78,14 @@ const setupPersistence = (state) => {
 
 // Simple sync configuration
 const getSyncConfig = () => {
-  // 1. URL parameter for testing: ?sync=ws://192.168.1.100:1234
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const urlSync = params.get('sync');
-    if (urlSync) return [urlSync];
-  } catch (e) {}
-  
-  // 2. Config file setting
+  // Use config file setting if available
   try {
     if (window.SYNC_CONFIG && window.SYNC_CONFIG.server) {
       return [window.SYNC_CONFIG.server];
     }
   } catch (e) {}
   
-  // 3. Default to public relays
+  // Default to public relays
   return [];
 };
 
