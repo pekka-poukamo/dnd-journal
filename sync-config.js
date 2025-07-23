@@ -1,18 +1,12 @@
-// D&D Journal Sync Configuration Template
-// Copy this file to sync-config.js and edit as needed
+// D&D Journal Sync Configuration
+// Edit this file to set your sync server
 
 window.SYNC_CONFIG = {
-  // Your sync server URL (leave empty for auto-detection)
+  // Your sync server URL (leave empty to use default public relays)
   server: '',
   
   // Examples:
   // server: 'ws://192.168.1.100:1234',
   // server: 'ws://raspberrypi.local:1234',
-  // server: 'ws://my-server.com:1234',
-  
-  // Public relay servers (always available as fallback)
-  relays: [
-    'wss://demos.yjs.dev',
-    'wss://y-websocket.herokuapp.com'
-  ]
+  // server: 'wss://my-server.com:1234',
 };

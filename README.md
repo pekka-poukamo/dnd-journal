@@ -23,24 +23,39 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies.
 
 Cross-device sync for your journal entries.
 
-**Users**: Nothing to configure! Auto-detects local servers + free public fallback.
+**Users**: Nothing to configure! Uses free public servers by default.
 
 **Developers**: 
 ```bash
-# Start sync server
+# Quick start
 npm run sync-server
 
-# To customize: copy sync-config.template.js to sync-config.js
-# Then edit: server: 'ws://192.168.1.100:1234'
+# Or edit sync-config.js to set your server:
+# server: 'ws://192.168.1.100:1234'
+```
+
+**Persistent Server Setup (Raspberry Pi):**
+```bash
+# Install PM2 and y-websocket globally
+npm install -g pm2 y-websocket
+
+# Start persistent server
+pm2 start y-websocket-server --name "dnd-sync" -- --port 1234
+
+# Make it start on boot
+pm2 startup
+pm2 save
+
+# Check status
+pm2 status
 ```
 
 **How it works:**
-1. Tries URL parameter: `?sync=ws://test:1234` 
-2. Uses `sync-config.js` setting
-3. Auto-detects `ws://localhost:1234`, `ws://raspberrypi.local:1234`
-4. Falls back to free public servers
+1. URL parameter for testing: `?sync=ws://test:1234` 
+2. Uses `sync-config.js` server setting
+3. Falls back to free public servers (demos.yjs.dev, etc.)
 
-Zero build tools, just edit the config file if needed.
+Simple: set your server in the config or use the defaults.
 
 ## Quick Start
 

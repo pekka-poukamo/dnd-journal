@@ -78,9 +78,7 @@ const setupPersistence = (state) => {
 
 // Simple sync configuration
 const getSyncConfig = () => {
-  const servers = [];
-  
-  // 1. URL parameter (for testing: ?sync=ws://192.168.1.100:1234)
+  // 1. URL parameter for testing: ?sync=ws://192.168.1.100:1234
   try {
     const params = new URLSearchParams(window.location.search);
     const urlSync = params.get('sync');
@@ -90,17 +88,12 @@ const getSyncConfig = () => {
   // 2. Config file setting
   try {
     if (window.SYNC_CONFIG && window.SYNC_CONFIG.server) {
-      servers.push(window.SYNC_CONFIG.server);
+      return [window.SYNC_CONFIG.server];
     }
   } catch (e) {}
   
-  // 3. Auto-detect common local servers
-  const hostname = window.location.hostname;
-  if (hostname === 'localhost' || hostname.startsWith('192.168.') || hostname.startsWith('10.0.')) {
-    servers.push('ws://localhost:1234', 'ws://raspberrypi.local:1234');
-  }
-  
-  return servers;
+  // 3. Default to public relays
+  return [];
 };
 
 // Setup network providers
@@ -109,28 +102,21 @@ const setupNetworking = (state) => {
   
   const providers = [];
   
-  // Try configured/detected servers first
-  const piServers = getSyncConfig();
-  piServers.forEach(serverUrl => {
-    try {
-      providers.push(new window.WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc));
-      console.log(`🔧 Trying server: ${serverUrl}`);
-    } catch (e) {
-      console.warn(`⚠️ Server ${serverUrl} failed:`, e);
-    }
-  });
-  
-  // Add public relay servers as fallback
-  const relays = (window.SYNC_CONFIG && window.SYNC_CONFIG.relays) || [
+  // Get configured servers or use defaults
+  const configuredServers = getSyncConfig();
+  const defaultRelays = [
     'wss://demos.yjs.dev',
     'wss://y-websocket.herokuapp.com'
   ];
   
-  relays.forEach(url => {
+  const servers = configuredServers.length > 0 ? configuredServers : defaultRelays;
+  
+  servers.forEach(serverUrl => {
     try {
-      providers.push(new window.WebsocketProvider(url, 'dnd-journal', state.ydoc));
+      providers.push(new window.WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc));
+      console.log(`🔧 Connecting to: ${serverUrl}`);
     } catch (e) {
-      console.warn(`⚠️ Failed to connect to ${url}:`, e);
+      console.warn(`⚠️ Failed to connect to ${serverUrl}:`, e);
     }
   });
   
