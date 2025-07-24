@@ -653,6 +653,108 @@ describe('D&D Journal App', function() {
     });
   });
 
+  describe('regenerateAIPrompt', function() {
+    beforeEach(function() {
+      document.body.innerHTML = `
+        <section id="ai-prompt-section" style="display: block;">
+          <div class="ai-prompt__header">
+            <button id="regenerate-prompt-btn">🔄 Regenerate</button>
+          </div>
+          <div id="ai-prompt-text">Existing prompt content</div>
+        </section>
+      `;
+      // Mock window.AI
+      global.window = {
+        AI: {
+          isAIEnabled: () => false,
+          generateIntrospectionPrompt: async () => null
+        }
+      };
+    });
+
+    it('should do nothing when AI is disabled', async function() {
+      await regenerateAIPrompt();
+      
+      const promptText = document.getElementById('ai-prompt-text');
+      promptText.textContent.should.equal('Existing prompt content');
+    });
+
+    it('should regenerate prompt when AI is enabled', async function() {
+      global.window.AI.isAIEnabled = () => true;
+      global.window.AI.generateIntrospectionPrompt = async () => 'New introspection prompt';
+      
+      await regenerateAIPrompt();
+      
+      const promptText = document.getElementById('ai-prompt-text');
+      const regenerateBtn = document.getElementById('regenerate-prompt-btn');
+      
+      promptText.textContent.should.equal('New introspection prompt');
+      promptText.classList.contains('loading').should.be.false;
+      regenerateBtn.disabled.should.be.false;
+    });
+
+    it('should show loading state during regeneration', async function() {
+      global.window.AI.isAIEnabled = () => true;
+      let resolvePromise;
+      const promiseToResolve = new Promise(resolve => {
+        resolvePromise = resolve;
+      });
+      global.window.AI.generateIntrospectionPrompt = async () => promiseToResolve;
+      
+      const regeneratePromise = regenerateAIPrompt();
+      
+      const promptText = document.getElementById('ai-prompt-text');
+      const regenerateBtn = document.getElementById('regenerate-prompt-btn');
+      
+      promptText.classList.contains('loading').should.be.true;
+      promptText.textContent.should.equal('Generating a new introspection prompt...');
+      regenerateBtn.disabled.should.be.true;
+      
+      resolvePromise('Test prompt');
+      await regeneratePromise;
+      
+      promptText.classList.contains('loading').should.be.false;
+      regenerateBtn.disabled.should.be.false;
+    });
+
+    it('should handle no prompt generated gracefully', async function() {
+      global.window.AI.isAIEnabled = () => true;
+      global.window.AI.generateIntrospectionPrompt = async () => null;
+      
+      await regenerateAIPrompt();
+      
+      const promptText = document.getElementById('ai-prompt-text');
+      const regenerateBtn = document.getElementById('regenerate-prompt-btn');
+      
+      promptText.textContent.should.equal('Unable to generate introspection prompt at this time.');
+      promptText.classList.contains('loading').should.be.false;
+      regenerateBtn.disabled.should.be.false;
+    });
+
+    it('should handle API errors gracefully', async function() {
+      global.window.AI.isAIEnabled = () => true;
+      global.window.AI.generateIntrospectionPrompt = async () => {
+        throw new Error('API Error');
+      };
+      
+      await regenerateAIPrompt();
+      
+      const promptText = document.getElementById('ai-prompt-text');
+      const regenerateBtn = document.getElementById('regenerate-prompt-btn');
+      
+      promptText.textContent.should.equal('Error generating prompt. Please try again.');
+      promptText.classList.contains('loading').should.be.false;
+      regenerateBtn.disabled.should.be.false;
+    });
+
+    it('should handle missing DOM elements gracefully', async function() {
+      document.body.innerHTML = '';
+      
+      // Should not throw error
+      (() => regenerateAIPrompt()).should.not.throw();
+    });
+  });
+
   describe('formatAIPrompt', function() {
          it('should format bold text correctly', function() {
        const input = '**Important Note:**\n1. Test question';
