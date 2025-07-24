@@ -1,4 +1,4 @@
-/* Navigation Component - Shared across pages */
+/* Navigation Component - Nordic Minimalism */
 
 .navigation {
   display: flex;
@@ -8,48 +8,62 @@
 }
 
 .navigation__title {
-  color: var(--color-primary);
+  color: var(--color-text);
+  font-family: var(--font-heading);
   font-size: var(--font-size-xl);
-  font-weight: 600;
+  font-weight: var(--font-weight-thin);
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .navigation__link {
-  color: var(--color-primary);
+  color: var(--color-text-secondary);
   text-decoration: none;
-  font-weight: 500;
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-light);
+  font-size: var(--font-size-sm);
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--border-radius);
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
+  transition: var(--transition);
+  border: var(--border-width) solid transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .navigation__link:hover {
-  background: var(--color-background);
-  border-color: var(--color-border);
-  transform: translateY(-1px);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
-.navigation__link:active {
-  transform: translateY(0);
+.navigation__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-light);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
-.navigation__link--primary {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
+.navigation__breadcrumb a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: var(--transition);
 }
 
-.navigation__link--primary:hover {
-  background: #357abd;
-  border-color: #357abd;
+.navigation__breadcrumb a:hover {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
 }
 
 /* Responsive navigation */
-@media (max-width: 767px) {
+@media (max-width: 640px) {
   .navigation {
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: var(--space-md);
     text-align: center;
   }
   
