@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D Journal - Simple</title>
+    <title>D&D Journal</title>
+    
+    <!-- Google Fonts for Nordic Minimalism Design -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@100;300;400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components/character-summary.css">
     <link rel="stylesheet" href="css/components/ai-prompt.css">
@@ -12,72 +18,82 @@
     <script src="https://unpkg.com/yjs@13.6.10/dist/yjs.js"></script>
     <script src="https://unpkg.com/y-websocket@1.5.0/dist/y-websocket.js"></script>
     <script src="https://unpkg.com/y-indexeddb@9.0.12/dist/y-indexeddb.js"></script>
-  </head>
+</head>
 <body>
     <header>
         <div class="container">
-            <h1>D&D Journal</h1>
-            <nav class="header-nav">
-                <a href="settings.html" class="button button--secondary">Settings</a>
-            </nav>
+            <div class="header-nav">
+                <h1>D&D Journal</h1>
+                <nav>
+                    <a href="character.html">Character</a>
+                    <a href="settings.html">Settings</a>
+                </nav>
+            </div>
         </div>
     </header>
     
-    <main class="container">
-        <div class="grid gap-lg">
-            <!-- AI Introspection Prompt Section -->
-            <section class="ai-prompt" id="ai-prompt-section" style="display: none;">
-                <div class="ai-prompt__header">
-                    <h2 class="ai-prompt__title">🎭 Introspection Prompt</h2>
-                    <button id="regenerate-prompt-btn" class="ai-prompt__regenerate-btn" title="Generate a new introspection prompt">
-                        🔄 Regenerate
-                    </button>
-                </div>
-                <div class="ai-prompt__content">
-                    <div class="ai-prompt__text" id="ai-prompt-text">
-                        Loading your personalized introspection prompt...
+    <main>
+        <div class="container">
+            <div class="grid">
+                <!-- AI Introspection Prompt Section -->
+                <section class="ai-prompt" id="ai-prompt-section" style="display: none;">
+                    <div class="ai-prompt__header">
+                        <h2 class="ai-prompt__title">Session Reflection</h2>
+                        <button id="regenerate-prompt-btn" class="ai-prompt__regenerate-btn">
+                            Regenerate
+                        </button>
                     </div>
-                </div>
-            </section>
+                    <div class="ai-prompt__content">
+                        <p class="ai-prompt__text" id="ai-prompt-text">
+                            Loading your personalized reflection prompt...
+                        </p>
+                    </div>
+                </section>
 
-            <!-- Character Summary Section -->
-            <section class="character-summary">
-                <div class="character-summary__header">
-                    <h2 class="character-summary__title">Your Character</h2>
-                    <a href="character.html" class="button button--secondary">View Details</a>
-                </div>
-                <div class="character-summary__content">
-                    <div class="character-summary__info">
-                        <div class="character-summary__name" id="summary-name">No character created yet</div>
-                        <div class="character-summary__details" id="summary-details">Click "View Details" to create your character</div>
+                <!-- Character Summary Section -->
+                <section class="character-summary">
+                    <div class="character-summary__header">
+                        <h2 class="character-summary__title">Character</h2>
+                        <a href="character.html" class="button button--secondary">Edit Details</a>
                     </div>
-                </div>
-            </section>
-            
-            <!-- New Entry Section -->
-            <section class="entry-section">
-                <h2>Add Entry</h2>
-                <div class="entry-form">
-                    <div class="form-group">
-                        <label for="entry-title" class="form-label">Title</label>
-                        <input type="text" id="entry-title" class="form-input" placeholder="What happened?">
+                    <div class="character-summary__content">
+                        <div class="character-summary__grid">
+                            <div class="character-summary__field">
+                                <label class="character-summary__label">Name</label>
+                                <span id="summary-name" class="character-summary__value">No character created</span>
+                            </div>
+                            <div class="character-summary__field">
+                                <label class="character-summary__label">Details</label>
+                                <span id="summary-details" class="character-summary__value">Click "Edit Details" to create</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="entry-content" class="form-label">Notes</label>
-                        <textarea id="entry-content" class="form-input" rows="4" placeholder="Write your notes here..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <button id="add-entry-btn" class="button">Add Entry</button>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- Journal Entries -->
-            <section class="entries-section">
-                <h2>Journal Entries</h2>
-                <div id="entries-list" class="entries-list"></div>
-            </section>
+                </section>
+                
+                <!-- New Entry Section -->
+                <section class="entry-section">
+                    <h2>Add Entry</h2>
+                    <form class="entry-form">
+                        <div class="form-group">
+                            <label for="entry-title" class="form-label">Title</label>
+                            <input type="text" id="entry-title" class="form-input" placeholder="What happened?">
+                        </div>
+                        <div class="form-group">
+                            <label for="entry-content" class="form-label">Notes</label>
+                            <textarea id="entry-content" class="form-textarea" rows="4" placeholder="Write your notes here..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="add-entry-btn" class="button button--primary">Add Entry</button>
+                        </div>
+                    </form>
+                </section>
+                
+                <!-- Journal Entries -->
+                <section class="entries-section">
+                    <h2>Journal Entries</h2>
+                    <div id="entries-list" class="entries-list"></div>
+                </section>
+            </div>
         </div>
     </main>
 
