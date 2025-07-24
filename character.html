@@ -4,58 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Character Details - D&D Journal</title>
+    
+    <!-- Google Fonts for Nordic Minimalism Design -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@100;300;400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components/navigation.css">
     <link rel="stylesheet" href="css/components/character-form.css">
     
     <!-- Yjs Sync Enhancement (ADR-0003) - Optional libraries for cross-device sync -->
     <script src="https://unpkg.com/yjs@13.6.10/dist/yjs.js"></script>
-    <script src="https://unpkg.com/y-websocket@1.5.0/dist/y-websocket.js"></script>
+    <script src="https://unpkg.com/y-websocket@1.5.4/dist/y-websocket.js"></script>
     <script src="https://unpkg.com/y-indexeddb@9.0.12/dist/y-indexeddb.js"></script>
-  </head>
+</head>
 <body>
     <header>
         <div class="container">
-            <nav class="navigation">
-                <h1 class="navigation__title">Character Details</h1>
-                <a href="index.html" class="navigation__link">← Back to Journal</a>
-            </nav>
+            <div class="header-nav">
+                <h1>Character Details</h1>
+                <nav>
+                    <a href="index.html">Journal</a>
+                    <a href="settings.html">Settings</a>
+                </nav>
+            </div>
         </div>
     </header>
     
-    <main class="container">
-        <div class="character-form">
-            <!-- Basic Information -->
-            <section class="character-form__section character-form__section--basic">
-                <h2 class="character-form__title">Basic Information</h2>
-                <div class="character-form__grid">
-                    <div class="form-group">
-                        <label for="character-name" class="form-label">Name</label>
-                        <input type="text" id="character-name" class="form-input" placeholder="Character name">
-                    </div>
-                    <div class="form-group">
-                        <label for="character-race" class="form-label">Race</label>
-                        <input type="text" id="character-race" class="form-input" placeholder="e.g. Human">
+    <main>
+        <div class="container">
+            <a href="index.html" class="nav-back">← Back to Journal</a>
+            
+            <div class="grid">
+                <!-- Basic Information -->
+                <section>
+                    <h2>Basic Information</h2>
+                    <div class="grid grid--two-col">
+                        <div class="form-group">
+                            <label for="character-name" class="form-label">Name</label>
+                            <input type="text" id="character-name" class="form-input" placeholder="Character name">
+                        </div>
+                        <div class="form-group">
+                            <label for="character-race" class="form-label">Race</label>
+                            <input type="text" id="character-race" class="form-input" placeholder="e.g., Human">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="character-class" class="form-label">Class</label>
-                        <input type="text" id="character-class" class="form-input" placeholder="e.g. Fighter">
+                        <input type="text" id="character-class" class="form-input" placeholder="e.g., Fighter">
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- Story Notes -->
-            <section class="character-form__section character-form__section--story">
-                <h2 class="character-form__title">Character Notes</h2>
-                <div class="form-group">
-                    <label for="character-backstory" class="form-label">Backstory</label>
-                    <textarea id="character-backstory" class="form-input character-form__backstory" rows="6" placeholder="Character's background, personality, and story..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="character-notes" class="form-label">Additional Notes</label>
-                    <textarea id="character-notes" class="form-input" rows="6" placeholder="Goals, relationships, abilities, equipment, or any other notes..."></textarea>
-                </div>
-            </section>
+                <!-- Character Story -->
+                <section>
+                    <h2>Character Story</h2>
+                    <div class="form-group">
+                        <label for="character-backstory" class="form-label">Backstory</label>
+                        <textarea id="character-backstory" class="form-textarea" rows="6" placeholder="Character's background, personality, and story..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="character-notes" class="form-label">Additional Notes</label>
+                        <textarea id="character-notes" class="form-textarea" rows="6" placeholder="Goals, relationships, abilities, equipment, or any other notes..."></textarea>
+                    </div>
+                </section>
+            </div>
         </div>
     </main>
 

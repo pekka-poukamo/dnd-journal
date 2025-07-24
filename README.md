@@ -4,6 +4,10 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies.
 
 🎲 **[Live App](https://dnd-journal.surge.sh)** 🎲
 
+## Visual Design
+
+**Minimalist Design Approach**: The app features a clean, functional design inspired by Nordic/Scandinavian minimalism with simplified color palette, improved typography using system fonts, and reduced visual complexity for better focus on content.
+
 ## What It Does
 
 - **Character**: Name, race, class (auto-save)

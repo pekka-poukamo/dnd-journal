@@ -262,9 +262,11 @@ describe('AI Module', () => {
         content: 'This is a test entry'
       };
 
-      // This will fail due to invalid API key, but should not throw
+      // With mocked API, this should return a summary object
       const summary = await AI.generateEntrySummary(entry);
-      expect(summary).to.be.null;
+      expect(summary).to.not.be.null;
+      expect(summary).to.have.property('id');
+      expect(summary).to.have.property('originalWordCount');
     });
   });
 });

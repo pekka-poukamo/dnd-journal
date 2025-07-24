@@ -42,4 +42,33 @@ global.console = {
   log: () => {}
 };
 
+// Mock fetch to prevent actual network calls in tests
+global.fetch = async (url, options) => {
+  // Mock OpenAI API responses
+  if (url.includes('openai.com')) {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // Return mock successful response
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        choices: [{
+          message: {
+            content: "1. What pivotal moment shaped your character?\n2. What internal conflict drives you?\n3. How might recent events change your path?\n4. What unexpected truth about yourself have you yet to discover?"
+          }
+        }]
+      })
+    };
+  }
+  
+  // For any other URLs, return empty response
+  return {
+    ok: false,
+    status: 404,
+    json: async () => ({})
+  };
+};
+
 module.exports = { chai, should: chai.should() };
