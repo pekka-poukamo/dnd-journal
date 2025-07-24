@@ -655,8 +655,8 @@ describe('D&D Journal App', function() {
 
   describe('formatAIPrompt', function() {
          it('should format bold text correctly', function() {
-       const input = '**Core Narrative Questions (1-3):**\n1. Test question';
-       const expected = '<strong>Core Narrative Questions (1-3):</strong><br><br>1. Test question';
+       const input = '**Important Note:**\n1. Test question';
+       const expected = '<strong>Important Note:</strong><br><br>1. Test question';
        
        const result = formatAIPrompt(input);
        result.should.equal(expected);
@@ -685,8 +685,8 @@ describe('D&D Journal App', function() {
     });
 
          it('should format complete AI prompt correctly', function() {
-       const input = '**Core Narrative Questions (1-3):**\n1. Puoskari, can you share a pivotal memory?\n2. What current internal conflict?\n\n**The Third Choice (4):**\nA surprising question';
-       const expected = '<strong>Core Narrative Questions (1-3):</strong><br><br>1. Puoskari, can you share a pivotal memory?<br><br>2. What current internal conflict?<br><br><strong>The Third Choice (4):</strong><br><br>A surprising question';
+       const input = '1. Puoskari, can you share a pivotal memory?\n2. What current internal conflict?\n3. How might recent events change your path?\n4. What unexpected truth about yourself remains hidden?';
+       const expected = '1. Puoskari, can you share a pivotal memory?<br><br>2. What current internal conflict?<br><br>3. How might recent events change your path?<br><br>4. What unexpected truth about yourself remains hidden?';
        
        const result = formatAIPrompt(input);
        result.should.equal(expected);
