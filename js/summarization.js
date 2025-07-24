@@ -106,13 +106,14 @@ const analyzeContent = (content, config, existingSummaries = {}) => {
     };
   } else if (config.type === 'metaSummaries') {
     // Meta-summary grouping analysis
-    const groups = [];
     const olderEntries = content
       .sort((a, b) => a.timestamp - b.timestamp)
       .slice(0, -config.recentCount);
     
     const entriesWithSummaries = olderEntries.filter(entry => existingSummaries[entry.id]);
     
+    // Group entries by chunking
+    const groups = [];
     for (let i = 0; i < entriesWithSummaries.length; i += config.summariesPerGroup) {
       const group = entriesWithSummaries.slice(i, i + config.summariesPerGroup);
       if (group.length === config.summariesPerGroup) {
@@ -386,27 +387,31 @@ const getFormattedEntriesForAI = () => {
   
   const entriesInMetaSummaries = new Set();
   
-  // Add meta-summaries first
-  const metaSummaryFormatted = [];
-  if (metaAnalysis.groups) {
-    for (const group of metaAnalysis.groups) {
-      const groupKey = `${group[0].id}-${group[group.length - 1].id}`;
-      if (metaSummaries[groupKey]) {
-        const metaSummary = metaSummaries[groupKey];
-        metaSummaryFormatted.push({
-          title: `Adventures (${metaSummary.entryCount} entries): ${metaSummary.timeRange}`,
-          content: metaSummary.summary,
-          timestamp: group[0].timestamp,
-          type: 'meta-summary',
-          entryCount: metaSummary.entryCount,
-          originalWordCount: metaSummary.originalWordCount,
-          metaSummaryWordCount: metaSummary.metaSummaryWordCount
-        });
-        
-        group.forEach(entry => entriesInMetaSummaries.add(entry.id));
-      }
-    }
-  }
+  // Add meta-summaries first using functional approach
+  const metaSummaryFormatted = metaAnalysis.groups
+    ? metaAnalysis.groups
+        .map(group => {
+          const groupKey = `${group[0].id}-${group[group.length - 1].id}`;
+          const metaSummary = metaSummaries[groupKey];
+          
+          if (metaSummary) {
+            // Mark entries as covered by meta-summary
+            group.forEach(entry => entriesInMetaSummaries.add(entry.id));
+            
+            return {
+              title: `Adventures (${metaSummary.entryCount} entries): ${metaSummary.timeRange}`,
+              content: metaSummary.summary,
+              timestamp: group[0].timestamp,
+              type: 'meta-summary',
+              entryCount: metaSummary.entryCount,
+              originalWordCount: metaSummary.originalWordCount,
+              metaSummaryWordCount: metaSummary.metaSummaryWordCount
+            };
+          }
+          return null;
+        })
+        .filter(item => item !== null)
+    : [];
   
   // Add individual summaries for entries not covered by meta-summaries
   const individualSummaryFormatted = olderEntries
