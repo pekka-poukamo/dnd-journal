@@ -1,54 +1,72 @@
-/* Character Summary Component */
+/* Character Summary Component - Nordic Minimalism */
 
 .character-summary {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--border-radius);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  transition: var(--transition);
 }
 
 .character-summary__header {
+  padding: var(--space-lg);
+  border-bottom: var(--border-width) solid var(--color-border-light);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-lg);
 }
 
 .character-summary__title {
-  color: var(--color-primary);
-  font-size: var(--font-size-lg);
-  font-weight: 600;
   margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-thin);
+  color: var(--color-text);
+  letter-spacing: -0.02em;
 }
 
 .character-summary__content {
-  background: var(--color-background);
   padding: var(--space-lg);
-  border-radius: var(--border-radius);
 }
 
-.character-summary__info {
-  text-align: center;
+.character-summary__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
 }
 
-.character-summary__name {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-primary);
-  margin-bottom: var(--space-sm);
-}
-
-.character-summary__details {
-  color: var(--color-text-light);
-  font-size: 0.9rem;
-}
-
-/* Responsive character summary */
-@media (max-width: 767px) {
-  .character-summary__header {
-    flex-direction: column;
-    gap: var(--space-sm);
-    text-align: center;
+@media (min-width: 640px) {
+  .character-summary__grid {
+    grid-template-columns: repeat(3, 1fr);
   }
+}
+
+.character-summary__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.character-summary__label {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-light);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.character-summary__value {
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text);
+  line-height: var(--line-height-snug);
+}
+
+/* Empty state */
+.character-summary__empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-style: italic;
 }
