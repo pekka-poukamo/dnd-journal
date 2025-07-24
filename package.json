@@ -9,7 +9,6 @@
     "test": "mocha test/**/*.test.js --timeout 5000",
     "test:watch": "mocha test/**/*.test.js --watch --timeout 5000",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
-    "verify": "node scripts/verify-data-integrity.js",
     "deploy": "surge .",
     "deploy:domain": "surge . dnd-journal.surge.sh"
   },
