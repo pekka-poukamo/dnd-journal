@@ -347,4 +347,178 @@ describe('Summarization Module', () => {
       });
     });
   });
+
+  describe('Character Summarization', () => {
+    describe('getCharacterDetailsNeedingSummaries', () => {
+      it('should identify character details that need summarization', () => {
+        const character = {
+          name: 'Gimli',
+          race: 'Dwarf',
+          class: 'Fighter',
+          backstory: 'A very long backstory that goes on and on with many words. It tells the tale of a brave dwarf warrior who fought many battles and had many adventures throughout his long life. This backstory continues to describe various events and relationships that shaped the character into who they are today. It contains detailed descriptions of family members, important locations, and key events that would be important for understanding the character but is quite lengthy and would benefit from summarization when used in AI prompts to save on token usage while preserving the essential information. The character has traveled to many distant lands and formed numerous alliances with other adventurers. They have faced countless challenges and overcome great adversities that have shaped their personality and worldview. This extensive background provides rich context for understanding their motivations and behavior in current adventures.',
+          notes: 'Short notes about equipment'
+        };
+        const characterSummaries = {};
+        
+        const result = Summarization.getCharacterDetailsNeedingSummaries(character, characterSummaries);
+        
+        expect(result).to.have.property('backstory');
+        expect(result.backstory.field).to.equal('backstory');
+        expect(result.backstory.wordCount).to.be.above(100);
+        expect(result).to.not.have.property('notes');
+      });
+
+      it('should not require summarization for short character details', () => {
+        const character = {
+          name: 'Legolas',
+          race: 'Elf',
+          class: 'Ranger',
+          backstory: 'A brief backstory.',
+          notes: 'Short notes.'
+        };
+        const characterSummaries = {};
+        
+        const result = Summarization.getCharacterDetailsNeedingSummaries(character, characterSummaries);
+        
+        expect(Object.keys(result)).to.have.length(0);
+      });
+
+      it('should detect changes in character details', () => {
+        const character = {
+          backstory: 'This is a very long original backstory that needs summarization. It contains many detailed descriptions of the character\'s past, including their family history, childhood experiences, and formative events. The backstory describes various relationships and conflicts that shaped the character. It also includes information about their training, skills, and personal motivations that drive their current adventures. The character has lived through many significant historical events and has developed unique perspectives based on these experiences. They have formed deep relationships with mentors, allies, and even former enemies who have influenced their development. Their skills were honed through years of dedicated practice and real-world application in dangerous situations. This comprehensive background helps explain their current abilities, personality traits, and decision-making patterns in new adventures.'
+        };
+        const characterSummaries = {
+          backstory: {
+            summary: 'Old summary',
+            contentHash: 'oldHash123'
+          }
+        };
+        
+        const result = Summarization.getCharacterDetailsNeedingSummaries(character, characterSummaries);
+        
+        expect(result).to.have.property('backstory');
+        expect(result.backstory.contentHash).to.not.equal('oldHash123');
+      });
+
+      it('should not require new summary if content unchanged', () => {
+        const backstoryContent = 'This is a very long backstory that needs summarization. It contains many detailed descriptions of the character\'s past, including their family history, childhood experiences, and formative events. The backstory describes various relationships and conflicts that shaped the character. It also includes information about their training, skills, and personal motivations that drive their current adventures. The character has lived through many significant historical events and has developed unique perspectives based on these experiences. They have formed deep relationships with mentors, allies, and even former enemies who have influenced their development. Their skills were honed through years of dedicated practice and real-world application in dangerous situations.';
+        const character = { backstory: backstoryContent };
+        const contentHash = btoa(backstoryContent).substring(0, 16);
+        const characterSummaries = {
+          backstory: {
+            summary: 'Existing summary',
+            contentHash: contentHash
+          }
+        };
+        
+        const result = Summarization.getCharacterDetailsNeedingSummaries(character, characterSummaries);
+        
+        expect(Object.keys(result)).to.have.length(0);
+      });
+    });
+
+    describe('getFormattedCharacterForAI', () => {
+      it('should use original text for short character details', () => {
+        const character = {
+          name: 'Aragorn',
+          backstory: 'Short backstory',
+          notes: 'Brief notes'
+        };
+        
+        const result = Summarization.getFormattedCharacterForAI(character);
+        
+        expect(result.backstory).to.equal('Short backstory');
+        expect(result.notes).to.equal('Brief notes');
+        expect(result.backstorySummarized).to.be.undefined;
+        expect(result.notesSummarized).to.be.undefined;
+      });
+
+      it('should use summaries for long character details when available', () => {
+        const character = {
+          name: 'Boromir',
+          backstory: 'This is a very long backstory that needs summarization. It contains many detailed descriptions of the character\'s past, including their family history, childhood experiences, and formative events. The backstory describes various relationships and conflicts that shaped the character. It also includes information about their training, skills, and personal motivations that drive their current adventures. The character has lived through many significant historical events and has developed unique perspectives based on these experiences. They have formed deep relationships with mentors, allies, and even former enemies who have influenced their development. Throughout their journeys, they have encountered countless challenges that tested not only their physical abilities but also their moral compass and intellectual capabilities. Each adventure has left its mark on their personality, teaching them valuable lessons about friendship, sacrifice, courage, and the complex nature of good and evil in the world.',
+                      notes: 'These are very detailed notes about the character that go on and on with extensive descriptions of equipment, relationships, goals, and other important details that would be useful for AI prompts but are quite lengthy and would benefit from summarization. The character carries numerous magical items acquired during their adventures, each with its own history and significance. They have established complex relationships with various factions and individuals throughout their journeys. Their personal goals have evolved over time as they have gained experience and wisdom through their many adventures and encounters with different cultures and belief systems. The character maintains detailed records of all their interactions, including tactical assessments of potential allies and enemies, strategic notes about various locations visited, and comprehensive inventories of magical items with their properties and origins. They also keep track of ongoing political situations, local customs in different regions, and important contacts who might provide assistance or information in future endeavors.'
+        };
+        
+        // Mock character summaries in localStorage
+        const characterSummaries = {
+          backstory: {
+            summary: 'Brief backstory summary',
+            originalWordCount: 50,
+            summaryWordCount: 10
+          },
+          notes: {
+            summary: 'Brief notes summary',
+            originalWordCount: 40,
+            summaryWordCount: 8
+          }
+        };
+        global.localStorage.setItem('simple-dnd-journal-character-summaries', JSON.stringify(characterSummaries));
+        
+        const result = Summarization.getFormattedCharacterForAI(character);
+        
+        expect(result.backstory).to.equal('Brief backstory summary');
+        expect(result.notes).to.equal('Brief notes summary');
+        expect(result.backstorySummarized).to.be.true;
+        expect(result.notesSummarized).to.be.true;
+      });
+
+      it('should preserve original long text when no summary available', () => {
+        const longBackstory = 'This is a very long backstory that needs summarization. It contains many detailed descriptions of the character\'s past, including their family history, childhood experiences, and formative events. The backstory describes various relationships and conflicts that shaped the character. It also includes information about their training, skills, and personal motivations that drive their current adventures. The character has lived through many significant historical events and has developed unique perspectives based on these experiences. They have formed deep relationships with mentors, allies, and even former enemies who have influenced their development.';
+        const character = {
+          name: 'Frodo',
+          backstory: longBackstory
+        };
+        
+        const result = Summarization.getFormattedCharacterForAI(character);
+        
+        expect(result.backstory).to.equal(longBackstory);
+        expect(result.backstorySummarized).to.be.undefined;
+      });
+    });
+
+    describe('getSummaryStats character integration', () => {
+      it('should include character summary statistics', () => {
+        const character = {
+          backstory: 'This is a very long backstory that needs summarization. It contains many detailed descriptions of the character\'s past, including their family history, childhood experiences, and formative events. The backstory describes various relationships and conflicts that shaped the character. It also includes information about their training, skills, and personal motivations that drive their current adventures. The character has lived through many significant historical events and has developed unique perspectives based on these experiences. They have formed deep relationships with mentors, allies, and even former enemies who have influenced their development.'
+        };
+        
+        global.localStorage.setItem('simple-dnd-journal', JSON.stringify({
+          character: character,
+          entries: []
+        }));
+        
+        const characterSummaries = {
+          backstory: {
+            summary: 'Brief summary',
+            originalWordCount: 50
+          }
+        };
+        global.localStorage.setItem('simple-dnd-journal-character-summaries', JSON.stringify(characterSummaries));
+        
+        const stats = Summarization.getSummaryStats();
+        
+        expect(stats.characterSummaries).to.equal(1);
+        expect(stats.characterSummaryFields).to.include('backstory');
+        expect(stats.characterFieldsNeedingSummaries).to.equal(0); // Already summarized
+      });
+
+      it('should detect character fields needing summaries', () => {
+        const character = {
+          backstory: 'This is a very long backstory that needs summarization. It contains many detailed descriptions of the character\'s past, including their family history, childhood experiences, and formative events. The backstory describes various relationships and conflicts that shaped the character. The character has lived through many significant historical events and has developed unique perspectives based on these experiences. They have formed deep relationships with mentors, allies, and even former enemies who have influenced their development. Throughout their journeys, they have encountered countless challenges that tested not only their physical abilities but also their moral compass and intellectual capabilities. Each adventure has left its mark on their personality, teaching them valuable lessons about friendship, sacrifice, courage, and the complex nature of good and evil in the world.',
+          notes: 'These are very detailed notes about the character that go on and on with extensive descriptions of equipment, relationships, goals, and other important details. The character carries numerous magical items acquired during their adventures, each with its own history and significance. They have established complex relationships with various factions and individuals throughout their journeys. Their personal goals have evolved over time as they have gained experience and wisdom through their many adventures and encounters with different cultures and belief systems. The character maintains detailed records of all their interactions, including tactical assessments of potential allies and enemies, strategic notes about various locations visited, and comprehensive inventories of magical items with their properties and origins. They also keep track of ongoing political situations, local customs in different regions, and important contacts who might provide assistance or information in future endeavors.'
+        };
+        
+        global.localStorage.setItem('simple-dnd-journal', JSON.stringify({
+          character: character,
+          entries: []
+        }));
+        
+        const stats = Summarization.getSummaryStats();
+        
+        expect(stats.characterSummaries).to.equal(0);
+        expect(stats.characterFieldsNeedingSummaries).to.equal(2); // Both backstory and notes need summaries
+      });
+    });
+  });
 });

@@ -16,6 +16,8 @@ global.window = dom.window;
 global.document = dom.window.document;
 global.navigator = dom.window.navigator;
 global.HTMLElement = dom.window.HTMLElement;
+global.btoa = (str) => Buffer.from(str, 'binary').toString('base64');
+global.atob = (str) => Buffer.from(str, 'base64').toString('binary');
 global.localStorage = {
   data: {},
   getItem(key) {

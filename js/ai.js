@@ -78,12 +78,20 @@ const isAIEnabled = () => {
 
 // Pure function to create introspection prompt
 const createIntrospectionPrompt = (character, formattedEntries) => {
-  const characterInfo = character.name ? 
-    `${character.name}, a ${character.race || 'character'} ${character.class || 'adventurer'}` :
+  // Use formatted character that may include summarized backstory/notes
+  const formattedCharacter = window.Summarization ? 
+    window.Summarization.getFormattedCharacterForAI(character) : 
+    character;
+  
+  const characterInfo = formattedCharacter.name ? 
+    `${formattedCharacter.name}, a ${formattedCharacter.race || 'character'} ${formattedCharacter.class || 'adventurer'}` :
     'your character';
     
-  const backstoryContext = character.backstory ? 
-    `\n\nCharacter Background: ${character.backstory}` : '';
+  const backstoryContext = formattedCharacter.backstory ? 
+    `\n\nCharacter Background: ${formattedCharacter.backstory}${formattedCharacter.backstorySummarized ? ' (summarized)' : ''}` : '';
+    
+  const notesContext = formattedCharacter.notes ? 
+    `\n\nAdditional Character Details: ${formattedCharacter.notes}${formattedCharacter.notesSummarized ? ' (summarized)' : ''}` : '';
     
   // Format entries using the summarization system's formatted entries
   const entriesContext = formattedEntries.length > 0 ? 
@@ -95,7 +103,7 @@ const createIntrospectionPrompt = (character, formattedEntries) => {
       return `- ${prefix}: ${entry.title} - ${content}`;
     }).join('\n')}` : '';
 
-  return `Character: ${characterInfo}${backstoryContext}${entriesContext}
+  return `Character: ${characterInfo}${backstoryContext}${notesContext}${entriesContext}
 
 Please create 4 introspective questions (3 core narrative + 1 unobvious) that would help this player discover compelling stories and unexpected depths in their character.`;
 };
