@@ -391,6 +391,46 @@ const displayAIPrompt = async () => {
   }
 };
 
+// Regenerate AI introspection prompt
+const regenerateAIPrompt = async () => {
+  const promptText = document.getElementById('ai-prompt-text');
+  const regenerateBtn = document.getElementById('regenerate-prompt-btn');
+  
+  if (!promptText || !regenerateBtn) return;
+  
+  // Check if AI features are enabled
+  if (!window.AI || !window.AI.isAIEnabled()) {
+    return;
+  }
+  
+  try {
+    // Disable button and show loading state
+    regenerateBtn.disabled = true;
+    promptText.classList.add('loading');
+    promptText.innerHTML = 'Generating a new introspection prompt...';
+    
+    // Generate new introspection prompt
+    const prompt = await window.AI.generateIntrospectionPrompt(state.character, state.entries);
+    
+    if (prompt) {
+      // Format and display the new prompt
+      const formattedPrompt = formatAIPrompt(prompt);
+      promptText.innerHTML = formattedPrompt;
+      promptText.classList.remove('loading');
+    } else {
+      promptText.innerHTML = 'Unable to generate introspection prompt at this time.';
+      promptText.classList.remove('loading');
+    }
+  } catch (error) {
+    console.error('Failed to regenerate AI prompt:', error);
+    promptText.innerHTML = 'Error generating prompt. Please try again.';
+    promptText.classList.remove('loading');
+  } finally {
+    // Re-enable button
+    regenerateBtn.disabled = false;
+  }
+};
+
 // Format AI prompt text for display
 const formatAIPrompt = (prompt) => {
   if (!prompt) return '';
@@ -440,6 +480,12 @@ const setupEventHandlers = () => {
   // Add entry button click handler
   if (addEntryBtn) {
     addEntryBtn.addEventListener('click', addEntry);
+  }
+  
+  // Regenerate AI prompt button click handler
+  const regenerateBtn = document.getElementById('regenerate-prompt-btn');
+  if (regenerateBtn) {
+    regenerateBtn.addEventListener('click', regenerateAIPrompt);
   }
 };
 
@@ -506,6 +552,7 @@ if (typeof global !== 'undefined') {
   global.createCharacterSummary = createCharacterSummary;
   global.displayCharacterSummary = displayCharacterSummary;
   global.displayAIPrompt = displayAIPrompt;
+  global.regenerateAIPrompt = regenerateAIPrompt;
   global.formatAIPrompt = formatAIPrompt;
   global.init = init;
 }
