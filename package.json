@@ -10,7 +10,8 @@
     "test:watch": "mocha test/**/*.test.js --watch --timeout 5000",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
     "deploy": "surge .",
-    "deploy:domain": "surge . dnd-journal.surge.sh"
+    "deploy:domain": "surge . dnd-journal.surge.sh",
+    "sync-server": "y-websocket-server --port 1234"
   },
   "repository": {
     "type": "git",
@@ -21,7 +22,10 @@
     "journal",
     "static",
     "roleplay",
-    "character-management"
+    "character-management",
+    "local-first",
+    "yjs",
+    "sync"
   ],
   "author": "pekka-poukamo",
   "license": "MIT",
@@ -35,6 +39,9 @@
     "mocha": "^10.2.0",
     "chai": "^4.3.10",
     "jsdom": "^23.0.0"
+  },
+  "optionalDependencies": {
+    "y-websocket": "^1.5.0"
   },
   "engines": {
     "node": ">=16.0.0"

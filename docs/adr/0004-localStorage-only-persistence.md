@@ -29,7 +29,7 @@ We will use **localStorage only** for all data persistence.
 ### Negative
 - Data tied to specific browser/device
 - Limited storage space (~5-10MB)
-- No data sharing between devices
+- No data sharing between devices (see ADR-0003 for cross-device enhancement)
 - Data lost if browser storage cleared
 
 ## Compliance
@@ -57,3 +57,6 @@ const loadState = () => JSON.parse(localStorage.getItem('dnd-journal') || '{}');
 fetch('/api/save', {method: 'POST', body: data}); // No APIs
 new Database(); // No databases
 ```
+
+## Extensions
+- **ADR-0003**: Yjs sync enhancement for optional cross-device synchronization while maintaining localStorage primacy

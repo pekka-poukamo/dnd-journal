@@ -54,6 +54,14 @@ const utils = getUtils();
 // Simple state management
 let state = utils.createInitialJournalState();
 
+// Initialize Yjs sync enhancement (ADR-0003)
+let yjsSync = null;
+try {
+  yjsSync = createYjsSync();
+} catch (e) {
+      // Yjs sync not available, using localStorage-only mode
+}
+
 // Load state from localStorage - using utils
 const loadData = () => {
   const result = utils.safeGetFromStorage(utils.STORAGE_KEYS.JOURNAL);
@@ -64,11 +72,40 @@ const loadData = () => {
       global.state = state;
     }
   }
+  
+  // Initialize Yjs with current localStorage data (ADR-0003)
+  if (yjsSync && yjsSync.isAvailable) {
+    const syncData = yjsSync.getData();
+    if (syncData) {
+      // Merge remote data if available and newer
+      const localTime = state.lastModified || 0;
+      const remoteTime = syncData.lastModified || 0;
+      
+      if (remoteTime > localTime) {
+        // Loading newer data from sync
+        state = { ...state, ...syncData };
+        utils.safeSetToStorage(utils.STORAGE_KEYS.JOURNAL, state);
+      } else {
+        // Upload current data to sync
+        yjsSync.setData(state);
+      }
+    } else {
+      // First time - upload current localStorage data
+      yjsSync.setData(state);
+    }
+  }
 };
 
-// Save state to localStorage - using utils
+// Save state to localStorage and sync - enhanced for ADR-0003
 const saveData = () => {
+  // Primary storage (ADR-0004)
   utils.safeSetToStorage(utils.STORAGE_KEYS.JOURNAL, state);
+  
+  // Sync enhancement (ADR-0003)
+  if (yjsSync && yjsSync.isAvailable) {
+    state.lastModified = Date.now();
+    yjsSync.setData(state);
+  }
 };
 
 // Create entry element with edit functionality
@@ -406,9 +443,31 @@ const setupEventHandlers = () => {
   }
 };
 
+// Setup remote change listener for sync (ADR-0003)
+const setupSyncListener = () => {
+  if (yjsSync && yjsSync.isAvailable) {
+    yjsSync.onChange((remoteData) => {
+      const localTime = state.lastModified || 0;
+      const remoteTime = remoteData.lastModified || 0;
+      
+      // Only update if remote data is newer
+      if (remoteTime > localTime && JSON.stringify(remoteData) !== JSON.stringify(state)) {
+        // Applying remote changes
+        state = { ...state, ...remoteData };
+        utils.safeSetToStorage(utils.STORAGE_KEYS.JOURNAL, state);
+        
+        // Refresh the UI to show new data
+        displayCharacterSummary();
+        renderEntries();
+      }
+    });
+  }
+};
+
 // Initialize app
 const init = async () => {
   loadData();
+  setupSyncListener();
   displayCharacterSummary();
   renderEntries();
   setupEventHandlers();

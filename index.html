@@ -7,7 +7,12 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components/character-summary.css">
     <link rel="stylesheet" href="css/components/ai-prompt.css">
-</head>
+    
+    <!-- Yjs Sync Enhancement (ADR-0003) - Optional libraries for cross-device sync -->
+    <script src="https://unpkg.com/yjs@13.6.10/dist/yjs.js"></script>
+    <script src="https://unpkg.com/y-websocket@1.5.0/dist/y-websocket.js"></script>
+    <script src="https://unpkg.com/y-indexeddb@9.0.12/dist/y-indexeddb.js"></script>
+  </head>
 <body>
     <header>
         <div class="container">
@@ -77,6 +82,8 @@
     </main>
 
     <script type="module" src="js/utils.js"></script>
+    <script src="sync-config.js"></script>
+    <script src="js/sync.js"></script>
     <script type="module" src="js/ai.js"></script>
     <script type="module" src="js/summarization.js"></script>
     <script type="module" src="js/app.js"></script>
