@@ -5,11 +5,11 @@
 // ================================
 //
 // This module provides a unified approach to AI-generated character introspection
-// focused on great storytelling and finding the "third choice" in character development.
+// focused on great storytelling and discovering unexpected character depths.
 //
 // FORMAT: 3+1 Questions
 // - 3 Core Narrative Questions: Pivotal moments, current conflicts, future paths
-// - 1 "Third Choice" Question: Surprising, left-field prompt for creative thinking
+// - 1 Unobvious Question: Surprising, unconventional question for deeper insight
 //
 // INTEGRATION WITH SUMMARIES:
 // The AI automatically uses generated summaries when available, providing context from:
@@ -22,18 +22,15 @@
 //
 // ================================
 
-// Unified narrative-focused system prompt with "third choice" element
+// Unified narrative-focused system prompt with unobvious question element
 const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
 
-Present exactly 4 questions in this format:
+Present exactly 4 questions as a simple numbered list without headings:
 
-**Core Narrative Questions (1-3):**
 1. A pivotal moment, memory, or relationship that has shaped who they are
 2. A current internal conflict, dilemma, or aspiration they're wrestling with  
 3. How recent events might change their path or reveal something new about them
-
-**The Third Choice (4):**
-A surprising, unexpected question that pushes beyond obvious responses. Encourage a creative "third option" - an unconventional perspective, hidden motivation, or surprising character truth that goes beyond binary thinking.
+4. An unobvious, surprising question that explores an unconventional perspective, hidden motivation, or unexpected character truth
 
 Make questions specific to the character's situation and recent adventures. Focus on narrative depth and emotional truth.`;
 
@@ -100,7 +97,7 @@ const createIntrospectionPrompt = (character, formattedEntries) => {
 
   return `Character: ${characterInfo}${backstoryContext}${entriesContext}
 
-Please create 4 introspective questions (3 core narrative + 1 surprising "third choice") that would help this player discover compelling stories and unexpected depths in their character.`;
+Please create 4 introspective questions (3 core narrative + 1 unobvious) that would help this player discover compelling stories and unexpected depths in their character.`;
 };
 
 // Call OpenAI API for text generation
@@ -239,7 +236,7 @@ const getEntrySummary = async (entry) => {
 
 // Helper function for prompt information
 const getPromptDescription = () => {
-  return 'Narrative-focused introspection with 3 core questions + 1 surprising "third choice" prompt';
+  return 'Narrative-focused introspection with 3 core questions + 1 unobvious question';
 };
 
 // Export functions
