@@ -8,6 +8,7 @@
     <!-- Preload critical fonts for better performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@100;300;400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components/navigation.css">
@@ -15,7 +16,7 @@
     
     <!-- Yjs Sync Enhancement (ADR-0003) - Optional libraries for cross-device sync -->
     <script src="https://unpkg.com/yjs@13.6.10/dist/yjs.js"></script>
-    <script src="https://unpkg.com/y-websocket@1.5.0/dist/y-websocket.js"></script>
+    <script src="https://unpkg.com/y-websocket@1.5.4/dist/y-websocket.js"></script>
     <script src="https://unpkg.com/y-indexeddb@9.0.12/dist/y-indexeddb.js"></script>
 </head>
 <body>
@@ -24,51 +25,52 @@
             <div class="header-nav">
                 <h1>Character Details</h1>
                 <nav>
-                    <a href="index.html" class="button button--secondary">← Back to Journal</a>
+                    <a href="index.html">Journal</a>
+                    <a href="settings.html">Settings</a>
                 </nav>
             </div>
         </div>
     </header>
-    
-    <main class="container">
-        <div class="grid">
-            <!-- Basic Information -->
-            <section>
-                <h2>Basic Information</h2>
-                <div class="grid grid--two-col">
+
+    <main>
+        <div class="container-narrow">
+            <a href="index.html" class="nav-back">← Back to Journal</a>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Character Information</h2>
+                </div>
+                
+                <form id="character-form" class="card-content">
                     <div class="form-group">
-                        <label for="character-name" class="form-label">Name</label>
-                        <input type="text" id="character-name" class="form-input" placeholder="Character name">
+                        <label for="character-name" class="form-label">Character Name</label>
+                        <input type="text" id="character-name" class="form-input" placeholder="Enter your character's name">
                     </div>
+                    
                     <div class="form-group">
                         <label for="character-race" class="form-label">Race</label>
-                        <input type="text" id="character-race" class="form-input" placeholder="e.g., Human">
+                        <input type="text" id="character-race" class="form-input" placeholder="e.g., Human, Elf, Dwarf">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="character-class" class="form-label">Class</label>
-                    <input type="text" id="character-class" class="form-input" placeholder="e.g., Fighter">
-                </div>
-            </section>
-
-            <!-- Character Story -->
-            <section>
-                <h2>Character Story</h2>
-                <div class="form-group">
-                    <label for="character-backstory" class="form-label">Backstory</label>
-                    <textarea id="character-backstory" class="form-input" rows="6" placeholder="Character's background, personality, and story..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="character-notes" class="form-label">Additional Notes</label>
-                    <textarea id="character-notes" class="form-input" rows="6" placeholder="Goals, relationships, abilities, equipment, or any other notes..."></textarea>
-                </div>
-            </section>
+                    
+                    <div class="form-group">
+                        <label for="character-class" class="form-label">Class</label>
+                        <input type="text" id="character-class" class="form-input" placeholder="e.g., Fighter, Wizard, Rogue">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="character-background" class="form-label">Background</label>
+                        <textarea id="character-background" class="form-textarea" placeholder="Tell us about your character's background and personality..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Save Character</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </main>
 
-    <script type="module" src="js/utils.js"></script>
-    <script src="sync-config.js"></script>
-    <script src="js/sync.js"></script>
-    <script type="module" src="js/character.js"></script>
+    <!-- Scripts -->
+    <script src="js/character.js"></script>
 </body>
 </html>

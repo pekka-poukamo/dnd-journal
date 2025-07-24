@@ -8,6 +8,7 @@
     <!-- Preload critical fonts for better performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@100;300;400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components/character-summary.css">
@@ -15,7 +16,7 @@
     
     <!-- Yjs Sync Enhancement (ADR-0003) - Optional libraries for cross-device sync -->
     <script src="https://unpkg.com/yjs@13.6.10/dist/yjs.js"></script>
-    <script src="https://unpkg.com/y-websocket@1.5.0/dist/y-websocket.js"></script>
+    <script src="https://unpkg.com/y-websocket@1.5.4/dist/y-websocket.js"></script>
     <script src="https://unpkg.com/y-indexeddb@9.0.12/dist/y-indexeddb.js"></script>
 </head>
 <body>
@@ -24,78 +25,71 @@
             <div class="header-nav">
                 <h1>D&D Journal</h1>
                 <nav>
-                    <a href="settings.html" class="button button--secondary">Settings</a>
+                    <a href="character.html">Character</a>
+                    <a href="settings.html">Settings</a>
                 </nav>
             </div>
         </div>
     </header>
-    
-    <main class="container">
-        <div class="grid gap-lg">
-            <!-- AI Introspection Prompt Section -->
-            <section class="ai-prompt" id="ai-prompt-section" style="display: none;">
-                <div class="ai-prompt__header">
-                    <h2 class="ai-prompt__title">🎭 Introspection Prompt</h2>
-                    <button id="regenerate-prompt-btn" class="ai-prompt__regenerate-btn" title="Generate a new introspection prompt">
-                        🔄 Regenerate
-                    </button>
+
+    <main>
+        <div class="container-narrow">
+            <!-- Character Summary Section -->
+            <section id="character-summary" class="character-summary">
+                <div class="character-summary__header">
+                    <h2 class="character-summary__title">Character Summary</h2>
+                    <a href="character.html" class="btn btn-secondary btn-small">Edit Details</a>
                 </div>
-                <div class="ai-prompt__content">
-                    <p class="ai-prompt__text" id="ai-prompt-text">
-                        Loading your personalized introspection prompt...
-                    </p>
+                
+                <div class="character-summary__content">
+                    <div class="character-summary__grid">
+                        <div class="character-summary__field">
+                            <label class="character-summary__label">Name</label>
+                            <span id="display-name" class="character-summary__value">Unnamed Character</span>
+                        </div>
+                        <div class="character-summary__field">
+                            <label class="character-summary__label">Race</label>
+                            <span id="display-race" class="character-summary__value">Unknown</span>
+                        </div>
+                        <div class="character-summary__field">
+                            <label class="character-summary__label">Class</label>
+                            <span id="display-class" class="character-summary__value">Unknown</span>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            <!-- Character Summary Section -->
-            <section class="character-summary">
-                <div class="character-summary__header">
-                    <h2 class="character-summary__title">Your Character</h2>
-                    <a href="character.html" class="button button--secondary">View Details</a>
+            <!-- AI Prompt Section -->
+            <section id="ai-prompt" class="ai-prompt">
+                <div class="ai-prompt__header">
+                    <h2 class="ai-prompt__title">Session Summary</h2>
+                    <button id="regenerate-prompt" class="ai-prompt__regenerate-btn">
+                        Regenerate
+                    </button>
                 </div>
-                <div class="character-summary__content">
-                    <div class="character-summary__info">
-                        <div class="character-summary__name" id="summary-name">No character created yet</div>
-                        <div class="character-summary__details" id="summary-details">Click "View Details" to create your character</div>
+                
+                <div class="ai-prompt__content">
+                    <div id="ai-prompt-text" class="ai-prompt__text">
+                        Ready to start your adventure! Add some journal entries and I'll help summarize your sessions.
                     </div>
                 </div>
             </section>
-            
-            <!-- New Entry Section -->
-            <section class="entry-section">
-                <h2>Add Entry</h2>
-                <form class="entry-form">
-                    <div class="form-group">
-                        <label for="entry-title" class="form-label">Title</label>
-                        <input type="text" id="entry-title" class="form-input" placeholder="What happened?">
-                    </div>
-                    <div class="form-group">
-                        <label for="entry-content" class="form-label">Notes</label>
-                        <textarea id="entry-content" class="form-input" rows="4" placeholder="Write your notes here..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="entry-image" class="form-label">Image URL (optional)</label>
-                        <input type="url" id="entry-image" class="form-input" placeholder="https://example.com/image.jpg">
-                    </div>
-                    <div class="form-group">
-                        <button type="button" id="add-entry-btn" class="button">Add Entry</button>
-                    </div>
-                </form>
-            </section>
-            
-            <!-- Journal Entries -->
-            <section class="entries-section">
-                <h2>Journal Entries</h2>
-                <div id="entries-list" class="entries-list"></div>
+
+            <!-- Journal Entries Section -->
+            <section class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Journal Entries</h2>
+                    <button id="add-entry" class="btn btn-primary">New Entry</button>
+                </div>
+                
+                <div id="entries-list" class="card-content">
+                    <!-- Entries will be dynamically loaded here -->
+                </div>
             </section>
         </div>
     </main>
 
-    <script type="module" src="js/utils.js"></script>
-    <script src="sync-config.js"></script>
-    <script src="js/sync.js"></script>
-    <script type="module" src="js/ai.js"></script>
-    <script type="module" src="js/summarization.js"></script>
-    <script type="module" src="js/app.js"></script>
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
 </body>
 </html>
