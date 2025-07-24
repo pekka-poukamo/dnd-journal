@@ -1,4 +1,4 @@
-// Summarization Management - Smart handling of entry summaries
+// Summarization Management - Smart handling of entry summaries and character details
 
 // Get utils reference - works in both browser and test environment
 const getUtils = () => {
@@ -18,7 +18,8 @@ const getUtils = () => {
         STORAGE_KEYS: {
           JOURNAL: 'simple-dnd-journal',
           SUMMARIES: 'simple-dnd-journal-summaries',
-          META_SUMMARIES: 'simple-dnd-journal-meta-summaries'
+          META_SUMMARIES: 'simple-dnd-journal-meta-summaries',
+          CHARACTER_SUMMARIES: 'simple-dnd-journal-character-summaries'
         },
         safeSetToStorage: () => ({ success: true })
       };
@@ -33,6 +34,12 @@ const META_SUMMARY_CONFIG = {
   triggerThreshold: 50, // Start meta-summarization when more than 50 entries
   summariesPerMetaSummary: 10, // Group 10 summaries into 1 meta-summary
   maxMetaSummaryWords: 200 // Maximum words in a meta-summary
+};
+
+// Configuration for character detail summarization
+const CHARACTER_SUMMARY_CONFIG = {
+  maxWordsBeforeSummary: 100, // Summarize character details if longer than 100 words
+  targetSummaryWords: 50 // Target length for character detail summaries
 };
 
 // Pure function to load journal data
@@ -61,6 +68,153 @@ const loadStoredMetaSummaries = () => {
 // Save meta-summaries to localStorage
 const saveStoredMetaSummaries = (metaSummaries) => {
   utils.safeSetToStorage(utils.STORAGE_KEYS.META_SUMMARIES, metaSummaries);
+};
+
+// Pure function to load stored character summaries
+const loadStoredCharacterSummaries = () => {
+  return utils.loadDataWithFallback(utils.STORAGE_KEYS.CHARACTER_SUMMARIES, {});
+};
+
+// Save character summaries to localStorage
+const saveStoredCharacterSummaries = (characterSummaries) => {
+  utils.safeSetToStorage(utils.STORAGE_KEYS.CHARACTER_SUMMARIES, characterSummaries);
+};
+
+// Pure function to determine if character details need summarization
+const getCharacterDetailsNeedingSummaries = (character, characterSummaries) => {
+  const needingSummaries = {};
+  
+  // Check backstory
+  if (character.backstory) {
+    const backstoryWordCount = utils.getWordCount(character.backstory);
+    if (backstoryWordCount > CHARACTER_SUMMARY_CONFIG.maxWordsBeforeSummary) {
+      const existingSummary = characterSummaries.backstory;
+      const backstoryHash = btoa(character.backstory).substring(0, 16); // Simple hash for change detection
+      
+      if (!existingSummary || existingSummary.contentHash !== backstoryHash) {
+        needingSummaries.backstory = {
+          field: 'backstory',
+          content: character.backstory,
+          wordCount: backstoryWordCount,
+          contentHash: backstoryHash
+        };
+      }
+    }
+  }
+  
+  // Check notes
+  if (character.notes) {
+    const notesWordCount = utils.getWordCount(character.notes);
+    if (notesWordCount > CHARACTER_SUMMARY_CONFIG.maxWordsBeforeSummary) {
+      const existingSummary = characterSummaries.notes;
+      const notesHash = btoa(character.notes).substring(0, 16); // Simple hash for change detection
+      
+      if (!existingSummary || existingSummary.contentHash !== notesHash) {
+        needingSummaries.notes = {
+          field: 'notes',
+          content: character.notes,
+          wordCount: notesWordCount,
+          contentHash: notesHash
+        };
+      }
+    }
+  }
+  
+  return needingSummaries;
+};
+
+// Generate character detail summary
+const generateCharacterDetailSummary = async (detailData) => {
+  if (!window.AI || !window.AI.isAIEnabled()) {
+    return null;
+  }
+
+  try {
+    const fieldName = detailData.field === 'backstory' ? 'backstory' : 'notes';
+    const prompt = `Summarize this D&D character's ${fieldName} in approximately ${CHARACTER_SUMMARY_CONFIG.targetSummaryWords} words. Keep the most important personality traits, key events, relationships, and defining characteristics:
+
+${detailData.content}`;
+
+    const summary = await window.AI.callOpenAI(prompt, 80);
+    
+    return {
+      field: detailData.field,
+      originalWordCount: detailData.wordCount,
+      summary: summary,
+      summaryWordCount: utils.getWordCount(summary),
+      contentHash: detailData.contentHash,
+      timestamp: Date.now()
+    };
+  } catch (error) {
+    console.error(`Failed to generate ${detailData.field} summary:`, error);
+    return null;
+  }
+};
+
+// Generate missing character detail summaries
+const generateMissingCharacterSummaries = async () => {
+  if (!window.AI || !window.AI.isAIEnabled()) {
+    return { generated: 0, remaining: 0 };
+  }
+
+  const journalData = loadJournalData();
+  const characterSummaries = loadStoredCharacterSummaries();
+  
+  const needingSummaries = getCharacterDetailsNeedingSummaries(journalData.character, characterSummaries);
+  const fieldsNeedingSummaries = Object.keys(needingSummaries);
+  
+  if (fieldsNeedingSummaries.length === 0) {
+    return { generated: 0, remaining: 0 };
+  }
+  
+  // Generate summaries for all needed fields
+  let generated = 0;
+  for (const field of fieldsNeedingSummaries) {
+    try {
+      const summary = await generateCharacterDetailSummary(needingSummaries[field]);
+      if (summary) {
+        characterSummaries[field] = summary;
+        generated++;
+      }
+    } catch (error) {
+      console.error(`Failed to generate summary for character ${field}:`, error);
+    }
+  }
+  
+  if (generated > 0) {
+    saveStoredCharacterSummaries(characterSummaries);
+  }
+  
+  return {
+    generated: generated,
+    remaining: 0 // We process all at once for character details
+  };
+};
+
+// Pure function to get formatted character details for AI prompts
+const getFormattedCharacterForAI = (character) => {
+  const characterSummaries = loadStoredCharacterSummaries();
+  const formattedCharacter = { ...character };
+  
+  // Use summary for backstory if available and original is long
+  if (character.backstory) {
+    const backstoryWordCount = utils.getWordCount(character.backstory);
+    if (backstoryWordCount > CHARACTER_SUMMARY_CONFIG.maxWordsBeforeSummary && characterSummaries.backstory) {
+      formattedCharacter.backstory = characterSummaries.backstory.summary;
+      formattedCharacter.backstorySummarized = true;
+    }
+  }
+  
+  // Use summary for notes if available and original is long
+  if (character.notes) {
+    const notesWordCount = utils.getWordCount(character.notes);
+    if (notesWordCount > CHARACTER_SUMMARY_CONFIG.maxWordsBeforeSummary && characterSummaries.notes) {
+      formattedCharacter.notes = characterSummaries.notes.summary;
+      formattedCharacter.notesSummarized = true;
+    }
+  }
+  
+  return formattedCharacter;
 };
 
 // Pure function to determine which entries need summaries
@@ -217,8 +371,9 @@ const generateMissingSummaries = async () => {
   
   saveStoredSummaries(summaries);
   
-  // After generating regular summaries, check if we need meta-summaries
+  // After generating regular summaries, check if we need meta-summaries and character summaries
   await generateMissingMetaSummaries();
+  await generateMissingCharacterSummaries();
   
   return {
     generated: batch.length,
@@ -289,6 +444,7 @@ const getSummaryStats = () => {
   const journalData = loadJournalData();
   const summaries = loadStoredSummaries();
   const metaSummaries = loadStoredMetaSummaries();
+  const characterSummaries = loadStoredCharacterSummaries();
   
   const { recentEntries, olderEntries, needingSummaries } = getEntriesNeedingSummaries(journalData.entries, summaries);
   
@@ -307,6 +463,10 @@ const getSummaryStats = () => {
     }
   });
   
+  // Character summary statistics
+  const characterNeedingSummaries = getCharacterDetailsNeedingSummaries(journalData.character, characterSummaries);
+  const characterFieldsNeedingSummaries = Object.keys(characterNeedingSummaries);
+  
   return {
     totalEntries: journalData.entries.length,
     recentEntries: recentEntries.length,
@@ -317,7 +477,10 @@ const getSummaryStats = () => {
     metaSummaries: metaSummaryCount,
     possibleMetaSummaries: possibleMetaSummaries,
     entriesInMetaSummaries: entriesInMetaSummaries.size,
-    metaSummaryActive: journalData.entries.length >= META_SUMMARY_CONFIG.triggerThreshold
+    metaSummaryActive: journalData.entries.length >= META_SUMMARY_CONFIG.triggerThreshold,
+    characterSummaries: Object.keys(characterSummaries).length,
+    characterFieldsNeedingSummaries: characterFieldsNeedingSummaries.length,
+    characterSummaryFields: Object.keys(characterSummaries)
   };
 };
 
@@ -347,7 +510,14 @@ if (typeof module !== 'undefined' && module.exports) {
     getFormattedEntriesForAI,
     getSummaryStats,
     initializeSummarization,
-    META_SUMMARY_CONFIG
+    META_SUMMARY_CONFIG,
+    CHARACTER_SUMMARY_CONFIG,
+    getCharacterDetailsNeedingSummaries,
+    generateMissingCharacterSummaries,
+    generateCharacterDetailSummary,
+    getFormattedCharacterForAI,
+    loadStoredCharacterSummaries,
+    saveStoredCharacterSummaries
   };
 } else if (typeof global !== 'undefined') {
   // For testing
@@ -359,6 +529,13 @@ if (typeof module !== 'undefined' && module.exports) {
   global.getSummaryStats = getSummaryStats;
   global.initializeSummarization = initializeSummarization;
   global.META_SUMMARY_CONFIG = META_SUMMARY_CONFIG;
+  global.CHARACTER_SUMMARY_CONFIG = CHARACTER_SUMMARY_CONFIG;
+  global.getCharacterDetailsNeedingSummaries = getCharacterDetailsNeedingSummaries;
+  global.generateMissingCharacterSummaries = generateMissingCharacterSummaries;
+  global.generateCharacterDetailSummary = generateCharacterDetailSummary;
+  global.getFormattedCharacterForAI = getFormattedCharacterForAI;
+  global.loadStoredCharacterSummaries = loadStoredCharacterSummaries;
+  global.saveStoredCharacterSummaries = saveStoredCharacterSummaries;
 } else {
   // For browser
   window.Summarization = {
@@ -369,6 +546,13 @@ if (typeof module !== 'undefined' && module.exports) {
     getFormattedEntriesForAI,
     getSummaryStats,
     initializeSummarization,
-    META_SUMMARY_CONFIG
+    META_SUMMARY_CONFIG,
+    CHARACTER_SUMMARY_CONFIG,
+    getCharacterDetailsNeedingSummaries,
+    generateMissingCharacterSummaries,
+    generateCharacterDetailSummary,
+    getFormattedCharacterForAI,
+    loadStoredCharacterSummaries,
+    saveStoredCharacterSummaries
   };
 }

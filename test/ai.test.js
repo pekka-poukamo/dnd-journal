@@ -149,6 +149,81 @@ describe('AI Module', () => {
       expect(prompt).to.include('...');
       expect(prompt).not.to.include(longContent);
     });
+
+    it('should include character notes in prompt', () => {
+      const character = {
+        name: 'Gandalf',
+        race: 'Wizard',
+        class: 'Mage',
+        backstory: 'A powerful wizard sent to Middle-earth',
+        notes: 'Carries a staff and knows many spells'
+      };
+      const formattedEntries = [];
+
+      const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
+      
+      expect(prompt).to.include('Gandalf');
+      expect(prompt).to.include('Wizard Mage');
+      expect(prompt).to.include('A powerful wizard sent to Middle-earth');
+      expect(prompt).to.include('Carries a staff and knows many spells');
+      expect(prompt).to.include('Additional Character Details');
+    });
+
+    it('should use summarized character details when available', () => {
+      // Set up summarization module mock
+      global.window = {
+        Summarization: {
+          getFormattedCharacterForAI: (character) => ({
+            ...character,
+            backstory: 'Brief backstory summary',
+            backstorySummarized: true,
+            notes: 'Brief notes summary',
+            notesSummarized: true
+          })
+        }
+      };
+
+      const character = {
+        name: 'Boromir',
+        race: 'Human',
+        class: 'Fighter',
+        backstory: 'A very long backstory that would normally be too long for AI prompts',
+        notes: 'Very detailed notes about equipment and relationships'
+      };
+      const formattedEntries = [];
+
+      const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
+      
+      expect(prompt).to.include('Boromir');
+      expect(prompt).to.include('Brief backstory summary');
+      expect(prompt).to.include('Brief notes summary');
+      expect(prompt).to.include('(summarized)');
+      expect(prompt).not.to.include('very long backstory');
+    });
+
+    it('should work without summarization module', () => {
+      // Temporarily remove summarization module
+      const originalSummarization = global.window.Summarization;
+      global.window.Summarization = undefined;
+
+      const character = {
+        name: 'Frodo',
+        race: 'Hobbit',
+        class: 'Burglar',
+        backstory: 'A hobbit from the Shire',
+        notes: 'Ring-bearer'
+      };
+      const formattedEntries = [];
+
+      const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
+      
+      expect(prompt).to.include('Frodo');
+      expect(prompt).to.include('A hobbit from the Shire');
+      expect(prompt).to.include('Ring-bearer');
+
+      // Restore original summarization module
+      global.window.Summarization = originalSummarization;
+    });
   });
 
   // getWordCount is now in utils module, tested in utils.test.js

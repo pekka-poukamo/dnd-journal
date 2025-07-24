@@ -6,7 +6,8 @@ const STORAGE_KEYS = {
   JOURNAL: 'simple-dnd-journal',
   SETTINGS: 'simple-dnd-journal-settings',
   SUMMARIES: 'simple-dnd-journal-summaries',
-  META_SUMMARIES: 'simple-dnd-journal-meta-summaries'
+  META_SUMMARIES: 'simple-dnd-journal-meta-summaries',
+  CHARACTER_SUMMARIES: 'simple-dnd-journal-character-summaries'
 };
 
 // Pure function for safe JSON parsing
