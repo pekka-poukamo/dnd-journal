@@ -28,7 +28,6 @@ describe('D&D Journal Integration Tests', function() {
       <input type="text" id="character-class" />
       <input type="text" id="entry-title" />
       <textarea id="entry-content"></textarea>
-      <input type="url" id="entry-image" />
       <div id="entries-list"></div>
     `;
     
@@ -55,12 +54,10 @@ describe('D&D Journal Integration Tests', function() {
     // 2. User adds multiple journal entries
     const titleInput = document.getElementById('entry-title');
     const contentInput = document.getElementById('entry-content');
-    const imageInput = document.getElementById('entry-image');
 
     // First entry
     titleInput.value = 'The Quest Begins';
     contentInput.value = 'We set out from the Shire on a grand adventure.';
-    imageInput.value = 'https://example.com/shire.jpg';
     addEntry();
 
     // Wait to ensure different timestamp
@@ -70,7 +67,6 @@ describe('D&D Journal Integration Tests', function() {
     // Second entry
     titleInput.value = 'Meeting Gandalf';
     contentInput.value = 'The wizard has important news for us.';
-    imageInput.value = '';
     addEntry();
 
     // Wait to ensure different timestamp
@@ -80,7 +76,6 @@ describe('D&D Journal Integration Tests', function() {
     // Third entry
     titleInput.value = 'The Lonely Mountain';
     contentInput.value = 'We can see our destination in the distance.';
-    imageInput.value = 'https://example.com/mountain.jpg';
     addEntry();
 
     // Should have 3 entries
@@ -133,10 +128,10 @@ describe('D&D Journal Integration Tests', function() {
     sortedEntries[1].title.should.equal('Meeting Gandalf');
     sortedEntries[2].title.should.equal('The Quest Begins');
 
-    // Check images are properly stored
-    sortedEntries[0].image.should.equal('https://example.com/mountain.jpg');
-    sortedEntries[1].image.should.equal('');
-    sortedEntries[2].image.should.equal('https://example.com/shire.jpg');
+    // Check that images are no longer stored in entries
+    sortedEntries[0].should.not.have.property('image');
+    sortedEntries[1].should.not.have.property('image');
+    sortedEntries[2].should.not.have.property('image');
   });
 
   it('should handle empty state gracefully', function() {
