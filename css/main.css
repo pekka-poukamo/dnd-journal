@@ -263,7 +263,7 @@ main {
   line-height: var(--line-height-normal);
 }
 
-/* Buttons - Understated Technical */
+/* Buttons - Understated Technical (Support both .btn and .button) */
 .btn,
 .button {
   display: inline-block;

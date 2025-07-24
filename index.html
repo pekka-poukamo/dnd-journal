@@ -16,7 +16,7 @@
     
     <!-- Yjs Sync Enhancement (ADR-0003) - Optional libraries for cross-device sync -->
     <script src="https://unpkg.com/yjs@13.6.10/dist/yjs.js"></script>
-    <script src="https://unpkg.com/y-websocket@1.5.0/dist/y-websocket.js"></script>
+    <script src="https://unpkg.com/y-websocket@1.5.4/dist/y-websocket.js"></script>
     <script src="https://unpkg.com/y-indexeddb@9.0.12/dist/y-indexeddb.js"></script>
 </head>
 <body>
@@ -31,69 +31,72 @@
             </div>
         </div>
     </header>
-    
-    <main>
-        <div class="container">
-            <div class="grid">
-                <!-- AI Introspection Prompt Section -->
-                <section class="ai-prompt" id="ai-prompt-section" style="display: none;">
-                    <div class="ai-prompt__header">
-                        <h2 class="ai-prompt__title">Session Reflection</h2>
-                        <button id="regenerate-prompt-btn" class="ai-prompt__regenerate-btn">
-                            Regenerate
-                        </button>
-                    </div>
-                    <div class="ai-prompt__content">
-                        <p class="ai-prompt__text" id="ai-prompt-text">
-                            Loading your personalized reflection prompt...
-                        </p>
-                    </div>
-                </section>
 
-                <!-- Character Summary Section -->
-                <section class="character-summary">
-                    <div class="character-summary__header">
-                        <h2 class="character-summary__title">Character</h2>
-                        <a href="character.html" class="button button--secondary">Edit Details</a>
-                    </div>
-                    <div class="character-summary__content">
-                        <div class="character-summary__grid">
-                            <div class="character-summary__field">
-                                <label class="character-summary__label">Name</label>
-                                <span id="summary-name" class="character-summary__value">No character created</span>
-                            </div>
-                            <div class="character-summary__field">
-                                <label class="character-summary__label">Details</label>
-                                <span id="summary-details" class="character-summary__value">Click "Edit Details" to create</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+    <main>
+        <div class="container-narrow">
+            <!-- AI Introspection Prompt Section -->
+            <section class="ai-prompt" id="ai-prompt-section" style="display: none;">
+                <div class="ai-prompt__header">
+                    <h2 class="ai-prompt__title">Session Reflection</h2>
+                    <button id="regenerate-prompt-btn" class="ai-prompt__regenerate-btn">
+                        Regenerate
+                    </button>
+                </div>
+                <div class="ai-prompt__content">
+                    <p class="ai-prompt__text" id="ai-prompt-text">
+                        Loading your personalized reflection prompt...
+                    </p>
+                </div>
+            </section>
+
+            <!-- Character Summary Section -->
+            <section id="character-summary" class="character-summary">
+                <div class="character-summary__header">
+                    <h2 class="character-summary__title">Character Summary</h2>
+                    <a href="character.html" class="btn btn-secondary btn-small">Edit Details</a>
+                </div>
                 
-                <!-- New Entry Section -->
-                <section class="entry-section">
-                    <h2>Add Entry</h2>
-                    <form class="entry-form">
-                        <div class="form-group">
-                            <label for="entry-title" class="form-label">Title</label>
-                            <input type="text" id="entry-title" class="form-input" placeholder="What happened?">
+                <div class="character-summary__content">
+                    <div class="character-summary__grid">
+                        <div class="character-summary__field">
+                            <label class="character-summary__label">Name</label>
+                            <span id="display-name" class="character-summary__value">Unnamed Character</span>
                         </div>
-                        <div class="form-group">
-                            <label for="entry-content" class="form-label">Notes</label>
-                            <textarea id="entry-content" class="form-textarea" rows="4" placeholder="Write your notes here..."></textarea>
+                        <div class="character-summary__field">
+                            <label class="character-summary__label">Race</label>
+                            <span id="display-race" class="character-summary__value">Unknown</span>
                         </div>
-                        <div class="form-group">
-                            <button type="button" id="add-entry-btn" class="button button--primary">Add Entry</button>
+                        <div class="character-summary__field">
+                            <label class="character-summary__label">Class</label>
+                            <span id="display-class" class="character-summary__value">Unknown</span>
                         </div>
-                    </form>
-                </section>
-                
-                <!-- Journal Entries -->
-                <section class="entries-section">
-                    <h2>Journal Entries</h2>
-                    <div id="entries-list" class="entries-list"></div>
-                </section>
-            </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- New Entry Section -->
+            <section class="entry-section">
+                <h2>Add Entry</h2>
+                <form class="entry-form">
+                    <div class="form-group">
+                        <label for="entry-title" class="form-label">Title</label>
+                        <input type="text" id="entry-title" class="form-input" placeholder="What happened?">
+                    </div>
+                    <div class="form-group">
+                        <label for="entry-content" class="form-label">Notes</label>
+                        <textarea id="entry-content" class="form-textarea" rows="4" placeholder="Write your notes here..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" id="add-entry-btn" class="button button--primary">Add Entry</button>
+                    </div>
+                </form>
+            </section>
+            
+            <!-- Journal Entries -->
+            <section class="entries-section">
+                <h2>Journal Entries</h2>
+                <div id="entries-list" class="entries-list"></div>
+            </section>
         </div>
     </main>
 
