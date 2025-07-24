@@ -112,14 +112,11 @@ const analyzeContent = (content, config, existingSummaries = {}) => {
     
     const entriesWithSummaries = olderEntries.filter(entry => existingSummaries[entry.id]);
     
-    // Group entries by chunking
-    const groups = [];
-    for (let i = 0; i < entriesWithSummaries.length; i += config.summariesPerGroup) {
-      const group = entriesWithSummaries.slice(i, i + config.summariesPerGroup);
-      if (group.length === config.summariesPerGroup) {
-        groups.push(group);
-      }
-    }
+    // Group entries by chunking - functional approach
+    const groups = Array.from(
+      { length: Math.floor(entriesWithSummaries.length / config.summariesPerGroup) },
+      (_, i) => entriesWithSummaries.slice(i * config.summariesPerGroup, (i + 1) * config.summariesPerGroup)
+    ).filter(group => group.length === config.summariesPerGroup);
     
     results.groups = groups;
   }
@@ -207,28 +204,38 @@ const processBatch = async (items, config, storageManager) => {
   const batch = items.slice(0, config.batchSize);
   const existingSummaries = storageManager.load();
   
-  for (const item of batch) {
-    try {
-      const summary = await processSummary(item, config);
-      if (summary) {
-        if (config.type === 'character') {
-          existingSummaries[item.field] = summary;
-        } else if (config.type === 'entries') {
-          existingSummaries[item.id] = summary;
-        } else if (config.type === 'metaSummaries') {
-          const groupKey = item.groupKey;
-          existingSummaries[groupKey] = summary;
-        }
-        results.generated++;
-      }
-    } catch (error) {
-      console.error(`Failed to process ${config.type} item:`, error);
-    }
-  }
-  
-  if (results.generated > 0) {
-    storageManager.save(existingSummaries);
-  }
+  // Process batch using functional approach
+  const processedResults = await Promise.all(
+    batch.map(async (item) => {
+      try {
+        const summary = await processSummary(item, config);
+        if (summary) {
+          if (config.type === 'character') {
+            return { success: true, key: item.field, summary };
+          } else if (config.type === 'entries') {
+            return { success: true, key: item.id, summary };
+          } else if (config.type === 'metaSummaries') {
+            return { success: true, key: item.groupKey, summary };
+                 }
+         return { success: true, key: null, summary: null };
+       } catch (error) {
+         console.error(`Failed to process ${config.type} item:`, error);
+         return { success: false, error };
+       }
+     })
+   );
+   
+   // Apply results to existingSummaries
+   processedResults
+     .filter(result => result.success && result.summary)
+     .forEach(result => {
+       existingSummaries[result.key] = result.summary;
+       results.generated++;
+     });
+   
+   if (results.generated > 0) {
+     storageManager.save(existingSummaries);
+   }
   
   return results;
 };
