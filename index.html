@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D Journal - Simple</title>
+    <title>D&D Journal</title>
+    
+    <!-- Preload critical fonts for better performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components/character-summary.css">
     <link rel="stylesheet" href="css/components/ai-prompt.css">
@@ -12,14 +17,16 @@
     <script src="https://unpkg.com/yjs@13.6.10/dist/yjs.js"></script>
     <script src="https://unpkg.com/y-websocket@1.5.0/dist/y-websocket.js"></script>
     <script src="https://unpkg.com/y-indexeddb@9.0.12/dist/y-indexeddb.js"></script>
-  </head>
+</head>
 <body>
     <header>
         <div class="container">
-            <h1>D&D Journal</h1>
-            <nav class="header-nav">
-                <a href="settings.html" class="button button--secondary">Settings</a>
-            </nav>
+            <div class="header-nav">
+                <h1>D&D Journal</h1>
+                <nav>
+                    <a href="settings.html" class="button button--secondary">Settings</a>
+                </nav>
+            </div>
         </div>
     </header>
     
@@ -34,9 +41,9 @@
                     </button>
                 </div>
                 <div class="ai-prompt__content">
-                    <div class="ai-prompt__text" id="ai-prompt-text">
+                    <p class="ai-prompt__text" id="ai-prompt-text">
                         Loading your personalized introspection prompt...
-                    </div>
+                    </p>
                 </div>
             </section>
 
@@ -57,7 +64,7 @@
             <!-- New Entry Section -->
             <section class="entry-section">
                 <h2>Add Entry</h2>
-                <div class="entry-form">
+                <form class="entry-form">
                     <div class="form-group">
                         <label for="entry-title" class="form-label">Title</label>
                         <input type="text" id="entry-title" class="form-input" placeholder="What happened?">
@@ -71,9 +78,9 @@
                         <input type="url" id="entry-image" class="form-input" placeholder="https://example.com/image.jpg">
                     </div>
                     <div class="form-group">
-                        <button id="add-entry-btn" class="button">Add Entry</button>
+                        <button type="button" id="add-entry-btn" class="button">Add Entry</button>
                     </div>
-                </div>
+                </form>
             </section>
             
             <!-- Journal Entries -->

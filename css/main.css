@@ -5,57 +5,85 @@
   box-sizing: border-box;
 }
 
-/* CSS Custom Properties */
+/* CSS Custom Properties - Simplified Minimalist Palette */
 :root {
-  /* Colors */
-  --color-primary: #4a90e2;
-  --color-background: #f8f9fa;
+  /* Simplified Color System - Inspired by Nordic/Minimal Design */
+  --color-primary: #2d3748;
+  --color-secondary: #4a5568;
+  --color-accent: #3182ce;
+  --color-background: #fafafa;
   --color-surface: #ffffff;
-  --color-text: #333333;
-  --color-text-light: #666666;
-  --color-border: #e1e5e9;
+  --color-surface-secondary: #f7fafc;
+  --color-text: #1a202c;
+  --color-text-secondary: #4a5568;
+  --color-text-muted: #718096;
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
   
-  /* Spacing */
+  /* Simplified Spacing Scale */
+  --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2rem;
+  --space-2xl: 3rem;
   
-  /* Typography */
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Typography - Clean, System Fonts */
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
   --font-size-lg: 1.125rem;
   --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
   
   /* Layout */
-  --border-radius: 8px;
-  --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  --max-width: 800px;
+  --border-radius: 6px;
+  --border-radius-lg: 8px;
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --max-width: 720px;
+  --transition: all 0.2s ease;
 }
 
 /* Base Typography */
 body {
   font-family: var(--font-family);
-  line-height: 1.6;
+  line-height: 1.5;
   color: var(--color-text);
   background: var(--color-background);
   font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3 {
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
   margin-bottom: var(--space-md);
-  font-weight: 600;
-  line-height: 1.3;
+  color: var(--color-text);
 }
 
 h1 { 
-  font-size: var(--font-size-xl); 
-  color: var(--color-primary);
+  font-size: var(--font-size-2xl);
 }
 
 h2 { 
-  font-size: var(--font-size-lg); 
-  color: var(--color-primary);
+  font-size: var(--font-size-xl);
+  color: var(--color-text-secondary);
+}
+
+h3 {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
+}
+
+p {
+  margin-bottom: var(--space-md);
+  color: var(--color-text-secondary);
 }
 
 /* Layout */
@@ -67,50 +95,62 @@ h2 {
 
 .grid {
   display: grid;
-  gap: var(--space-md);
+  gap: var(--space-lg);
 }
 
 .grid--two-col {
   grid-template-columns: 1fr 1fr;
 }
 
-.gap-md { gap: var(--space-md); }
-.gap-lg { gap: var(--space-lg); }
-
-/* Header */
+/* Header - Minimal and Clean */
 header {
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-light);
   padding: var(--space-lg) 0;
+}
+
+.header-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* Main Content */
 main {
-  padding: var(--space-xl) 0;
+  padding: var(--space-2xl) 0;
 }
 
-/* Sections */
+/* Sections - Simplified Cards */
 section {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
-  padding: var(--space-lg);
+  border-radius: var(--border-radius-lg);
+  padding: var(--space-xl);
   margin-bottom: var(--space-lg);
+  box-shadow: var(--shadow-subtle);
+  transition: var(--transition);
 }
 
-/* Forms */
+section:hover {
+  box-shadow: var(--shadow-soft);
+}
+
+/* Forms - Clean and Minimal */
 .form-group {
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-lg);
 }
 
 .form-label {
   display: block;
   margin-bottom: var(--space-sm);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   color: var(--color-text);
+  font-size: var(--font-size-sm);
 }
 
-.form-input, textarea {
+.form-input, 
+textarea, 
+select {
   width: 100%;
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--color-border);
@@ -119,38 +159,44 @@ section {
   font-family: var(--font-family);
   background: var(--color-surface);
   color: var(--color-text);
-  transition: border-color 0.2s ease;
+  transition: var(--transition);
 }
 
-.form-input:focus, textarea:focus {
+.form-input:focus, 
+textarea:focus,
+select:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
 }
 
 textarea {
   resize: vertical;
-  min-height: 100px;
+  min-height: 120px;
+  line-height: 1.5;
 }
 
-/* Buttons */
+/* Buttons - Simple and Functional */
 .button {
-  background: var(--color-primary);
-  color: white;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--space-sm) var(--space-lg);
+  border: 1px solid transparent;
   border-radius: var(--border-radius);
-  cursor: pointer;
   font-size: var(--font-size-base);
   font-family: var(--font-family);
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition);
+  background: var(--color-primary);
+  color: white;
 }
 
 .button:hover:not(:disabled) {
-  background: #357abd;
+  background: var(--color-secondary);
   transform: translateY(-1px);
-  box-shadow: var(--shadow);
 }
 
 .button:active {
@@ -158,51 +204,60 @@ textarea {
 }
 
 .button:disabled {
-  background: var(--color-text-light);
+  background: var(--color-text-muted);
   cursor: not-allowed;
   transform: none;
 }
 
 .button--secondary {
-  background: transparent;
-  color: var(--color-text);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   border-color: var(--color-border);
 }
 
-.button--secondary:hover {
-  background: var(--color-background);
+.button--secondary:hover:not(:disabled) {
+  background: var(--color-surface-secondary);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .button--small {
-  padding: var(--space-sm) var(--space-md);
-  font-size: 0.875rem;
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--font-size-sm);
 }
 
-/* Entry Cards */
+/* Entry Cards - Clean and Readable */
 .entry-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-lg);
   padding: var(--space-lg);
   margin-bottom: var(--space-md);
+  transition: var(--transition);
+}
+
+.entry-card:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-soft);
 }
 
 .entry-title {
-  color: var(--color-primary);
+  color: var(--color-text);
   font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   margin-bottom: var(--space-sm);
 }
 
 .entry-date {
-  color: var(--color-text-light);
-  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
   margin-bottom: var(--space-md);
 }
 
 .entry-content {
   margin-bottom: var(--space-md);
-  white-space: pre-wrap;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
 }
 
 .entry-actions {
@@ -218,21 +273,32 @@ textarea {
   margin-top: var(--space-md);
 }
 
-/* Empty State */
+/* Empty State - Gentle and Encouraging */
 .empty-state {
   text-align: center;
-  padding: var(--space-xl);
-  color: var(--color-text-light);
+  padding: var(--space-2xl);
+  color: var(--color-text-muted);
   border: 2px dashed var(--color-border);
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-lg);
+  background: var(--color-surface-secondary);
 }
 
-
+.empty-state p {
+  margin-bottom: 0;
+  font-size: var(--font-size-lg);
+}
 
 /* Responsive Design */
 @media (max-width: 767px) {
+  :root {
+    --space-md: 0.75rem;
+    --space-lg: 1rem;
+    --space-xl: 1.5rem;
+    --space-2xl: 2rem;
+  }
+  
   .container {
-    padding: 0 var(--space-sm);
+    padding: 0 var(--space-md);
   }
   
   .grid--two-col {
@@ -240,10 +306,18 @@ textarea {
   }
   
   main {
-    padding: var(--space-lg) 0;
+    padding: var(--space-xl) 0;
   }
   
   section {
-    padding: var(--space-md);
+    padding: var(--space-lg);
+  }
+  
+  h1 {
+    font-size: var(--font-size-xl);
+  }
+  
+  h2 {
+    font-size: var(--font-size-lg);
   }
 }
