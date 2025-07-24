@@ -134,7 +134,7 @@ describe('AI Module', () => {
 
     it('should truncate long entry content', () => {
       const character = { name: 'Test', race: 'Human', class: 'Fighter' };
-      const longContent = 'A'.repeat(200);
+      const longContent = 'A'.repeat(600); // Increased to 600 to exceed the new 500-character limit
       const formattedEntries = [
         {
           title: 'Long Entry',
