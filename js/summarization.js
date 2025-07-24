@@ -216,8 +216,9 @@ const processBatch = async (items, config, storageManager) => {
             return { success: true, key: item.id, summary };
           } else if (config.type === 'metaSummaries') {
             return { success: true, key: item.groupKey, summary };
-                 }
-         return { success: true, key: null, summary: null };
+          }
+        }
+        return { success: true, key: null, summary: null };
        } catch (error) {
          console.error(`Failed to process ${config.type} item:`, error);
          return { success: false, error };
