@@ -59,7 +59,7 @@ let yjsSync = null;
 try {
   yjsSync = createYjsSync();
 } catch (e) {
-  console.log('📱 Yjs sync not available, using localStorage-only mode');
+      // Yjs sync not available, using localStorage-only mode
 }
 
 // Load state from localStorage - using utils
@@ -82,7 +82,7 @@ const loadData = () => {
       const remoteTime = syncData.lastModified || 0;
       
       if (remoteTime > localTime) {
-        console.log('🔄 Loading newer data from sync');
+        // Loading newer data from sync
         state = { ...state, ...syncData };
         utils.safeSetToStorage(utils.STORAGE_KEYS.JOURNAL, state);
       } else {
@@ -429,7 +429,7 @@ const setupSyncListener = () => {
       
       // Only update if remote data is newer
       if (remoteTime > localTime && JSON.stringify(remoteData) !== JSON.stringify(state)) {
-        console.log('🔄 Applying remote changes');
+        // Applying remote changes
         state = { ...state, ...remoteData };
         utils.safeSetToStorage(utils.STORAGE_KEYS.JOURNAL, state);
         

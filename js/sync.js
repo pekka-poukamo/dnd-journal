@@ -29,7 +29,7 @@ const initializeSync = () => {
   const isAvailable = checkYjsAvailability();
   
   if (!isAvailable) {
-    console.log('📱 Yjs not available, using localStorage-only mode');
+    // Yjs not available, using localStorage-only mode
     return { ...syncState, isAvailable: false };
   }
 
@@ -52,7 +52,7 @@ const initializeSync = () => {
     syncState = withObservers;
     return syncState;
   } catch (e) {
-    console.warn('⚠️ Yjs setup failed, falling back to localStorage-only:', e);
+    console.error('Failed to setup Yjs:', e);
     return { ...syncState, isAvailable: false };
   }
 };
@@ -65,13 +65,13 @@ const setupPersistence = (state) => {
     const indexeddbProvider = new window.IndexeddbPersistence('dnd-journal-sync', state.ydoc);
     
     indexeddbProvider.on('synced', () => {
-      console.log('📱 Yjs local persistence ready');
+      // Yjs local persistence ready
       notifyCallbacks(syncState);
     });
     
     return { ...state, indexeddbProvider };
   } catch (e) {
-    console.warn('⚠️ IndexedDB persistence setup failed:', e);
+    console.error('Failed to setup IndexedDB persistence:', e);
     return state;
   }
 };
@@ -107,9 +107,9 @@ const setupNetworking = (state) => {
   servers.forEach(serverUrl => {
     try {
       providers.push(new window.WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc));
-      console.log(`🔧 Connecting to: ${serverUrl}`);
+      // Connecting to sync server
     } catch (e) {
-      console.warn(`⚠️ Failed to connect to ${serverUrl}:`, e);
+              console.error(`Failed to connect to ${serverUrl}:`, e);
     }
   });
   
@@ -120,16 +120,16 @@ const setupNetworking = (state) => {
       const isConnected = providers.some(p => p.wsconnected);
       
       if (!wasConnected && isConnected) {
-        console.log('🌐 Sync connected');
+        // Sync connected
       } else if (wasConnected && !isConnected) {
-        console.log('📴 Sync disconnected');
+        // Sync disconnected
       }
       
       syncState = { ...syncState, isConnected };
     });
     
     provider.on('connection-error', () => {
-      console.log('⚠️ Sync connection error, continuing offline');
+      // Sync connection error, continuing offline
     });
     
     return provider;
@@ -143,7 +143,7 @@ const setupObservers = (state) => {
   if (!state.isAvailable || !state.ymap) return state;
   
   state.ymap.observe(() => {
-    console.log('🔄 Remote changes detected');
+          // Remote changes detected
     notifyCallbacks(state);
   });
   
@@ -161,7 +161,7 @@ const getSyncData = () => {
   try {
     return syncState.ymap.get('data') || null;
   } catch (e) {
-    console.warn('⚠️ Failed to get Yjs data:', e);
+    console.error('Failed to get Yjs data:', e);
     return null;
   }
 };
@@ -177,7 +177,7 @@ const setSyncData = (data) => {
     syncState.ymap.set('lastModified', Date.now());
     syncState.ymap.set('deviceId', getDeviceId());
   } catch (e) {
-    console.warn('⚠️ Failed to set Yjs data:', e);
+    console.error('Failed to set Yjs data:', e);
   }
 };
 
@@ -199,7 +199,7 @@ const notifyCallbacks = (state) => {
       try {
         callback(data);
       } catch (e) {
-        console.warn('⚠️ Callback error:', e);
+        console.error('Failed to execute callback:', e);
       }
     });
   }
