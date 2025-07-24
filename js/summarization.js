@@ -1,4 +1,4 @@
-// Summarization Management - Smart handling of entry summaries and character details
+// Summarization Management - General framework for handling different types of summaries
 
 // Get utils reference - works in both browser and test environment
 const getUtils = () => {
@@ -29,18 +29,212 @@ const getUtils = () => {
 
 const utils = getUtils();
 
-// Configuration for meta-summarization
-const META_SUMMARY_CONFIG = {
-  triggerThreshold: 50, // Start meta-summarization when more than 50 entries
-  summariesPerMetaSummary: 10, // Group 10 summaries into 1 meta-summary
-  maxMetaSummaryWords: 200 // Maximum words in a meta-summary
+// =============================================================================
+// GENERAL SUMMARIZATION FRAMEWORK
+// =============================================================================
+
+// Base configuration for different summarization types
+const SUMMARIZATION_CONFIGS = {
+  entries: {
+    storageKey: utils.STORAGE_KEYS.SUMMARIES,
+    recentCount: 5, // Keep 5 most recent entries in full
+    batchSize: 3,
+    targetCompressionRatio: 0.3 // 30% of original length
+  },
+  
+  metaSummaries: {
+    storageKey: utils.STORAGE_KEYS.META_SUMMARIES,
+    triggerThreshold: 50,
+    summariesPerGroup: 10,
+    maxWords: 200,
+    batchSize: 2
+  },
+  
+  character: {
+    storageKey: utils.STORAGE_KEYS.CHARACTER_SUMMARIES,
+    fields: ['backstory', 'notes'],
+    maxWordsBeforeSummary: 100,
+    targetWords: 50,
+    batchSize: 2
+  }
 };
 
-// Configuration for character detail summarization
-const CHARACTER_SUMMARY_CONFIG = {
-  maxWordsBeforeSummary: 100, // Summarize character details if longer than 100 words
-  targetSummaryWords: 50 // Target length for character detail summaries
+// Generic summary storage operations
+const createStorageManager = (storageKey) => ({
+  load: () => utils.loadDataWithFallback(storageKey, {}),
+  save: (data) => utils.safeSetToStorage(storageKey, data)
+});
+
+// Generic content analyzer - determines if content needs summarization
+const analyzeContent = (content, config, existingSummaries = {}) => {
+  const results = {};
+  
+  if (config.type === 'character') {
+    // Character field analysis
+    config.fields.forEach(field => {
+      if (content[field]) {
+        const wordCount = utils.getWordCount(content[field]);
+        if (wordCount > config.maxWordsBeforeSummary) {
+          const contentHash = btoa(content[field]).substring(0, 16);
+          const existing = existingSummaries[field];
+          
+          if (!existing || existing.contentHash !== contentHash) {
+            results[field] = {
+              type: 'character',
+              field: field,
+              content: content[field],
+              wordCount: wordCount,
+              contentHash: contentHash,
+              targetWords: config.targetWords
+            };
+          }
+        }
+      }
+    });
+  } else if (config.type === 'entries') {
+    // Entry analysis
+    const sortedEntries = [...content].sort((a, b) => b.timestamp - a.timestamp);
+    const recentEntries = sortedEntries.slice(0, config.recentCount);
+    const olderEntries = sortedEntries.slice(config.recentCount);
+    const needingSummaries = olderEntries.filter(entry => !existingSummaries[entry.id]);
+    
+    results.analysis = {
+      recentEntries,
+      olderEntries,
+      needingSummaries,
+      total: content.length
+    };
+  } else if (config.type === 'metaSummaries') {
+    // Meta-summary grouping analysis
+    const groups = [];
+    const olderEntries = content
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .slice(0, -config.recentCount);
+    
+    const entriesWithSummaries = olderEntries.filter(entry => existingSummaries[entry.id]);
+    
+    for (let i = 0; i < entriesWithSummaries.length; i += config.summariesPerGroup) {
+      const group = entriesWithSummaries.slice(i, i + config.summariesPerGroup);
+      if (group.length === config.summariesPerGroup) {
+        groups.push(group);
+      }
+    }
+    
+    results.groups = groups;
+  }
+  
+  return results;
 };
+
+// Generic AI prompt creator
+const createAIPrompt = (item, config) => {
+  if (config.type === 'character') {
+    const fieldName = item.field === 'backstory' ? 'backstory' : 'notes';
+    return `Summarize this D&D character's ${fieldName} in approximately ${item.targetWords} words. Keep the most important personality traits, key events, relationships, and defining characteristics:
+
+${item.content}`;
+  } else if (config.type === 'entries') {
+    const wordCount = utils.getWordCount(item.content);
+    const targetLength = Math.max(10, Math.floor(wordCount * config.targetCompressionRatio));
+    
+    return `Summarize this D&D journal entry in approximately ${targetLength} words. Keep the key events, emotions, and character development:
+
+Title: ${item.title}
+Content: ${item.content}`;
+  } else if (config.type === 'metaSummaries') {
+    const summariesText = item.summaries.map(s => `• ${s.summary}`).join('\n');
+    
+    return `Create a meta-summary of these D&D journal entry summaries from ${item.timeRange}. Capture the key themes, character development, and major events in about ${config.maxWords} words:
+
+${summariesText}`;
+  }
+  
+  return '';
+};
+
+// Generic summary processor
+const processSummary = async (item, config) => {
+  if (!window.AI || !window.AI.isAIEnabled()) {
+    return null;
+  }
+
+  try {
+    const prompt = createAIPrompt(item, config);
+    const maxTokens = config.type === 'metaSummaries' ? config.maxWords : 
+                     config.type === 'character' ? 80 : 100;
+    
+    const summary = await window.AI.callOpenAI(prompt, maxTokens);
+    
+    if (config.type === 'character') {
+      return {
+        field: item.field,
+        originalWordCount: item.wordCount,
+        summary: summary,
+        summaryWordCount: utils.getWordCount(summary),
+        contentHash: item.contentHash,
+        timestamp: Date.now()
+      };
+    } else if (config.type === 'entries') {
+      return {
+        id: item.id,
+        originalWordCount: item.wordCount || utils.getWordCount(item.content),
+        summary: summary,
+        summaryWordCount: utils.getWordCount(summary),
+        timestamp: Date.now()
+      };
+    } else if (config.type === 'metaSummaries') {
+      return {
+        summary: summary,
+        entryCount: item.entryCount,
+        timeRange: item.timeRange,
+        originalWordCount: item.originalWordCount,
+        metaSummaryWordCount: utils.getWordCount(summary),
+        timestamp: Date.now()
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Failed to generate ${config.type} summary:`, error);
+    return null;
+  }
+};
+
+// Generic batch processor
+const processBatch = async (items, config, storageManager) => {
+  const results = { generated: 0, remaining: Math.max(0, items.length - config.batchSize) };
+  const batch = items.slice(0, config.batchSize);
+  const existingSummaries = storageManager.load();
+  
+  for (const item of batch) {
+    try {
+      const summary = await processSummary(item, config);
+      if (summary) {
+        if (config.type === 'character') {
+          existingSummaries[item.field] = summary;
+        } else if (config.type === 'entries') {
+          existingSummaries[item.id] = summary;
+        } else if (config.type === 'metaSummaries') {
+          const groupKey = item.groupKey;
+          existingSummaries[groupKey] = summary;
+        }
+        results.generated++;
+      }
+    } catch (error) {
+      console.error(`Failed to process ${config.type} item:`, error);
+    }
+  }
+  
+  if (results.generated > 0) {
+    storageManager.save(existingSummaries);
+  }
+  
+  return results;
+};
+
+// =============================================================================
+// SPECIFIC SUMMARIZATION IMPLEMENTATIONS
+// =============================================================================
 
 // Pure function to load journal data
 const loadJournalData = () => {
@@ -50,344 +244,130 @@ const loadJournalData = () => {
   );
 };
 
-// Pure function to load stored summaries
-const loadStoredSummaries = () => {
-  return utils.loadDataWithFallback(utils.STORAGE_KEYS.SUMMARIES, {});
-};
-
-// Save summaries to localStorage
-const saveStoredSummaries = (summaries) => {
-  utils.safeSetToStorage(utils.STORAGE_KEYS.SUMMARIES, summaries);
-};
-
-// Pure function to load stored meta-summaries
-const loadStoredMetaSummaries = () => {
-  return utils.loadDataWithFallback(utils.STORAGE_KEYS.META_SUMMARIES, {});
-};
-
-// Save meta-summaries to localStorage
-const saveStoredMetaSummaries = (metaSummaries) => {
-  utils.safeSetToStorage(utils.STORAGE_KEYS.META_SUMMARIES, metaSummaries);
-};
-
-// Pure function to load stored character summaries
-const loadStoredCharacterSummaries = () => {
-  return utils.loadDataWithFallback(utils.STORAGE_KEYS.CHARACTER_SUMMARIES, {});
-};
-
-// Save character summaries to localStorage
-const saveStoredCharacterSummaries = (characterSummaries) => {
-  utils.safeSetToStorage(utils.STORAGE_KEYS.CHARACTER_SUMMARIES, characterSummaries);
-};
-
-// Pure function to determine if character details need summarization
-const getCharacterDetailsNeedingSummaries = (character, characterSummaries) => {
-  const needingSummaries = {};
-  
-  // Check backstory
-  if (character.backstory) {
-    const backstoryWordCount = utils.getWordCount(character.backstory);
-    if (backstoryWordCount > CHARACTER_SUMMARY_CONFIG.maxWordsBeforeSummary) {
-      const existingSummary = characterSummaries.backstory;
-      const backstoryHash = btoa(character.backstory).substring(0, 16); // Simple hash for change detection
-      
-      if (!existingSummary || existingSummary.contentHash !== backstoryHash) {
-        needingSummaries.backstory = {
-          field: 'backstory',
-          content: character.backstory,
-          wordCount: backstoryWordCount,
-          contentHash: backstoryHash
-        };
-      }
-    }
-  }
-  
-  // Check notes
-  if (character.notes) {
-    const notesWordCount = utils.getWordCount(character.notes);
-    if (notesWordCount > CHARACTER_SUMMARY_CONFIG.maxWordsBeforeSummary) {
-      const existingSummary = characterSummaries.notes;
-      const notesHash = btoa(character.notes).substring(0, 16); // Simple hash for change detection
-      
-      if (!existingSummary || existingSummary.contentHash !== notesHash) {
-        needingSummaries.notes = {
-          field: 'notes',
-          content: character.notes,
-          wordCount: notesWordCount,
-          contentHash: notesHash
-        };
-      }
-    }
-  }
-  
-  return needingSummaries;
-};
-
-// Generate character detail summary
-const generateCharacterDetailSummary = async (detailData) => {
-  if (!window.AI || !window.AI.isAIEnabled()) {
-    return null;
-  }
-
-  try {
-    const fieldName = detailData.field === 'backstory' ? 'backstory' : 'notes';
-    const prompt = `Summarize this D&D character's ${fieldName} in approximately ${CHARACTER_SUMMARY_CONFIG.targetSummaryWords} words. Keep the most important personality traits, key events, relationships, and defining characteristics:
-
-${detailData.content}`;
-
-    const summary = await window.AI.callOpenAI(prompt, 80);
-    
-    return {
-      field: detailData.field,
-      originalWordCount: detailData.wordCount,
-      summary: summary,
-      summaryWordCount: utils.getWordCount(summary),
-      contentHash: detailData.contentHash,
-      timestamp: Date.now()
-    };
-  } catch (error) {
-    console.error(`Failed to generate ${detailData.field} summary:`, error);
-    return null;
-  }
-};
-
-// Generate missing character detail summaries
+// Character summarization
 const generateMissingCharacterSummaries = async () => {
-  if (!window.AI || !window.AI.isAIEnabled()) {
-    return { generated: 0, remaining: 0 };
-  }
-
+  const config = { ...SUMMARIZATION_CONFIGS.character, type: 'character' };
+  const storageManager = createStorageManager(config.storageKey);
   const journalData = loadJournalData();
-  const characterSummaries = loadStoredCharacterSummaries();
   
-  const needingSummaries = getCharacterDetailsNeedingSummaries(journalData.character, characterSummaries);
-  const fieldsNeedingSummaries = Object.keys(needingSummaries);
+  const analysis = analyzeContent(journalData.character, config, storageManager.load());
+  const itemsToProcess = Object.values(analysis);
   
-  if (fieldsNeedingSummaries.length === 0) {
+  if (itemsToProcess.length === 0) {
     return { generated: 0, remaining: 0 };
   }
   
-  // Generate summaries for all needed fields
-  let generated = 0;
-  for (const field of fieldsNeedingSummaries) {
-    try {
-      const summary = await generateCharacterDetailSummary(needingSummaries[field]);
-      if (summary) {
-        characterSummaries[field] = summary;
-        generated++;
-      }
-    } catch (error) {
-      console.error(`Failed to generate summary for character ${field}:`, error);
-    }
-  }
-  
-  if (generated > 0) {
-    saveStoredCharacterSummaries(characterSummaries);
-  }
-  
-  return {
-    generated: generated,
-    remaining: 0 // We process all at once for character details
-  };
+  return await processBatch(itemsToProcess, config, storageManager);
 };
 
-// Pure function to get formatted character details for AI prompts
+// Entry summarization
+const generateMissingSummaries = async () => {
+  const config = { ...SUMMARIZATION_CONFIGS.entries, type: 'entries' };
+  const storageManager = createStorageManager(config.storageKey);
+  const journalData = loadJournalData();
+  
+  const analysis = analyzeContent(journalData.entries, config, storageManager.load());
+  const itemsToProcess = analysis.analysis ? analysis.analysis.needingSummaries : [];
+  
+  if (itemsToProcess.length === 0) {
+    await generateMissingMetaSummaries();
+    await generateMissingCharacterSummaries();
+    return { generated: 0, remaining: 0 };
+  }
+  
+  const results = await processBatch(itemsToProcess, config, storageManager);
+  
+  // After generating regular summaries, check for meta-summaries and character summaries
+  await generateMissingMetaSummaries();
+  await generateMissingCharacterSummaries();
+  
+  return results;
+};
+
+// Meta-summarization
+const generateMissingMetaSummaries = async () => {
+  const journalData = loadJournalData();
+  
+  if (journalData.entries.length < SUMMARIZATION_CONFIGS.metaSummaries.triggerThreshold) {
+    return { generated: 0, remaining: 0 };
+  }
+  
+  const config = { 
+    ...SUMMARIZATION_CONFIGS.metaSummaries, 
+    type: 'metaSummaries',
+    recentCount: SUMMARIZATION_CONFIGS.entries.recentCount
+  };
+  const storageManager = createStorageManager(config.storageKey);
+  const summaryStorageManager = createStorageManager(SUMMARIZATION_CONFIGS.entries.storageKey);
+  
+  const analysis = analyzeContent(journalData.entries, config, summaryStorageManager.load());
+  const metaSummaries = storageManager.load();
+  
+  // Find groups that don't have meta-summaries yet
+  const itemsToProcess = analysis.groups
+    .filter(group => {
+      const groupKey = `${group[0].id}-${group[group.length - 1].id}`;
+      return !metaSummaries[groupKey];
+    })
+    .map(group => {
+      const firstEntry = group[0];
+      const lastEntry = group[group.length - 1];
+      const timeRange = `${new Date(firstEntry.timestamp).toLocaleDateString()} - ${new Date(lastEntry.timestamp).toLocaleDateString()}`;
+      const summaries = summaryStorageManager.load();
+      const summaryGroup = group.map(entry => summaries[entry.id]);
+      
+      return {
+        groupKey: `${firstEntry.id}-${lastEntry.id}`,
+        summaries: summaryGroup,
+        timeRange: timeRange,
+        entryCount: group.length,
+        originalWordCount: summaryGroup.reduce((total, s) => total + s.summaryWordCount, 0)
+      };
+    });
+  
+  return await processBatch(itemsToProcess, config, storageManager);
+};
+
+// =============================================================================
+// FORMATTING AND OUTPUT FUNCTIONS
+// =============================================================================
+
+// Get formatted character for AI prompts
 const getFormattedCharacterForAI = (character) => {
-  const characterSummaries = loadStoredCharacterSummaries();
+  const config = SUMMARIZATION_CONFIGS.character;
+  const storageManager = createStorageManager(config.storageKey);
+  const characterSummaries = storageManager.load();
   const formattedCharacter = { ...character };
   
-  // Use summary for backstory if available and original is long
-  if (character.backstory) {
-    const backstoryWordCount = utils.getWordCount(character.backstory);
-    if (backstoryWordCount > CHARACTER_SUMMARY_CONFIG.maxWordsBeforeSummary && characterSummaries.backstory) {
-      formattedCharacter.backstory = characterSummaries.backstory.summary;
-      formattedCharacter.backstorySummarized = true;
+  config.fields.forEach(field => {
+    if (character[field]) {
+      const wordCount = utils.getWordCount(character[field]);
+      if (wordCount > config.maxWordsBeforeSummary && characterSummaries[field]) {
+        formattedCharacter[field] = characterSummaries[field].summary;
+        formattedCharacter[`${field}Summarized`] = true;
+      }
     }
-  }
-  
-  // Use summary for notes if available and original is long
-  if (character.notes) {
-    const notesWordCount = utils.getWordCount(character.notes);
-    if (notesWordCount > CHARACTER_SUMMARY_CONFIG.maxWordsBeforeSummary && characterSummaries.notes) {
-      formattedCharacter.notes = characterSummaries.notes.summary;
-      formattedCharacter.notesSummarized = true;
-    }
-  }
+  });
   
   return formattedCharacter;
 };
 
-// Pure function to determine which entries need summaries
-const getEntriesNeedingSummaries = (entries, summaries) => {
-  // Sort entries by date (newest first)
-  const sortedEntries = [...entries].sort((a, b) => b.timestamp - a.timestamp);
-  
-  // Keep the 5 most recent entries in full
-  const recentEntries = sortedEntries.slice(0, 5);
-  const olderEntries = sortedEntries.slice(5);
-  
-  // Find older entries that don't have summaries yet
-  const needingSummaries = olderEntries.filter(entry => !summaries[entry.id]);
-  
-  return {
-    recentEntries,
-    olderEntries,
-    needingSummaries
-  };
-};
-
-// Generate meta-summary from a group of summaries
-const generateMetaSummary = async (summaryGroup, timeRange) => {
-  if (!window.AI || !window.AI.isAIEnabled()) {
-    return null;
-  }
-
-  try {
-    const summariesText = summaryGroup
-      .map(summary => `• ${summary.summary}`)
-      .join('\n');
-
-    const prompt = `Create a meta-summary of these D&D journal entry summaries from ${timeRange}. Capture the key themes, character development, and major events in about ${META_SUMMARY_CONFIG.maxMetaSummaryWords} words:
-
-${summariesText}`;
-
-    const metaSummary = await window.AI.callOpenAI(prompt, META_SUMMARY_CONFIG.maxMetaSummaryWords);
-    
-    return {
-      summary: metaSummary,
-      entryCount: summaryGroup.length,
-      timeRange: timeRange,
-      originalWordCount: summaryGroup.reduce((total, s) => total + s.summaryWordCount, 0),
-      metaSummaryWordCount: utils.getWordCount(metaSummary),
-      timestamp: Date.now()
-    };
-  } catch (error) {
-    console.error('Failed to generate meta-summary:', error);
-    return null;
-  }
-};
-
-// Pure function to group summaries for meta-summarization
-const groupSummariesForMeta = (entries, summaries) => {
-  // Sort entries by date (oldest first for meta-summarization)
-  const olderEntries = entries
-    .sort((a, b) => a.timestamp - b.timestamp)
-    .slice(0, -5); // Exclude recent 5 entries
-  
-  // Filter entries that have summaries
-  const entriesWithSummaries = olderEntries.filter(entry => summaries[entry.id]);
-  
-  // Group into batches for meta-summarization
-  const groups = [];
-  for (let i = 0; i < entriesWithSummaries.length; i += META_SUMMARY_CONFIG.summariesPerMetaSummary) {
-    const group = entriesWithSummaries.slice(i, i + META_SUMMARY_CONFIG.summariesPerMetaSummary);
-    if (group.length === META_SUMMARY_CONFIG.summariesPerMetaSummary) {
-      groups.push(group);
-    }
-  }
-  
-  return groups;
-};
-
-// Generate missing meta-summaries
-const generateMissingMetaSummaries = async () => {
-  if (!window.AI || !window.AI.isAIEnabled()) {
-    return;
-  }
-
-  const journalData = loadJournalData();
-  
-  // Only proceed if we have enough entries
-  if (journalData.entries.length < META_SUMMARY_CONFIG.triggerThreshold) {
-    return { generated: 0, remaining: 0 };
-  }
-
-  const summaries = loadStoredSummaries();
-  const metaSummaries = loadStoredMetaSummaries();
-  
-  const summaryGroups = groupSummariesForMeta(journalData.entries, summaries);
-  
-  // Find groups that don't have meta-summaries yet
-  const needingMetaSummaries = summaryGroups.filter(group => {
-    const groupKey = `${group[0].id}-${group[group.length - 1].id}`;
-    return !metaSummaries[groupKey];
-  });
-  
-  // Generate meta-summaries for up to 2 groups at a time
-  const batchSize = 2;
-  const batch = needingMetaSummaries.slice(0, batchSize);
-  
-  for (const group of batch) {
-    try {
-      const firstEntry = group[0];
-      const lastEntry = group[group.length - 1];
-      const timeRange = `${new Date(firstEntry.timestamp).toLocaleDateString()} - ${new Date(lastEntry.timestamp).toLocaleDateString()}`;
-      
-      const summaryGroup = group.map(entry => summaries[entry.id]);
-      const metaSummary = await generateMetaSummary(summaryGroup, timeRange);
-      
-      if (metaSummary) {
-        const groupKey = `${firstEntry.id}-${lastEntry.id}`;
-        metaSummaries[groupKey] = metaSummary;
-      }
-    } catch (error) {
-      console.error('Failed to generate meta-summary for group:', error);
-    }
-  }
-  
-  saveStoredMetaSummaries(metaSummaries);
-  
-  return {
-    generated: batch.length,
-    remaining: needingMetaSummaries.length - batch.length
-  };
-};
-
-// Generate summaries for entries that need them
-const generateMissingSummaries = async () => {
-  if (!window.AI || !window.AI.isAIEnabled()) {
-    return;
-  }
-
-  const journalData = loadJournalData();
-  const summaries = loadStoredSummaries();
-  
-  const { needingSummaries } = getEntriesNeedingSummaries(journalData.entries, summaries);
-  
-  // Generate summaries for up to 3 entries at a time to avoid overwhelming the API
-  const batchSize = 3;
-  const batch = needingSummaries.slice(0, batchSize);
-  
-  for (const entry of batch) {
-    try {
-      const summary = await window.AI.getEntrySummary(entry);
-      if (summary) {
-        summaries[entry.id] = summary;
-      }
-    } catch (error) {
-      console.error(`Failed to generate summary for entry ${entry.id}:`, error);
-    }
-  }
-  
-  saveStoredSummaries(summaries);
-  
-  // After generating regular summaries, check if we need meta-summaries and character summaries
-  await generateMissingMetaSummaries();
-  await generateMissingCharacterSummaries();
-  
-  return {
-    generated: batch.length,
-    remaining: needingSummaries.length - batch.length
-  };
-};
-
-// Get formatted entries for AI prompts (mix of full entries, summaries, and meta-summaries)
+// Get formatted entries for AI prompts
 const getFormattedEntriesForAI = () => {
   const journalData = loadJournalData();
-  const summaries = loadStoredSummaries();
-  const metaSummaries = loadStoredMetaSummaries();
+  const entriesConfig = SUMMARIZATION_CONFIGS.entries;
+  const metaConfig = SUMMARIZATION_CONFIGS.metaSummaries;
   
-  const { recentEntries, olderEntries } = getEntriesNeedingSummaries(journalData.entries, summaries);
+  const summaryStorage = createStorageManager(entriesConfig.storageKey);
+  const metaStorage = createStorageManager(metaConfig.storageKey);
+  
+  const summaries = summaryStorage.load();
+  const metaSummaries = metaStorage.load();
+  
+  const analysis = analyzeContent(journalData.entries, { ...entriesConfig, type: 'entries' }, summaries);
+  if (!analysis.analysis) return [];
+  
+  const { recentEntries, olderEntries } = analysis.analysis;
   
   // Use full content for recent entries
   const recentFormatted = recentEntries.map(entry => ({
@@ -398,27 +378,33 @@ const getFormattedEntriesForAI = () => {
   }));
   
   // For older entries, use meta-summaries where available, otherwise individual summaries
-  const summaryGroups = groupSummariesForMeta(journalData.entries, summaries);
+  const metaAnalysis = analyzeContent(journalData.entries, { 
+    ...metaConfig, 
+    type: 'metaSummaries',
+    recentCount: entriesConfig.recentCount 
+  }, summaries);
+  
   const entriesInMetaSummaries = new Set();
   
   // Add meta-summaries first
   const metaSummaryFormatted = [];
-  for (const group of summaryGroups) {
-    const groupKey = `${group[0].id}-${group[group.length - 1].id}`;
-    if (metaSummaries[groupKey]) {
-      const metaSummary = metaSummaries[groupKey];
-      metaSummaryFormatted.push({
-        title: `Adventures (${metaSummary.entryCount} entries): ${metaSummary.timeRange}`,
-        content: metaSummary.summary,
-        timestamp: group[0].timestamp, // Use first entry's timestamp for sorting
-        type: 'meta-summary',
-        entryCount: metaSummary.entryCount,
-        originalWordCount: metaSummary.originalWordCount,
-        metaSummaryWordCount: metaSummary.metaSummaryWordCount
-      });
-      
-      // Mark these entries as covered by meta-summary
-      group.forEach(entry => entriesInMetaSummaries.add(entry.id));
+  if (metaAnalysis.groups) {
+    for (const group of metaAnalysis.groups) {
+      const groupKey = `${group[0].id}-${group[group.length - 1].id}`;
+      if (metaSummaries[groupKey]) {
+        const metaSummary = metaSummaries[groupKey];
+        metaSummaryFormatted.push({
+          title: `Adventures (${metaSummary.entryCount} entries): ${metaSummary.timeRange}`,
+          content: metaSummary.summary,
+          timestamp: group[0].timestamp,
+          type: 'meta-summary',
+          entryCount: metaSummary.entryCount,
+          originalWordCount: metaSummary.originalWordCount,
+          metaSummaryWordCount: metaSummary.metaSummaryWordCount
+        });
+        
+        group.forEach(entry => entriesInMetaSummaries.add(entry.id));
+      }
     }
   }
   
@@ -434,38 +420,52 @@ const getFormattedEntriesForAI = () => {
       summaryWordCount: summaries[entry.id].summaryWordCount
     }));
   
-  // Combine and sort by timestamp
   const allFormatted = [...recentFormatted, ...metaSummaryFormatted, ...individualSummaryFormatted];
   return allFormatted.sort((a, b) => b.timestamp - a.timestamp);
 };
 
-// Get summary statistics
+// Get comprehensive summary statistics
 const getSummaryStats = () => {
   const journalData = loadJournalData();
-  const summaries = loadStoredSummaries();
-  const metaSummaries = loadStoredMetaSummaries();
-  const characterSummaries = loadStoredCharacterSummaries();
+  const entriesConfig = SUMMARIZATION_CONFIGS.entries;
+  const metaConfig = SUMMARIZATION_CONFIGS.metaSummaries;
+  const characterConfig = SUMMARIZATION_CONFIGS.character;
   
-  const { recentEntries, olderEntries, needingSummaries } = getEntriesNeedingSummaries(journalData.entries, summaries);
+  const summaryStorage = createStorageManager(entriesConfig.storageKey);
+  const metaStorage = createStorageManager(metaConfig.storageKey);
+  const characterStorage = createStorageManager(characterConfig.storageKey);
   
+  const summaries = summaryStorage.load();
+  const metaSummaries = metaStorage.load();
+  const characterSummaries = characterStorage.load();
+  
+  // Entry statistics
+  const entryAnalysis = analyzeContent(journalData.entries, { ...entriesConfig, type: 'entries' }, summaries);
+  const { recentEntries = [], olderEntries = [], needingSummaries = [] } = entryAnalysis.analysis || {};
   const summarizedCount = olderEntries.filter(entry => summaries[entry.id]).length;
   
   // Meta-summary statistics
-  const summaryGroups = groupSummariesForMeta(journalData.entries, summaries);
+  const metaAnalysis = analyzeContent(journalData.entries, { 
+    ...metaConfig, 
+    type: 'metaSummaries',
+    recentCount: entriesConfig.recentCount 
+  }, summaries);
   const metaSummaryCount = Object.keys(metaSummaries).length;
-  const possibleMetaSummaries = summaryGroups.length;
+  const possibleMetaSummaries = metaAnalysis.groups ? metaAnalysis.groups.length : 0;
   
   const entriesInMetaSummaries = new Set();
-  summaryGroups.forEach(group => {
-    const groupKey = `${group[0].id}-${group[group.length - 1].id}`;
-    if (metaSummaries[groupKey]) {
-      group.forEach(entry => entriesInMetaSummaries.add(entry.id));
-    }
-  });
+  if (metaAnalysis.groups) {
+    metaAnalysis.groups.forEach(group => {
+      const groupKey = `${group[0].id}-${group[group.length - 1].id}`;
+      if (metaSummaries[groupKey]) {
+        group.forEach(entry => entriesInMetaSummaries.add(entry.id));
+      }
+    });
+  }
   
-  // Character summary statistics
-  const characterNeedingSummaries = getCharacterDetailsNeedingSummaries(journalData.character, characterSummaries);
-  const characterFieldsNeedingSummaries = Object.keys(characterNeedingSummaries);
+  // Character statistics
+  const characterAnalysis = analyzeContent(journalData.character, { ...characterConfig, type: 'character' }, characterSummaries);
+  const characterFieldsNeedingSummaries = Object.keys(characterAnalysis);
   
   return {
     totalEntries: journalData.entries.length,
@@ -477,7 +477,7 @@ const getSummaryStats = () => {
     metaSummaries: metaSummaryCount,
     possibleMetaSummaries: possibleMetaSummaries,
     entriesInMetaSummaries: entriesInMetaSummaries.size,
-    metaSummaryActive: journalData.entries.length >= META_SUMMARY_CONFIG.triggerThreshold,
+    metaSummaryActive: journalData.entries.length >= metaConfig.triggerThreshold,
     characterSummaries: Object.keys(characterSummaries).length,
     characterFieldsNeedingSummaries: characterFieldsNeedingSummaries.length,
     characterSummaryFields: Object.keys(characterSummaries)
@@ -500,59 +500,122 @@ const initializeSummarization = async () => {
   }
 };
 
+// =============================================================================
+// LEGACY COMPATIBILITY FUNCTIONS
+// =============================================================================
+
+// Keep these for backward compatibility with existing code
+const getEntriesNeedingSummaries = (entries, summaries) => {
+  const config = { ...SUMMARIZATION_CONFIGS.entries, type: 'entries' };
+  const analysis = analyzeContent(entries, config, summaries);
+  return analysis.analysis || { recentEntries: [], olderEntries: [], needingSummaries: [] };
+};
+
+const groupSummariesForMeta = (entries, summaries) => {
+  const config = { 
+    ...SUMMARIZATION_CONFIGS.metaSummaries, 
+    type: 'metaSummaries',
+    recentCount: SUMMARIZATION_CONFIGS.entries.recentCount 
+  };
+  const analysis = analyzeContent(entries, config, summaries);
+  return analysis.groups || [];
+};
+
+const getCharacterDetailsNeedingSummaries = (character, characterSummaries) => {
+  const config = { ...SUMMARIZATION_CONFIGS.character, type: 'character' };
+  return analyzeContent(character, config, characterSummaries);
+};
+
+const generateCharacterDetailSummary = async (detailData) => {
+  const config = { ...SUMMARIZATION_CONFIGS.character, type: 'character' };
+  return await processSummary(detailData, config);
+};
+
+const loadStoredCharacterSummaries = () => {
+  const storageManager = createStorageManager(SUMMARIZATION_CONFIGS.character.storageKey);
+  return storageManager.load();
+};
+
+const saveStoredCharacterSummaries = (characterSummaries) => {
+  const storageManager = createStorageManager(SUMMARIZATION_CONFIGS.character.storageKey);
+  return storageManager.save(characterSummaries);
+};
+
 // Export functions
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    getEntriesNeedingSummaries,
+    // New general framework
+    SUMMARIZATION_CONFIGS,
+    analyzeContent,
+    processSummary,
+    processBatch,
+    createStorageManager,
+    
+    // Main functions
     generateMissingSummaries,
     generateMissingMetaSummaries,
-    groupSummariesForMeta,
+    generateMissingCharacterSummaries,
     getFormattedEntriesForAI,
+    getFormattedCharacterForAI,
     getSummaryStats,
     initializeSummarization,
-    META_SUMMARY_CONFIG,
-    CHARACTER_SUMMARY_CONFIG,
+    
+    // Legacy compatibility
+    getEntriesNeedingSummaries,
+    groupSummariesForMeta,
     getCharacterDetailsNeedingSummaries,
-    generateMissingCharacterSummaries,
     generateCharacterDetailSummary,
-    getFormattedCharacterForAI,
     loadStoredCharacterSummaries,
-    saveStoredCharacterSummaries
+    saveStoredCharacterSummaries,
+    
+    // For testing
+    META_SUMMARY_CONFIG: SUMMARIZATION_CONFIGS.metaSummaries,
+    CHARACTER_SUMMARY_CONFIG: SUMMARIZATION_CONFIGS.character
   };
 } else if (typeof global !== 'undefined') {
   // For testing
-  global.getEntriesNeedingSummaries = getEntriesNeedingSummaries;
+  global.SUMMARIZATION_CONFIGS = SUMMARIZATION_CONFIGS;
+  global.analyzeContent = analyzeContent;
+  global.processSummary = processSummary;
+  global.processBatch = processBatch;
+  global.createStorageManager = createStorageManager;
   global.generateMissingSummaries = generateMissingSummaries;
   global.generateMissingMetaSummaries = generateMissingMetaSummaries;
-  global.groupSummariesForMeta = groupSummariesForMeta;
+  global.generateMissingCharacterSummaries = generateMissingCharacterSummaries;
   global.getFormattedEntriesForAI = getFormattedEntriesForAI;
+  global.getFormattedCharacterForAI = getFormattedCharacterForAI;
   global.getSummaryStats = getSummaryStats;
   global.initializeSummarization = initializeSummarization;
-  global.META_SUMMARY_CONFIG = META_SUMMARY_CONFIG;
-  global.CHARACTER_SUMMARY_CONFIG = CHARACTER_SUMMARY_CONFIG;
+  global.getEntriesNeedingSummaries = getEntriesNeedingSummaries;
+  global.groupSummariesForMeta = groupSummariesForMeta;
   global.getCharacterDetailsNeedingSummaries = getCharacterDetailsNeedingSummaries;
-  global.generateMissingCharacterSummaries = generateMissingCharacterSummaries;
   global.generateCharacterDetailSummary = generateCharacterDetailSummary;
-  global.getFormattedCharacterForAI = getFormattedCharacterForAI;
   global.loadStoredCharacterSummaries = loadStoredCharacterSummaries;
   global.saveStoredCharacterSummaries = saveStoredCharacterSummaries;
+  global.META_SUMMARY_CONFIG = SUMMARIZATION_CONFIGS.metaSummaries;
+  global.CHARACTER_SUMMARY_CONFIG = SUMMARIZATION_CONFIGS.character;
 } else {
   // For browser
   window.Summarization = {
-    getEntriesNeedingSummaries,
+    SUMMARIZATION_CONFIGS,
+    analyzeContent,
+    processSummary,
+    processBatch,
+    createStorageManager,
     generateMissingSummaries,
     generateMissingMetaSummaries,
-    groupSummariesForMeta,
+    generateMissingCharacterSummaries,
     getFormattedEntriesForAI,
+    getFormattedCharacterForAI,
     getSummaryStats,
     initializeSummarization,
-    META_SUMMARY_CONFIG,
-    CHARACTER_SUMMARY_CONFIG,
+    getEntriesNeedingSummaries,
+    groupSummariesForMeta,
     getCharacterDetailsNeedingSummaries,
-    generateMissingCharacterSummaries,
     generateCharacterDetailSummary,
-    getFormattedCharacterForAI,
     loadStoredCharacterSummaries,
-    saveStoredCharacterSummaries
+    saveStoredCharacterSummaries,
+    META_SUMMARY_CONFIG: SUMMARIZATION_CONFIGS.metaSummaries,
+    CHARACTER_SUMMARY_CONFIG: SUMMARIZATION_CONFIGS.character
   };
 }
