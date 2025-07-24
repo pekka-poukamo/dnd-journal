@@ -205,18 +205,27 @@ textarea {
   white-space: pre-wrap;
 }
 
+.entry-summary {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+  font-size: 0.875rem;
+  color: var(--color-text-light);
+}
+
+.entry-summary strong {
+  color: var(--color-text);
+}
+
 .entry-actions {
   display: flex;
   gap: var(--space-sm);
   margin-top: var(--space-md);
 }
 
-.entry-image {
-  max-width: 100%;
-  height: auto;
-  border-radius: var(--border-radius);
-  margin-top: var(--space-md);
-}
+
 
 /* Empty State */
 .empty-state {

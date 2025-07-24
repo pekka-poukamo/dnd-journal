@@ -7,8 +7,7 @@ A minimal D&D journal app. Vanilla JavaScript, zero dependencies.
 ## What It Does
 
 - **Character**: Name, race, class (auto-save)
-- **Journal Entries**: Title + content (auto-save)
-- **Images**: URL support
+- **Journal Entries**: Title + content with AI-generated summaries (auto-save)
 - **Storage**: Browser localStorage
 - **Sync**: Optional cross-device sync via Yjs (ADR-0003)
 

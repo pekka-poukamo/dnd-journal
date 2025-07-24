@@ -108,6 +108,19 @@ const saveData = () => {
   }
 };
 
+// Pure function to get summary for an entry
+const getEntrySummary = (entryId) => {
+  try {
+    const summariesResult = utils.safeGetFromStorage(utils.STORAGE_KEYS.SUMMARIES);
+    if (summariesResult.success && summariesResult.data && summariesResult.data[entryId]) {
+      return summariesResult.data[entryId];
+    }
+    return null;
+  } catch (error) {
+    return null;
+  }
+};
+
 // Create entry element with edit functionality
 const createEntryElement = (entry) => {
   const entryDiv = document.createElement('div');
@@ -127,6 +140,15 @@ const createEntryElement = (entry) => {
   contentDiv.className = 'entry-content';
   contentDiv.textContent = entry.content;
   
+  // Check if entry has a summary
+  const summary = getEntrySummary(entry.id);
+  let summaryDiv = null;
+  if (summary && summary.summary) {
+    summaryDiv = document.createElement('div');
+    summaryDiv.className = 'entry-summary';
+    summaryDiv.innerHTML = `<strong>Summary:</strong> ${summary.summary}`;
+  }
+  
   const actionsDiv = document.createElement('div');
   actionsDiv.className = 'entry-actions';
   
@@ -140,19 +162,12 @@ const createEntryElement = (entry) => {
   entryDiv.appendChild(titleDiv);
   entryDiv.appendChild(dateDiv);
   entryDiv.appendChild(contentDiv);
+  if (summaryDiv) {
+    entryDiv.appendChild(summaryDiv);
+  }
   entryDiv.appendChild(actionsDiv);
   
-  // Add image if present
-  if (entry.image && entry.image.trim()) {
-    const imageElement = document.createElement('img');
-    imageElement.className = 'entry-image';
-    imageElement.src = entry.image;
-    imageElement.alt = entry.title;
-    imageElement.onerror = () => {
-      imageElement.style.display = 'none';
-    };
-    entryDiv.appendChild(imageElement);
-  }
+
   
   return entryDiv;
 };
@@ -256,7 +271,6 @@ const createEntryFromForm = (formData) => ({
   id: utils.generateId(),
   title: formData.title.trim(),
   content: formData.content.trim(),
-  image: formData.image.trim(),
   timestamp: Date.now()
 });
 
@@ -264,12 +278,10 @@ const createEntryFromForm = (formData) => ({
 const getFormData = () => {
   const titleElement = document.getElementById('entry-title');
   const contentElement = document.getElementById('entry-content');
-  const imageElement = document.getElementById('entry-image');
   
   return {
     title: titleElement ? titleElement.value : '',
-    content: contentElement ? contentElement.value : '',
-    image: imageElement ? imageElement.value : ''
+    content: contentElement ? contentElement.value : ''
   };
 };
 
@@ -312,7 +324,7 @@ const addEntry = async () => {
 
 // Pure function to clear entry form
 const clearEntryForm = () => {
-  const formFields = ['entry-title', 'entry-content', 'entry-image'];
+  const formFields = ['entry-title', 'entry-content'];
   formFields.forEach(id => {
     const element = document.getElementById(id);
     if (element) element.value = '';
@@ -497,6 +509,7 @@ if (typeof global !== 'undefined') {
   global.state = state;
   global.loadData = loadData;
   global.saveData = saveData;
+  global.getEntrySummary = getEntrySummary;
   global.createEntryElement = createEntryElement;
   global.enableEditMode = enableEditMode;
   global.saveEdit = saveEdit;

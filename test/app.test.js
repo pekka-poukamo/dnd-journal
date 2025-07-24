@@ -21,7 +21,6 @@ function loadApp() {
     <input type="text" id="character-class" />
     <input type="text" id="entry-title" />
     <textarea id="entry-content"></textarea>
-    <input type="url" id="entry-image" />
     <div id="entries-list"></div>
   `;
   
@@ -29,6 +28,7 @@ function loadApp() {
   delete global.state;
   delete global.loadData;
   delete global.saveData;
+  delete global.getEntrySummary;
   delete global.createEntryElement;
   delete global.enableEditMode;
   delete global.saveEdit;
@@ -134,7 +134,6 @@ describe('D&D Journal App', function() {
         <input type="text" id="character-class" />
         <input type="text" id="entry-title" />
         <textarea id="entry-content"></textarea>
-        <input type="url" id="entry-image" />
         <div id="entries-list"></div>
       `;
     });
@@ -144,7 +143,6 @@ describe('D&D Journal App', function() {
         id: '123',
         title: 'Test Adventure',
         content: 'A great quest!',
-        image: 'https://example.com/image.jpg',
         timestamp: Date.now()
       };
 
@@ -164,24 +162,47 @@ describe('D&D Journal App', function() {
       const dateEl = element.querySelector('.entry-date');
       dateEl.should.not.be.null;
       
+      // Images should no longer be displayed
       const imageEl = element.querySelector('.entry-image');
-      imageEl.should.not.be.null;
-      imageEl.src.should.equal('https://example.com/image.jpg');
+      (imageEl === null).should.be.true;
     });
 
-    it('should create entry element without image when not provided', function() {
+    it('should create entry element with summary when available', function() {
+      // Setup mock summaries in localStorage
+      localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify({
+        '124': {
+          summary: 'Adventure summary: Heroes explored a dungeon.',
+          originalWordCount: 15,
+          summaryWordCount: 7
+        }
+      }));
+
       const entry = {
         id: '124',
         title: 'Another Adventure',
-        content: 'No image this time',
-        image: '',
+        content: 'A detailed adventure in the dungeon with many encounters.',
         timestamp: Date.now()
       };
 
       const element = createEntryElement(entry);
-      const imageEl = element.querySelector('.entry-image');
+      const summaryEl = element.querySelector('.entry-summary');
       
-      (imageEl === null).should.be.true;
+      summaryEl.should.not.be.null;
+      summaryEl.innerHTML.should.contain('Adventure summary: Heroes explored a dungeon.');
+    });
+
+    it('should create entry element without summary when not available', function() {
+      const entry = {
+        id: '125',
+        title: 'New Adventure',
+        content: 'No summary yet.',
+        timestamp: Date.now()
+      };
+
+      const element = createEntryElement(entry);
+      const summaryEl = element.querySelector('.entry-summary');
+      
+      (summaryEl === null).should.be.true;
     });
 
     it('should render empty state when no entries exist', function() {
@@ -221,11 +242,9 @@ describe('D&D Journal App', function() {
     it('should add new entry when form is filled', async function() {
       const titleInput = document.getElementById('entry-title');
       const contentInput = document.getElementById('entry-content');
-      const imageInput = document.getElementById('entry-image');
 
       titleInput.value = 'New Quest';
       contentInput.value = 'Epic adventure awaits!';
-      imageInput.value = 'https://example.com/quest.jpg';
 
       // Mock window.AI and displayAIPrompt for async behavior
       global.window = global.window || {};
@@ -243,14 +262,13 @@ describe('D&D Journal App', function() {
       const newEntry = state.entries[state.entries.length - 1];
       newEntry.title.should.equal('New Quest');
       newEntry.content.should.equal('Epic adventure awaits!');
-      newEntry.image.should.equal('https://example.com/quest.jpg');
       newEntry.should.have.property('id');
       newEntry.should.have.property('timestamp');
+      newEntry.should.not.have.property('image');
 
       // Form should be cleared
       titleInput.value.should.equal('');
       contentInput.value.should.equal('');
-      imageInput.value.should.equal('');
     });
 
     it('should not add entry when title or content is missing', function() {
@@ -353,7 +371,6 @@ describe('D&D Journal App', function() {
         <input type="text" id="character-class" />
         <input type="text" id="entry-title" />
         <textarea id="entry-content"></textarea>
-        <input type="url" id="entry-image" />
         <div id="entries-list"></div>
       `;
     });
@@ -583,6 +600,48 @@ describe('D&D Journal App', function() {
 
       // Should not throw an error
       (() => displayCharacterSummary()).should.not.throw();
+    });
+  });
+
+  describe('getEntrySummary', function() {
+    beforeEach(function() {
+      localStorage.clear();
+    });
+
+    it('should return null when no summary exists', function() {
+      const result = getEntrySummary('nonexistent-id');
+      (result === null).should.be.true;
+    });
+
+    it('should return summary when it exists', function() {
+      const summaries = {
+        'test-id': {
+          summary: 'Test adventure summary',
+          originalWordCount: 20,
+          summaryWordCount: 4
+        }
+      };
+      localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify(summaries));
+
+      const result = getEntrySummary('test-id');
+      result.should.not.be.null;
+      result.summary.should.equal('Test adventure summary');
+      result.originalWordCount.should.equal(20);
+      result.summaryWordCount.should.equal(4);
+    });
+
+    it('should handle corrupted localStorage gracefully', function() {
+      localStorage.setItem('simple-dnd-journal-summaries', 'invalid-json');
+      
+      const result = getEntrySummary('test-id');
+      (result === null).should.be.true;
+    });
+
+    it('should return null when summary data is malformed', function() {
+      localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify({ 'test-id': null }));
+      
+      const result = getEntrySummary('test-id');
+      (result === null).should.be.true;
     });
   });
 
