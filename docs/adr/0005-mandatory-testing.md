@@ -66,3 +66,40 @@ describe('functionName', () => {
 - Unit tests: `test/app.test.js`
 - Integration tests: `test/integration.test.js`
 - Run with: `npm test`
+
+## Amendment: Coverage Implementation (2024-12-25)
+
+### Decision
+Added test coverage reporting with PR feedback to improve test quality visibility.
+
+### Implementation
+- **Tool**: c8 coverage tool
+- **Target**: 80% line coverage
+- **Behavior**: Warns but does not block PRs
+- **Scope**: Reports on changed files only in PR comments
+- **Command**: `npm run coverage`
+
+### PR Comments
+Each PR receives a coverage table for modified JavaScript files:
+
+```
+## 📊 Coverage Report
+
+| File | Lines Covered | Percentage |
+|------|---------------|------------|
+| `js/app.js` | 45/62 | ⚠️ 73% |
+| `js/utils.js` | 89/91 | ✅ 98% |
+
+**Coverage target: 80%**
+```
+
+### Rationale
+- **Actionable**: Shows exactly which files need attention
+- **Relevant**: Only covers files changed in the PR
+- **Non-blocking**: Encourages improvement without blocking delivery
+- **Simple**: Minimal configuration and overhead
+
+### Configuration
+- `.c8rc.json`: Basic configuration (80% target, warnings only)
+- `.github/workflows/coverage.yml`: PR comment automation
+- Reports line coverage only for simplicity

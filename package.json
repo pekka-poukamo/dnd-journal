@@ -9,6 +9,7 @@
     "build": "echo 'No build step needed - static site' && exit 0",
     "test": "mocha test/**/*.test.js --timeout 10000",
     "test:watch": "mocha test/**/*.test.js --watch --timeout 10000",
+    "coverage": "c8 npm test",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
     "deploy": "surge .",
     "deploy:domain": "surge . dnd-journal.surge.sh",
@@ -39,7 +40,8 @@
     "surge": "^0.23.1",
     "mocha": "^10.2.0",
     "chai": "^4.3.10",
-    "jsdom": "^23.0.0"
+    "jsdom": "^23.0.0",
+    "c8": "^8.0.1"
   },
   "optionalDependencies": {
     "y-websocket": "^1.5.0"
