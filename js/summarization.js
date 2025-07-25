@@ -51,12 +51,17 @@ export const generateSummary = async (content, targetWords, type = 'content') =>
       return null;
     }
 
-    const prompt = createSummaryPrompt(content, targetWords, type);
-    const summary = await aiModule.callOpenAI(prompt, targetWords * 2);
+    // Calculate target words using logarithmic scale of original word count
+    const originalWordCount = getWordCount(content);
+    const calculatedTargetWords = Math.max(10, Math.floor(Math.log10(originalWordCount) * 20));
+    const finalTargetWords = targetWords || calculatedTargetWords;
+
+    const prompt = createSummaryPrompt(content, finalTargetWords, type);
+    const summary = await aiModule.callOpenAIForSummarization(prompt, finalTargetWords * 2);
     
     return {
       summary: summary,
-      originalWordCount: getWordCount(content),
+      originalWordCount: originalWordCount,
       summaryWordCount: getWordCount(summary),
       timestamp: Date.now(),
       contentHash: btoa(content).substring(0, 16)
@@ -69,20 +74,9 @@ export const generateSummary = async (content, targetWords, type = 'content') =>
 
 // Create appropriate AI prompt based on content type
 const createSummaryPrompt = (content, targetWords, type) => {
-  const basePrompt = `Summarize the following ${type} in approximately ${targetWords} words.`;
+  const basePrompt = `Summarize this text in ${targetWords} words.`;
   
-  switch (type) {
-    case 'entry':
-      return `${basePrompt} Keep the key events, emotions, and character development:\n\n${content}`;
-    case 'character-backstory':
-      return `${basePrompt} Focus on key background details, personality traits, and important history:\n\n${content}`;
-    case 'character-notes':
-      return `${basePrompt} Focus on important character details, relationships, and equipment:\n\n${content}`;
-    case 'meta-summary':
-      return `${basePrompt} Focus on overarching themes, character development, and major story arcs from these D&D adventures:\n\n${content}`;
-    default:
-      return `${basePrompt}\n\n${content}`;
-  }
+  return `${basePrompt}\n\n${content}`;
 };
 
 // =============================================================================
