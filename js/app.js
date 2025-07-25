@@ -26,7 +26,7 @@ try {
 }
 
 // Load state from localStorage - using utils
-const loadData = () => {
+export const loadData = () => {
   const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
   if (result.success && result.data) {
     state = { ...state, ...result.data };
@@ -60,7 +60,7 @@ const loadData = () => {
 };
 
 // Save state to localStorage and sync - enhanced for ADR-0003
-const saveData = () => {
+export const saveData = () => {
   state.lastModified = Date.now();
   const result = safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
   
@@ -73,7 +73,7 @@ const saveData = () => {
 };
 
 // Get entry summary from AI if available
-const getEntrySummary = (entryId) => {
+export const getEntrySummary = (entryId) => {
   if (window.AI && window.AI.isAIEnabled()) {
     const entry = state.entries.find(e => e.id === entryId);
     if (entry) {
@@ -84,7 +84,7 @@ const getEntrySummary = (entryId) => {
 };
 
 // Create DOM element for an entry
-const createEntryElement = (entry) => {
+export const createEntryElement = (entry) => {
   const entryDiv = document.createElement('div');
   entryDiv.className = 'entry';
   entryDiv.dataset.entryId = entry.id;
@@ -100,14 +100,14 @@ const createEntryElement = (entry) => {
   date.className = 'entry-date';
   date.textContent = formatDate(entry.timestamp);
   
-  const editButton = document.createElement('button');
-  editButton.className = 'entry-edit-btn';
-  editButton.textContent = 'Edit';
-  editButton.onclick = () => enableEditMode(entryDiv, entry);
+  const editBtn = document.createElement('button');
+  editBtn.className = 'edit-btn';
+  editBtn.textContent = 'Edit';
+  editBtn.onclick = () => enableEditMode(entryDiv, entry);
   
   header.appendChild(title);
   header.appendChild(date);
-  header.appendChild(editButton);
+  header.appendChild(editBtn);
   
   const content = document.createElement('div');
   content.className = 'entry-content';
@@ -120,101 +120,120 @@ const createEntryElement = (entry) => {
 };
 
 // Enable edit mode for an entry
-const enableEditMode = (entryDiv, entry) => {
-  const header = entryDiv.querySelector('.entry-header');
+export const enableEditMode = (entryDiv, entry) => {
+  const title = entryDiv.querySelector('.entry-title');
   const content = entryDiv.querySelector('.entry-content');
+  const editBtn = entryDiv.querySelector('.edit-btn');
   
   // Create edit form
   const editForm = document.createElement('div');
-  editForm.className = 'entry-edit-form';
+  editForm.className = 'edit-form';
   
   const titleInput = document.createElement('input');
   titleInput.type = 'text';
-  titleInput.className = 'entry-edit-title';
   titleInput.value = entry.title;
+  titleInput.className = 'edit-title-input';
   
   const contentTextarea = document.createElement('textarea');
-  contentTextarea.className = 'entry-edit-content';
   contentTextarea.value = entry.content;
-  contentTextarea.rows = 4;
+  contentTextarea.className = 'edit-content-textarea';
   
-  const buttonContainer = document.createElement('div');
-  buttonContainer.className = 'entry-edit-buttons';
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save';
+  saveBtn.onclick = () => saveEdit(entryDiv, entry, titleInput.value, contentTextarea.value);
   
-  const saveButton = document.createElement('button');
-  saveButton.textContent = 'Save';
-  saveButton.className = 'btn btn-primary btn-small';
-  saveButton.onclick = () => saveEdit(entryDiv, entry, titleInput.value, contentTextarea.value);
-  
-  const cancelButton = document.createElement('button');
-  cancelButton.textContent = 'Cancel';
-  cancelButton.className = 'btn btn-secondary btn-small';
-  cancelButton.onclick = () => cancelEdit(entryDiv, entry);
-  
-  buttonContainer.appendChild(saveButton);
-  buttonContainer.appendChild(cancelButton);
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = () => cancelEdit(entryDiv, entry);
   
   editForm.appendChild(titleInput);
   editForm.appendChild(contentTextarea);
-  editForm.appendChild(buttonContainer);
+  editForm.appendChild(saveBtn);
+  editForm.appendChild(cancelBtn);
   
   // Replace content with edit form
-  entryDiv.innerHTML = '';
+  title.style.display = 'none';
+  content.style.display = 'none';
+  editBtn.style.display = 'none';
+  
   entryDiv.appendChild(editForm);
   
+  // Focus on title input
   titleInput.focus();
 };
 
 // Save edit changes
-const saveEdit = (entryDiv, entry, newTitle, newContent) => {
-  if (!isValidEntry({ title: newTitle, content: newContent })) {
-    alert('Title and content cannot be empty');
-    return;
+export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
+  if (newTitle.trim() && newContent.trim()) {
+    entry.title = newTitle.trim();
+    entry.content = newContent.trim();
+    entry.timestamp = Date.now();
+    
+    // Remove edit form and restore display
+    const editForm = entryDiv.querySelector('.edit-form');
+    if (editForm) {
+      editForm.remove();
+    }
+    
+    const title = entryDiv.querySelector('.entry-title');
+    const content = entryDiv.querySelector('.entry-content');
+    const editBtn = entryDiv.querySelector('.edit-btn');
+    
+    title.textContent = entry.title;
+    title.style.display = '';
+    content.textContent = entry.content;
+    content.style.display = '';
+    editBtn.style.display = '';
+    
+    saveData();
   }
-  
-  // Update entry
-  const updatedEntry = { ...entry, title: newTitle.trim(), content: newContent.trim() };
-  const entryIndex = state.entries.findIndex(e => e.id === entry.id);
-  state.entries[entryIndex] = updatedEntry;
-  
-  // Save and re-render
-  saveData();
-  renderEntries();
 };
 
-// Cancel edit and restore original
-const cancelEdit = (entryDiv, entry) => {
-  renderEntries();
+// Cancel edit mode
+export const cancelEdit = (entryDiv, entry) => {
+  const editForm = entryDiv.querySelector('.edit-form');
+  if (editForm) {
+    editForm.remove();
+  }
+  
+  const title = entryDiv.querySelector('.entry-title');
+  const content = entryDiv.querySelector('.entry-content');
+  const editBtn = entryDiv.querySelector('.edit-btn');
+  
+  title.style.display = '';
+  content.style.display = '';
+  editBtn.style.display = '';
 };
 
 // Create empty state element
-const createEmptyStateElement = () => {
+export const createEmptyStateElement = () => {
   const emptyDiv = document.createElement('div');
   emptyDiv.className = 'empty-state';
-  emptyDiv.innerHTML = '<p>No journal entries yet. Add your first entry above!</p>';
+  emptyDiv.innerHTML = '<p>No journal entries yet. Start writing your adventure!</p>';
   return emptyDiv;
 };
 
 // Render all entries
-const renderEntries = () => {
+export const renderEntries = () => {
   const entriesList = document.getElementById('entries-list');
   if (!entriesList) return;
   
   entriesList.innerHTML = '';
   
-  const sortedEntries = sortEntriesByDate(state.entries);
-  
-  if (sortedEntries.length === 0) {
+  if (state.entries.length === 0) {
     entriesList.appendChild(createEmptyStateElement());
-  } else {
-    sortedEntries.forEach(entry => {
-      entriesList.appendChild(createEntryElement(entry));
-    });
+    return;
   }
+  
+  const sortedEntries = sortEntriesByDate(state.entries);
+  sortedEntries.forEach(entry => {
+    const entryElement = createEntryElement(entry);
+    entriesList.appendChild(entryElement);
+  });
 };
 
-// Create entry object from form data
-const createEntryFromForm = (formData) => ({
+// Create entry from form data
+export const createEntryFromForm = (formData) => ({
   id: generateId(),
   title: formData.title.trim(),
   content: formData.content.trim(),
@@ -222,7 +241,7 @@ const createEntryFromForm = (formData) => ({
 });
 
 // Get form data
-const getFormData = () => {
+export const getFormData = () => {
   const titleInput = document.getElementById('entry-title');
   const contentTextarea = document.getElementById('entry-content');
   
@@ -233,37 +252,36 @@ const getFormData = () => {
 };
 
 // Add new entry
-const addEntry = async () => {
+export const addEntry = async () => {
   const formData = getFormData();
   
-  if (!isValidEntry(formData)) {
-    alert('Please enter both title and content');
+  if (!formData.title.trim() || !formData.content.trim()) {
+    alert('Please fill in both title and content.');
     return;
   }
   
-  const newEntry = createEntryFromForm(formData);
-  state.entries = [...state.entries, newEntry];
+  const entry = createEntryFromForm(formData);
   
-  saveData();
-  clearEntryForm();
-  renderEntries();
-  focusEntryTitle();
-  
-  // Generate AI summary if available
-  if (window.AI && window.AI.isAIEnabled()) {
-    try {
-      await window.AI.getEntrySummary(newEntry);
-    } catch (error) {
-      console.error('Failed to generate entry summary:', error);
+  if (isValidEntry(entry)) {
+    state.entries.push(entry);
+    saveData();
+    renderEntries();
+    clearEntryForm();
+    focusEntryTitle();
+    
+    // Generate AI summary if available
+    if (window.AI && window.AI.isAIEnabled()) {
+      try {
+        await window.AI.generateEntrySummary(entry);
+      } catch (error) {
+        console.error('Failed to generate entry summary:', error);
+      }
     }
   }
-  
-  // Display AI introspection prompt
-  await displayAIPrompt();
 };
 
 // Clear entry form
-const clearEntryForm = () => {
+export const clearEntryForm = () => {
   const titleInput = document.getElementById('entry-title');
   const contentTextarea = document.getElementById('entry-content');
   
@@ -271,82 +289,69 @@ const clearEntryForm = () => {
   if (contentTextarea) contentTextarea.value = '';
 };
 
-// Focus on title input
-const focusEntryTitle = () => {
+// Focus on entry title input
+export const focusEntryTitle = () => {
   const titleInput = document.getElementById('entry-title');
-  if (titleInput) titleInput.focus();
+  if (titleInput) {
+    titleInput.focus();
+  }
 };
 
-// Create character summary HTML
-const createCharacterSummary = (character) => {
-  return `
-    <div class="character-summary__grid">
-      <div class="character-summary__field">
-        <label class="character-summary__label">Name</label>
-        <span class="character-summary__value">${character.name || 'Unnamed Character'}</span>
-      </div>
-      <div class="character-summary__field">
-        <label class="character-summary__label">Race</label>
-        <span class="character-summary__value">${character.race || 'Unknown'}</span>
-      </div>
-      <div class="character-summary__field">
-        <label class="character-summary__label">Class</label>
-        <span class="character-summary__value">${character.class || 'Unknown'}</span>
-      </div>
-    </div>
-  `;
+// Create character summary
+export const createCharacterSummary = (character) => {
+  if (!character || !character.name) {
+    return {
+      name: 'No Character',
+      details: 'Create a character to see details here.'
+    };
+  }
+  
+  const details = [];
+  if (character.race) details.push(`Race: ${character.race}`);
+  if (character.class) details.push(`Class: ${character.class}`);
+  if (character.backstory) details.push(`Backstory: ${character.backstory}`);
+  if (character.notes) details.push(`Notes: ${character.notes}`);
+  
+  return {
+    name: character.name,
+    details: details.join(' | ')
+  };
 };
 
 // Display character summary
-const displayCharacterSummary = () => {
+export const displayCharacterSummary = () => {
   const characterSummary = document.getElementById('character-summary');
   if (!characterSummary) return;
   
-  const content = characterSummary.querySelector('.character-summary__content');
-  if (content) {
-    content.innerHTML = createCharacterSummary(state.character);
-  }
+  const summary = createCharacterSummary(state.character);
+  characterSummary.innerHTML = `
+    <h3>${summary.name}</h3>
+    <p>${summary.details}</p>
+  `;
 };
 
-// Display AI introspection prompt
-const displayAIPrompt = async () => {
-  const aiPromptSection = document.getElementById('ai-prompt-section');
+// Display AI prompt
+export const displayAIPrompt = async () => {
   const aiPromptText = document.getElementById('ai-prompt-text');
-  
-  if (!aiPromptSection || !aiPromptText) return;
-  
-  if (!window.AI || !window.AI.isAIEnabled()) {
-    aiPromptSection.style.display = 'none';
-    return;
-  }
+  if (!aiPromptText) return;
   
   try {
-    aiPromptSection.style.display = 'block';
-    aiPromptText.textContent = 'Generating your personalized reflection prompt...';
-    
     const prompt = await generateIntrospectionPrompt(state.character, state.entries);
-    
     if (prompt) {
       aiPromptText.innerHTML = formatAIPrompt(prompt);
-    } else {
-      aiPromptSection.style.display = 'none';
     }
   } catch (error) {
-    console.error('Failed to display AI prompt:', error);
-    aiPromptSection.style.display = 'none';
+    console.error('Failed to generate AI prompt:', error);
+    aiPromptText.innerHTML = '<p>Unable to generate AI prompt at this time.</p>';
   }
 };
 
-// Regenerate AI introspection prompt
-const regenerateAIPrompt = async () => {
+// Regenerate AI prompt
+export const regenerateAIPrompt = async () => {
   const aiPromptText = document.getElementById('ai-prompt-text');
   const regenerateBtn = document.getElementById('regenerate-prompt-btn');
   
   if (!aiPromptText || !regenerateBtn) return;
-  
-  if (!window.AI || !window.AI.isAIEnabled()) {
-    return;
-  }
   
   try {
     regenerateBtn.disabled = true;
@@ -366,7 +371,7 @@ const regenerateAIPrompt = async () => {
 };
 
 // Format AI prompt for display
-const formatAIPrompt = (prompt) => {
+export const formatAIPrompt = (prompt) => {
   return prompt
     .split('\n')
     .map(line => line.trim())
@@ -376,7 +381,7 @@ const formatAIPrompt = (prompt) => {
 };
 
 // Setup event handlers
-const setupEventHandlers = () => {
+export const setupEventHandlers = () => {
   const addEntryBtn = document.getElementById('add-entry-btn');
   if (addEntryBtn) {
     addEntryBtn.addEventListener('click', addEntry);
@@ -403,7 +408,7 @@ const setupEventHandlers = () => {
 };
 
 // Setup sync listener for real-time updates
-const setupSyncListener = () => {
+export const setupSyncListener = () => {
   if (yjsSync && yjsSync.isAvailable) {
     yjsSync.onUpdate(() => {
       // Reload data from sync
@@ -418,7 +423,7 @@ const setupSyncListener = () => {
 };
 
 // Initialize app
-const init = async () => {
+export const init = async () => {
   loadData();
   renderEntries();
   displayCharacterSummary();
@@ -438,12 +443,25 @@ const init = async () => {
   await displayAIPrompt();
 };
 
+// Reset state to initial values (for testing)
+export const resetState = () => {
+  state = createInitialJournalState();
+  // Update global state reference for tests
+  if (typeof global !== 'undefined') {
+    global.state = state;
+  }
+};
+
+// Export state for testing
+export { state };
+
 // Start when DOM is ready
 document.addEventListener('DOMContentLoaded', init);
 
-// Export for testing
+// Export for testing (backward compatibility)
 if (typeof global !== 'undefined') {
   global.loadData = loadData;
   global.saveData = saveData;
   global.state = state;
+  global.resetState = resetState;
 }
