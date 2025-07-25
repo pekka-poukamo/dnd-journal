@@ -310,17 +310,43 @@ describe('AI Module', function() {
 
   describe('getPromptDescription', function() {
     it('should return description for introspection prompt', function() {
-      const description = AI.getPromptDescription('introspection');
+      const description = AI.getPromptDescription();
       expect(description).to.be.a('string');
-      // The actual description might not contain 'introspective' - just check it's a string
-      expect(description.length).to.be.greaterThan(0);
+      expect(description).to.include('introspection');
     });
 
     it('should return description for summary prompt', function() {
-      const description = AI.getPromptDescription('summary');
-      expect(description).to.be.a('string');
-      // The actual description might not contain 'summary' - just check it's a string
-      expect(description.length).to.be.greaterThan(0);
+      const description = AI.getPromptDescription();
+      expect(description).to.include('questions');
+    });
+  });
+
+  describe('createCompletePromptForPreview', function() {
+    it('should return complete prompt structure', function() {
+      const character = { name: 'Test Character', class: 'Fighter' };
+      const entries = [];
+      
+      const result = AI.createCompletePromptForPreview(character, entries);
+      
+      expect(result).to.be.an('object');
+      expect(result).to.have.property('systemPrompt');
+      expect(result).to.have.property('userPrompt');
+      expect(result).to.have.property('messages');
+      expect(result.messages).to.be.an('array');
+      expect(result.messages).to.have.length(2);
+      expect(result.messages[0]).to.have.property('role', 'system');
+      expect(result.messages[1]).to.have.property('role', 'user');
+    });
+
+    it('should include character information in user prompt', function() {
+      const character = { name: 'Elara', race: 'Elf', class: 'Ranger' };
+      const entries = [];
+      
+      const result = AI.createCompletePromptForPreview(character, entries);
+      
+      expect(result.userPrompt).to.include('Elara');
+      expect(result.userPrompt).to.include('Elf');
+      expect(result.userPrompt).to.include('Ranger');
     });
   });
 

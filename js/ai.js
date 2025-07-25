@@ -219,6 +219,32 @@ export const getPromptDescription = () => {
   return 'Narrative-focused introspection with 3 core questions + 1 unobvious question';
 };
 
+// Create complete prompt structure for preview (without API call)
+export const createCompletePromptForPreview = (character, entries) => {
+  // Use formatted entries that include summaries for older entries
+  const formattedEntries = getFormattedEntriesForAI();
+  
+  // Get formatted character that may include summarized backstory/notes
+  const formattedCharacter = getFormattedCharacterForAI(character);
+  
+  const userPrompt = createIntrospectionPrompt(formattedCharacter, formattedEntries);
+  
+  return {
+    systemPrompt: NARRATIVE_INTROSPECTION_PROMPT,
+    userPrompt: userPrompt,
+    messages: [
+      {
+        role: 'system',
+        content: NARRATIVE_INTROSPECTION_PROMPT
+      },
+      {
+        role: 'user', 
+        content: userPrompt
+      }
+    ]
+  };
+};
+
 // =============================================================================
 // AI-SPECIFIC FORMATTING FUNCTIONS
 // =============================================================================

@@ -9,11 +9,8 @@ import {
 } from './utils.js';
 import { getSummaryStats, autoSummarizeEntries } from './summarization.js';
 import { 
-  createIntrospectionPrompt, 
-  getFormattedEntriesForAI, 
-  getFormattedCharacterForAI,
-  isAIEnabled,
-  NARRATIVE_INTROSPECTION_PROMPT
+  createCompletePromptForPreview,
+  isAIEnabled
 } from './ai.js';
 
 import { createYjsSync } from './sync.js';
@@ -286,22 +283,18 @@ const handleShowAIPrompt = async () => {
       // Load current journal data
       const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
       
-      // Get formatted data for AI
-      const formattedCharacter = getFormattedCharacterForAI(journalData.character);
-      const formattedEntries = getFormattedEntriesForAI();
+      // Create the complete prompt using the AI module function
+      const promptData = createCompletePromptForPreview(journalData.character, journalData.entries);
       
-      // Create the prompt
-      const promptText = createIntrospectionPrompt(formattedCharacter, formattedEntries);
-      
-      // Format for display using the actual system prompt from AI module
+      // Format for display using the prompt data from AI module
       contentDiv.innerHTML = `
         <div class="system-prompt">
           <strong>System Prompt:</strong><br>
-          ${NARRATIVE_INTROSPECTION_PROMPT.replace(/\n/g, '<br>')}
+          ${promptData.systemPrompt.replace(/\n/g, '<br>')}
         </div>
         <div class="user-prompt">
           <strong>User Prompt:</strong><br>
-          ${promptText.replace(/\n/g, '<br>')}
+          ${promptData.userPrompt.replace(/\n/g, '<br>')}
         </div>
       `;
       
