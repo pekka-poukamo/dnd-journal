@@ -1,0 +1,27 @@
+<svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2c3e50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34495e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="96" height="96" fill="url(#bg)" rx="9.600000000000001"/>
+  
+  <!-- Book/Journal representation -->
+  <rect x="19.200000000000003" y="14.399999999999999" width="57.599999999999994" height="67.19999999999999" fill="#ecf0f1" rx="1.92" stroke="#bdc3c7" stroke-width="0.96"/>
+  
+  <!-- Book spine -->
+  <rect x="19.200000000000003" y="14.399999999999999" width="7.68" height="67.19999999999999" fill="#95a5a6"/>
+  
+  <!-- D20 die in center -->
+  <circle cx="48" cy="43.2" r="11.52" fill="#e74c3c" stroke="#c0392b" stroke-width="0.96"/>
+  <text x="48" y="46.08" text-anchor="middle" font-family="Arial, sans-serif" font-size="7.68" font-weight="bold" fill="white">20</text>
+  
+  <!-- Lines representing text -->
+  <line x1="30.72" y1="28.799999999999997" x2="65.28" y2="28.799999999999997" stroke="#7f8c8d" stroke-width="0.768"/>
+  <line x1="30.72" y1="57.599999999999994" x2="62.400000000000006" y2="57.599999999999994" stroke="#7f8c8d" stroke-width="0.768"/>
+  <line x1="30.72" y1="62.400000000000006" x2="67.19999999999999" y2="62.400000000000006" stroke="#7f8c8d" stroke-width="0.768"/>
+  <line x1="30.72" y1="67.19999999999999" x2="59.519999999999996" y2="67.19999999999999" stroke="#7f8c8d" stroke-width="0.768"/>
+</svg>
