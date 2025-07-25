@@ -200,6 +200,46 @@ export const callOpenAI = async (prompt, maxTokens = 400) => {
   }
 };
 
+// Call OpenAI API specifically for summarization (without narrative system prompt)
+export const callOpenAIForSummarization = async (prompt, maxTokens = 400) => {
+  const settings = loadAISettings();
+  
+  if (!settings.apiKey) {
+    throw new Error('No API key configured');
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${settings.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1-mini',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: maxTokens,
+        temperature: 0.3  // Lower temperature for more consistent summarization
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('OpenAI API call failed:', error);
+    throw error;
+  }
+};
+
 // Generate introspection prompt
 export const generateIntrospectionPrompt = async (character, entries) => {
   if (!isAIEnabled()) {
@@ -227,14 +267,15 @@ export const generateEntrySummary = async (entry) => {
 
   try {
     const wordCount = getWordCount(entry.content);
-    const targetLength = Math.max(10, Math.floor(wordCount * 0.3)); // 30% of original length
+    // Use logarithmic scale for target length
+    const targetLength = Math.max(10, Math.floor(Math.log10(wordCount) * 20));
     
-    const prompt = `Summarize this D&D journal entry in approximately ${targetLength} words. Keep the key events, emotions, and character development:
+    const prompt = `Summarize this text in ${targetLength} words.
 
 Title: ${entry.title}
 Content: ${entry.content}`;
 
-    const summary = await callOpenAI(prompt, 100);
+    const summary = await callOpenAIForSummarization(prompt, targetLength * 2);
     
     return {
       id: entry.id,
