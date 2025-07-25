@@ -259,7 +259,7 @@ const testSyncServer = async (serverUrl) => {
   if (typeof window.Y === 'undefined' || typeof window.WebsocketProvider === 'undefined') {
     return { 
       success: false, 
-      error: 'Sync libraries failed to load. This may indicate a problem with the vendor files. Try refreshing the page.' 
+      error: 'Sync libraries failed to load from CDN. Check your internet connection and try refreshing the page.' 
     };
   }
 
@@ -362,7 +362,7 @@ const updateSimpleSyncStatus = () => {
   if (!yjsSync) {
     if (syncDot) syncDot.className = 'sync-dot unavailable';
     if (syncText) syncText.textContent = 'Sync unavailable';
-    if (syncHelp) syncHelp.textContent = 'Sync libraries failed to load. Check browser console for details.';
+    if (syncHelp) syncHelp.textContent = 'Sync libraries failed to load from CDN. Check your internet connection or try refreshing the page.';
     return;
   }
   

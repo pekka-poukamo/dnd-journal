@@ -42,11 +42,12 @@ Device A ↔ Personal Pi Server (primary)
 
 ### Allowed Components
 ```javascript
-// ✅ Allowed Yjs Integration (Self-Hosted)
-// Libraries are bundled in vendor/ directory for reliability
-import * as Y from './vendor/yjs.js'
-import { WebsocketProvider } from './vendor/y-websocket.js'
-import { IndexeddbPersistence } from './vendor/y-indexeddb.js'
+// ✅ Allowed Yjs Integration (CDN-based)
+// Libraries loaded from reliable CDN with fallback
+// Primary: jsDelivr, Fallback: unpkg
+import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.27/dist/yjs.js'
+import { WebsocketProvider } from 'https://cdn.jsdelivr.net/npm/y-websocket@3.0.0/dist/y-websocket.js'
+import { IndexeddbPersistence } from 'https://cdn.jsdelivr.net/npm/y-indexeddb@9.0.12/dist/y-indexeddb.js'
 
 // Yjs as transparent sync layer
 const ydoc = new Y.Doc()
