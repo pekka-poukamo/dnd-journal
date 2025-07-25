@@ -46,6 +46,27 @@ Make questions specific to the character's situation and recent adventures. Focu
 // END SYSTEM PROMPT CONFIGURATIONS
 // ================================
 
+// Simple token estimation function (approximately 4 characters per token for GPT models)
+export const estimateTokenCount = (text) => {
+  if (!text || typeof text !== 'string') {
+    return 0;
+  }
+  return Math.ceil(text.length / 4);
+};
+
+// Calculate total tokens for a set of messages
+export const calculateTotalTokens = (messages) => {
+  if (!Array.isArray(messages)) {
+    return 0;
+  }
+  
+  return messages.reduce((total, message) => {
+    const contentTokens = estimateTokenCount(message.content || '');
+    // Add small overhead for message structure (role, etc.)
+    return total + contentTokens + 4;
+  }, 0);
+};
+
 // Pure function to load settings
 export const loadAISettings = () => {
   return loadDataWithFallback(
@@ -241,7 +262,11 @@ export const getIntrospectionPromptForPreview = (character, entries) => {
           role: 'user', 
           content: userPrompt
         }
-      ]
+      ],
+      totalTokens: calculateTotalTokens([
+        { role: 'system', content: NARRATIVE_INTROSPECTION_PROMPT },
+        { role: 'user', content: userPrompt }
+      ])
     };
   } catch (error) {
     console.error('Failed to create prompt for preview:', error);

@@ -295,6 +295,9 @@ const handleShowAIPrompt = async () => {
       
       // Format for display using the prompt data from AI module
       contentDiv.innerHTML = `
+        <div class="token-count">
+          <strong>Estimated Token Count:</strong> ${promptData.totalTokens} tokens
+        </div>
         <div class="system-prompt">
           <strong>System Prompt:</strong><br>
           ${promptData.systemPrompt.replace(/\n/g, '<br>')}

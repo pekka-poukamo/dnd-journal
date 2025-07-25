@@ -589,4 +589,68 @@ describe('AI Module', function() {
       expect(isEnabled).to.be.false;
     });
   });
+
+  describe('estimateTokenCount', function() {
+    it('should estimate tokens for simple text', function() {
+      const text = 'Hello world';
+      const tokens = AI.estimateTokenCount(text);
+      expect(tokens).to.equal(3); // 11 characters / 4 = 2.75, rounded up to 3
+    });
+
+    it('should handle empty string', function() {
+      const tokens = AI.estimateTokenCount('');
+      expect(tokens).to.equal(0);
+    });
+
+    it('should handle null input', function() {
+      const tokens = AI.estimateTokenCount(null);
+      expect(tokens).to.equal(0);
+    });
+
+    it('should handle undefined input', function() {
+      const tokens = AI.estimateTokenCount(undefined);
+      expect(tokens).to.equal(0);
+    });
+
+    it('should handle longer text', function() {
+      const text = 'This is a longer piece of text that would be more representative of actual prompts';
+      const tokens = AI.estimateTokenCount(text);
+      expect(tokens).to.be.above(0);
+      expect(tokens).to.equal(Math.ceil(text.length / 4));
+    });
+  });
+
+  describe('calculateTotalTokens', function() {
+    it('should calculate tokens for array of messages', function() {
+      const messages = [
+        { role: 'system', content: 'You are a helpful assistant' },
+        { role: 'user', content: 'Hello' }
+      ];
+      const totalTokens = AI.calculateTotalTokens(messages);
+      expect(totalTokens).to.be.above(0);
+      // Should be sum of content tokens plus overhead (4 tokens per message)
+      const expectedTokens = Math.ceil('You are a helpful assistant'.length / 4) + 4 + 
+                            Math.ceil('Hello'.length / 4) + 4;
+      expect(totalTokens).to.equal(expectedTokens);
+    });
+
+    it('should handle empty array', function() {
+      const totalTokens = AI.calculateTotalTokens([]);
+      expect(totalTokens).to.equal(0);
+    });
+
+    it('should handle null input', function() {
+      const totalTokens = AI.calculateTotalTokens(null);
+      expect(totalTokens).to.equal(0);
+    });
+
+    it('should handle messages with empty content', function() {
+      const messages = [
+        { role: 'system', content: '' },
+        { role: 'user', content: null }
+      ];
+      const totalTokens = AI.calculateTotalTokens(messages);
+      expect(totalTokens).to.equal(8); // 4 tokens overhead per message
+    });
+  });
 });
