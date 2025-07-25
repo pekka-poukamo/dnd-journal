@@ -35,8 +35,15 @@ jobs:
     - name: Get changed files
       id: changed-files
       run: |
+        echo "=== Debug: Changed files detection ==="
+        echo "All changed files:"
+        git diff --name-only base-branch...HEAD
+        echo "JS files only:"
+        JS_FILES=$(git diff --name-only base-branch...HEAD | grep 'js/.*\.js$' || echo "")
+        echo "$JS_FILES"
+        echo "=== End debug ==="
         echo "files<<EOF" >> $GITHUB_OUTPUT
-        git diff --name-only base-branch...HEAD | grep 'js/.*\.js$' || echo "No JS files changed"
+        echo "$JS_FILES"
         echo "EOF" >> $GITHUB_OUTPUT
     
     - name: Coverage comment
@@ -61,7 +68,10 @@ jobs:
           }
           
           // Get changed files
-          const changedFiles = `${{ steps.changed-files.outputs.files }}`.split('\n').filter(f => f.trim() && f !== 'No JS files changed');
+          const changedFilesRaw = `${{ steps.changed-files.outputs.files }}`;
+          console.log('Raw changed files output:', JSON.stringify(changedFilesRaw));
+          const changedFiles = changedFilesRaw.split('\n').filter(f => f.trim() && f !== 'No JS files changed' && f !== '');
+          console.log('Processed changed files:', changedFiles);
           
           if (changedFiles.length === 0) {
             await github.rest.issues.createComment({
