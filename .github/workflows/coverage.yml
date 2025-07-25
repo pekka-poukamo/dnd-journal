@@ -32,44 +32,24 @@ jobs:
     - run: npm ci
     - run: npm run coverage
     
-    - name: Get changed files
-      id: changed-files
-      run: |
-        echo "=== Debug: Changed files detection ==="
-        echo "All changed files:"
-        git diff --name-only base-branch...HEAD
-        echo "JS files only:"
-        JS_FILES=$(git diff --name-only base-branch...HEAD | grep 'js/.*\.js$' || echo "")
-        echo "$JS_FILES"
-        echo "=== End debug ==="
-        echo "files=$JS_FILES" >> $GITHUB_OUTPUT
-    
-    - name: Coverage comment
+    - name: Coverage report and comment
       uses: actions/github-script@v7
       with:
         script: |
           const fs = require('fs');
+          const { execSync } = require('child_process');
           
-          // Read coverage data
-          let coverage = {};
+          // Get changed JS files
+          let changedFiles = [];
           try {
-            coverage = JSON.parse(fs.readFileSync('coverage/coverage-final.json', 'utf8'));
+            const output = execSync('git diff --name-only base-branch...HEAD', { encoding: 'utf8' });
+            changedFiles = output.split('\n')
+              .filter(file => file.trim())
+              .filter(file => file.match(/^js\/.*\.js$/));
+            console.log('Changed JS files:', changedFiles);
           } catch (e) {
-            console.log('No coverage data found');
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: '## 📊 Coverage Report\n\n❌ Unable to read coverage data.'
-            });
-            return;
+            console.log('Error getting changed files:', e.message);
           }
-          
-          // Get changed files
-          const changedFilesRaw = `${{ steps.changed-files.outputs.files }}`;
-          console.log('Raw changed files output:', JSON.stringify(changedFilesRaw));
-          const changedFiles = changedFilesRaw.split(/\s+/).filter(f => f.trim() && f !== '');
-          console.log('Processed changed files:', changedFiles);
           
           if (changedFiles.length === 0) {
             await github.rest.issues.createComment({
@@ -81,7 +61,21 @@ jobs:
             return;
           }
           
-          // Generate report for changed files only
+          // Read coverage data
+          let coverage = {};
+          try {
+            coverage = JSON.parse(fs.readFileSync('coverage/coverage-final.json', 'utf8'));
+          } catch (e) {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '## 📊 Coverage Report\n\n❌ Unable to read coverage data.'
+            });
+            return;
+          }
+          
+          // Generate report for changed files
           let report = '## 📊 Coverage Report\n\n';
           report += '| File | Lines Covered | Percentage |\n';
           report += '|------|---------------|------------|\n';
