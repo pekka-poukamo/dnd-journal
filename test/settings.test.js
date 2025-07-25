@@ -1,40 +1,53 @@
-const { expect } = require('chai');
-require('./setup');
+import { expect } from 'chai';
+import './setup.js';
+import * as Settings from '../js/settings.js';
 
-// Since settings.js is a browser module, we'll need to simulate its functions
 describe('Settings Module', () => {
   beforeEach(() => {
     // Clear localStorage before each test
     global.localStorage.clear();
-    
-    // Setup window object for utils
-    global.window = global.window || {};
-    // Load utils for the settings module
-    const utilsPath = require('path').join(__dirname, '../js/utils.js');
-    const utilsContent = require('fs').readFileSync(utilsPath, 'utf8');
-    eval(utilsContent);
   });
 
   describe('Settings Data Management', () => {
-    it('should store and retrieve settings in localStorage', () => {
+    it('should load default settings when none exist', () => {
+      const settings = Settings.loadSettings();
+      
+      expect(settings).to.have.property('apiKey', '');
+      expect(settings).to.have.property('enableAIFeatures', false);
+    });
+
+    it('should load existing settings from localStorage', () => {
       const testSettings = {
         apiKey: 'sk-test123',
         enableAIFeatures: true
       };
 
-      // Simulate saving settings
       global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
 
-      // Simulate loading settings
-      const stored = global.localStorage.getItem('simple-dnd-journal-settings');
-      const loaded = JSON.parse(stored);
-
+      const loaded = Settings.loadSettings();
       expect(loaded).to.deep.equal(testSettings);
     });
 
-    it('should handle missing settings gracefully', () => {
+    it('should save settings to localStorage', () => {
+      const testSettings = {
+        apiKey: 'sk-test456',
+        enableAIFeatures: false
+      };
+
+      Settings.saveSettings(testSettings);
+
       const stored = global.localStorage.getItem('simple-dnd-journal-settings');
-      expect(stored).to.be.null;
+      const loaded = JSON.parse(stored);
+      expect(loaded).to.deep.equal(testSettings);
+    });
+
+    it('should handle corrupted localStorage data gracefully', () => {
+      global.localStorage.setItem('simple-dnd-journal-settings', 'invalid-json');
+
+      const settings = Settings.loadSettings();
+      
+      expect(settings).to.have.property('apiKey', '');
+      expect(settings).to.have.property('enableAIFeatures', false);
     });
 
     it('should validate API key format', () => {
@@ -44,7 +57,13 @@ describe('Settings Module', () => {
       expect(validKey.startsWith('sk-')).to.be.true;
       expect(invalidKey.startsWith('sk-')).to.be.false;
     });
+
+    it('should test API key functionality', async () => {
+      // Mock successful API test
+      const result = await Settings.testApiKey('sk-test123');
+      
+      expect(result).to.have.property('success');
+      expect(result).to.have.property('message');
+    });
   });
-
-
 });

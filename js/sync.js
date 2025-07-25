@@ -2,6 +2,8 @@
 // Maintains localStorage as primary store while adding cross-device sync
 // Follows ADR-0002: Functional Programming Only
 
+import { SYNC_CONFIG } from '../sync-config.js';
+
 // Sync state management
 let syncState = {
   isAvailable: false,
@@ -80,8 +82,8 @@ const setupPersistence = (state) => {
 const getSyncConfig = () => {
   // Use config file setting if available
   try {
-    if (window.SYNC_CONFIG && window.SYNC_CONFIG.server) {
-      return [window.SYNC_CONFIG.server];
+    if (SYNC_CONFIG && SYNC_CONFIG.server) {
+      return [SYNC_CONFIG.server];
     }
   } catch (e) {}
   
@@ -144,13 +146,11 @@ const setupObservers = (state) => {
   
   state.ymap.observe(() => {
           // Remote changes detected
-    notifyCallbacks(state);
+    notifyCallbacks(syncState);
   });
   
   return state;
 };
-
-
 
 // Get current data from Yjs
 const getSyncData = () => {
@@ -207,13 +207,22 @@ const notifyCallbacks = (state) => {
 
 // Get sync status
 const getSyncStatus = () => {
+  const deviceId = getDeviceId();
+  
   if (!syncState.isAvailable) {
-    return { available: false, reason: 'Yjs not loaded' };
+    return { 
+      available: false, 
+      reason: 'Yjs not loaded',
+      deviceId,
+      connected: false
+    };
   }
   
   return {
     available: true,
+    reason: 'Yjs loaded successfully',
     connected: syncState.isConnected,
+    deviceId,
     providers: syncState.providers.map(p => ({
       url: p.url,
       connected: p.wsconnected || false
@@ -234,8 +243,6 @@ const getDeviceId = () => {
     return 'device-test-' + Math.random().toString(36).substr(2, 9);
   }
 };
-
-
 
 // Clean shutdown
 const teardownSync = () => {
@@ -265,7 +272,7 @@ const teardownSync = () => {
 };
 
 // Public API object (following functional pattern)
-const createYjsSync = () => {
+export const createYjsSync = () => {
   // Initialize on creation
   syncState = initializeSync();
   
@@ -286,10 +293,3 @@ const createYjsSync = () => {
     _getState: () => syncState
   };
 };
-
-// Export for different module systems
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { createYjsSync, getSyncData, setSyncData, onSyncChange, getSyncStatus };
-} else {
-  window.createYjsSync = createYjsSync;
-}

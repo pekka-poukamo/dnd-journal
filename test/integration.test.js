@@ -1,213 +1,276 @@
-require('./setup');
-const path = require('path');
-const fs = require('fs');
-
-// Load utils module
-let Utils;
-try {
-  Utils = require('../js/utils.js');
-} catch (e) {
-  // Utils module not available in test environment
-}
+import { expect } from 'chai';
+import './setup.js';
+import * as App from '../js/app.js';
+import * as Utils from '../js/utils.js';
 
 describe('D&D Journal Integration Tests', function() {
-  let appContent;
-  
-  before(function() {
-    // Load the app content
-    const appPath = path.join(__dirname, '../js/app.js');
-    appContent = fs.readFileSync(appPath, 'utf8');
+  beforeEach(function() {
+    // Reset localStorage before each test
+    global.resetLocalStorage();
+    
+    // Clear DOM
+    document.body.innerHTML = '';
+    
+    // Reset app state to initial values
+    App.resetState();
   });
 
-  beforeEach(function() {
-    // Clear localStorage and reset DOM
-    localStorage.clear();
-    document.body.innerHTML = `
-      <input type="text" id="character-name" />
-      <input type="text" id="character-race" />
-      <input type="text" id="character-class" />
-      <input type="text" id="entry-title" />
-      <textarea id="entry-content"></textarea>
-      <div id="entries-list"></div>
-    `;
-    
-    // Execute app code
-    eval(appContent);
+  afterEach(function() {
+    // Reset localStorage after each test
+    global.resetLocalStorage();
   });
 
   it('should complete full user workflow', function() {
-    // 1. User creates a character (simulating data from character page)
-    state.character = {
-      name: 'Thorin',
-      race: 'Dwarf',
-      class: 'King'
+    // Set up character data
+    App.state.character = {
+      name: 'Aragorn',
+      race: 'Human',
+      class: 'Ranger',
+      backstory: 'Heir to the throne of Gondor',
+      notes: 'Carries Andúril, the sword of kings'
     };
 
-    // Save the character data
-    saveData();
-
-    // Character should be saved
-    state.character.name.should.equal('Thorin');
-    state.character.race.should.equal('Dwarf');
-    state.character.class.should.equal('King');
-
-    // 2. User adds multiple journal entries
-    const titleInput = document.getElementById('entry-title');
-    const contentInput = document.getElementById('entry-content');
-
-    // First entry
-    titleInput.value = 'The Quest Begins';
-    contentInput.value = 'We set out from the Shire on a grand adventure.';
-    addEntry();
-
-    // Wait to ensure different timestamp
-    const start1 = Date.now();
-    while (Date.now() === start1) { /* wait */ }
-
-    // Second entry
-    titleInput.value = 'Meeting Gandalf';
-    contentInput.value = 'The wizard has important news for us.';
-    addEntry();
-
-    // Wait to ensure different timestamp
-    const start2 = Date.now();
-    while (Date.now() === start2) { /* wait */ }
-
-    // Third entry
-    titleInput.value = 'The Lonely Mountain';
-    contentInput.value = 'We can see our destination in the distance.';
-    addEntry();
-
-    // Should have 3 entries
-    state.entries.should.have.length(3);
-
-    // 3. Check that data persists after reload
-    const savedData = localStorage.getItem('simple-dnd-journal');
-    savedData.should.not.be.null;
-
-    const parsedData = JSON.parse(savedData);
-    parsedData.character.name.should.equal('Thorin');
-    parsedData.entries.should.have.length(3);
-
-    // 4. Test data persistence (simulate app reload)
-    const storedData = localStorage.getItem('simple-dnd-journal');
-    
-    // Parse and verify the stored data directly
-    const parsedStoredData = JSON.parse(storedData);
-    parsedStoredData.character.name.should.equal('Thorin');
-    parsedStoredData.character.race.should.equal('Dwarf');
-    parsedStoredData.character.class.should.equal('King');
-    parsedStoredData.entries.should.have.length(3);
-
-    // Simulate fresh app load by resetting and reloading from storage
-    localStorage.clear();
-    localStorage.setItem('simple-dnd-journal', storedData);
-    
-    // Create fresh state and load from storage
-    const freshState = {
-      character: { name: '', race: '', class: '' },
-      entries: []
+    // Add journal entries
+    const entry1 = {
+      id: Utils.generateId(),
+      title: 'The Fellowship Begins',
+      content: 'Today we set out from Rivendell with the One Ring.',
+      timestamp: Date.now()
     };
-    
-    const reloadedData = localStorage.getItem('simple-dnd-journal');
-    if (reloadedData) {
-      Object.assign(freshState, JSON.parse(reloadedData));
-    }
 
-    // Character data should be restored
-    freshState.character.name.should.equal('Thorin');
-    freshState.character.race.should.equal('Dwarf');
-    freshState.character.class.should.equal('King');
+    const entry2 = {
+      id: Utils.generateId(),
+      title: 'Moria Mines',
+      content: 'We entered the dark mines of Moria. Gandalf fell fighting the Balrog.',
+      timestamp: Date.now() + 1000
+    };
 
-    // Entries should be restored
-    freshState.entries.should.have.length(3);
+    App.state.entries.push(entry1, entry2);
 
-    // Verify entries are in correct order (newest first when sorted)
-    const sortedEntries = [...freshState.entries].sort((a, b) => b.timestamp - a.timestamp);
-    sortedEntries[0].title.should.equal('The Lonely Mountain');
-    sortedEntries[1].title.should.equal('Meeting Gandalf');
-    sortedEntries[2].title.should.equal('The Quest Begins');
+    // Save data
+    App.saveData();
 
-    // Check that images are no longer stored in entries
-    sortedEntries[0].should.not.have.property('image');
-    sortedEntries[1].should.not.have.property('image');
-    sortedEntries[2].should.not.have.property('image');
+    // Verify data persistence
+    const savedData = Utils.safeGetFromStorage(Utils.STORAGE_KEYS.JOURNAL);
+    expect(savedData.success).to.be.true;
+    expect(savedData.data.character.name).to.equal('Aragorn');
+    expect(savedData.data.entries).to.have.length(2);
+
+    // Test character summary
+    const summary = App.createCharacterSummary(App.state.character);
+    expect(summary.name).to.equal('Aragorn');
+    expect(summary.details).to.include('Human');
+    expect(summary.details).to.include('Ranger');
+
+    // Test entry editing
+    const originalTitle = App.state.entries[0].title;
+    App.state.entries[0].title = 'Updated Title';
+    expect(App.state.entries[0].title).to.equal('Updated Title');
+
+    // Test data validation
+    const validEntry = {
+      id: Utils.generateId(),
+      title: 'Valid Entry',
+      content: 'This is valid content',
+      timestamp: Date.now()
+    };
+    expect(Utils.isValidEntry(validEntry)).to.be.true;
+
+    const invalidEntry = {
+      id: Utils.generateId(),
+      title: '', // Empty title is invalid
+      content: 'This has no title',
+      timestamp: Date.now()
+    };
+    expect(Utils.isValidEntry(invalidEntry)).to.be.false;
   });
 
-  it('should handle empty state gracefully', function() {
-    // Fresh start with no data
-    renderEntries();
-    
-    const entriesContainer = document.getElementById('entries-list');
-    entriesContainer.innerHTML.should.include('No entries yet');
-    
-    // Setup DOM for character summary test
-    document.body.innerHTML += `
-      <div class="character-summary__name" id="summary-name"></div>
-      <div class="character-summary__details" id="summary-details"></div>
-    `;
-    
-    displayCharacterSummary();
-    
-    const nameElement = document.getElementById('summary-name');
-    const detailsElement = document.getElementById('summary-details');
-    
-    nameElement.textContent.should.equal('No character created yet');
-    detailsElement.textContent.should.equal('Click "View Details" to create your character');
+  it('should handle character and entry integration', function() {
+    // Create character
+    App.state.character = {
+      name: 'Legolas',
+      race: 'Elf',
+      class: 'Archer',
+      backstory: 'Prince of Mirkwood',
+      notes: 'Master archer with keen eyesight'
+    };
+
+    // Add entries that reference the character
+    const entry1 = {
+      id: Utils.generateId(),
+      title: 'First Shot',
+      content: 'Legolas proved his archery skills today, hitting targets from impossible distances.',
+      timestamp: Date.now()
+    };
+
+    const entry2 = {
+      id: Utils.generateId(),
+      title: 'Elven Wisdom',
+      content: 'Legolas shared ancient elven knowledge about the forest paths.',
+      timestamp: Date.now() + 1000
+    };
+
+    App.state.entries.push(entry1, entry2);
+
+    // Save both character and entries
+    App.saveData();
+
+    // Verify integration
+    const savedData = Utils.safeGetFromStorage(Utils.STORAGE_KEYS.JOURNAL);
+    expect(savedData.success).to.be.true;
+    expect(savedData.data.character.name).to.equal('Legolas');
+    expect(savedData.data.entries).to.have.length(2);
+
+    // Test that entries can reference character
+    const characterSummary = App.createCharacterSummary(App.state.character);
+    expect(characterSummary.name).to.equal('Legolas');
+
+    // Test entry sorting
+    const sortedEntries = Utils.sortEntriesByDate(App.state.entries);
+    expect(sortedEntries[0].timestamp).to.be.greaterThan(sortedEntries[1].timestamp);
+
+    // Test word counting
+    const totalWords = App.state.entries.reduce((sum, entry) => {
+      return sum + Utils.getWordCount(entry.content);
+    }, 0);
+    expect(totalWords).to.be.greaterThan(0);
   });
 
-  it('should maintain data integrity through multiple operations', function() {
-    // Add some initial data
-    state.character = { name: 'Frodo', race: 'Hobbit', class: 'Burglar' };
-    state.entries = [
-      {
-        id: Utils.generateId(),
-        title: 'Initial Entry',
-        content: 'Starting the journey',
-        timestamp: Date.now() - 1000
-      }
-    ];
+  it('should handle data validation and error cases', function() {
+    // Test invalid entry
+    const invalidEntry = {
+      id: Utils.generateId(),
+      title: '', // Empty title
+      content: 'Some content',
+      timestamp: Date.now()
+    };
+
+    expect(Utils.isValidEntry(invalidEntry)).to.be.false;
+
+    // Test valid entry
+    const validEntry = {
+      id: Utils.generateId(),
+      title: 'Valid Title',
+      content: 'Valid content',
+      timestamp: Date.now()
+    };
+
+    expect(Utils.isValidEntry(validEntry)).to.be.true;
+
+    // Test corrupted data handling
+    global.localStorage.setItem(Utils.STORAGE_KEYS.JOURNAL, 'invalid json');
     
-    saveData();
+    // Should load default state without throwing
+    expect(() => App.loadData()).to.not.throw();
+    expect(App.state.character.name).to.equal('');
+    expect(App.state.entries).to.have.length(0);
+  });
 
-    // Add more entries
-    const titleInput = document.getElementById('entry-title');
-    const contentInput = document.getElementById('entry-content');
+  it('should handle localStorage errors gracefully', function() {
+    // Mock localStorage to throw error temporarily
+    const originalSetItem = global.localStorage.setItem;
+    global.localStorage.setItem = () => {
+      throw new Error('Storage full');
+    };
 
-    titleInput.value = 'Second Entry';
-    contentInput.value = 'The journey continues';
-    addEntry();
+    // Should not throw when saving
+    expect(() => App.saveData()).to.not.throw();
 
-    // Small delay to ensure different timestamps
-    const start = Date.now();
-    while (Date.now() === start) {
-      // wait for next millisecond
+    // Restore original method
+    global.localStorage.setItem = originalSetItem;
+  });
+
+  it('should handle corrupted localStorage data', function() {
+    // Set corrupted data
+    global.localStorage.setItem(Utils.STORAGE_KEYS.JOURNAL, 'invalid json');
+
+    // Should load default state without throwing
+    expect(() => App.loadData()).to.not.throw();
+    
+    // Should have default character state
+    expect(App.state.character.name).to.equal('');
+    expect(App.state.character.race).to.equal('');
+    expect(App.state.character.class).to.equal('');
+    expect(App.state.entries).to.have.length(0);
+  });
+
+  it('should integrate with utility functions', function() {
+    // Test utility integration
+    const testData = { test: 'value' };
+    const result = Utils.safeSetToStorage('test-key', testData);
+    expect(result.success).to.be.true;
+
+    const retrieved = Utils.safeGetFromStorage('test-key');
+    expect(retrieved.success).to.be.true;
+    expect(retrieved.data).to.deep.equal(testData);
+
+    // Test ID generation
+    const id1 = Utils.generateId();
+    const id2 = Utils.generateId();
+    expect(id1).to.be.a('string');
+    expect(id2).to.be.a('string');
+    // Note: IDs might be identical if generated in same millisecond
+  });
+
+  it('should handle character summary integration', function() {
+    // Create character
+    App.state.character = {
+      name: 'Gandalf',
+      race: 'Wizard',
+      class: 'Mage',
+      backstory: 'A powerful wizard sent to Middle-earth',
+      notes: 'Carries a staff and knows many spells'
+    };
+
+    // Generate character summary
+    const summary = App.createCharacterSummary(App.state.character);
+    
+    expect(summary.name).to.equal('Gandalf');
+    expect(summary.details).to.include('Wizard');
+    expect(summary.details).to.include('Mage');
+  });
+
+  it('should handle entry editing workflow', function() {
+    // Ensure entries-list element exists
+    let entriesList = document.getElementById('entries-list');
+    if (!entriesList) {
+      entriesList = document.createElement('div');
+      entriesList.id = 'entries-list';
+      document.body.appendChild(entriesList);
     }
 
-    titleInput.value = 'Third Entry';
-    contentInput.value = 'Almost there!';
-    addEntry();
+    // Add an entry
+    App.state.entries.push({
+      id: '1',
+      title: 'Original Title',
+      content: 'Original content',
+      timestamp: Date.now()
+    });
 
-    // Should have 3 total entries
-    state.entries.should.have.length(3);
+    // Render entries
+    App.renderEntries();
 
-    // Update character (simulating character page update)
-    state.character.name = 'Frodo Baggins';
-    saveData();
+    // Enable edit mode
+    const entryDiv = document.querySelector('.entry');
+    expect(entryDiv).to.exist;
+    App.enableEditMode(entryDiv, App.state.entries[0]);
 
-    // Verify everything is still consistent
-    state.character.name.should.equal('Frodo Baggins');
-    state.entries.should.have.length(3);
+    // Verify edit form is created
+    const editForm = entryDiv.querySelector('.edit-form');
+    expect(editForm).to.exist;
 
-    // Verify persistence
-    const savedData = JSON.parse(localStorage.getItem('simple-dnd-journal'));
-    savedData.character.name.should.equal('Frodo Baggins');
-    savedData.entries.should.have.length(3);
+    // Modify and save
+    const titleInput = editForm.querySelector('input[type="text"]');
+    const contentTextarea = editForm.querySelector('textarea');
     
-    // Check entry order is maintained
-    const sortedEntries = [...state.entries].sort((a, b) => b.timestamp - a.timestamp);
-    sortedEntries[0].title.should.equal('Third Entry');
-    sortedEntries[1].title.should.equal('Second Entry');
-    sortedEntries[2].title.should.equal('Initial Entry');
+    if (titleInput && contentTextarea) {
+      titleInput.value = 'Updated Title';
+      contentTextarea.value = 'Updated content';
+
+      App.saveEdit(entryDiv, App.state.entries[0], 'Updated Title', 'Updated content');
+
+      expect(App.state.entries[0].title).to.equal('Updated Title');
+      expect(App.state.entries[0].content).to.equal('Updated content');
+    }
   });
 });

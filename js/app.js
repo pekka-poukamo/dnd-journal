@@ -1,58 +1,21 @@
 // D&D Journal - Simple & Functional with In-Place Editing
 
-// Get utils reference - works in both browser and test environment
-const getUtils = () => {
-  if (typeof window !== 'undefined' && window.Utils) return window.Utils;
-  if (typeof global !== 'undefined' && global.Utils) return global.Utils;
-  try {
-    return require('./utils.js');
-  } catch (e) {
-    try {
-      return require('../js/utils.js');
-    } catch (e2) {
-      // Fallback to inline implementations for tests
-      return {
-        createInitialJournalState: () => ({
-          character: { name: '', race: '', class: '', backstory: '', notes: '' },
-          entries: []
-        }),
-        safeGetFromStorage: (key) => {
-          try {
-            const stored = localStorage.getItem(key);
-            return stored ? { success: true, data: JSON.parse(stored) } : { success: true, data: null };
-          } catch (error) {
-            return { success: false, error: error.message };
-          }
-        },
-        safeSetToStorage: (key, data) => {
-          try {
-            localStorage.setItem(key, JSON.stringify(data));
-            return { success: true };
-          } catch (error) {
-            return { success: false, error: error.message };
-          }
-        },
-        STORAGE_KEYS: {
-          JOURNAL: 'simple-dnd-journal',
-          SETTINGS: 'simple-dnd-journal-settings',
-          SUMMARIES: 'simple-dnd-journal-summaries',
-          META_SUMMARIES: 'simple-dnd-journal-meta-summaries'
-        },
-        generateId: () => Date.now().toString(),
-        formatDate: (timestamp) => new Date(timestamp).toLocaleDateString('en-US', {
-          year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        }),
-        sortEntriesByDate: (entries) => [...entries].sort((a, b) => b.timestamp - a.timestamp),
-        isValidEntry: (entryData) => entryData.title.trim().length > 0 && entryData.content.trim().length > 0
-      };
-    }
-  }
-};
+import { 
+  safeGetFromStorage, 
+  safeSetToStorage, 
+  createInitialJournalState, 
+  STORAGE_KEYS, 
+  generateId, 
+  formatDate, 
+  sortEntriesByDate, 
+  isValidEntry 
+} from './utils.js';
 
-const utils = getUtils();
+import { generateIntrospectionPrompt, isAIEnabled, getEntrySummary as aiGetEntrySummary, generateEntrySummary as aiGenerateEntrySummary } from './ai.js';
+import { createYjsSync } from './sync.js';
 
 // Simple state management
-let state = utils.createInitialJournalState();
+let state = createInitialJournalState();
 
 // Initialize Yjs sync enhancement (ADR-0003)
 let yjsSync = null;
@@ -63,8 +26,8 @@ try {
 }
 
 // Load state from localStorage - using utils
-const loadData = () => {
-  const result = utils.safeGetFromStorage(utils.STORAGE_KEYS.JOURNAL);
+export const loadData = () => {
+  const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
   if (result.success && result.data) {
     state = { ...state, ...result.data };
     // Update global state reference for tests
@@ -84,7 +47,7 @@ const loadData = () => {
       if (remoteTime > localTime) {
         // Loading newer data from sync
         state = { ...state, ...syncData };
-        utils.safeSetToStorage(utils.STORAGE_KEYS.JOURNAL, state);
+        safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
       } else {
         // Upload current data to sync
         yjsSync.setData(state);
@@ -97,475 +60,408 @@ const loadData = () => {
 };
 
 // Save state to localStorage and sync - enhanced for ADR-0003
-const saveData = () => {
-  // Primary storage (ADR-0004)
-  utils.safeSetToStorage(utils.STORAGE_KEYS.JOURNAL, state);
+export const saveData = () => {
+  state.lastModified = Date.now();
+  const result = safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
   
-  // Sync enhancement (ADR-0003)
+  // Update sync if available
   if (yjsSync && yjsSync.isAvailable) {
-    state.lastModified = Date.now();
     yjsSync.setData(state);
   }
+  
+  return result;
 };
 
-// Pure function to get summary for an entry
-const getEntrySummary = (entryId) => {
-  try {
-    const summariesResult = utils.safeGetFromStorage(utils.STORAGE_KEYS.SUMMARIES);
-    if (summariesResult.success && summariesResult.data && summariesResult.data[entryId]) {
-      return summariesResult.data[entryId];
+// Get entry summary from AI if available
+export const getEntrySummary = (entryId) => {
+  if (isAIEnabled()) {
+    const entry = state.entries.find(e => e.id === entryId);
+    if (entry) {
+      return aiGetEntrySummary(entry);
     }
-    return null;
-  } catch (error) {
-    return null;
   }
+  return null;
 };
 
-// Create entry element with edit functionality
-const createEntryElement = (entry) => {
+// Create DOM element for an entry
+export const createEntryElement = (entry) => {
   const entryDiv = document.createElement('div');
-  entryDiv.className = 'entry-card';
+  entryDiv.className = 'entry';
   entryDiv.dataset.entryId = entry.id;
   
-  // Create view mode elements
-  const titleDiv = document.createElement('div');
-  titleDiv.className = 'entry-title';
-  titleDiv.textContent = entry.title;
+  const header = document.createElement('div');
+  header.className = 'entry-header';
   
-  const dateDiv = document.createElement('div');
-  dateDiv.className = 'entry-date';
-  dateDiv.textContent = utils.formatDate(entry.timestamp);
+  const title = document.createElement('h3');
+  title.className = 'entry-title';
+  title.textContent = entry.title;
   
-  const contentDiv = document.createElement('div');
-  contentDiv.className = 'entry-content';
-  contentDiv.textContent = entry.content;
+  const date = document.createElement('span');
+  date.className = 'entry-date';
+  date.textContent = formatDate(entry.timestamp);
   
-  // Check if entry has a summary
-  const summary = getEntrySummary(entry.id);
-  let summaryDiv = null;
-  if (summary && summary.summary) {
-    summaryDiv = document.createElement('div');
-    summaryDiv.className = 'entry-summary';
-    summaryDiv.innerHTML = `<strong>Summary:</strong> ${summary.summary}`;
-  }
+  const editBtn = document.createElement('button');
+  editBtn.className = 'edit-btn';
+  editBtn.textContent = 'Edit';
+  editBtn.onclick = () => enableEditMode(entryDiv, entry);
   
-  const actionsDiv = document.createElement('div');
-  actionsDiv.className = 'entry-actions';
+  header.appendChild(title);
+  header.appendChild(date);
+  header.appendChild(editBtn);
   
-  const editButton = document.createElement('button');
-  editButton.className = 'button button--secondary button--small';
-  editButton.textContent = 'Edit';
-  editButton.onclick = () => enableEditMode(entryDiv, entry);
+  const content = document.createElement('div');
+  content.className = 'entry-content';
+  content.textContent = entry.content;
   
-  actionsDiv.appendChild(editButton);
-  
-  entryDiv.appendChild(titleDiv);
-  entryDiv.appendChild(dateDiv);
-  entryDiv.appendChild(contentDiv);
-  if (summaryDiv) {
-    entryDiv.appendChild(summaryDiv);
-  }
-  entryDiv.appendChild(actionsDiv);
-  
-
+  entryDiv.appendChild(header);
+  entryDiv.appendChild(content);
   
   return entryDiv;
 };
 
 // Enable edit mode for an entry
-const enableEditMode = (entryDiv, entry) => {
-  const titleDiv = entryDiv.querySelector('.entry-title');
-  const contentDiv = entryDiv.querySelector('.entry-content');
-  const actionsDiv = entryDiv.querySelector('.entry-actions');
+export const enableEditMode = (entryDiv, entry) => {
+  const title = entryDiv.querySelector('.entry-title');
+  const content = entryDiv.querySelector('.entry-content');
+  const editBtn = entryDiv.querySelector('.edit-btn');
   
-  // Create edit inputs
+  // Create edit form
+  const editForm = document.createElement('div');
+  editForm.className = 'edit-form';
+  
   const titleInput = document.createElement('input');
   titleInput.type = 'text';
-  titleInput.className = 'form-input';
   titleInput.value = entry.title;
+  titleInput.className = 'edit-title-input';
   
   const contentTextarea = document.createElement('textarea');
-  contentTextarea.className = 'form-input';
-  contentTextarea.rows = 4;
   contentTextarea.value = entry.content;
+  contentTextarea.className = 'edit-content-textarea';
   
-  // Create save/cancel buttons
-  const saveButton = document.createElement('button');
-  saveButton.className = 'button button--small';
-  saveButton.textContent = 'Save';
-  saveButton.onclick = () => saveEdit(entryDiv, entry, titleInput.value, contentTextarea.value);
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save';
+  saveBtn.onclick = () => saveEdit(entryDiv, entry, titleInput.value, contentTextarea.value);
   
-  const cancelButton = document.createElement('button');
-  cancelButton.className = 'button button--secondary button--small';
-  cancelButton.textContent = 'Cancel';
-  cancelButton.onclick = () => cancelEdit(entryDiv, entry);
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = () => cancelEdit(entryDiv, entry);
+  
+  editForm.appendChild(titleInput);
+  editForm.appendChild(contentTextarea);
+  editForm.appendChild(saveBtn);
+  editForm.appendChild(cancelBtn);
   
   // Replace content with edit form
-  titleDiv.replaceWith(titleInput);
-  contentDiv.replaceWith(contentTextarea);
+  title.style.display = 'none';
+  content.style.display = 'none';
+  editBtn.style.display = 'none';
   
-  // Update actions
-  actionsDiv.innerHTML = '';
-  actionsDiv.appendChild(saveButton);
-  actionsDiv.appendChild(cancelButton);
+  entryDiv.appendChild(editForm);
   
   // Focus on title input
   titleInput.focus();
 };
 
 // Save edit changes
-const saveEdit = (entryDiv, entry, newTitle, newContent) => {
-  const title = newTitle.trim();
-  const content = newContent.trim();
-  
-  if (!title || !content) return;
-  
-  // Update entry data
-  entry.title = title;
-  entry.content = content;
-  entry.timestamp = Date.now(); // Update timestamp to show it was edited
-  
-  // Save to storage
-  saveData();
-  
-  // Re-render the entry
-  const newEntryElement = createEntryElement(entry);
-  entryDiv.replaceWith(newEntryElement);
+export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
+  if (newTitle.trim() && newContent.trim()) {
+    entry.title = newTitle.trim();
+    entry.content = newContent.trim();
+    entry.timestamp = Date.now();
+    
+    // Remove edit form and restore display
+    const editForm = entryDiv.querySelector('.edit-form');
+    if (editForm) {
+      editForm.remove();
+    }
+    
+    const title = entryDiv.querySelector('.entry-title');
+    const content = entryDiv.querySelector('.entry-content');
+    const editBtn = entryDiv.querySelector('.edit-btn');
+    
+    title.textContent = entry.title;
+    title.style.display = '';
+    content.textContent = entry.content;
+    content.style.display = '';
+    editBtn.style.display = '';
+    
+    saveData();
+  }
 };
 
-// Cancel edit and restore original view
-const cancelEdit = (entryDiv, entry) => {
-  const newEntryElement = createEntryElement(entry);
-  entryDiv.replaceWith(newEntryElement);
+// Cancel edit mode
+export const cancelEdit = (entryDiv, entry) => {
+  const editForm = entryDiv.querySelector('.edit-form');
+  if (editForm) {
+    editForm.remove();
+  }
+  
+  const title = entryDiv.querySelector('.entry-title');
+  const content = entryDiv.querySelector('.entry-content');
+  const editBtn = entryDiv.querySelector('.edit-btn');
+  
+  title.style.display = '';
+  content.style.display = '';
+  editBtn.style.display = '';
 };
 
-
-
-// Pure function to create empty state element
-const createEmptyStateElement = () => {
-  const div = document.createElement('div');
-  div.className = 'empty-state';
-  div.textContent = 'No entries yet. Add your first adventure above!';
-  return div;
+// Create empty state element
+export const createEmptyStateElement = () => {
+  const emptyDiv = document.createElement('div');
+  emptyDiv.className = 'empty-state';
+  emptyDiv.innerHTML = '<p>No journal entries yet. Start writing your adventure!</p>';
+  return emptyDiv;
 };
 
-// Render entries - more functional approach
-const renderEntries = () => {
-  const entriesContainer = document.getElementById('entries-list');
-  if (!entriesContainer) return;
+// Render all entries
+export const renderEntries = () => {
+  const entriesList = document.getElementById('entries-list');
+  if (!entriesList) return;
+  
+  entriesList.innerHTML = '';
   
   if (state.entries.length === 0) {
-    entriesContainer.replaceChildren(createEmptyStateElement());
+    entriesList.appendChild(createEmptyStateElement());
     return;
   }
   
-  // Functional approach to rendering
-  const sortedEntries = utils.sortEntriesByDate(state.entries);
-  const entryElements = sortedEntries.map(createEntryElement);
-  
-  entriesContainer.replaceChildren(...entryElements);
+  const sortedEntries = sortEntriesByDate(state.entries);
+  sortedEntries.forEach(entry => {
+    const entryElement = createEntryElement(entry);
+    entriesList.appendChild(entryElement);
+  });
 };
 
-// Pure function to create entry from form data
-const createEntryFromForm = (formData) => ({
-  id: utils.generateId(),
+// Create entry from form data
+export const createEntryFromForm = (formData) => ({
+  id: generateId(),
   title: formData.title.trim(),
   content: formData.content.trim(),
   timestamp: Date.now()
 });
 
-// Pure function to get form data
-const getFormData = () => {
-  const titleElement = document.getElementById('entry-title');
-  const contentElement = document.getElementById('entry-content');
+// Get form data
+export const getFormData = () => {
+  const titleInput = document.getElementById('entry-title');
+  const contentTextarea = document.getElementById('entry-content');
   
   return {
-    title: titleElement ? titleElement.value : '',
-    content: contentElement ? contentElement.value : ''
+    title: titleInput ? titleInput.value : '',
+    content: contentTextarea ? contentTextarea.value : ''
   };
 };
 
-// Add new entry - functional approach
-const addEntry = async () => {
+// Add new entry
+export const addEntry = async () => {
   const formData = getFormData();
   
-  if (!utils.isValidEntry(formData)) return;
-  
-  const newEntry = createEntryFromForm(formData);
-  
-  // Add to state immutably - functional approach
-  state = {
-    ...state,
-    entries: [...state.entries, newEntry]
-  };
-  
-  // Update global state reference for tests
-  if (typeof global !== 'undefined') {
-    global.state = state;
-  }
-  
-  saveData();
-  renderEntries();
-  clearEntryForm();
-  focusEntryTitle();
-  
-  // Generate summary for the new entry if AI is enabled
-  if (window.AI && window.AI.isAIEnabled()) {
-    try {
-      await window.AI.getEntrySummary(newEntry);
-    } catch (error) {
-      console.error('Failed to generate summary for new entry:', error);
-    }
-  }
-  
-  // Refresh AI prompt after adding new entry
-  await displayAIPrompt();
-};
-
-// Pure function to clear entry form
-const clearEntryForm = () => {
-  const formFields = ['entry-title', 'entry-content'];
-  formFields.forEach(id => {
-    const element = document.getElementById(id);
-    if (element) element.value = '';
-  });
-};
-
-// Pure function to focus on entry title
-const focusEntryTitle = () => {
-  const titleInput = document.getElementById('entry-title');
-  if (titleInput) titleInput.focus();
-};
-
-// Pure function to create character summary data
-const createCharacterSummary = (character) => {
-  if (!character.name && !character.race && !character.class) {
-    return {
-      name: 'No character created yet',
-      details: 'Click "View Details" to create your character'
-    };
-  }
-  
-  // Functional approach - filter and map instead of push
-  const details = [character.race, character.class]
-    .filter(detail => detail && detail.trim())
-    .join(' • ');
-  
-  return {
-    name: character.name || 'Unnamed Character',
-    details: details || 'Click "View Details" to add more information'
-  };
-};
-
-// Display character summary on main page
-const displayCharacterSummary = () => {
-  const nameElement = document.getElementById('summary-name');
-  const detailsElement = document.getElementById('summary-details');
-  
-  if (!nameElement || !detailsElement) return;
-  
-  const summary = createCharacterSummary(state.character);
-  nameElement.textContent = summary.name;
-  detailsElement.textContent = summary.details;
-};
-
-// Display AI introspection prompt
-const displayAIPrompt = async () => {
-  const promptSection = document.getElementById('ai-prompt-section');
-  const promptText = document.getElementById('ai-prompt-text');
-  
-  if (!promptSection || !promptText) return;
-  
-  // Check if AI features are enabled
-  if (!window.AI || !window.AI.isAIEnabled()) {
-    promptSection.style.display = 'none';
+  if (!formData.title.trim() || !formData.content.trim()) {
+    alert('Please fill in both title and content.');
     return;
   }
   
-  // Show the section
-  promptSection.style.display = 'block';
+  const entry = createEntryFromForm(formData);
   
-  try {
-    // Generate introspection prompt
-    const prompt = await window.AI.generateIntrospectionPrompt(state.character, state.entries);
+  if (isValidEntry(entry)) {
+    state.entries.push(entry);
+    saveData();
+    renderEntries();
+    clearEntryForm();
+    focusEntryTitle();
     
-    if (prompt) {
-      // Format the prompt for proper display
-      const formattedPrompt = formatAIPrompt(prompt);
-      promptText.innerHTML = formattedPrompt;
-      promptText.classList.remove('loading');
-    } else {
-      promptSection.style.display = 'none';
+    // Generate AI summary if available
+    if (isAIEnabled()) {
+      try {
+        await aiGenerateEntrySummary(entry);
+      } catch (error) {
+        console.error('Failed to generate entry summary:', error);
+      }
     }
-  } catch (error) {
-    console.error('Failed to generate AI prompt:', error);
-    promptSection.style.display = 'none';
   }
 };
 
-// Regenerate AI introspection prompt
-const regenerateAIPrompt = async () => {
-  const promptText = document.getElementById('ai-prompt-text');
-  const regenerateBtn = document.getElementById('regenerate-prompt-btn');
-  
-  if (!promptText || !regenerateBtn) return;
-  
-  // Check if AI features are enabled
-  if (!window.AI || !window.AI.isAIEnabled()) {
-    return;
-  }
-  
-  try {
-    // Disable button and show loading state
-    regenerateBtn.disabled = true;
-    promptText.classList.add('loading');
-    promptText.innerHTML = 'Generating a new introspection prompt...';
-    
-    // Generate new introspection prompt
-    const prompt = await window.AI.generateIntrospectionPrompt(state.character, state.entries);
-    
-    if (prompt) {
-      // Format and display the new prompt
-      const formattedPrompt = formatAIPrompt(prompt);
-      promptText.innerHTML = formattedPrompt;
-      promptText.classList.remove('loading');
-    } else {
-      promptText.innerHTML = 'Unable to generate introspection prompt at this time.';
-      promptText.classList.remove('loading');
-    }
-  } catch (error) {
-    console.error('Failed to regenerate AI prompt:', error);
-    promptText.innerHTML = 'Error generating prompt. Please try again.';
-    promptText.classList.remove('loading');
-  } finally {
-    // Re-enable button
-    regenerateBtn.disabled = false;
-  }
-};
-
-// Format AI prompt text for display
-const formatAIPrompt = (prompt) => {
-  if (!prompt) return '';
-  
-  // Convert markdown-like formatting to HTML
-  let formatted = prompt
-    // Convert **bold text** to <strong>
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // Convert line breaks to <br>
-    .replace(/\n/g, '<br>')
-    // Format numbered lists with proper spacing (add break before if not already there)
-    .replace(/<br>(\d+\.\s)/g, '<br><br>$1')
-    // Add extra spacing after section headers (but avoid triple breaks)
-    .replace(/(<strong>.*?<\/strong>)<br><br><br>/g, '$1<br><br>')
-    .replace(/(<strong>.*?<\/strong>)<br>(?!<br>)/g, '$1<br><br>')
-    // Clean up extra breaks at the beginning
-    .replace(/^<br>+/, '');
-  
-  return formatted;
-};
-
-// Setup event handlers for journal entries
-const setupEventHandlers = () => {
-  // Entry inputs - manual save via button
+// Clear entry form
+export const clearEntryForm = () => {
   const titleInput = document.getElementById('entry-title');
-  const contentInput = document.getElementById('entry-content');
-  const addEntryBtn = document.getElementById('add-entry-btn');
+  const contentTextarea = document.getElementById('entry-content');
   
-  if (titleInput && contentInput) {
-    // Add entry on Enter in title field
-    titleInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        contentInput.focus();
-      }
-    });
-    
-    // Add entry on Enter in content field
-    contentInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.ctrlKey) {
-        e.preventDefault();
-        addEntry();
-      }
-    });
-  }
-  
-  // Add entry button click handler
-  if (addEntryBtn) {
-    addEntryBtn.addEventListener('click', addEntry);
-  }
-  
-  // Regenerate AI prompt button click handler
-  const regenerateBtn = document.getElementById('regenerate-prompt-btn');
-  if (regenerateBtn) {
-    regenerateBtn.addEventListener('click', regenerateAIPrompt);
-  }
+  if (titleInput) titleInput.value = '';
+  if (contentTextarea) contentTextarea.value = '';
 };
 
-// Setup remote change listener for sync (ADR-0003)
-const setupSyncListener = () => {
-  if (yjsSync && yjsSync.isAvailable) {
-    yjsSync.onChange((remoteData) => {
-      const localTime = state.lastModified || 0;
-      const remoteTime = remoteData.lastModified || 0;
-      
-      // Only update if remote data is newer
-      if (remoteTime > localTime && JSON.stringify(remoteData) !== JSON.stringify(state)) {
-        // Applying remote changes
-        state = { ...state, ...remoteData };
-        utils.safeSetToStorage(utils.STORAGE_KEYS.JOURNAL, state);
-        
-        // Refresh the UI to show new data
-        displayCharacterSummary();
-        renderEntries();
-      }
-    });
-  }
-};
-
-// Initialize app
-const init = async () => {
-  loadData();
-  setupSyncListener();
-  displayCharacterSummary();
-  renderEntries();
-  setupEventHandlers();
-  
-  // Initialize summarization in background
-  if (window.Summarization) {
-    setTimeout(async () => {
-      await window.Summarization.initializeSummarization();
-    }, 1000); // Delay to not block initial load
-  }
-  
-  // Display AI prompt after everything else is loaded
-  await displayAIPrompt();
-  
-  // Focus on entry title
+// Focus on entry title input
+export const focusEntryTitle = () => {
   const titleInput = document.getElementById('entry-title');
   if (titleInput) {
     titleInput.focus();
   }
 };
 
-// Start the app when DOM is ready
+// Create character summary
+export const createCharacterSummary = (character) => {
+  if (!character || !character.name) {
+    return {
+      name: 'No Character',
+      details: 'Create a character to see details here.'
+    };
+  }
+  
+  const details = [];
+  if (character.race) details.push(`Race: ${character.race}`);
+  if (character.class) details.push(`Class: ${character.class}`);
+  if (character.backstory) details.push(`Backstory: ${character.backstory}`);
+  if (character.notes) details.push(`Notes: ${character.notes}`);
+  
+  return {
+    name: character.name,
+    details: details.join(' | ')
+  };
+};
+
+// Display character summary
+export const displayCharacterSummary = () => {
+  const characterSummary = document.getElementById('character-summary');
+  if (!characterSummary) return;
+  
+  const summary = createCharacterSummary(state.character);
+  characterSummary.innerHTML = `
+    <h3>${summary.name}</h3>
+    <p>${summary.details}</p>
+  `;
+};
+
+// Display AI prompt
+export const displayAIPrompt = async () => {
+  const aiPromptText = document.getElementById('ai-prompt-text');
+  if (!aiPromptText) return;
+  
+  try {
+    const prompt = await generateIntrospectionPrompt(state.character, state.entries);
+    if (prompt) {
+      aiPromptText.innerHTML = formatAIPrompt(prompt);
+    }
+  } catch (error) {
+    console.error('Failed to generate AI prompt:', error);
+    aiPromptText.innerHTML = '<p>Unable to generate AI prompt at this time.</p>';
+  }
+};
+
+// Regenerate AI prompt
+export const regenerateAIPrompt = async () => {
+  const aiPromptText = document.getElementById('ai-prompt-text');
+  const regenerateBtn = document.getElementById('regenerate-prompt-btn');
+  
+  if (!aiPromptText || !regenerateBtn) return;
+  
+  try {
+    regenerateBtn.disabled = true;
+    regenerateBtn.textContent = 'Generating...';
+    
+    const prompt = await generateIntrospectionPrompt(state.character, state.entries);
+    
+    if (prompt) {
+      aiPromptText.innerHTML = formatAIPrompt(prompt);
+    }
+  } catch (error) {
+    console.error('Failed to regenerate AI prompt:', error);
+  } finally {
+    regenerateBtn.disabled = false;
+    regenerateBtn.textContent = 'Regenerate';
+  }
+};
+
+// Format AI prompt for display
+export const formatAIPrompt = (prompt) => {
+  return prompt
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .map(line => `<p>${line}</p>`)
+    .join('');
+};
+
+// Setup event handlers
+export const setupEventHandlers = () => {
+  const addEntryBtn = document.getElementById('add-entry-btn');
+  if (addEntryBtn) {
+    addEntryBtn.addEventListener('click', addEntry);
+  }
+  
+  const regeneratePromptBtn = document.getElementById('regenerate-prompt-btn');
+  if (regeneratePromptBtn) {
+    regeneratePromptBtn.addEventListener('click', regenerateAIPrompt);
+  }
+  
+  // Enter key to add entry
+  const titleInput = document.getElementById('entry-title');
+  const contentTextarea = document.getElementById('entry-content');
+  
+  const handleEnterKey = (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      addEntry();
+    }
+  };
+  
+  if (titleInput) titleInput.addEventListener('keydown', handleEnterKey);
+  if (contentTextarea) contentTextarea.addEventListener('keydown', handleEnterKey);
+};
+
+// Setup sync listener for real-time updates
+export const setupSyncListener = () => {
+  if (yjsSync && yjsSync.isAvailable) {
+    yjsSync.onUpdate(() => {
+      // Reload data from sync
+      const syncData = yjsSync.getData();
+      if (syncData) {
+        state = { ...state, ...syncData };
+        renderEntries();
+        displayCharacterSummary();
+      }
+    });
+  }
+};
+
+// Initialize app
+export const init = async () => {
+  loadData();
+  renderEntries();
+  displayCharacterSummary();
+  setupEventHandlers();
+  setupSyncListener();
+  
+  // Initialize summarization if available
+  if (typeof window !== 'undefined' && window.Summarization) {
+    try {
+      await window.Summarization.initializeSummarization();
+    } catch (error) {
+      console.error('Failed to initialize summarization:', error);
+    }
+  }
+  
+  // Display AI prompt
+  await displayAIPrompt();
+};
+
+// Reset state to initial values (for testing)
+export const resetState = () => {
+  state = createInitialJournalState();
+  // Update global state reference for tests
+  if (typeof global !== 'undefined') {
+    global.state = state;
+  }
+};
+
+// Export state for testing
+export { state };
+
+// Start when DOM is ready
 document.addEventListener('DOMContentLoaded', init);
 
-// Export functions for testing (only in test environment)
+// Export for testing (backward compatibility)
 if (typeof global !== 'undefined') {
-  global.state = state;
   global.loadData = loadData;
   global.saveData = saveData;
-  global.getEntrySummary = getEntrySummary;
-  global.createEntryElement = createEntryElement;
-  global.enableEditMode = enableEditMode;
-  global.saveEdit = saveEdit;
-  global.cancelEdit = cancelEdit;
-  global.renderEntries = renderEntries;
-  global.addEntry = addEntry;
-  global.createCharacterSummary = createCharacterSummary;
-  global.displayCharacterSummary = displayCharacterSummary;
-  global.displayAIPrompt = displayAIPrompt;
-  global.regenerateAIPrompt = regenerateAIPrompt;
-  global.formatAIPrompt = formatAIPrompt;
-  global.init = init;
+  global.state = state;
+  global.resetState = resetState;
 }

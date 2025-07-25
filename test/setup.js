@@ -1,74 +1,85 @@
-const { JSDOM } = require('jsdom');
-const chai = require('chai');
+import { JSDOM } from 'jsdom';
+import chai from 'chai';
 
 // Enable should syntax
 chai.should();
 
-// Setup DOM environment
+// Setup DOM environment (JSDOM sets up window, document, navigator, HTMLElement)
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
   url: 'http://localhost',
   pretendToBeVisual: true,
   resources: 'usable'
 });
 
-// Make DOM globals available
 global.window = dom.window;
 global.document = dom.window.document;
-global.navigator = dom.window.navigator;
-global.HTMLElement = dom.window.HTMLElement;
-global.btoa = (str) => Buffer.from(str, 'binary').toString('base64');
-global.atob = (str) => Buffer.from(str, 'base64').toString('binary');
-global.localStorage = {
+// JSDOM already sets global.navigator and global.HTMLElement
+
+// Create a robust localStorage mock
+const createLocalStorageMock = () => ({
   data: {},
-  getItem(key) {
-    return this.data[key] || null;
+  getItem: function(key) { 
+    return this.data[key] || null; 
   },
-  setItem(key, value) {
-    this.data[key] = value;
+  setItem: function(key, value) { 
+    this.data[key] = value; 
   },
-  removeItem(key) {
-    delete this.data[key];
+  removeItem: function(key) { 
+    delete this.data[key]; 
   },
-  clear() {
-    this.data = {};
+  clear: function() { 
+    this.data = {}; 
   }
-};
+});
 
-// Mock console methods to avoid noise in tests
+// Initialize localStorage
+global.localStorage = createLocalStorageMock();
+
+// Add or override missing globals
+if (!global.btoa) {
+  global.btoa = function(str) { return Buffer.from(str, 'binary').toString('base64'); };
+}
+if (!global.atob) {
+  global.atob = function(str) { return Buffer.from(str, 'base64').toString('binary'); };
+}
+
 global.console = {
-  ...console,
-  error: () => {},
-  warn: () => {},
-  log: () => {}
+  error: function() {},
+  warn: function() {},
+  log: function() {},
+  info: function() {},
+  debug: function() {}
 };
 
-// Mock fetch to prevent actual network calls in tests
-global.fetch = async (url, options) => {
+global.fetch = async function(url, options) {
   // Mock OpenAI API responses
   if (url.includes('openai.com')) {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 10));
-    
-    // Return mock successful response
+    await new Promise(function(resolve) { setTimeout(resolve, 10); });
     return {
       ok: true,
       status: 200,
-      json: async () => ({
-        choices: [{
-          message: {
-            content: "1. What pivotal moment shaped your character?\n2. What internal conflict drives you?\n3. How might recent events change your path?\n4. What unexpected truth about yourself have you yet to discover?"
-          }
-        }]
-      })
+      json: async function() {
+        return {
+          choices: [{
+            message: {
+              content: "1. What pivotal moment shaped your character?\n2. What internal conflict drives you?\n3. How might recent events change your path?\n4. What unexpected truth about yourself have you yet to discover?"
+            }
+          }]
+        };
+      }
     };
   }
-  
-  // For any other URLs, return empty response
   return {
     ok: false,
     status: 404,
-    json: async () => ({})
+    json: async function() { return {}; }
   };
 };
 
-module.exports = { chai, should: chai.should() };
+// Add cleanup function to reset localStorage between tests
+global.resetLocalStorage = () => {
+  global.localStorage = createLocalStorageMock();
+};
+
+export { chai };
+export const should = chai.should();

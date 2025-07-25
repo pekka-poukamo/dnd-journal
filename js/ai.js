@@ -22,6 +22,14 @@
 //
 // ================================
 
+import { 
+  loadDataWithFallback, 
+  createInitialSettings, 
+  getWordCount, 
+  STORAGE_KEYS, 
+  safeSetToStorage 
+} from './utils.js';
+
 // Unified narrative-focused system prompt with unobvious question element
 const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
 
@@ -38,48 +46,24 @@ Make questions specific to the character's situation and recent adventures. Focu
 // END SYSTEM PROMPT CONFIGURATIONS
 // ================================
 
-// Get utils reference - works in both browser and test environment
-const getUtils = () => {
-  if (typeof window !== 'undefined' && window.Utils) return window.Utils;
-  if (typeof global !== 'undefined' && global.Utils) return global.Utils;
-  try {
-    return require('./utils.js');
-  } catch (e) {
-    try {
-      return require('../js/utils.js');
-    } catch (e2) {
-      // Fallback for tests
-      return {
-        loadDataWithFallback: (key, fallback) => fallback,
-        createInitialSettings: () => ({ apiKey: '', enableAIFeatures: false }),
-        getWordCount: (text) => text.trim().split(/\s+/).filter(word => word.length > 0).length,
-        STORAGE_KEYS: { SETTINGS: 'simple-dnd-journal-settings', SUMMARIES: 'simple-dnd-journal-summaries' },
-        safeSetToStorage: () => ({ success: true })
-      };
-    }
-  }
-};
-
-const utils = getUtils();
-
 // Pure function to load settings
-const loadAISettings = () => {
-  return utils.loadDataWithFallback(
-    utils.STORAGE_KEYS.SETTINGS, 
-    utils.createInitialSettings()
+export const loadAISettings = () => {
+  return loadDataWithFallback(
+    STORAGE_KEYS.SETTINGS, 
+    createInitialSettings()
   );
 };
 
 // Pure function to check if AI features are available
-const isAIEnabled = () => {
+export const isAIEnabled = () => {
   const settings = loadAISettings();
   return Boolean(settings.enableAIFeatures && settings.apiKey && settings.apiKey.startsWith('sk-'));
 };
 
 // Pure function to create introspection prompt
-const createIntrospectionPrompt = (character, formattedEntries) => {
+export const createIntrospectionPrompt = (character, formattedEntries) => {
   // Use formatted character that may include summarized backstory/notes
-  const formattedCharacter = window.Summarization ? 
+  const formattedCharacter = typeof window !== 'undefined' && window.Summarization ? 
     window.Summarization.getFormattedCharacterForAI(character) : 
     character;
   
@@ -109,7 +93,7 @@ Please create 4 introspective questions (3 core narrative + 1 unobvious) that wo
 };
 
 // Call OpenAI API for text generation
-const callOpenAI = async (prompt, maxTokens = 400) => {
+export const callOpenAI = async (prompt, maxTokens = 400) => {
   const settings = loadAISettings();
   
   if (!settings.apiKey) {
@@ -154,7 +138,7 @@ const callOpenAI = async (prompt, maxTokens = 400) => {
 };
 
 // Generate introspection prompt
-const generateIntrospectionPrompt = async (character, entries) => {
+export const generateIntrospectionPrompt = async (character, entries) => {
   if (!isAIEnabled()) {
     return null;
   }
@@ -162,7 +146,7 @@ const generateIntrospectionPrompt = async (character, entries) => {
   try {
     // Use formatted entries that include summaries for older entries
     let formattedEntries;
-    if (window.Summarization) {
+    if (typeof window !== 'undefined' && window.Summarization) {
       formattedEntries = window.Summarization.getFormattedEntriesForAI();
     } else {
       // Fallback: Get last 5 entries for context
@@ -181,16 +165,14 @@ const generateIntrospectionPrompt = async (character, entries) => {
   }
 };
 
-
-
 // Generate entry summary
-const generateEntrySummary = async (entry) => {
+export const generateEntrySummary = async (entry) => {
   if (!isAIEnabled()) {
     return null;
   }
 
   try {
-    const wordCount = utils.getWordCount(entry.content);
+    const wordCount = getWordCount(entry.content);
     const targetLength = Math.max(10, Math.floor(wordCount * 0.3)); // 30% of original length
     
     const prompt = `Summarize this D&D journal entry in approximately ${targetLength} words. Keep the key events, emotions, and character development:
@@ -204,7 +186,7 @@ Content: ${entry.content}`;
       id: entry.id,
       originalWordCount: wordCount,
       summary: summary,
-      summaryWordCount: utils.getWordCount(summary),
+      summaryWordCount: getWordCount(summary),
       timestamp: Date.now()
     };
   } catch (error) {
@@ -215,16 +197,16 @@ Content: ${entry.content}`;
 
 // Load stored summaries
 const loadStoredSummaries = () => {
-  return utils.loadDataWithFallback(utils.STORAGE_KEYS.SUMMARIES, {});
+  return loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
 };
 
 // Save summaries to localStorage
 const saveStoredSummaries = (summaries) => {
-  utils.safeSetToStorage(utils.STORAGE_KEYS.SUMMARIES, summaries);
+  safeSetToStorage(STORAGE_KEYS.SUMMARIES, summaries);
 };
 
 // Get or generate summary for an entry
-const getEntrySummary = async (entry) => {
+export const getEntrySummary = async (entry) => {
   const storedSummaries = loadStoredSummaries();
   
   // Return existing summary if available
@@ -243,42 +225,6 @@ const getEntrySummary = async (entry) => {
 };
 
 // Helper function for prompt information
-const getPromptDescription = () => {
+export const getPromptDescription = () => {
   return 'Narrative-focused introspection with 3 core questions + 1 unobvious question';
 };
-
-// Export functions
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    loadAISettings,
-    isAIEnabled,
-    createIntrospectionPrompt,
-    generateIntrospectionPrompt,
-    generateEntrySummary,
-    getEntrySummary,
-    callOpenAI,
-    getPromptDescription
-  };
-} else if (typeof global !== 'undefined') {
-  // For testing
-  global.loadAISettings = loadAISettings;
-  global.isAIEnabled = isAIEnabled;
-  global.createIntrospectionPrompt = createIntrospectionPrompt;
-  global.generateIntrospectionPrompt = generateIntrospectionPrompt;
-  global.generateEntrySummary = generateEntrySummary;
-  global.getEntrySummary = getEntrySummary;
-  global.callOpenAI = callOpenAI;
-  global.getPromptDescription = getPromptDescription;
-} else {
-  // For browser
-  window.AI = {
-    loadAISettings,
-    isAIEnabled,
-    createIntrospectionPrompt,
-    generateIntrospectionPrompt,
-    generateEntrySummary,
-    getEntrySummary,
-    callOpenAI,
-    getPromptDescription
-  };
-}
