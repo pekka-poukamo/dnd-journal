@@ -108,5 +108,5 @@ export const getCharacterFormFieldIds = () => [
   'character-notes'
 ];
 
-// Pure function to convert field ID to property name
+// Pure function to convert field ID to property name for character forms
 export const getPropertyNameFromFieldId = (fieldId) => fieldId.replace('character-', '');
