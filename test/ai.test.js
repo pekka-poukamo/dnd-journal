@@ -654,4 +654,79 @@ describe('AI Module', function() {
       expect(totalTokens).to.equal(8); // 4 tokens overhead per message
     });
   });
+
+  describe('getFormattedEntriesForAI', function() {
+    beforeEach(function() {
+      global.resetLocalStorage();
+    });
+
+    it('should exclude entries that are already included in meta-summaries', function() {
+      // Set up test data with entries and meta-summaries
+      const now = Date.now();
+      const journalData = {
+        character: { name: 'Test Character' },
+        entries: [
+          { id: 'entry-1', title: 'Recent Entry 1', content: 'Recent content 1', timestamp: now },
+          { id: 'entry-2', title: 'Recent Entry 2', content: 'Recent content 2', timestamp: now - 1000 },
+          { id: 'entry-3', title: 'Recent Entry 3', content: 'Recent content 3', timestamp: now - 2000 },
+          { id: 'entry-4', title: 'Recent Entry 4', content: 'Recent content 4', timestamp: now - 3000 },
+          { id: 'entry-5', title: 'Recent Entry 5', content: 'Recent content 5', timestamp: now - 4000 },
+          { id: 'entry-6', title: 'Old Entry', content: 'Old content', timestamp: now - 1000000 } // Much older
+        ]
+      };
+      
+              // Create entry summaries
+        const entrySummaries = {
+          'entry-6': {
+            id: 'entry-6',
+            summary: 'Summary of old entry',
+            originalWordCount: 10,
+            summaryWordCount: 5,
+            timestamp: now
+          }
+        };
+        
+        // Create meta-summary that includes entry-6
+        const metaSummaries = {
+          'meta-1': {
+            id: 'meta-1',
+            title: 'Adventures Summary (1 entries)',
+            summary: 'Meta summary including old entry',
+            includedSummaryIds: ['entry-6'], // This entry should be excluded from individual entries
+            timestamp: now
+          }
+        };
+      
+      // Store test data
+      global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
+      global.localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify(entrySummaries));
+      global.localStorage.setItem('simple-dnd-journal-meta-summaries', JSON.stringify(metaSummaries));
+      
+      // Call the function
+      const formattedEntries = AI.getFormattedEntriesForAI();
+      
+      // Verify results
+      expect(formattedEntries).to.be.an('array');
+      
+              // Should have 5 recent entries and meta-summary, but NOT entry-6 individually
+        const entryTitles = formattedEntries.map(e => e.title);
+        expect(entryTitles).to.include('Recent Entry 1'); // entry-1 should be included
+        expect(entryTitles).to.include('Recent Entry 2'); // entry-2 should be included
+        expect(entryTitles).to.include('Recent Entry 3'); // entry-3 should be included
+        expect(entryTitles).to.include('Recent Entry 4'); // entry-4 should be included
+        expect(entryTitles).to.include('Recent Entry 5'); // entry-5 should be included
+        expect(entryTitles).to.include('Adventures Summary (1 entries)'); // meta-summary should be included
+        expect(entryTitles).to.not.include('Old Entry'); // entry-6 should NOT be included individually
+        
+        // Verify entry types
+        const recentEntries = formattedEntries.filter(e => e.type === 'recent');
+        const metaSummaryEntries = formattedEntries.filter(e => e.type === 'meta-summary');
+        
+        expect(recentEntries).to.have.length(5);
+        expect(recentEntries[0].title).to.equal('Recent Entry 1');
+      
+      expect(metaSummaryEntries).to.have.length(1);
+      expect(metaSummaryEntries[0].title).to.equal('Adventures Summary (1 entries)');
+    });
+  });
 });

@@ -344,13 +344,24 @@ export const getFormattedEntriesForAI = () => {
   const entrySummaries = loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
   const metaSummaries = loadDataWithFallback('simple-dnd-journal-meta-summaries', {});
   
+  // Get all entry IDs that are already included in meta-summaries to avoid duplication
+  const entriesInMetaSummaries = new Set();
+  Object.values(metaSummaries).forEach(metaSummary => {
+    if (metaSummary.includedSummaryIds) {
+      metaSummary.includedSummaryIds.forEach(entryId => {
+        // Entry summaries are keyed by entry ID, so the summaryId is the entryId
+        entriesInMetaSummaries.add(entryId);
+      });
+    }
+  });
+  
   const sortedEntries = [...(journalData.entries || [])].sort((a, b) => b.timestamp - a.timestamp);
   const recentEntries = sortedEntries.slice(0, 5); // Keep 5 most recent entries in full
   const olderEntries = sortedEntries.slice(5);
   
   const formattedEntries = [];
   
-  // Add recent entries in full
+  // Add recent entries in full (these are always included regardless of meta-summaries)
   recentEntries.forEach(entry => {
     formattedEntries.push({
       type: 'recent',
@@ -360,8 +371,13 @@ export const getFormattedEntriesForAI = () => {
     });
   });
   
-  // Add individual summaries for older entries
+  // Add individual summaries for older entries, but only if they're not already in meta-summaries
   olderEntries.forEach(entry => {
+    // Skip entries that are already included in meta-summaries
+    if (entriesInMetaSummaries.has(entry.id)) {
+      return;
+    }
+    
     const summary = entrySummaries[entry.id];
     if (summary) {
       formattedEntries.push({
@@ -381,7 +397,7 @@ export const getFormattedEntriesForAI = () => {
     }
   });
   
-  // Add meta-summaries for very old entries
+  // Add meta-summaries for very old entries (these replace the individual entries)
   Object.values(metaSummaries).forEach(metaSummary => {
     formattedEntries.push({
       type: 'meta-summary',

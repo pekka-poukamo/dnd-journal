@@ -768,6 +768,58 @@ describe('Summarization Module', () => {
       expect(loaded).to.have.property('meta-1');
       expect(loaded['meta-1']).to.deep.equal(metaSummary);
     });
+
+    it('should clear all summaries', () => {
+      // Set up test data
+      const entrySummary = {
+        id: 'test-entry',
+        summary: 'Test summary',
+        originalWordCount: 100,
+        summaryWordCount: 20,
+        timestamp: Date.now()
+      };
+      
+      const characterSummary = {
+        field: 'backstory',
+        summary: 'Character summary',
+        originalWordCount: 150,
+        summaryWordCount: 30,
+        timestamp: Date.now()
+      };
+      
+      const metaSummary = {
+        id: 'meta-1',
+        title: 'Meta summary',
+        summary: 'Meta summary content',
+        includedSummaryIds: ['test-entry'],
+        timestamp: Date.now()
+      };
+      
+      // Save test data
+      SummaryStorage.saveEntrySummary('test-entry', entrySummary);
+      SummaryStorage.saveCharacterSummary('backstory', characterSummary);
+      SummaryStorage.saveMetaSummary('meta-1', metaSummary);
+      
+      // Verify data exists
+      expect(SummaryStorage.loadEntrySummaries()).to.have.property('test-entry');
+      expect(SummaryStorage.loadCharacterSummaries()).to.have.property('backstory');
+      expect(SummaryStorage.loadMetaSummaries()).to.have.property('meta-1');
+      
+      // Clear all summaries
+      const result = SummaryStorage.clearAllSummaries();
+      
+      // Verify clearing was successful
+      expect(result).to.have.property('success', true);
+      expect(result).to.have.property('results');
+      expect(result.results.entrySummaries).to.be.true;
+      expect(result.results.metaSummaries).to.be.true;
+      expect(result.results.characterSummaries).to.be.true;
+      
+      // Verify all summaries are cleared
+      expect(SummaryStorage.loadEntrySummaries()).to.deep.equal({});
+      expect(SummaryStorage.loadCharacterSummaries()).to.deep.equal({});
+      expect(SummaryStorage.loadMetaSummaries()).to.deep.equal({});
+    });
   });
 
   describe('Error Handling', () => {

@@ -93,3 +93,34 @@ export const getSummaryStats = () => {
     totalSummaries: summarizedEntries + metaSummaryCount + Object.keys(characterSummaries).length
   };
 };
+
+// Clear all summaries - useful for regeneration or troubleshooting
+export const clearAllSummaries = () => {
+  try {
+    // Clear entry summaries
+    const entryResult = saveEntrySummaries({});
+    
+    // Clear meta-summaries
+    const metaResult = saveMetaSummaries({});
+    
+    // Clear character summaries
+    const characterResult = saveCharacterSummaries({});
+    
+    // Check if all operations succeeded
+    const allSucceeded = entryResult.success && metaResult.success && characterResult.success;
+    
+    return {
+      success: allSucceeded,
+      results: {
+        entrySummaries: entryResult.success,
+        metaSummaries: metaResult.success,
+        characterSummaries: characterResult.success
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
