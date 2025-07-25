@@ -99,6 +99,101 @@ describe('AI Module', function() {
         global.fetch = originalFetch;
       }
     });
+
+    it('should use fallback entry formatting when Summarization is not available', async function() {
+      // Clear and reset localStorage to ensure clean state
+      global.resetLocalStorage();
+      
+      const character = {
+        name: 'Gandalf',
+        race: 'Wizard',
+        class: 'Mage'
+      };
+
+      // Create more than 5 entries to test the sorting and slicing
+      const entries = [];
+      for (let i = 0; i < 8; i++) {
+        entries.push({
+          id: `entry-${i}`,
+          title: `Test Entry ${i}`,
+          content: `Test content ${i}`,
+          timestamp: Date.now() - (i * 1000) // Make timestamps different
+        });
+      }
+
+      // Set up valid AI settings AFTER localStorage reset
+      const testSettings = {
+        apiKey: 'sk-test123',
+        enableAIFeatures: true
+      };
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+
+      // Verify AI is enabled
+      expect(AI.isAIEnabled()).to.be.true;
+
+      // Ensure window.Summarization is NOT available (test the fallback path)
+      const originalWindow = global.window;
+      global.window = undefined;
+
+      // Mock successful fetch
+      const originalFetch = global.fetch;
+      global.fetch = async (url, options) => {
+        return {
+          ok: true,
+          json: async () => ({
+            choices: [{
+              message: {
+                content: 'Generated introspection prompt using fallback'
+              }
+            }]
+          })
+        };
+      };
+
+      const result = await AI.generateIntrospectionPrompt(character, entries);
+      expect(result).to.equal('Generated introspection prompt using fallback');
+
+      // Cleanup
+      global.fetch = originalFetch;
+      global.window = originalWindow;
+    });
+
+    it('should handle errors in generateIntrospectionPrompt', async function() {
+      // Clear and reset localStorage to ensure clean state
+      global.resetLocalStorage();
+      
+      const character = {
+        name: 'Gandalf',
+        race: 'Wizard',
+        class: 'Mage'
+      };
+
+      const entries = [{
+        id: '1',
+        title: 'Test Entry',
+        content: 'Test content',
+        timestamp: Date.now()
+      }];
+
+      // Set up valid AI settings AFTER localStorage reset
+      const testSettings = {
+        apiKey: 'sk-test123',
+        enableAIFeatures: true
+      };
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+
+      // Mock fetch to throw an error
+      const originalFetch = global.fetch;
+      global.fetch = async () => {
+        throw new Error('Network error');
+      };
+
+      const result = await AI.generateIntrospectionPrompt(character, entries);
+      expect(result).to.be.null;
+
+      // Cleanup
+      global.fetch = originalFetch;
+    });
   });
 
   describe('generateEntrySummary', function() {
@@ -226,6 +321,179 @@ describe('AI Module', function() {
       expect(description).to.be.a('string');
       // The actual description might not contain 'summary' - just check it's a string
       expect(description.length).to.be.greaterThan(0);
+    });
+  });
+
+  describe('getEntrySummary', function() {
+    beforeEach(function() {
+      global.resetLocalStorage();
+    });
+
+    afterEach(function() {
+      global.resetLocalStorage();
+    });
+
+    it('should return existing summary from localStorage', async function() {
+      const entry = {
+        id: 'test-entry-1',
+        title: 'Test Entry',
+        content: 'This is test content',
+        timestamp: Date.now()
+      };
+
+      const existingSummary = 'This is an existing summary';
+      
+      // Store existing summary
+      const summaries = { [entry.id]: existingSummary };
+      global.localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify(summaries));
+
+      const result = await AI.getEntrySummary(entry);
+      expect(result).to.equal(existingSummary);
+    });
+
+    it('should generate new summary when none exists', async function() {
+      // Clear and reset localStorage to ensure clean state
+      global.resetLocalStorage();
+      
+      // Set up AI settings to enable AI AFTER localStorage reset
+      const testSettings = {
+        apiKey: 'sk-test123',
+        enableAIFeatures: true
+      };
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+
+      // Verify AI is enabled
+      expect(AI.isAIEnabled()).to.be.true;
+
+      const entry = {
+        id: 'new-entry',
+        title: 'Test Entry',
+        content: 'This is test content that needs summarization',
+        timestamp: Date.now()
+      };
+
+      // Mock fetch for successful API call
+      const originalFetch = global.fetch;
+      global.fetch = async () => ({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: 'Generated summary of the entry'
+            }
+          }]
+        })
+      });
+
+      const result = await AI.getEntrySummary(entry);
+      expect(result).to.be.an('object');
+      expect(result.summary).to.equal('Generated summary of the entry');
+      expect(result.id).to.equal(entry.id);
+      
+      // Verify summary was saved to localStorage
+      const storedSummaries = JSON.parse(global.localStorage.getItem('simple-dnd-journal-summaries') || '{}');
+      expect(storedSummaries[entry.id]).to.be.an('object');
+      expect(storedSummaries[entry.id].summary).to.equal('Generated summary of the entry');
+
+      global.fetch = originalFetch;
+    });
+
+    it('should return null when summary generation fails', async function() {
+      // Clear and reset localStorage to ensure clean state
+      global.resetLocalStorage();
+      
+      // Set up AI settings to enable AI AFTER localStorage reset
+      const testSettings = {
+        apiKey: 'sk-test123',
+        enableAIFeatures: true
+      };
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+
+      const entry = {
+        id: 'failed-entry',
+        title: 'Test Entry',
+        content: 'This is test content',
+        timestamp: Date.now()
+      };
+
+      // Mock fetch to fail
+      const originalFetch = global.fetch;
+      global.fetch = async () => {
+        throw new Error('API Error');
+      };
+
+      const result = await AI.getEntrySummary(entry);
+      expect(result).to.be.null;
+
+      global.fetch = originalFetch;
+    });
+
+    it('should handle corrupted localStorage data gracefully', async function() {
+      const entry = {
+        id: 'test-entry',
+        title: 'Test Entry',
+        content: 'This is test content',
+        timestamp: Date.now()
+      };
+
+      // Store invalid JSON
+      global.localStorage.setItem('simple-dnd-journal-summaries', 'invalid-json');
+
+      const result = await AI.getEntrySummary(entry);
+      expect(result).to.be.null;
+    });
+  });
+
+  describe('AI Settings Functions', function() {
+    beforeEach(function() {
+      global.resetLocalStorage();
+    });
+
+    afterEach(function() {
+      global.resetLocalStorage();
+    });
+
+    it('should load AI settings from localStorage', function() {
+      const testSettings = {
+        apiKey: 'sk-test123',
+        enableAIFeatures: true
+      };
+
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+
+      // Note: loadAISettings is not exported, but we can test isAIEnabled which uses it
+      const isEnabled = AI.isAIEnabled();
+      expect(isEnabled).to.be.true;
+    });
+
+    it('should return false when AI features are disabled', function() {
+      const testSettings = {
+        apiKey: 'sk-test123',
+        enableAIFeatures: false
+      };
+
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+
+      const isEnabled = AI.isAIEnabled();
+      expect(isEnabled).to.be.false;
+    });
+
+    it('should return false when no API key is provided', function() {
+      const testSettings = {
+        apiKey: '',
+        enableAIFeatures: true
+      };
+
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+
+      const isEnabled = AI.isAIEnabled();
+      expect(isEnabled).to.be.false;
+    });
+
+    it('should return false with default settings', function() {
+      // No settings in localStorage, should use defaults
+      const isEnabled = AI.isAIEnabled();
+      expect(isEnabled).to.be.false;
     });
   });
 });
