@@ -153,6 +153,10 @@ describe('AI Module', function() {
       const prompt = 'Test prompt';
       const apiKey = 'test-key';
 
+      // Set up API key in settings
+      const settings = { apiKey: apiKey, enableAIFeatures: true };
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(settings));
+
       const result = await AI.callOpenAI(prompt, apiKey);
       expect(result).to.be.a('string');
       expect(result.length).to.be.greaterThan(0);
@@ -161,6 +165,10 @@ describe('AI Module', function() {
     it('should handle API errors', async function() {
       const prompt = 'Test prompt';
       const apiKey = 'invalid-key';
+
+      // Set up API key in settings
+      const settings = { apiKey: apiKey, enableAIFeatures: true };
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(settings));
 
       // Mock fetch to return error
       const originalFetch = global.fetch;
@@ -171,8 +179,10 @@ describe('AI Module', function() {
       });
 
       try {
-        const result = await AI.callOpenAI(prompt, apiKey);
-        expect(result).to.be.null;
+        await AI.callOpenAI(prompt, apiKey);
+        expect.fail('Expected function to throw an error');
+      } catch (error) {
+        expect(error.message).to.equal('API request failed');
       } finally {
         global.fetch = originalFetch;
       }
@@ -182,6 +192,10 @@ describe('AI Module', function() {
       const prompt = 'Test prompt';
       const apiKey = 'test-key';
 
+      // Set up API key in settings
+      const settings = { apiKey: apiKey, enableAIFeatures: true };
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(settings));
+
       // Mock fetch to throw error
       const originalFetch = global.fetch;
       global.fetch = async () => {
@@ -189,8 +203,10 @@ describe('AI Module', function() {
       };
 
       try {
-        const result = await AI.callOpenAI(prompt, apiKey);
-        expect(result).to.be.null;
+        await AI.callOpenAI(prompt, apiKey);
+        expect.fail('Expected function to throw an error');
+      } catch (error) {
+        expect(error.message).to.equal('Network error');
       } finally {
         global.fetch = originalFetch;
       }

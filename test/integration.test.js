@@ -233,6 +233,14 @@ describe('D&D Journal Integration Tests', function() {
   });
 
   it('should handle entry editing workflow', function() {
+    // Ensure entries-list element exists
+    let entriesList = document.getElementById('entries-list');
+    if (!entriesList) {
+      entriesList = document.createElement('div');
+      entriesList.id = 'entries-list';
+      document.body.appendChild(entriesList);
+    }
+
     // Add an entry
     App.state.entries.push({
       id: '1',

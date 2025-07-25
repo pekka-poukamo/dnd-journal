@@ -11,7 +11,7 @@ describe('Yjs Sync (Functional)', () => {
     global.window.Y = undefined;
     global.window.WebsocketProvider = undefined;
     global.window.IndexeddbPersistence = undefined;
-    global.window.location = { search: '', href: 'http://localhost:3000' };
+    // Don't set location directly to avoid JSDOM navigation errors
   });
 
   describe('Graceful Degradation (ADR-0003)', () => {

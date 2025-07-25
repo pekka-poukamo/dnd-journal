@@ -207,13 +207,22 @@ const notifyCallbacks = (state) => {
 
 // Get sync status
 const getSyncStatus = () => {
+  const deviceId = getDeviceId();
+  
   if (!syncState.isAvailable) {
-    return { available: false, reason: 'Yjs not loaded' };
+    return { 
+      available: false, 
+      reason: 'Yjs not loaded',
+      deviceId,
+      connected: false
+    };
   }
   
   return {
     available: true,
+    reason: 'Yjs loaded successfully',
     connected: syncState.isConnected,
+    deviceId,
     providers: syncState.providers.map(p => ({
       url: p.url,
       connected: p.wsconnected || false
