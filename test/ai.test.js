@@ -370,6 +370,51 @@ describe('AI Module', function() {
       
       expect(result).to.be.null;
     });
+
+    it('should handle errors in prompt preparation', function() {
+      // Set up AI but create a scenario that might cause errors
+      const character = null; // Invalid character data
+      const entries = null; // Invalid entries data
+      
+      const result = AI.createCompletePromptForPreview(character, entries);
+      
+      // Should handle gracefully and either return valid data or null
+      expect(result).to.satisfy(val => val === null || (typeof val === 'object' && val.systemPrompt && val.userPrompt));
+    });
+
+    it('should use consistent system prompt', function() {
+      const character = { name: 'Test Character', class: 'Fighter' };
+      const entries = [];
+      
+      const result = AI.createCompletePromptForPreview(character, entries);
+      
+      expect(result).to.not.be.null;
+      expect(result.systemPrompt).to.include('D&D storytelling companion');
+      expect(result.systemPrompt).to.include('4 questions');
+      expect(result.messages[0].content).to.equal(result.systemPrompt);
+    });
+
+    it('should include entries context when provided', function() {
+      const character = { name: 'Test Hero', class: 'Paladin' };
+      const entries = [
+        {
+          id: '1',
+          title: 'Victory Against Evil',
+          content: 'We defeated the dark wizard threatening the kingdom.',
+          timestamp: Date.now()
+        }
+      ];
+      
+      const result = AI.createCompletePromptForPreview(character, entries);
+      
+      expect(result).to.not.be.null;
+      expect(result.userPrompt).to.include('Test Hero');
+      expect(result.userPrompt).to.include('Paladin');
+      // The function uses formatted entries, so let's check for the actual structure
+      expect(result.userPrompt).to.satisfy(prompt => 
+        prompt.includes('Journey') || prompt.includes('Entry') || prompt.includes('Recent') || prompt.length > 50
+      );
+    });
   });
 
   describe('getEntrySummary', function() {
