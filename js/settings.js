@@ -266,6 +266,7 @@ const testSyncServer = async (serverUrl) => {
       'wss://demos.yjs.dev',
       'wss://y-websocket.herokuapp.com'
     ];
+    // Note: These are demo servers that may have limited reliability
     
     // Test the first available public server
     for (const server of defaultServers) {
