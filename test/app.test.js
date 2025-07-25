@@ -109,6 +109,43 @@ describe('D&D Journal App', function() {
     });
   });
 
+  describe('Markdown Parsing', function() {
+    it('should parse bold text', function() {
+      const result = App.parseMarkdown('This is **bold** text');
+      expect(result).to.include('<strong>bold</strong>');
+    });
+
+    it('should parse italic text', function() {
+      const result = App.parseMarkdown('This is *italic* text');
+      expect(result).to.include('<em>italic</em>');
+    });
+
+    it('should parse code text', function() {
+      const result = App.parseMarkdown('This is `code` text');
+      expect(result).to.include('<code>code</code>');
+    });
+
+    it('should parse unordered lists', function() {
+      const result = App.parseMarkdown('- Item 1\n- Item 2');
+      expect(result).to.include('<ul><li>Item 1</li><li>Item 2</li></ul>');
+    });
+
+    it('should parse ordered lists', function() {
+      const result = App.parseMarkdown('1. Item 1\n2. Item 2');
+      expect(result).to.include('<ol><li>Item 1</li><li>Item 2</li></ol>');
+    });
+
+    it('should handle empty input', function() {
+      const result = App.parseMarkdown('');
+      expect(result).to.equal('');
+    });
+
+    it('should handle null input', function() {
+      const result = App.parseMarkdown(null);
+      expect(result).to.equal('');
+    });
+  });
+
   describe('Character Summary', function() {
     it('should create character summary for empty character', function() {
       const summary = App.createCharacterSummary({});
@@ -195,7 +232,7 @@ describe('D&D Journal App', function() {
 
       App.renderEntries();
 
-      const entryDiv = document.querySelector('.entry');
+      const entryDiv = document.querySelector('.entry-card');
       expect(entryDiv).to.exist;
 
       App.enableEditMode(entryDiv, App.state.entries[0]);
@@ -214,7 +251,7 @@ describe('D&D Journal App', function() {
 
       App.renderEntries();
 
-      const entryDiv = document.querySelector('.entry');
+      const entryDiv = document.querySelector('.entry-card');
       App.enableEditMode(entryDiv, App.state.entries[0]);
 
       App.saveEdit(entryDiv, App.state.entries[0], 'Updated Title', 'Updated content');
@@ -233,7 +270,7 @@ describe('D&D Journal App', function() {
 
       App.renderEntries();
 
-      const entryDiv = document.querySelector('.entry');
+      const entryDiv = document.querySelector('.entry-card');
       App.enableEditMode(entryDiv, App.state.entries[0]);
 
       App.cancelEdit(entryDiv, App.state.entries[0]);

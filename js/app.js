@@ -26,6 +26,68 @@ try {
       // Yjs sync not available, using localStorage-only mode
 }
 
+// Simple markdown parser for basic formatting
+export const parseMarkdown = (text) => {
+  if (!text) return '';
+  
+  let result = text
+    // Bold text **text** or __text__
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+    // Italic text *text* or _text_ (but not part of ** or __)
+    .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
+    .replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>')
+    // Code `text`
+    .replace(/`(.*?)`/g, '<code>$1</code>');
+  
+  // Process lists more carefully
+  const lines = result.split('\n');
+  const processedLines = [];
+  let inList = false;
+  let listType = null;
+  
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    // Check for unordered list items
+    if (trimmedLine.match(/^[-*]\s+(.+)$/)) {
+      if (!inList || listType !== 'ul') {
+        if (inList) processedLines.push(`</${listType}>`);
+        processedLines.push('<ul>');
+        inList = true;
+        listType = 'ul';
+      }
+      processedLines.push(`<li>${trimmedLine.replace(/^[-*]\s+/, '')}</li>`);
+    }
+    // Check for ordered list items
+    else if (trimmedLine.match(/^\d+\.\s+(.+)$/)) {
+      if (!inList || listType !== 'ol') {
+        if (inList) processedLines.push(`</${listType}>`);
+        processedLines.push('<ol>');
+        inList = true;
+        listType = 'ol';
+      }
+      processedLines.push(`<li>${trimmedLine.replace(/^\d+\.\s+/, '')}</li>`);
+    }
+    // Regular line
+    else {
+      if (inList) {
+        processedLines.push(`</${listType}>`);
+        inList = false;
+        listType = null;
+      }
+      processedLines.push(trimmedLine || '<br>');
+    }
+  }
+  
+  // Close any open list
+  if (inList) {
+    processedLines.push(`</${listType}>`);
+  }
+  
+  return processedLines.join('');
+};
+
 // Load state from localStorage - using utils
 export const loadData = () => {
   const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
@@ -87,7 +149,7 @@ export const getEntrySummary = (entryId) => {
 // Create DOM element for an entry
 export const createEntryElement = (entry) => {
   const entryDiv = document.createElement('div');
-  entryDiv.className = 'entry';
+  entryDiv.className = 'entry-card';
   entryDiv.dataset.entryId = entry.id;
   
   const header = document.createElement('div');
@@ -112,12 +174,51 @@ export const createEntryElement = (entry) => {
   
   const content = document.createElement('div');
   content.className = 'entry-content';
-  content.textContent = entry.content;
+  content.innerHTML = parseMarkdown(entry.content);
   
   entryDiv.appendChild(header);
   entryDiv.appendChild(content);
   
+  // Add collapsible summary section if AI is enabled
+  if (isAIEnabled()) {
+    const summary = aiGetEntrySummary(entry);
+    if (summary) {
+      const summarySection = createSummarySection(summary);
+      entryDiv.appendChild(summarySection);
+    }
+  }
+  
   return entryDiv;
+};
+
+// Create collapsible summary section
+export const createSummarySection = (summary) => {
+  const summaryDiv = document.createElement('div');
+  summaryDiv.className = 'entry-summary';
+  
+  const summaryToggle = document.createElement('button');
+  summaryToggle.className = 'entry-summary__toggle';
+  summaryToggle.innerHTML = `
+    <span class="entry-summary__label">Summary</span>
+    <span class="entry-summary__icon">▼</span>
+  `;
+  
+  const summaryContent = document.createElement('div');
+  summaryContent.className = 'entry-summary__content';
+  summaryContent.style.display = 'none';
+  summaryContent.innerHTML = `<p>${summary}</p>`;
+  
+  summaryToggle.onclick = () => {
+    const isExpanded = summaryContent.style.display !== 'none';
+    summaryContent.style.display = isExpanded ? 'none' : 'block';
+    summaryToggle.querySelector('.entry-summary__icon').textContent = isExpanded ? '▼' : '▲';
+    summaryToggle.classList.toggle('entry-summary__toggle--expanded', !isExpanded);
+  };
+  
+  summaryDiv.appendChild(summaryToggle);
+  summaryDiv.appendChild(summaryContent);
+  
+  return summaryDiv;
 };
 
 // Enable edit mode for an entry
@@ -319,16 +420,36 @@ export const createCharacterSummary = (character) => {
   };
 };
 
-// Display character summary
-export const displayCharacterSummary = () => {
-  const characterSummary = document.getElementById('character-summary');
-  if (!characterSummary) return;
+// Create simplified character data for main page display
+export const createSimpleCharacterData = (character) => {
+  if (!character || !character.name) {
+    return {
+      name: 'Unnamed Character',
+      race: 'Unknown',
+      class: 'Unknown'
+    };
+  }
   
-  const summary = createCharacterSummary(state.character);
-  characterSummary.innerHTML = `
-    <h3>${summary.name}</h3>
-    <p>${summary.details}</p>
-  `;
+  return {
+    name: character.name,
+    race: character.race || 'Unknown',
+    class: character.class || 'Unknown'
+  };
+};
+
+// Display character summary - simplified
+export const displayCharacterSummary = () => {
+  const nameEl = document.getElementById('display-name');
+  const raceEl = document.getElementById('display-race');
+  const classEl = document.getElementById('display-class');
+  
+  if (!nameEl || !raceEl || !classEl) return;
+  
+  const summary = createSimpleCharacterData(state.character);
+  
+  nameEl.textContent = summary.name;
+  raceEl.textContent = summary.race;
+  classEl.textContent = summary.class;
 };
 
 // Display AI prompt

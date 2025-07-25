@@ -251,7 +251,7 @@ describe('D&D Journal Integration Tests', function() {
     App.renderEntries();
 
     // Enable edit mode
-    const entryDiv = document.querySelector('.entry');
+    const entryDiv = document.querySelector('.entry-card');
     expect(entryDiv).to.exist;
     App.enableEditMode(entryDiv, App.state.entries[0]);
 
