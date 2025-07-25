@@ -27,7 +27,7 @@ import {
 export const WORD_THRESHOLDS = {
   ENTRY_SUMMARIZATION: 300,     // Summarize entries over 300 words
   CHARACTER_FIELD: 150,         // Summarize character fields over 150 words
-  META_SUMMARY_TRIGGER: 3000,   // Create meta-summaries when total summaries exceed 3000 words
+  META_SUMMARY_TRIGGER: 1000,   // Create meta-summaries when total summaries exceed 1000 words
   SUMMARIES_PER_META: 10        // Group 10 summaries per meta-summary
 };
 

@@ -13,7 +13,7 @@ describe('Summarization Module', () => {
     it('should have sensible word count thresholds', () => {
       expect(Summarization.WORD_THRESHOLDS).to.have.property('ENTRY_SUMMARIZATION', 300);
       expect(Summarization.WORD_THRESHOLDS).to.have.property('CHARACTER_FIELD', 150);
-      expect(Summarization.WORD_THRESHOLDS).to.have.property('META_SUMMARY_TRIGGER', 3000);
+      expect(Summarization.WORD_THRESHOLDS).to.have.property('META_SUMMARY_TRIGGER', 1000);
       expect(Summarization.WORD_THRESHOLDS).to.have.property('SUMMARIES_PER_META', 10);
     });
   });
@@ -157,11 +157,11 @@ describe('Summarization Module', () => {
 
     it('should create meta-summaries when threshold is exceeded', () => {
       // Create enough entry summaries to exceed word threshold
-      for (let i = 1; i <= 16; i++) {
+      for (let i = 1; i <= 12; i++) {
         SummaryStorage.saveEntrySummary(`${i}`, {
           id: `${i}`,
-          summary: 'word '.repeat(200), // 200 words each
-          summaryWordCount: 200,
+          summary: 'word '.repeat(100), // 100 words each (1200 total > 1000 threshold)
+          summaryWordCount: 100,
           timestamp: Date.now() - (i * 1000)
         });
       }
