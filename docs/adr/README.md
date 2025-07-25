@@ -20,9 +20,6 @@ This directory contains Architecture Decision Records (ADRs) that document the k
 | [ADR-0007](0007-feature-freeze-boundaries.md) | Feature Freeze Boundaries | Accepted |
 | [ADR-0008](0008-surge-deployment-only.md) | Surge.sh Deployment Only | Accepted |
 | [ADR-0009](0009-minimal-pwa-for-ios-installation.md) | Minimal PWA for iOS Installation | Accepted |
-| [ADR-0010](0010-es6-modules-only.md) | ES6 Modules Only | Accepted |
-| [ADR-0011](0011-node-esm-testing.md) | Node.js Native ESM Testing | Accepted |
-| [ADR-0012](0012-test-state-isolation.md) | Test State Isolation | Accepted |
 
 ## For AI Agents
 
