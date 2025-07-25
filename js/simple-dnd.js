@@ -1,8 +1,8 @@
 // Simple D&D Integration - Easy functions for the D&D journal
 // Following functional programming principles and style guide
 
-import { summarize, getAllSummaries, getSummary, getStats } from './simple-summary.js';
-import { generateQuestions } from './simple-ai.js';
+import { summarize, getAllSummaries, getSummary, getStats } from './summarization.js';
+import { generateQuestions, getIntrospectionQuestions as getStoryQuestions } from './storytelling.js';
 import { loadDataWithFallback, STORAGE_KEYS, createInitialJournalState } from './utils.js';
 
 // =============================================================================
@@ -57,10 +57,9 @@ export const autoSummarizeAll = async () => {
 // AI STORYTELLING FUNCTIONS
 // =============================================================================
 
-// Generate introspection questions
+// Generate introspection questions  
 export const getIntrospectionQuestions = async () => {
-  const journal = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
-  return await generateQuestions(journal.character || {}, journal.entries || []);
+  return await generateQuestions();
 };
 
 // =============================================================================

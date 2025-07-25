@@ -1,319 +1,175 @@
-// Summarization Module - General purpose summarization tool
+// Summarization - Pure content summarization with auto meta-summaries
 // Following functional programming principles and style guide
 
-import { 
-  loadDataWithFallback, 
-  createInitialJournalState, 
-  getWordCount, 
-  STORAGE_KEYS,
-  generateId
-} from './utils.js';
-
-import {
-  loadEntrySummaries,
-  saveEntrySummary,
-  loadMetaSummaries,
-  saveMetaSummary,
-  loadCharacterSummaries,
-  saveCharacterSummary,
-  getSummaryStats
-} from './summary-storage.js';
+import { loadDataWithFallback, safeSetToStorage, generateId } from './utils.js';
+import { createSummarizationFunction, createTemplateFunction, isAPIAvailable } from './openai-wrapper.js';
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
 
-// Word count thresholds for auto-summarization (to control AI costs)
-export const WORD_THRESHOLDS = {
-  ENTRY_SUMMARIZATION: 300,     // Summarize entries over 300 words
-  CHARACTER_FIELD: 150,         // Summarize character fields over 150 words
-  META_SUMMARY_TRIGGER: 1000,   // Create meta-summaries when total summaries exceed 1000 words
-  SUMMARIES_PER_META: 10        // Group 10 summaries per meta-summary
-};
-
-// Target word counts for summaries (compression ratios)
-export const TARGET_WORDS = {
-  ENTRY_SUMMARY: 50,             // Compress entries to ~50 words
-  CHARACTER_SUMMARY: 40,         // Compress character fields to ~40 words  
-  META_SUMMARY: 100              // Meta-summaries ~100 words
-};
+const STORAGE_KEY = 'simple-summaries';
+const TARGET_TOTAL_WORDS = 400;
+const WORDS_PER_SUMMARY = 30;
+const META_TRIGGER = 10;
 
 // =============================================================================
-// CORE SUMMARIZATION FUNCTIONS
+// AI FUNCTIONS (CURRIED)
 // =============================================================================
 
-// General purpose summarization function
-export const generateSummary = async (content, targetWords, type = 'content') => {
-  // Check if AI is available via dynamic import
+// Create summarization function (no system prompt, low temperature)
+const callSummarize = createSummarizationFunction();
+
+// Create meta-summarization function with template
+const createMetaSummaryPrompt = (combinedText, targetWords) => 
+  `Summarize these summaries in ${targetWords} words, focusing on key themes: ${combinedText}`;
+
+const callMetaSummarize = createTemplateFunction(createMetaSummaryPrompt, {
+  temperature: 0.3,
+  maxTokens: 200
+});
+
+// =============================================================================
+// STORAGE FUNCTIONS
+// =============================================================================
+
+const loadSummaries = () => loadDataWithFallback(STORAGE_KEY, {});
+const saveSummaries = (summaries) => safeSetToStorage(STORAGE_KEY, summaries);
+
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+const countWords = (text) => {
+  if (!text || typeof text !== 'string') return 0;
+  return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+};
+
+const shouldSummarize = (text) => countWords(text) >= 100;
+
+// =============================================================================
+// CORE SUMMARIZATION
+// =============================================================================
+
+// Summarize any content with a key
+export const summarize = async (key, text) => {
+  if (!shouldSummarize(text)) return null;
+  if (!isAPIAvailable()) return null;
+
   try {
-    const aiModule = await import('./ai.js');
-    if (!aiModule.isAIEnabled()) {
-      return null;
-    }
-
-    // Calculate target words using logarithmic scale of original word count
-    const originalWordCount = getWordCount(content);
-    const calculatedTargetWords = Math.max(10, Math.floor(Math.log10(originalWordCount) * 20));
-    const finalTargetWords = targetWords || calculatedTargetWords;
-
-    const prompt = createSummaryPrompt(content, finalTargetWords, type);
-    const summary = await aiModule.callOpenAIForSummarization(prompt, finalTargetWords * 2);
+    const prompt = `Summarize in ${WORDS_PER_SUMMARY} words: ${text}`;
+    const summary = await callSummarize(prompt);
     
-    return {
-      summary: summary,
-      originalWordCount: originalWordCount,
-      summaryWordCount: getWordCount(summary),
-      timestamp: Date.now(),
-      contentHash: btoa(content).substring(0, 16)
+    if (!summary) return null;
+
+    // Store the summary
+    const summaries = loadSummaries();
+    summaries[key] = {
+      content: summary,
+      words: countWords(summary),
+      timestamp: Date.now()
     };
+    
+    // Check if we need meta-summary
+    await createMetaIfNeeded(summaries);
+    
+    saveSummaries(summaries);
+    return summary;
   } catch (error) {
-    console.error('Failed to generate summary:', error);
+    console.error('Summarization failed:', error);
     return null;
   }
 };
 
-// Create appropriate AI prompt based on content type
-const createSummaryPrompt = (content, targetWords, type) => {
-  const basePrompt = `Summarize this text in ${targetWords} words.`;
+// Create meta-summary when needed
+const createMetaIfNeeded = async (summaries) => {
+  const entries = Object.entries(summaries);
+  const regularSummaries = entries.filter(([key]) => !key.startsWith('meta:'));
   
-  return `${basePrompt}\n\n${content}`;
-};
-
-// =============================================================================
-// CONTENT ANALYSIS FUNCTIONS
-// =============================================================================
-
-// Check if content needs summarization based on word count
-export const needsSummarization = (content, threshold = WORD_THRESHOLDS.ENTRY_SUMMARIZATION) => {
-  return getWordCount(content) > threshold;
-};
-
-// Get entries that need summarization
-export const getEntriesNeedingSummary = (entries) => {
-  const existingSummaries = loadEntrySummaries();
-  
-  return entries.filter(entry => {
-    const hasExistingSummary = existingSummaries[entry.id];
-    const needsSummary = needsSummarization(entry.content, WORD_THRESHOLDS.ENTRY_SUMMARIZATION);
-    return needsSummary && !hasExistingSummary;
-  });
-};
-
-// Get character fields that need summarization
-export const getCharacterFieldsNeedingSummary = (character) => {
-  if (!character || typeof character !== 'object') {
-    return [];
-  }
-  
-  const existingSummaries = loadCharacterSummaries();
-  const fieldsNeedingSummary = [];
-  
-  ['backstory', 'notes'].forEach(field => {
-    if (character[field] && needsSummarization(character[field], WORD_THRESHOLDS.CHARACTER_FIELD)) {
-      const contentHash = btoa(character[field]).substring(0, 16);
-      const existing = existingSummaries[field];
+  if (regularSummaries.length >= META_TRIGGER) {
+    const oldest = regularSummaries
+      .sort(([,a], [,b]) => a.timestamp - b.timestamp)
+      .slice(0, 5);
+    
+    const combinedText = oldest.map(([, summary]) => summary.content).join(' ');
+    const targetWords = WORDS_PER_SUMMARY * 2;
+    
+    try {
+      const metaSummary = await callMetaSummarize(combinedText, targetWords);
       
-      // Check if content has changed since last summary
-      if (!existing || existing.contentHash !== contentHash) {
-        fieldsNeedingSummary.push({
-          field,
-          content: character[field],
-          contentHash
-        });
+      if (metaSummary) {
+        const metaKey = `meta:${generateId()}`;
+        summaries[metaKey] = {
+          content: metaSummary,
+          words: countWords(metaSummary),
+          timestamp: Date.now(),
+          replaces: oldest.map(([key]) => key)
+        };
+        
+        // Remove original summaries
+        oldest.forEach(([key]) => delete summaries[key]);
       }
-    }
-  });
-  
-  return fieldsNeedingSummary;
-};
-
-// Check if meta-summaries should be created
-export const shouldCreateMetaSummaries = () => {
-  const entrySummaries = loadEntrySummaries();
-  const existingMeta = loadMetaSummaries();
-  
-  const summaryEntries = Object.values(entrySummaries);
-  const totalWords = summaryEntries.reduce((sum, s) => sum + s.summaryWordCount, 0);
-  
-  // Create meta-summaries if we exceed word threshold and have enough summaries
-  if (totalWords > WORD_THRESHOLDS.META_SUMMARY_TRIGGER && summaryEntries.length >= WORD_THRESHOLDS.SUMMARIES_PER_META) {
-    // Check how many summaries are not yet included in meta-summaries
-    const processedSummaryIds = new Set();
-    Object.values(existingMeta).forEach(meta => {
-      meta.includedSummaryIds?.forEach(id => processedSummaryIds.add(id));
-    });
-    
-    const unprocessedSummaries = summaryEntries.filter(s => !processedSummaryIds.has(s.id));
-    return unprocessedSummaries.length >= WORD_THRESHOLDS.SUMMARIES_PER_META;
-  }
-  
-  return false;
-};
-
-// =============================================================================
-// BATCH PROCESSING FUNCTIONS
-// =============================================================================
-
-// Process a single entry for summarization
-export const processEntrySummary = async (entry) => {
-  if (!entry || !entry.id || !entry.content) {
-    return null;
-  }
-  
-  const summaryData = await generateSummary(entry.content, TARGET_WORDS.ENTRY_SUMMARY, 'entry');
-  
-  if (summaryData) {
-    const summary = {
-      id: entry.id,
-      originalTitle: entry.title,
-      ...summaryData
-    };
-    
-    saveEntrySummary(entry.id, summary);
-    return summary;
-  }
-  
-  return null;
-};
-
-// Process a single character field for summarization
-export const processCharacterFieldSummary = async (fieldData) => {
-  if (!fieldData || !fieldData.field || !fieldData.content) {
-    return null;
-  }
-  
-  const type = `character-${fieldData.field}`;
-  const summaryData = await generateSummary(fieldData.content, TARGET_WORDS.CHARACTER_SUMMARY, type);
-  
-  if (summaryData) {
-    const summary = {
-      field: fieldData.field,
-      ...summaryData
-    };
-    
-    saveCharacterSummary(fieldData.field, summary);
-    return summary;
-  }
-  
-  return null;
-};
-
-// Create meta-summary from existing summaries
-export const processMetaSummary = async () => {
-  const entrySummaries = loadEntrySummaries();
-  const existingMeta = loadMetaSummaries();
-  
-  // Get summaries not yet included in meta-summaries
-  const processedSummaryIds = new Set();
-  Object.values(existingMeta).forEach(meta => {
-    meta.includedSummaryIds?.forEach(id => processedSummaryIds.add(id));
-  });
-  
-  const unprocessedSummaries = Object.values(entrySummaries)
-    .filter(s => !processedSummaryIds.has(s.id))
-    .sort((a, b) => a.timestamp - b.timestamp); // Oldest first for chronological grouping
-  
-  if (unprocessedSummaries.length >= WORD_THRESHOLDS.SUMMARIES_PER_META) {
-    const summariesToProcess = unprocessedSummaries.slice(0, WORD_THRESHOLDS.SUMMARIES_PER_META);
-    const combinedContent = summariesToProcess
-      .map(s => `${s.originalTitle}: ${s.summary}`)
-      .join('\n\n');
-    
-    const metaSummaryData = await generateSummary(combinedContent, TARGET_WORDS.META_SUMMARY, 'meta-summary');
-    
-    if (metaSummaryData) {
-      const metaId = generateId();
-      const metaSummary = {
-        id: metaId,
-        title: `Adventures Summary (${summariesToProcess.length} entries)`,
-        includedSummaryIds: summariesToProcess.map(s => s.id),
-        dateRange: {
-          start: summariesToProcess[0].timestamp,
-          end: summariesToProcess[summariesToProcess.length - 1].timestamp
-        },
-        ...metaSummaryData
-      };
-      
-      saveMetaSummary(metaId, metaSummary);
-      return metaSummary;
+    } catch (error) {
+      console.error('Meta-summarization failed:', error);
     }
   }
-  
-  return null;
 };
 
 // =============================================================================
-// AUTO-SUMMARIZATION FUNCTIONS
+// RETRIEVAL FUNCTIONS
 // =============================================================================
 
-// Auto-summarize entries that exceed word threshold
-export const autoSummarizeEntries = async () => {
-  const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
-  const entriesNeedingSummary = getEntriesNeedingSummary(journalData.entries);
-  
-  const results = [];
-  for (const entry of entriesNeedingSummary) {
-    const result = await processEntrySummary(entry);
-    if (result) {
-      results.push(result);
-    }
-  }
-  
-  return results;
+// Get a specific summary
+export const getSummary = (key) => {
+  const summaries = loadSummaries();
+  return summaries[key]?.content || null;
 };
 
-// Auto-summarize character fields that exceed word threshold
-export const autoSummarizeCharacter = async () => {
-  const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
-  const fieldsNeedingSummary = getCharacterFieldsNeedingSummary(journalData.character);
-  
-  const results = [];
-  for (const fieldData of fieldsNeedingSummary) {
-    const result = await processCharacterFieldSummary(fieldData);
-    if (result) {
-      results.push(result);
-    }
-  }
-  
-  return results;
+// Get all summaries formatted for AI context
+export const getAllSummaries = () => {
+  const summaries = loadSummaries();
+  return Object.entries(summaries)
+    .map(([key, data]) => ({
+      key,
+      content: data.content,
+      type: key.startsWith('meta:') ? 'meta' : 'regular',
+      timestamp: data.timestamp
+    }))
+    .sort((a, b) => b.timestamp - a.timestamp);
 };
 
-// Auto-create meta-summaries when threshold is reached
-export const autoCreateMetaSummaries = async () => {
-  if (shouldCreateMetaSummaries()) {
-    return await processMetaSummary();
-  }
-  return null;
-};
-
-// Run all auto-summarization processes
-export const runAutoSummarization = async () => {
-  try {
-    const entryResults = await autoSummarizeEntries();
-    const characterResults = await autoSummarizeCharacter();
-    const metaResult = await autoCreateMetaSummaries();
-    
-    return {
-      entrySummaries: entryResults,
-      characterSummaries: characterResults,
-      metaSummary: metaResult,
-      totalProcessed: entryResults.length + characterResults.length + (metaResult ? 1 : 0)
-    };
-  } catch (error) {
-    console.error('Auto-summarization failed:', error);
-    return {
-      entrySummaries: [],
-      characterSummaries: [],
-      metaSummary: null,
-      totalProcessed: 0,
-      error: error.message
-    };
-  }
+// Get summaries by key pattern
+export const getSummariesByPattern = (pattern) => {
+  const summaries = loadSummaries();
+  const regex = new RegExp(pattern);
+  
+  return Object.entries(summaries)
+    .filter(([key]) => regex.test(key))
+    .map(([key, data]) => ({ key, content: data.content }));
 };
 
 // =============================================================================
-// EXPORT ADDITIONAL FUNCTIONS FOR COMPATIBILITY
+// STATISTICS
 // =============================================================================
 
-// Export storage functions for external use
-export { getSummaryStats } from './summary-storage.js';
+export const getStats = () => {
+  const summaries = loadSummaries();
+  const entries = Object.values(summaries);
+  const totalWords = entries.reduce((sum, s) => sum + (s.words || 0), 0);
+  
+  return {
+    count: entries.length,
+    totalWords,
+    withinTarget: totalWords <= TARGET_TOTAL_WORDS,
+    metaSummaries: entries.filter(s => s.replaces).length
+  };
+};
+
+// =============================================================================
+// MAINTENANCE
+// =============================================================================
+
+export const clearAll = () => {
+  saveSummaries({});
+  return true;
+};
