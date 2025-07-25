@@ -4,37 +4,34 @@ import chai from 'chai';
 // Enable should syntax
 chai.should();
 
-// Setup DOM environment
+// Setup DOM environment (JSDOM sets up window, document, navigator, HTMLElement)
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
   url: 'http://localhost',
   pretendToBeVisual: true,
   resources: 'usable'
 });
 
-// Make DOM globals available
 global.window = dom.window;
 global.document = dom.window.document;
-global.navigator = dom.window.navigator;
-global.HTMLElement = dom.window.HTMLElement;
-global.btoa = function(str) { return Buffer.from(str, 'binary').toString('base64'); };
-global.atob = function(str) { return Buffer.from(str, 'base64').toString('binary'); };
-global.localStorage = {
-  data: {},
-  getItem: function(key) {
-    return this.data[key] || null;
-  },
-  setItem: function(key, value) {
-    this.data[key] = value;
-  },
-  removeItem: function(key) {
-    delete this.data[key];
-  },
-  clear: function() {
-    this.data = {};
-  }
-};
+// JSDOM already sets global.navigator and global.HTMLElement
 
-// Mock console methods to avoid noise in tests
+// Add or override missing globals
+if (!global.btoa) {
+  global.btoa = function(str) { return Buffer.from(str, 'binary').toString('base64'); };
+}
+if (!global.atob) {
+  global.atob = function(str) { return Buffer.from(str, 'base64').toString('binary'); };
+}
+if (!global.localStorage) {
+  global.localStorage = {
+    data: {},
+    getItem: function(key) { return this.data[key] || null; },
+    setItem: function(key, value) { this.data[key] = value; },
+    removeItem: function(key) { delete this.data[key]; },
+    clear: function() { this.data = {}; }
+  };
+}
+
 global.console = {
   error: function() {},
   warn: function() {},
@@ -43,14 +40,10 @@ global.console = {
   debug: function() {}
 };
 
-// Mock fetch to prevent actual network calls in tests
 global.fetch = async function(url, options) {
   // Mock OpenAI API responses
   if (url.includes('openai.com')) {
-    // Simulate network delay
     await new Promise(function(resolve) { setTimeout(resolve, 10); });
-    
-    // Return mock successful response
     return {
       ok: true,
       status: 200,
@@ -65,14 +58,10 @@ global.fetch = async function(url, options) {
       }
     };
   }
-  
-  // For any other URLs, return empty response
   return {
     ok: false,
     status: 404,
-    json: async function() {
-      return {};
-    }
+    json: async function() { return {}; }
   };
 };
 
