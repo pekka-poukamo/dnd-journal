@@ -14,22 +14,7 @@ The journal supports real-time sync across multiple devices using Yjs.
 
 ### Sync Status
 
-Check the sync status in the Settings page:
-- **Green dot**: Connected and syncing
-- **Yellow dot**: Connecting...
-- **Red dot**: Connection failed - working offline
-- **Gray dot**: Sync unavailable
-
-### Troubleshooting Sync Issues
-
-If sync isn't working between devices:
-
-1. **Check Sync Status**: Go to Settings to see the sync status indicator
-2. **Verify Connection**: Ensure both devices can access the internet
-3. **Same Network**: Both devices should access the same journal address
-4. **Clear Cache**: Use "Clear Sync Cache" button in Settings if issues persist
-5. **Force Sync**: Use "Force Upload" or "Force Download" for manual sync
-6. **Custom Server**: Configure your own sync server in Settings for better reliability
+Check the sync status in Settings page. Journal automatically syncs across devices when online.
 
 ### Setting Up Your Own Sync Server
 

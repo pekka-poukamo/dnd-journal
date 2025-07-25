@@ -272,61 +272,7 @@ const getDeviceId = () => {
   }
 };
 
-// Force upload current data
-const forceUpload = () => {
-  if (!syncState.isAvailable || !syncState.ymap) {
-    return { success: false, error: 'Sync not available' };
-  }
-  
-  try {
-    const localData = JSON.parse(localStorage.getItem('simple-dnd-journal') || '{}');
-    setSyncData(localData);
-    return { success: true };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-};
 
-// Force download remote data
-const forceDownload = () => {
-  if (!syncState.isAvailable || !syncState.ymap) {
-    return { success: false, error: 'Sync not available' };
-  }
-  
-  try {
-    const syncData = getSyncData();
-    if (syncData) {
-      localStorage.setItem('simple-dnd-journal', JSON.stringify(syncData));
-      return { success: true };
-    } else {
-      return { success: false, error: 'No remote data available' };
-    }
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-};
-
-// Clear sync cache
-const clearSyncCache = async () => {
-  if (!syncState.isAvailable) {
-    return { success: false, error: 'Sync not available' };
-  }
-  
-  try {
-    // Clear IndexedDB cache
-    if (syncState.indexeddbProvider) {
-      await syncState.indexeddbProvider.clearData();
-    }
-    
-    // Reset sync state
-    syncState.errors = [];
-    syncState.connectionAttempts = 0;
-    
-    return { success: true };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-};
 
 // Clean shutdown
 const teardownSync = () => {
@@ -375,11 +321,6 @@ export const createYjsSync = () => {
     getStatus: getSyncStatus,
     getDeviceId,
     teardown: teardownSync,
-    
-    // Troubleshooting methods
-    forceUpload,
-    forceDownload,
-    clearSyncCache,
     
     // Internal for testing
     _getState: () => syncState

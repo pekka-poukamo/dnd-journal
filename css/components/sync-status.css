@@ -1,56 +1,34 @@
-/* Sync Status Component Styles */
+/* Simple Sync Status - Minimal Implementation */
 
-.sync-status {
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.sync-status__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.sync-status__title {
-  margin: 0;
-  font-size: 1.25rem;
-  color: var(--text-primary);
-}
-
-.sync-status__indicator {
+.sync-indicator {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
-.sync-status__dot {
-  width: 12px;
-  height: 12px;
+.sync-dot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--text-secondary);
   transition: background-color 0.3s ease;
 }
 
-.sync-status__dot.connected {
+.sync-dot.connected {
   background: #10b981; /* Green */
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
-.sync-status__dot.connecting {
+.sync-dot.connecting {
   background: #f59e0b; /* Amber */
   animation: pulse 2s infinite;
 }
 
-.sync-status__dot.disconnected {
+.sync-dot.disconnected {
   background: #ef4444; /* Red */
 }
 
-.sync-status__dot.unavailable {
+.sync-dot.unavailable {
   background: var(--text-secondary); /* Gray */
 }
 
@@ -61,161 +39,4 @@
   50% {
     opacity: 0.5;
   }
-}
-
-.sync-status__text {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.sync-status__details {
-  border-top: 1px solid var(--border-color);
-  padding-top: 1rem;
-}
-
-.sync-status__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.sync-status__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.sync-status__label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.sync-status__value {
-  font-family: monospace;
-  font-size: 0.875rem;
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-}
-
-.sync-status__servers h4 {
-  margin: 0 0 0.75rem 0;
-  font-size: 1rem;
-  color: var(--text-primary);
-}
-
-.sync-status__servers {
-  margin-bottom: 1.5rem;
-}
-
-.server-status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 0.875rem;
-}
-
-.server-status__url {
-  font-family: monospace;
-  color: var(--text-primary);
-}
-
-.server-status__indicator {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.server-status__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-secondary);
-}
-
-.server-status__dot.connected {
-  background: #10b981;
-}
-
-.server-status__dot.disconnected {
-  background: #ef4444;
-}
-
-.server-status__text {
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-}
-
-.sync-status__troubleshooting h4 {
-  margin: 0 0 0.75rem 0;
-  font-size: 1rem;
-  color: var(--text-primary);
-}
-
-.troubleshooting-actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.troubleshooting-actions .btn {
-  font-size: 0.875rem;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .sync-status__grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .sync-status__header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-  
-  .troubleshooting-actions {
-    flex-direction: column;
-  }
-  
-  .troubleshooting-actions .btn {
-    width: 100%;
-  }
-}
-
-/* Alert styles for sync issues */
-.sync-alert {
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-}
-
-.sync-alert.warning {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #92400e;
-}
-
-.sync-alert.error {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #991b1b;
-}
-
-.sync-alert.info {
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: #1e40af;
 }

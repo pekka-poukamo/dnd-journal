@@ -151,10 +151,6 @@ const setupEventHandlers = () => {
   // Sync event handlers
   const syncServerInput = document.getElementById('sync-server');
   const testSyncButton = document.getElementById('test-sync-server');
-  const syncRefreshBtn = document.getElementById('sync-refresh-btn');
-  const syncForceUploadBtn = document.getElementById('sync-force-upload');
-  const syncForceDownloadBtn = document.getElementById('sync-force-download');
-  const syncClearCacheBtn = document.getElementById('sync-clear-cache');
   
   if (syncServerInput) {
     syncServerInput.addEventListener('blur', () => {
@@ -169,22 +165,6 @@ const setupEventHandlers = () => {
   
   if (testSyncButton) {
     testSyncButton.addEventListener('click', handleSyncServerTest);
-  }
-  
-  if (syncRefreshBtn) {
-    syncRefreshBtn.addEventListener('click', updateSyncStatusUI);
-  }
-  
-  if (syncForceUploadBtn) {
-    syncForceUploadBtn.addEventListener('click', handleForceUpload);
-  }
-  
-  if (syncForceDownloadBtn) {
-    syncForceDownloadBtn.addEventListener('click', handleForceDownload);
-  }
-  
-  if (syncClearCacheBtn) {
-    syncClearCacheBtn.addEventListener('click', handleClearSyncCache);
   }
 };
 
@@ -309,113 +289,42 @@ const testSyncServer = async (serverUrl) => {
   });
 };
 
-// Update sync status UI
-const updateSyncStatusUI = () => {
-  const syncStatusSection = document.getElementById('sync-status-details');
-  const syncStatusDot = document.getElementById('sync-status-dot');
-  const syncStatusText = document.getElementById('sync-status-text');
-  const syncDeviceId = document.getElementById('sync-device-id');
-  const syncConnectedServers = document.getElementById('sync-connected-servers');
-  const syncLastUpdated = document.getElementById('sync-last-updated');
-  const syncServersDetails = document.getElementById('sync-servers-details');
-  const syncServersList = document.getElementById('sync-servers-list');
-  const syncTroubleshooting = document.getElementById('sync-troubleshooting');
+// Simple sync status update
+const updateSimpleSyncStatus = () => {
+  const syncSection = document.getElementById('sync-status-simple');
+  const syncDot = document.getElementById('sync-dot');
+  const syncText = document.getElementById('sync-text');
+  const syncHelp = document.getElementById('sync-help');
   
-  if (!syncStatusSection) return;
+  if (!syncSection) return;
   
-  // Always show sync status if Yjs libraries are loaded
+  // Show sync status if Yjs libraries are loaded
   if (typeof window.Y !== 'undefined') {
-    syncStatusSection.style.display = 'block';
+    syncSection.style.display = 'block';
   }
   
   if (!yjsSync) {
-    // Sync not initialized
-    if (syncStatusDot) {
-      syncStatusDot.className = 'sync-status__dot unavailable';
-    }
-    if (syncStatusText) {
-      syncStatusText.textContent = 'Sync not initialized';
-    }
+    if (syncDot) syncDot.className = 'sync-dot unavailable';
+    if (syncText) syncText.textContent = 'Sync unavailable';
+    if (syncHelp) syncHelp.textContent = 'Sync libraries not loaded.';
     return;
   }
   
   const status = yjsSync.getStatus();
   
-  // Update status indicator
-  if (syncStatusDot && syncStatusText) {
+  if (syncDot && syncText && syncHelp) {
     if (!status.available) {
-      syncStatusDot.className = 'sync-status__dot unavailable';
-      syncStatusText.textContent = 'Sync unavailable';
+      syncDot.className = 'sync-dot unavailable';
+      syncText.textContent = 'Sync unavailable';
+      syncHelp.textContent = 'Sync is not available.';
     } else if (status.connected) {
-      syncStatusDot.className = 'sync-status__dot connected';
-      syncStatusText.textContent = `Connected (${status.connectedCount}/${status.totalProviders} servers)`;
-    } else if (status.connectionAttempts > 0) {
-      syncStatusDot.className = 'sync-status__dot disconnected';
-      syncStatusText.textContent = 'Connection failed - working offline';
+      syncDot.className = 'sync-dot connected';
+      syncText.textContent = 'Connected';
+      syncHelp.textContent = 'Your journal is syncing across devices.';
     } else {
-      syncStatusDot.className = 'sync-status__dot connecting';
-      syncStatusText.textContent = 'Connecting...';
-    }
-  }
-  
-  // Show details if available
-  if (status.available) {
-    if (syncDeviceId) {
-      syncDeviceId.textContent = status.deviceId;
-    }
-    
-    if (syncConnectedServers) {
-      syncConnectedServers.textContent = `${status.connectedCount}/${status.totalProviders}`;
-    }
-    
-    if (syncLastUpdated) {
-      if (status.lastModified) {
-        syncLastUpdated.textContent = new Date(status.lastModified).toLocaleString();
-      } else {
-        syncLastUpdated.textContent = 'Never';
-      }
-    }
-    
-    // Show server details if there are providers
-    if (status.providers && status.providers.length > 0 && syncServersList && syncServersDetails) {
-      syncServersList.style.display = 'block';
-      syncServersDetails.innerHTML = status.providers.map(provider => {
-        const statusClass = provider.connected ? 'connected' : 'disconnected';
-        const statusText = provider.connected ? 'Connected' : 'Disconnected';
-        return `
-          <div class="server-status">
-            <span class="server-status__url">${provider.url}</span>
-            <div class="server-status__indicator">
-              <span class="server-status__dot ${statusClass}"></span>
-              <span class="server-status__text">${statusText}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-    
-    // Show troubleshooting if there are issues
-    if (syncTroubleshooting) {
-      if (!status.connected || status.errors.length > 0) {
-        syncTroubleshooting.style.display = 'block';
-        
-        // Clear previous error messages
-        const existingAlerts = syncTroubleshooting.querySelectorAll('.sync-alert');
-        existingAlerts.forEach(alert => alert.remove());
-        
-        // Show error messages
-        if (status.errors.length > 0) {
-          const errorAlert = document.createElement('div');
-          errorAlert.className = 'sync-alert error';
-          errorAlert.innerHTML = `
-            <strong>Connection Issues:</strong><br>
-            ${status.errors.slice(-3).join('<br>')}
-          `;
-          syncTroubleshooting.insertBefore(errorAlert, syncTroubleshooting.firstChild);
-        }
-      } else {
-        syncTroubleshooting.style.display = 'none';
-      }
+      syncDot.className = 'sync-dot disconnected';
+      syncText.textContent = 'Working offline';
+      syncHelp.textContent = 'Your journal will sync when connection is restored.';
     }
   }
 };
@@ -453,7 +362,7 @@ const populateForm = () => {
   }
   
   updateSummaryStats();
-  updateSyncStatusUI();
+  updateSimpleSyncStatus();
 };
 
 // Handle sync server test
@@ -493,95 +402,7 @@ const handleSyncServerTest = async () => {
   }
 };
 
-// Handle force upload
-const handleForceUpload = async () => {
-  if (!yjsSync) return;
-  
-  const button = document.getElementById('sync-force-upload');
-  if (button) {
-    button.disabled = true;
-    button.textContent = 'Uploading...';
-  }
-  
-  try {
-    const result = yjsSync.forceUpload();
-    if (result.success) {
-      alert('Data uploaded successfully!');
-    } else {
-      alert(`Upload failed: ${result.error}`);
-    }
-  } catch (error) {
-    alert(`Upload failed: ${error.message}`);
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = 'Force Upload';
-    }
-    updateSyncStatusUI();
-  }
-};
 
-// Handle force download
-const handleForceDownload = async () => {
-  if (!yjsSync) return;
-  
-  const button = document.getElementById('sync-force-download');
-  if (button) {
-    button.disabled = true;
-    button.textContent = 'Downloading...';
-  }
-  
-  try {
-    const result = yjsSync.forceDownload();
-    if (result.success) {
-      alert('Data downloaded successfully! The page will reload to show the new data.');
-      // Reload the page to reflect changes
-      window.location.reload();
-    } else {
-      alert(`Download failed: ${result.error}`);
-    }
-  } catch (error) {
-    alert(`Download failed: ${error.message}`);
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = 'Force Download';
-    }
-    updateSyncStatusUI();
-  }
-};
-
-// Handle clear sync cache
-const handleClearSyncCache = async () => {
-  if (!yjsSync) return;
-  
-  if (!confirm('This will clear the sync cache. Are you sure?')) {
-    return;
-  }
-  
-  const button = document.getElementById('sync-clear-cache');
-  if (button) {
-    button.disabled = true;
-    button.textContent = 'Clearing...';
-  }
-  
-  try {
-    const result = await yjsSync.clearSyncCache();
-    if (result.success) {
-      alert('Sync cache cleared successfully!');
-    } else {
-      alert(`Clear cache failed: ${result.error}`);
-    }
-  } catch (error) {
-    alert(`Clear cache failed: ${error.message}`);
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = 'Clear Sync Cache';
-    }
-    updateSyncStatusUI();
-  }
-};
 
 // Initialize settings page
 const init = () => {
@@ -590,7 +411,7 @@ const init = () => {
   
   // Update sync status periodically
   if (yjsSync) {
-    setInterval(updateSyncStatusUI, 5000);
+    setInterval(updateSimpleSyncStatus, 5000);
   }
 };
 
