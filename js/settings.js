@@ -252,11 +252,14 @@ const handleGenerateSummaries = async () => {
 
 // Test sync server connection
 const testSyncServer = async (serverUrl) => {
-  // If no Yjs libraries are available, return helpful error
+  // Wait for libraries to load if they're still loading
+  await waitForLibraries();
+  
+  // If no Yjs libraries are available after waiting, return helpful error
   if (typeof window.Y === 'undefined' || typeof window.WebsocketProvider === 'undefined') {
     return { 
       success: false, 
-      error: 'Sync libraries not loaded. Refresh the page to enable sync testing.' 
+      error: 'Sync libraries failed to load from CDN. Check your internet connection and try refreshing the page.' 
     };
   }
 
@@ -264,7 +267,7 @@ const testSyncServer = async (serverUrl) => {
   if (!serverUrl) {
     const defaultServers = [
       'wss://demos.yjs.dev',
-      'wss://y-websocket.herokuapp.com'
+      // Note: Other demo servers removed due to reliability issues
     ];
     // Note: These are demo servers that may have limited reliability
     
@@ -274,14 +277,14 @@ const testSyncServer = async (serverUrl) => {
       if (result.success) {
         return { 
           success: true, 
-          message: `Default public sync server (${server}) is working!` 
+          message: `Default public sync server (${server}) is working! Note: Demo servers may have limited reliability.` 
         };
       }
     }
     
     return { 
       success: false, 
-      error: 'Unable to connect to default public sync servers' 
+      error: 'Unable to connect to default public sync servers. These demo servers may be temporarily unavailable. Consider setting up your own sync server.' 
     };
   }
   
@@ -290,6 +293,27 @@ const testSyncServer = async (serverUrl) => {
   }
   
   return await testSingleServer(serverUrl);
+};
+
+// Helper function to wait for libraries to load
+const waitForLibraries = async () => {
+  const maxWaitTime = 5000; // 5 seconds
+  const checkInterval = 100; // Check every 100ms
+  let waited = 0;
+  
+  return new Promise((resolve) => {
+    const checkLibraries = () => {
+      if (typeof window.Y !== 'undefined' && typeof window.WebsocketProvider !== 'undefined') {
+        resolve();
+      } else if (waited >= maxWaitTime) {
+        resolve(); // Stop waiting after max time
+      } else {
+        waited += checkInterval;
+        setTimeout(checkLibraries, checkInterval);
+      }
+    };
+    checkLibraries();
+  });
 };
 
 // Helper function to test a single server
@@ -338,7 +362,7 @@ const updateSimpleSyncStatus = () => {
   if (!yjsSync) {
     if (syncDot) syncDot.className = 'sync-dot unavailable';
     if (syncText) syncText.textContent = 'Sync unavailable';
-    if (syncHelp) syncHelp.textContent = 'Sync libraries not loaded.';
+    if (syncHelp) syncHelp.textContent = 'Sync libraries failed to load from CDN. Check your internet connection or try refreshing the page.';
     return;
   }
   
@@ -348,7 +372,7 @@ const updateSimpleSyncStatus = () => {
     if (!status.available) {
       syncDot.className = 'sync-dot unavailable';
       syncText.textContent = 'Sync unavailable';
-      syncHelp.textContent = 'Sync is not available.';
+      syncHelp.textContent = 'Sync libraries are not available. Check browser console for details.';
     } else if (status.connected) {
       syncDot.className = 'sync-dot connected';
       syncText.textContent = 'Connected';
@@ -356,7 +380,7 @@ const updateSimpleSyncStatus = () => {
     } else {
       syncDot.className = 'sync-dot disconnected';
       syncText.textContent = 'Working offline';
-      syncHelp.textContent = 'Your journal will sync when connection is restored.';
+      syncHelp.textContent = 'Your journal will sync when connection is restored. Demo servers may have limited availability.';
     }
   }
 };

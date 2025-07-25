@@ -21,10 +21,22 @@ let syncState = {
 // Check if Yjs libraries are available
 const checkYjsAvailability = () => {
   try {
-    return typeof window.Y !== 'undefined' && 
-           typeof window.WebsocketProvider !== 'undefined' &&
-           typeof window.IndexeddbPersistence !== 'undefined';
+    const hasY = typeof window.Y !== 'undefined';
+    const hasWebsocket = typeof window.WebsocketProvider !== 'undefined';
+    const hasIndexeddb = typeof window.IndexeddbPersistence !== 'undefined';
+    
+    // Log detailed availability for debugging
+    if (!hasY || !hasWebsocket || !hasIndexeddb) {
+      console.warn('Yjs library availability:', {
+        Y: hasY,
+        WebsocketProvider: hasWebsocket,
+        IndexeddbPersistence: hasIndexeddb
+      });
+    }
+    
+    return hasY && hasWebsocket && hasIndexeddb;
   } catch (e) {
+    console.error('Error checking Yjs availability:', e);
     return false;
   }
 };
@@ -94,7 +106,8 @@ const getSyncConfig = () => {
   // Note: These are demo servers - for production use, consider PartyKit, Liveblocks, or your own server
   return [
     'wss://demos.yjs.dev',
-    'wss://y-websocket.herokuapp.com'
+    // Removing y-websocket.herokuapp.com due to reliability issues
+    // You can add your own backup servers here
   ];
 };
 
