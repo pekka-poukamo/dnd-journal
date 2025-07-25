@@ -13,6 +13,8 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
+      statuses: write
+      checks: write
     
     steps:
     - name: Checkout code
@@ -28,8 +30,137 @@ jobs:
       run: npm ci
       
     - name: Run tests with coverage
-      run: npm run coverage:warn
+      run: npm run coverage:agent:summary
+      id: coverage
       
+    - name: Parse coverage results
+      id: parse
+      run: |
+        # Parse the coverage output
+        COVERAGE_OUTPUT=$(npm run coverage:agent:summary 2>/dev/null | tail -5)
+        
+        # Extract values
+        STATUS=$(echo "$COVERAGE_OUTPUT" | grep "COVERAGE_STATUS=" | cut -d'=' -f2)
+        LINES=$(echo "$COVERAGE_OUTPUT" | grep "LINES_COVERAGE=" | cut -d'=' -f2)
+        CRITICAL=$(echo "$COVERAGE_OUTPUT" | grep "CRITICAL_FILES=" | cut -d'=' -f2)
+        HIGH=$(echo "$COVERAGE_OUTPUT" | grep "HIGH_PRIORITY_FILES=" | cut -d'=' -f2)
+        ACTION=$(echo "$COVERAGE_OUTPUT" | grep "NEXT_ACTION=" | cut -d'=' -f2)
+        
+        # Set outputs
+        echo "status=$STATUS" >> $GITHUB_OUTPUT
+        echo "lines=$LINES" >> $GITHUB_OUTPUT
+        echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+        echo "high=$HIGH" >> $GITHUB_OUTPUT
+        echo "action=$ACTION" >> $GITHUB_OUTPUT
+        
+        # Determine overall state
+        if [ "$STATUS" = "COMPLIANT" ]; then
+          echo "state=success" >> $GITHUB_OUTPUT
+          echo "description=✅ Coverage: ${LINES}% (ADR-0005 compliant)" >> $GITHUB_OUTPUT
+        elif [ "$CRITICAL" -gt "0" ]; then
+          echo "state=failure" >> $GITHUB_OUTPUT
+          echo "description=🔴 Coverage: ${LINES}% (${CRITICAL} critical files)" >> $GITHUB_OUTPUT
+        else
+          echo "state=pending" >> $GITHUB_OUTPUT
+          echo "description=🟡 Coverage: ${LINES}% (needs improvement)" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Create Coverage Status Check
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const state = '${{ steps.parse.outputs.state }}';
+          const description = '${{ steps.parse.outputs.description }}';
+          const lines = '${{ steps.parse.outputs.lines }}';
+          const critical = '${{ steps.parse.outputs.critical }}';
+          const high = '${{ steps.parse.outputs.high }}';
+          const action = '${{ steps.parse.outputs.action }}';
+          
+          // Create status check
+          await github.rest.repos.createCommitStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            sha: context.payload.pull_request.head.sha,
+            state: state,
+            description: description,
+            context: 'coverage/adr-0005'
+          });
+          
+          // Create detailed check run
+          await github.rest.checks.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            name: 'Coverage Analysis',
+            head_sha: context.payload.pull_request.head.sha,
+            status: 'completed',
+            conclusion: state === 'success' ? 'success' : state === 'failure' ? 'failure' : 'neutral',
+            output: {
+              title: `Coverage: ${lines}%`,
+              summary: `**ADR-0005 Status:** ${state === 'success' ? '✅ COMPLIANT' : '⚠️ NEEDS IMPROVEMENT'}\n\n**Quick Stats:**\n- Lines: ${lines}%\n- Critical files: ${critical}\n- High priority files: ${high}\n\n**Next Action:** ${action}`,
+              text: `## Coverage Summary\n\n- **Overall:** ${lines}% line coverage\n- **Status:** ${state === 'success' ? 'ADR-0005 Compliant' : 'Below 95% target'}\n- **Critical Issues:** ${critical} file(s)\n- **High Priority:** ${high} file(s)\n\n## Next Steps\n${action}\n\n## Commands\n\`\`\`bash\nnpm run coverage:html    # Detailed coverage report\nnpm run coverage:auto    # Auto-generate test stubs\nnpm run coverage:agent   # Agent-friendly analysis\n\`\`\``
+            }
+          });
+
+    - name: Update PR with Coverage Badge
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const lines = '${{ steps.parse.outputs.lines }}';
+          const critical = '${{ steps.parse.outputs.critical }}';
+          const high = '${{ steps.parse.outputs.high }}';
+          const action = '${{ steps.parse.outputs.action }}';
+          
+          // Get changed files in PR
+          const { data: prFiles } = await github.rest.pulls.listFiles({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number,
+          });
+          
+          // Filter for JavaScript files
+          const changedJSFiles = prFiles
+            .filter(file => file.filename.startsWith('js/') && file.filename.endsWith('.js'))
+            .map(file => file.filename);
+          
+          if (changedJSFiles.length === 0) {
+            console.log('No JavaScript files changed');
+            return;
+          }
+          
+          // Simple coverage badge
+          const badge = lines >= 95 ? '🟢' : lines >= 80 ? '🟡' : '🔴';
+          const status = lines >= 95 ? 'COMPLIANT' : 'NEEDS WORK';
+          
+          const commentBody = `## ${badge} Coverage: ${lines}% | Status: ${status}
+          
+**Changed Files:** ${changedJSFiles.map(f => `\`${f}\``).join(', ')}
+**Critical Files:** ${critical} | **High Priority:** ${high}
+**Next Action:** ${action}
+
+<details>
+<summary>🤖 Agent Commands</summary>
+
+\`\`\`bash
+npm run coverage:html     # Detailed analysis
+npm run coverage:auto     # Auto-generate tests
+npm run coverage:agent    # Machine-readable data
+\`\`\`
+</details>
+
+---
+*Auto-generated coverage report for agents*`;
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: commentBody
+          });
+
     - name: Upload coverage reports
       uses: actions/upload-artifact@v4
       if: always()
@@ -37,151 +168,3 @@ jobs:
         name: coverage-report
         path: coverage/
         retention-days: 7
-        
-    - name: Coverage Summary Comment
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const fs = require('fs');
-          const path = require('path');
-          
-          try {
-            // Get changed files in PR
-            const { data: prFiles } = await github.rest.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-            });
-            
-            // Filter for JavaScript files in js/ directory
-            const changedJSFiles = prFiles
-              .filter(file => file.filename.startsWith('js/') && file.filename.endsWith('.js'))
-              .map(file => file.filename);
-            
-            if (changedJSFiles.length === 0) {
-              console.log('No JavaScript files changed in this PR');
-              return;
-            }
-            
-            // Read coverage summary
-            const coverageFile = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
-            if (!fs.existsSync(coverageFile)) {
-              console.log('Coverage summary not found');
-              return;
-            }
-            
-            const coverage = JSON.parse(fs.readFileSync(coverageFile, 'utf8'));
-            
-            // Helper functions
-            const formatPct = (pct) => `${pct.toFixed(2)}%`;
-            const getEmoji = (pct, target) => pct >= target ? '🟢' : pct >= target - 15 ? '🟡' : '🔴';
-            const getStatus = (pct, excellent, good) => 
-              pct >= excellent ? 'Excellent' : pct >= good ? 'Good' : 'Needs Improvement';
-            
-            // Analyze changed files
-            let changedFilesTable = '';
-            let hasLowCoverage = false;
-            let criticalFiles = [];
-            
-            changedJSFiles.forEach(filePath => {
-              // Look for coverage data (try both relative and absolute paths)
-              const fullPath = path.resolve(filePath);
-              const relativePath = `./${filePath}`;
-              
-              let fileCoverage = coverage[filePath] || coverage[fullPath] || coverage[relativePath];
-              
-              // Try workspace prefix
-              if (!fileCoverage) {
-                const workspacePath = `workspace/${filePath}`;
-                fileCoverage = coverage[workspacePath];
-              }
-              
-              if (fileCoverage) {
-                const fileName = path.basename(filePath);
-                const lines = fileCoverage.lines.pct;
-                const functions = fileCoverage.functions.pct;
-                const branches = fileCoverage.branches.pct;
-                
-                const linesEmoji = getEmoji(lines, 95);
-                const functionsEmoji = getEmoji(functions, 90);
-                const branchesEmoji = getEmoji(branches, 85);
-                
-                const linesStatus = getStatus(lines, 95, 80);
-                const uncoveredLines = fileCoverage.lines.total - fileCoverage.lines.covered;
-                
-                changedFilesTable += `| ${fileName} | ${linesEmoji} ${formatPct(lines)} | ${functionsEmoji} ${formatPct(functions)} | ${branchesEmoji} ${formatPct(branches)} | ${linesStatus} |\n`;
-                
-                // Check for critical issues
-                if (lines < 50 || functions < 40) {
-                  criticalFiles.push(`${fileName}: ${formatPct(lines)} lines, ${formatPct(functions)} functions`);
-                }
-                
-                if (lines < 80) {
-                  hasLowCoverage = true;
-                }
-              } else {
-                // File not found in coverage (might be new)
-                const fileName = path.basename(filePath);
-                changedFilesTable += `| ${fileName} | ❓ No data | ❓ No data | ❓ No data | New file? |\n`;
-                hasLowCoverage = true;
-              }
-            });
-            
-            // Overall coverage for context
-            const total = coverage.total;
-            const overallStatus = total.lines.pct >= 95 ? '✅ **COMPLIANT**' : '⚠️ **NEEDS IMPROVEMENT**';
-            
-            // Build comment
-            let commentBody = `## 🧪 Coverage Report - Changed Files\n\n`;
-            
-            // Changed files table
-            commentBody += `### 📁 Files Changed in This PR\n\n`;
-            commentBody += `| File | Lines | Functions | Branches | Status |\n`;
-            commentBody += `|------|-------|-----------|----------|--------|\n`;
-            commentBody += changedFilesTable;
-            
-            // Critical issues section
-            if (criticalFiles.length > 0) {
-              commentBody += `\n### 🔴 Critical Coverage Issues (ADR-0005 Violations)\n`;
-              criticalFiles.forEach(file => {
-                commentBody += `- ❌ ${file}\n`;
-              });
-              commentBody += `\n💡 These files violate ADR-0005 "Mandatory Testing for All Code"\n`;
-            }
-            
-            // Overall project status
-            commentBody += `\n### 📊 Overall Project Coverage\n`;
-            commentBody += `- **Lines**: ${formatPct(total.lines.pct)} (${total.lines.covered}/${total.lines.total})\n`;
-            commentBody += `- **Functions**: ${formatPct(total.functions.pct)} (${total.functions.covered}/${total.functions.total})\n`;
-            commentBody += `- **Branches**: ${formatPct(total.branches.pct)} (${total.branches.covered}/${total.branches.total})\n`;
-            commentBody += `- **ADR-0005 Compliance**: ${overallStatus}\n`;
-            
-            // Recommendations
-            commentBody += `\n### 💡 Recommendations\n`;
-            if (criticalFiles.length > 0) {
-              commentBody += `🎯 **Priority**: Address ${criticalFiles.length} critical coverage issue(s) first\n`;
-            }
-            if (hasLowCoverage) {
-              commentBody += `📈 **Action**: Add tests for changed files below 80% coverage\n`;
-            } else {
-              commentBody += `✨ **Great**: All changed files have good coverage!\n`;
-            }
-            commentBody += `🔍 **Details**: Run \`npm run coverage:html\` for line-by-line analysis\n`;
-            
-            commentBody += `\n---\n*Coverage focused on changed files. See [ADR-0005](docs/adr/0005-mandatory-testing.md) for testing guidelines.*`;
-            
-            // Post comment on PR
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: commentBody
-            });
-            
-          } catch (error) {
-            console.log('Error posting coverage comment:', error.message);
-            console.log('Error details:', error);
-            // Don't fail the workflow if comment posting fails
-          }
