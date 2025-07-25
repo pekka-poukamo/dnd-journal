@@ -19,6 +19,7 @@ This directory contains Architecture Decision Records (ADRs) that document the k
 | [ADR-0006](0006-no-build-tools.md) | No Build Tools or Bundlers | Accepted |
 | [ADR-0007](0007-feature-freeze-boundaries.md) | Feature Freeze Boundaries | Accepted |
 | [ADR-0008](0008-surge-deployment-only.md) | Surge.sh Deployment Only | Accepted |
+| [ADR-0009](0009-minimal-pwa-for-ios-installation.md) | Minimal PWA for iOS Installation | Accepted |
 
 ## For AI Agents
 
