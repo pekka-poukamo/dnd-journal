@@ -284,7 +284,7 @@ const handleShowAIPrompt = async () => {
       const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
       
       // Get the prompt that would be sent to AI using the AI module function
-      const promptData = getIntrospectionPromptForPreview(journalData.character, journalData.entries);
+      const promptData = await getIntrospectionPromptForPreview(journalData.character, journalData.entries);
       
       if (!promptData) {
         contentDiv.innerHTML = `<div class="error">AI features are not properly configured. Please check your API key and settings.</div>`;

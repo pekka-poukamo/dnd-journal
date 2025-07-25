@@ -46,25 +46,69 @@ Make questions specific to the character's situation and recent adventures. Focu
 // END SYSTEM PROMPT CONFIGURATIONS
 // ================================
 
-// Simple token estimation function (approximately 4 characters per token for GPT models)
-export const estimateTokenCount = (text) => {
+// Global tiktoken encoder - will be loaded asynchronously
+let tiktokenEncoder = null;
+
+// Initialize tiktoken encoder (using the lite version with cl100k_base for gpt-3.5-turbo)
+const initializeTiktoken = async () => {
+  if (tiktokenEncoder) {
+    return tiktokenEncoder;
+  }
+  
+  try {
+    // Check if js-tiktoken is available globally (loaded via CDN)
+    if (typeof window.JsTiktoken === 'undefined') {
+      console.warn('js-tiktoken not available, falling back to estimation');
+      return null;
+    }
+    
+    // Load the cl100k_base encoding for gpt-3.5-turbo
+    const res = await fetch('https://tiktoken.pages.dev/js/cl100k_base.json');
+    const cl100k_base = await res.json();
+    
+    const { Tiktoken } = window.JsTiktoken;
+    tiktokenEncoder = new Tiktoken(cl100k_base);
+    
+    return tiktokenEncoder;
+  } catch (error) {
+    console.warn('Failed to initialize tiktoken:', error);
+    return null;
+  }
+};
+
+// Accurate token count using tiktoken or fallback estimation
+export const estimateTokenCount = async (text) => {
   if (!text || typeof text !== 'string') {
     return 0;
   }
+  
+  const encoder = await initializeTiktoken();
+  if (encoder) {
+    try {
+      return encoder.encode(text).length;
+    } catch (error) {
+      console.warn('Tiktoken encoding failed, using fallback:', error);
+    }
+  }
+  
+  // Fallback to simple estimation (4 characters per token)
   return Math.ceil(text.length / 4);
 };
 
 // Calculate total tokens for a set of messages
-export const calculateTotalTokens = (messages) => {
+export const calculateTotalTokens = async (messages) => {
   if (!Array.isArray(messages)) {
     return 0;
   }
   
-  return messages.reduce((total, message) => {
-    const contentTokens = estimateTokenCount(message.content || '');
+  let total = 0;
+  for (const message of messages) {
+    const contentTokens = await estimateTokenCount(message.content || '');
     // Add small overhead for message structure (role, etc.)
-    return total + contentTokens + 4;
-  }, 0);
+    total += contentTokens + 4;
+  }
+  
+  return total;
 };
 
 // Pure function to load settings
@@ -240,7 +284,7 @@ export const getPromptDescription = () => {
 };
 
 // Get the prompt that would be sent to AI (for preview purposes - reuses exact same logic as generateIntrospectionPrompt)
-export const getIntrospectionPromptForPreview = (character, entries) => {
+export const getIntrospectionPromptForPreview = async (character, entries) => {
   if (!isAIEnabled()) {
     return null;
   }
@@ -250,23 +294,24 @@ export const getIntrospectionPromptForPreview = (character, entries) => {
     const formattedEntries = getFormattedEntriesForAI();
     const userPrompt = createIntrospectionPrompt(character, formattedEntries);
     
+    const messages = [
+      {
+        role: 'system',
+        content: NARRATIVE_INTROSPECTION_PROMPT
+      },
+      {
+        role: 'user', 
+        content: userPrompt
+      }
+    ];
+    
+    const totalTokens = await calculateTotalTokens(messages);
+    
     return {
       systemPrompt: NARRATIVE_INTROSPECTION_PROMPT,
       userPrompt: userPrompt,
-      messages: [
-        {
-          role: 'system',
-          content: NARRATIVE_INTROSPECTION_PROMPT
-        },
-        {
-          role: 'user', 
-          content: userPrompt
-        }
-      ],
-      totalTokens: calculateTotalTokens([
-        { role: 'system', content: NARRATIVE_INTROSPECTION_PROMPT },
-        { role: 'user', content: userPrompt }
-      ])
+      messages: messages,
+      totalTokens: totalTokens
     };
   } catch (error) {
     console.error('Failed to create prompt for preview:', error);

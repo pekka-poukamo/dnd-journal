@@ -333,60 +333,61 @@ describe('AI Module', function() {
       global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
     });
 
-    it('should return complete prompt structure', function() {
+    it('should return complete prompt structure', async function() {
       const character = { name: 'Test Character', class: 'Fighter' };
       const entries = [];
       
-      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      const result = await AI.getIntrospectionPromptForPreview(character, entries);
       
       expect(result).to.be.an('object');
       expect(result).to.have.property('systemPrompt');
       expect(result).to.have.property('userPrompt');
       expect(result).to.have.property('messages');
+      expect(result).to.have.property('totalTokens');
       expect(result.messages).to.be.an('array');
       expect(result.messages).to.have.length(2);
       expect(result.messages[0]).to.have.property('role', 'system');
       expect(result.messages[1]).to.have.property('role', 'user');
     });
 
-    it('should include character information in user prompt', function() {
+    it('should include character information in user prompt', async function() {
       const character = { name: 'Elara', race: 'Elf', class: 'Ranger' };
       const entries = [];
       
-      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      const result = await AI.getIntrospectionPromptForPreview(character, entries);
       
       expect(result.userPrompt).to.include('Elara');
       expect(result.userPrompt).to.include('Elf');
       expect(result.userPrompt).to.include('Ranger');
     });
 
-    it('should return null when AI is not enabled', function() {
+    it('should return null when AI is not enabled', async function() {
       global.resetLocalStorage(); // Clear AI settings
       
       const character = { name: 'Test Character', class: 'Fighter' };
       const entries = [];
       
-      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      const result = await AI.getIntrospectionPromptForPreview(character, entries);
       
       expect(result).to.be.null;
     });
 
-    it('should handle errors in prompt preparation', function() {
+    it('should handle errors in prompt preparation', async function() {
       // Set up AI but create a scenario that might cause errors
       const character = null; // Invalid character data
       const entries = null; // Invalid entries data
       
-      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      const result = await AI.getIntrospectionPromptForPreview(character, entries);
       
       // Should handle gracefully and either return valid data or null
       expect(result).to.satisfy(val => val === null || (typeof val === 'object' && val.systemPrompt && val.userPrompt));
     });
 
-    it('should use consistent system prompt', function() {
+    it('should use consistent system prompt', async function() {
       const character = { name: 'Test Character', class: 'Fighter' };
       const entries = [];
       
-      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      const result = await AI.getIntrospectionPromptForPreview(character, entries);
       
       expect(result).to.not.be.null;
       expect(result.systemPrompt).to.include('D&D storytelling companion');
@@ -394,7 +395,7 @@ describe('AI Module', function() {
       expect(result.messages[0].content).to.equal(result.systemPrompt);
     });
 
-    it('should include entries context when provided', function() {
+    it('should include entries context when provided', async function() {
       const character = { name: 'Test Hero', class: 'Paladin' };
       const entries = [
         {
@@ -405,7 +406,7 @@ describe('AI Module', function() {
         }
       ];
       
-      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      const result = await AI.getIntrospectionPromptForPreview(character, entries);
       
       expect(result).to.not.be.null;
       expect(result.userPrompt).to.include('Test Hero');
@@ -591,65 +592,65 @@ describe('AI Module', function() {
   });
 
   describe('estimateTokenCount', function() {
-    it('should estimate tokens for simple text', function() {
+    it('should estimate tokens for simple text', async function() {
       const text = 'Hello world';
-      const tokens = AI.estimateTokenCount(text);
-      expect(tokens).to.equal(3); // 11 characters / 4 = 2.75, rounded up to 3
-    });
-
-    it('should handle empty string', function() {
-      const tokens = AI.estimateTokenCount('');
-      expect(tokens).to.equal(0);
-    });
-
-    it('should handle null input', function() {
-      const tokens = AI.estimateTokenCount(null);
-      expect(tokens).to.equal(0);
-    });
-
-    it('should handle undefined input', function() {
-      const tokens = AI.estimateTokenCount(undefined);
-      expect(tokens).to.equal(0);
-    });
-
-    it('should handle longer text', function() {
-      const text = 'This is a longer piece of text that would be more representative of actual prompts';
-      const tokens = AI.estimateTokenCount(text);
+      const tokens = await AI.estimateTokenCount(text);
       expect(tokens).to.be.above(0);
-      expect(tokens).to.equal(Math.ceil(text.length / 4));
+      // Should be more accurate than simple estimation but we can't guarantee exact count without tiktoken
+    });
+
+    it('should handle empty string', async function() {
+      const tokens = await AI.estimateTokenCount('');
+      expect(tokens).to.equal(0);
+    });
+
+    it('should handle null input', async function() {
+      const tokens = await AI.estimateTokenCount(null);
+      expect(tokens).to.equal(0);
+    });
+
+    it('should handle undefined input', async function() {
+      const tokens = await AI.estimateTokenCount(undefined);
+      expect(tokens).to.equal(0);
+    });
+
+    it('should handle longer text', async function() {
+      const text = 'This is a longer piece of text that would be more representative of actual prompts';
+      const tokens = await AI.estimateTokenCount(text);
+      expect(tokens).to.be.above(0);
+      // Fallback should at least give reasonable estimation
+      expect(tokens).to.be.at.least(Math.ceil(text.length / 6)); // More conservative test
     });
   });
 
   describe('calculateTotalTokens', function() {
-    it('should calculate tokens for array of messages', function() {
+    it('should calculate tokens for array of messages', async function() {
       const messages = [
         { role: 'system', content: 'You are a helpful assistant' },
         { role: 'user', content: 'Hello' }
       ];
-      const totalTokens = AI.calculateTotalTokens(messages);
+      const totalTokens = await AI.calculateTotalTokens(messages);
       expect(totalTokens).to.be.above(0);
-      // Should be sum of content tokens plus overhead (4 tokens per message)
-      const expectedTokens = Math.ceil('You are a helpful assistant'.length / 4) + 4 + 
-                            Math.ceil('Hello'.length / 4) + 4;
-      expect(totalTokens).to.equal(expectedTokens);
+      // Should include content tokens plus overhead
+      expect(totalTokens).to.be.above(8); // At least overhead (4 per message)
     });
 
-    it('should handle empty array', function() {
-      const totalTokens = AI.calculateTotalTokens([]);
+    it('should handle empty array', async function() {
+      const totalTokens = await AI.calculateTotalTokens([]);
       expect(totalTokens).to.equal(0);
     });
 
-    it('should handle null input', function() {
-      const totalTokens = AI.calculateTotalTokens(null);
+    it('should handle null input', async function() {
+      const totalTokens = await AI.calculateTotalTokens(null);
       expect(totalTokens).to.equal(0);
     });
 
-    it('should handle messages with empty content', function() {
+    it('should handle messages with empty content', async function() {
       const messages = [
         { role: 'system', content: '' },
         { role: 'user', content: null }
       ];
-      const totalTokens = AI.calculateTotalTokens(messages);
+      const totalTokens = await AI.calculateTotalTokens(messages);
       expect(totalTokens).to.equal(8); // 4 tokens overhead per message
     });
   });
