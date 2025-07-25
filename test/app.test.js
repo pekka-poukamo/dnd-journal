@@ -144,6 +144,25 @@ describe('D&D Journal App', function() {
       const result = App.parseMarkdown(null);
       expect(result).to.equal('');
     });
+
+    it('should handle single line breaks', function() {
+      const result = App.parseMarkdown('Line 1\nLine 2');
+      expect(result).to.include('Line 1');
+      expect(result).to.include('Line 2');
+    });
+
+    it('should handle double line breaks as paragraphs', function() {
+      const result = App.parseMarkdown('Paragraph 1\n\nParagraph 2');
+      expect(result).to.include('Paragraph 1');
+      expect(result).to.include('Paragraph 2');
+    });
+
+    it('should handle mixed content with line breaks', function() {
+      const result = App.parseMarkdown('**Bold text**\nNew line\n\nNew paragraph');
+      expect(result).to.include('<strong>Bold text</strong>');
+      expect(result).to.include('New line');
+      expect(result).to.include('New paragraph');
+    });
   });
 
   describe('Character Summary', function() {

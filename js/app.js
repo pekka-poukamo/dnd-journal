@@ -40,7 +40,7 @@ export const parseMarkdown = (text) => {
     // Code `text`
     .replace(/`(.*?)`/g, '<code>$1</code>');
   
-  // Process lists more carefully
+  // Process lists and line breaks more carefully
   const lines = result.split('\n');
   const processedLines = [];
   let inList = false;
@@ -76,7 +76,12 @@ export const parseMarkdown = (text) => {
         inList = false;
         listType = null;
       }
-      processedLines.push(trimmedLine || '<br>');
+      // Handle empty lines as paragraph breaks, regular lines normally
+      if (trimmedLine === '') {
+        processedLines.push('__EMPTY_LINE__'); // Placeholder for empty lines
+      } else {
+        processedLines.push(trimmedLine);
+      }
     }
   }
   
@@ -85,7 +90,14 @@ export const parseMarkdown = (text) => {
     processedLines.push(`</${listType}>`);
   }
   
-  return processedLines.join('');
+  // Join and handle line breaks properly
+  return processedLines
+    .join('__LINE_BREAK__')
+    .replace(/__EMPTY_LINE____LINE_BREAK__/g, '<br><br>') // Double line breaks
+    .replace(/__EMPTY_LINE__/g, '<br><br>') // Remaining empty lines
+    .replace(/__LINE_BREAK__(?=<\/?(ul|ol|li))/g, '') // No breaks before/after list tags
+    .replace(/(<\/?(ul|ol)>)__LINE_BREAK__/g, '$1') // No breaks after list tags
+    .replace(/__LINE_BREAK__/g, '<br>'); // Single line breaks
 };
 
 // Load state from localStorage - using utils
