@@ -428,22 +428,38 @@ describe('D&D Journal App', function() {
   });
 
   describe('Focus Management', function() {
-    it('should focus entry title when element exists', function() {
+    it('should call focus on entry title when element exists', function() {
+      // Clean up any existing elements first
+      const existing = document.getElementById('entry-title');
+      if (existing) existing.remove();
+      
       const titleInput = document.createElement('input');
       titleInput.id = 'entry-title';
       document.body.appendChild(titleInput);
       
-      // Mock focus method and track if it was called
+      // Track focus calls by modifying the element directly accessed by the function
       let focusCalled = false;
-      const originalFocus = titleInput.focus;
-      titleInput.focus = function() { 
-        focusCalled = true; 
-        if (originalFocus) originalFocus.call(this);
+      const originalGetElementById = document.getElementById;
+      
+      document.getElementById = function(id) {
+        const element = originalGetElementById.call(this, id);
+        if (element && id === 'entry-title') {
+          element.focus = function() { 
+            focusCalled = true;
+          };
+        }
+        return element;
       };
       
+      // Call the function
       App.focusEntryTitle();
       
+      // Restore original method
+      document.getElementById = originalGetElementById;
+      
+      // Verify focus was called
       expect(focusCalled).to.be.true;
+      
       titleInput.remove();
     });
 
