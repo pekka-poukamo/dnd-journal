@@ -1,7 +1,8 @@
 name: Coverage Check
 
-on: 
+on:
   pull_request:
+    branches: [ main ]
 
 jobs:
   coverage:
@@ -9,15 +10,25 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-    - run: npm ci
-    - name: Run coverage
-      run: |
-        npm run test:coverage > coverage-output.txt 2>&1
-        echo "Coverage completed"
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests with coverage
+      run: npm run test:coverage > coverage-output.txt 2>&1
+      
     - name: Post coverage comment
+      if: github.event_name == 'pull_request'
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -26,7 +37,6 @@ jobs:
           
           try {
             const output = fs.readFileSync('coverage-output.txt', 'utf8');
-            console.log('Coverage output:', output);
             
             // Extract the coverage table
             const lines = output.split('\n');
@@ -34,7 +44,6 @@ jobs:
             
             let coverageTable = '';
             if (tableStart !== -1) {
-              // Get table lines (usually next 10-15 lines after "File" header)
               const tableLines = lines.slice(tableStart, tableStart + 15)
                 .filter(line => line.trim() !== '');
               coverageTable = tableLines.join('\n');
@@ -48,7 +57,7 @@ jobs:
 ${coverageTable}
 \`\`\`
 
-**Command to run locally:** \`npm run test:coverage\``;
+**Run locally:** \`npm run test:coverage\``;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -57,15 +66,13 @@ ${coverageTable}
               body: commentBody
             });
             
-            console.log('Comment posted successfully');
           } catch (error) {
-            console.error('Error posting comment:', error);
+            console.error('Error:', error);
             
-            // Fallback comment
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '## 📊 Coverage Report\n\nCoverage check completed. Run `npm run test:coverage` locally to see results.'
+              body: '## 📊 Coverage Report\n\nCoverage completed. Run `npm run test:coverage` locally.'
             });
           }
