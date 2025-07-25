@@ -107,6 +107,10 @@ export const getEntriesNeedingSummary = (entries) => {
 
 // Get character fields that need summarization
 export const getCharacterFieldsNeedingSummary = (character) => {
+  if (!character || typeof character !== 'object') {
+    return [];
+  }
+  
   const existingSummaries = loadCharacterSummaries();
   const fieldsNeedingSummary = [];
   
@@ -158,6 +162,10 @@ export const shouldCreateMetaSummaries = () => {
 
 // Process a single entry for summarization
 export const processEntrySummary = async (entry) => {
+  if (!entry || !entry.id || !entry.content) {
+    return null;
+  }
+  
   const summaryData = await generateSummary(entry.content, TARGET_WORDS.ENTRY_SUMMARY, 'entry');
   
   if (summaryData) {
@@ -176,6 +184,10 @@ export const processEntrySummary = async (entry) => {
 
 // Process a single character field for summarization
 export const processCharacterFieldSummary = async (fieldData) => {
+  if (!fieldData || !fieldData.field || !fieldData.content) {
+    return null;
+  }
+  
   const type = `character-${fieldData.field}`;
   const summaryData = await generateSummary(fieldData.content, TARGET_WORDS.CHARACTER_SUMMARY, type);
   
