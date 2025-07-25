@@ -63,9 +63,7 @@ export const isAIEnabled = () => {
 // Pure function to create introspection prompt
 export const createIntrospectionPrompt = (character, formattedEntries) => {
   // Use formatted character that may include summarized backstory/notes
-  const formattedCharacter = typeof window !== 'undefined' && window.Summarization ? 
-    window.Summarization.getFormattedCharacterForAI(character) : 
-    character;
+  const formattedCharacter = getFormattedCharacterForAI(character);
   
   const characterInfo = formattedCharacter.name ? 
     `${formattedCharacter.name}, a ${formattedCharacter.race || 'character'} ${formattedCharacter.class || 'adventurer'}` :
@@ -145,15 +143,7 @@ export const generateIntrospectionPrompt = async (character, entries) => {
 
   try {
     // Use formatted entries that include summaries for older entries
-    let formattedEntries;
-    if (typeof window !== 'undefined' && window.Summarization) {
-      formattedEntries = window.Summarization.getFormattedEntriesForAI();
-    } else {
-      // Fallback: Get last 5 entries for context
-      formattedEntries = entries
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, 5);
-    }
+    const formattedEntries = getFormattedEntriesForAI();
 
     const promptText = createIntrospectionPrompt(character, formattedEntries);
     const response = await callOpenAI(promptText);
@@ -227,4 +217,111 @@ export const getEntrySummary = async (entry) => {
 // Helper function for prompt information
 export const getPromptDescription = () => {
   return 'Narrative-focused introspection with 3 core questions + 1 unobvious question';
+};
+
+// =============================================================================
+// AI-SPECIFIC FORMATTING FUNCTIONS
+// =============================================================================
+
+// Format character data for AI processing (with summaries if available)
+export const getFormattedCharacterForAI = (character) => {
+  // Import storage functions dynamically to avoid circular dependency
+  const loadCharacterSummaries = () => {
+    try {
+      return JSON.parse(localStorage.getItem('simple-dnd-journal-character-summaries') || '{}');
+    } catch {
+      return {};
+    }
+  };
+  
+  const characterSummaries = loadCharacterSummaries();
+  
+  return {
+    ...character,
+    backstorySummarized: characterSummaries.backstory ? true : false,
+    notesSummarized: characterSummaries.notes ? true : false,
+    backstory: characterSummaries.backstory ? characterSummaries.backstory.summary : character.backstory,
+    notes: characterSummaries.notes ? characterSummaries.notes.summary : character.notes
+  };
+};
+
+// Format entries for AI processing (with summaries for older entries, full content for recent)
+export const getFormattedEntriesForAI = () => {
+  // Import storage and utility functions dynamically to avoid circular dependency
+  const loadJournalData = () => {
+    try {
+      return JSON.parse(localStorage.getItem('simple-dnd-journal') || '{}');
+    } catch {
+      return { character: {}, entries: [] };
+    }
+  };
+  
+  const loadEntrySummaries = () => {
+    try {
+      return JSON.parse(localStorage.getItem('simple-dnd-journal-summaries') || '{}');
+    } catch {
+      return {};
+    }
+  };
+  
+  const loadMetaSummaries = () => {
+    try {
+      return JSON.parse(localStorage.getItem('simple-dnd-journal-meta-summaries') || '{}');
+    } catch {
+      return {};
+    }
+  };
+  
+  const journalData = loadJournalData();
+  const entrySummaries = loadEntrySummaries();
+  const metaSummaries = loadMetaSummaries();
+  
+  const sortedEntries = [...(journalData.entries || [])].sort((a, b) => b.timestamp - a.timestamp);
+  const recentEntries = sortedEntries.slice(0, 5); // Keep 5 most recent entries in full
+  const olderEntries = sortedEntries.slice(5);
+  
+  const formattedEntries = [];
+  
+  // Add recent entries in full
+  recentEntries.forEach(entry => {
+    formattedEntries.push({
+      type: 'recent',
+      title: entry.title,
+      content: entry.content,
+      timestamp: entry.timestamp
+    });
+  });
+  
+  // Add individual summaries for older entries
+  olderEntries.forEach(entry => {
+    const summary = entrySummaries[entry.id];
+    if (summary) {
+      formattedEntries.push({
+        type: 'summary',
+        title: entry.title,
+        content: summary.summary,
+        timestamp: entry.timestamp
+      });
+    } else {
+      // Fallback to full entry if no summary available
+      formattedEntries.push({
+        type: 'recent',
+        title: entry.title,
+        content: entry.content,
+        timestamp: entry.timestamp
+      });
+    }
+  });
+  
+  // Add meta-summaries for very old entries
+  Object.values(metaSummaries).forEach(metaSummary => {
+    formattedEntries.push({
+      type: 'meta-summary',
+      title: metaSummary.title,
+      content: metaSummary.summary,
+      timestamp: metaSummary.timestamp
+    });
+  });
+  
+  return formattedEntries;
 };

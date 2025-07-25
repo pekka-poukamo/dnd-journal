@@ -6,6 +6,7 @@ import {
   safeSetToStorage, 
   STORAGE_KEYS 
 } from './utils.js';
+import { getSummaryStats, autoSummarizeEntries } from './summarization.js';
 
 // Load settings from localStorage
 export const loadSettings = () => {
@@ -153,9 +154,9 @@ const updateSummaryStats = () => {
   
   summaryStatsDiv.style.display = 'block';
   
-  // Use the summarization module if available
-  if (typeof window !== 'undefined' && window.Summarization) {
-    const stats = window.Summarization.getSummaryStats();
+  // Use the summarization module
+  try {
+    const stats = getSummaryStats();
     
     const totalEntriesEl = document.getElementById('total-entries');
     const recentEntriesEl = document.getElementById('recent-entries');
@@ -188,8 +189,9 @@ const updateSummaryStats = () => {
       if (metaSummaryStatEl) metaSummaryStatEl.style.display = 'none';
       if (metaEntriesStatEl) metaEntriesStatEl.style.display = 'none';
     }
-  } else {
-    // Summarization not available, hide stats
+  } catch (error) {
+    console.error('Failed to load summary stats:', error);
+    // Hide stats on error
     summaryStatsDiv.style.display = 'none';
   }
 };
@@ -204,14 +206,12 @@ const handleGenerateSummaries = async () => {
   button.disabled = true;
   
   try {
-    if (typeof window !== 'undefined' && window.Summarization) {
-      const result = await window.Summarization.generateMissingSummaries();
-      if (result) {
-        alert(`Generated ${result.generated} summaries. ${result.remaining} remaining.`);
-        updateSummaryStats();
-      }
+    const result = await autoSummarizeEntries();
+    if (result && result.length > 0) {
+      alert(`Generated ${result.length} summaries.`);
+      updateSummaryStats();
     } else {
-      alert('Summarization not available');
+      alert('No summaries needed at this time.');
     }
   } catch (error) {
     alert('Failed to generate summaries: ' + error.message);
