@@ -2,7 +2,7 @@
 // Following functional programming principles and style guide
 
 import { loadDataWithFallback, safeSetToStorage, generateId } from './utils.js';
-import { createSummarizationFunction, createTemplateFunction, isAPIAvailable } from './openai-wrapper.js';
+import { createUserPromptFunction, createTemplateFunction, isAPIAvailable } from './openai-wrapper.js';
 
 // =============================================================================
 // CONFIGURATION
@@ -18,7 +18,10 @@ const META_TRIGGER = 10;
 // =============================================================================
 
 // Create summarization function (no system prompt, low temperature)
-const callSummarize = createSummarizationFunction();
+const callSummarize = createUserPromptFunction({ 
+  temperature: 0.3, 
+  maxTokens: 200 
+});
 
 // Create meta-summarization function with template
 const createMetaSummaryPrompt = (combinedText, targetWords) => 

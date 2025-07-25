@@ -1,4 +1,4 @@
-// OpenAI Wrapper - Simple curried functions for reusable AI calls
+// OpenAI Wrapper - Pure OpenAI interface with currying
 // Following functional programming principles and style guide
 
 import { loadDataWithFallback, createInitialSettings, STORAGE_KEYS } from './utils.js';
@@ -7,12 +7,9 @@ import { loadDataWithFallback, createInitialSettings, STORAGE_KEYS } from './uti
 // CORE OPENAI INTERFACE
 // =============================================================================
 
-// Get API settings
-const getSettings = () => loadDataWithFallback(STORAGE_KEYS.SETTINGS, createInitialSettings());
-
 // Check if API is available
 export const isAPIAvailable = () => {
-  const settings = getSettings();
+  const settings = loadDataWithFallback(STORAGE_KEYS.SETTINGS, createInitialSettings());
   return Boolean(settings.enableAIFeatures && settings.apiKey && settings.apiKey.startsWith('sk-'));
 };
 
@@ -22,7 +19,7 @@ const callOpenAI = async (systemPrompt, userPrompt, options = {}) => {
     throw new Error('OpenAI API not available - check settings');
   }
 
-  const settings = getSettings();
+  const settings = loadDataWithFallback(STORAGE_KEYS.SETTINGS, createInitialSettings());
   const defaultOptions = {
     model: 'gpt-4.1-mini',
     maxTokens: 400,
@@ -71,14 +68,14 @@ const callOpenAI = async (systemPrompt, userPrompt, options = {}) => {
 // =============================================================================
 
 // Create a function with a fixed system prompt
-export const createPromptFunction = (systemPrompt, options = {}) => {
+export const createSystemPromptFunction = (systemPrompt, options = {}) => {
   return async (userPrompt) => {
     return await callOpenAI(systemPrompt, userPrompt, options);
   };
 };
 
-// Create a function with no system prompt (for summaries)
-export const createSimpleFunction = (options = {}) => {
+// Create a function with no system prompt
+export const createUserPromptFunction = (options = {}) => {
   return async (userPrompt) => {
     return await callOpenAI(null, userPrompt, options);
   };
@@ -93,43 +90,15 @@ export const createTemplateFunction = (promptTemplate, options = {}) => {
 };
 
 // =============================================================================
-// SPECIALIZED GENERATORS
+// DIRECT CALL FUNCTIONS
 // =============================================================================
 
-// Generate storytelling function with fixed prompt
-export const createStorytellingFunction = (systemPrompt) => {
-  return createPromptFunction(systemPrompt, { 
-    temperature: 0.8, 
-    maxTokens: 400 
-  });
-};
-
-// Generate summarization function 
-export const createSummarizationFunction = () => {
-  return createSimpleFunction({ 
-    temperature: 0.3, 
-    maxTokens: 200 
-  });
-};
-
-// Generate function with prompt template for dynamic prompts
-export const createDynamicFunction = (templateFn, options = {}) => {
-  return async (...args) => {
-    const prompt = templateFn(...args);
-    return await callOpenAI(null, prompt, options);
-  };
-};
-
-// =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
-
-// Direct call for one-off requests
+// Direct call with user prompt only
 export const callAI = async (prompt, options = {}) => {
   return await callOpenAI(null, prompt, options);
 };
 
-// Call with system prompt for one-off requests
+// Direct call with system and user prompts
 export const callAIWithSystem = async (systemPrompt, userPrompt, options = {}) => {
   return await callOpenAI(systemPrompt, userPrompt, options);
 };

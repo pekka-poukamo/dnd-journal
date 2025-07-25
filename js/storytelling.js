@@ -2,7 +2,7 @@
 // Following functional programming principles and style guide
 
 import { loadDataWithFallback, STORAGE_KEYS, createInitialJournalState } from './utils.js';
-import { createStorytellingFunction, isAPIAvailable } from './openai-wrapper.js';
+import { createSystemPromptFunction, isAPIAvailable } from './openai-wrapper.js';
 import { getAllSummaries, getSummariesByPattern } from './summarization.js';
 
 // =============================================================================
@@ -23,7 +23,10 @@ Make questions specific to their character and adventures.`;
 // =============================================================================
 
 // Create storytelling function with fixed prompt and settings
-const callStorytelling = createStorytellingFunction(STORYTELLING_PROMPT);
+const callStorytelling = createSystemPromptFunction(STORYTELLING_PROMPT, { 
+  temperature: 0.8, 
+  maxTokens: 400 
+});
 
 // =============================================================================
 // CONTENT FORMATTING FOR AI

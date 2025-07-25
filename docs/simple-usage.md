@@ -1,21 +1,21 @@
 # Clean Summarization & Storytelling Architecture
 
-## Core Modules (3 files, 477 lines total)
+## Core Modules (3 files, 452 lines total)
 
-### 1. OpenAI Wrapper (134 lines)
+### 1. OpenAI Wrapper (103 lines)
 ```javascript
-import { createSummarizationFunction, createStorytellingFunction } from './js/openai-wrapper.js';
+import { createSystemPromptFunction, createUserPromptFunction } from './js/openai-wrapper.js';
 
 // Create reusable functions with curried prompts
-const summarizeFn = createSummarizationFunction();
-const storyFn = createStorytellingFunction("You are a storytelling assistant...");
+const summarizeFn = createUserPromptFunction({ temperature: 0.3 });
+const storyFn = createSystemPromptFunction("You are a storytelling assistant...", { temperature: 0.8 });
 
 // Use them
 const summary = await summarizeFn("Summarize in 30 words: Long text here...");
 const story = await storyFn("Character details here...");
 ```
 
-### 2. Summarization (175 lines)
+### 2. Summarization (178 lines)
 ```javascript
 import { summarize, getAllSummaries, getSummary } from './js/summarization.js';
 
@@ -30,7 +30,7 @@ const summaries = getAllSummaries();
 const specificSummary = getSummary('entry:123');
 ```
 
-### 3. Storytelling (168 lines)
+### 3. Storytelling (171 lines)
 ```javascript
 import { generateQuestions, getCharacterContext } from './js/storytelling.js';
 
@@ -46,8 +46,8 @@ console.log(context.summaryStats); // { totalSummaries: 5, entrySummaries: 3, ..
 ## Key Features
 
 ### OpenAI Wrapper
-- **Curried Functions**: Create reusable AI functions with fixed prompts
-- **Specialized Generators**: `createStorytellingFunction()`, `createSummarizationFunction()`
+- **Pure Interface**: Generic curried functions for any use case
+- **System/User Prompts**: `createSystemPromptFunction()`, `createUserPromptFunction()`
 - **Template Functions**: Dynamic prompts with `createTemplateFunction()`
 - **Settings Integration**: Automatically uses API key from settings
 
@@ -155,4 +155,4 @@ for (const entry of entries) {
 const questions = await generateQuestions();
 ```
 
-Total: **477 lines** across 3 focused modules vs **1000+** in previous complex architecture.
+Total: **452 lines** across 3 focused modules vs **1000+** in previous complex architecture.
