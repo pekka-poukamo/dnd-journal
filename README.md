@@ -1,6 +1,7 @@
 # D&D Journal
 
 ![Test Suite](https://github.com/pekka-poukamo/dnd-journal/workflows/Test%20Suite/badge.svg)
+![Coverage](https://github.com/pekka-poukamo/dnd-journal/workflows/Coverage/badge.svg)
 
 A simple D&D journal built with vanilla JavaScript.
 
@@ -28,13 +29,14 @@ For private or local sync:
 ```bash
 npm install
 npm test
+npm run coverage  # Test coverage (≥80% required)
 ```
 
 ## CI/CD
 
 Automated testing and deployment via GitHub Actions:
 
-- **Pull Requests**: Tests run automatically on all PRs
+- **Pull Requests**: Tests + coverage check on all PRs
 - **Main Branch**: Tests + automatic deployment to [dnd-journal.surge.sh](https://dnd-journal.surge.sh)
 - **Test Matrix**: Node.js 16.x, 18.x, and 20.x
 - **Zero Build**: Static files deployed directly (ADR-0006)
