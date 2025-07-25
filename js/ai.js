@@ -225,16 +225,8 @@ export const getPromptDescription = () => {
 
 // Format character data for AI processing (with summaries if available)
 export const getFormattedCharacterForAI = (character) => {
-  // Import storage functions dynamically to avoid circular dependency
-  const loadCharacterSummaries = () => {
-    try {
-      return JSON.parse(localStorage.getItem('simple-dnd-journal-character-summaries') || '{}');
-    } catch {
-      return {};
-    }
-  };
-  
-  const characterSummaries = loadCharacterSummaries();
+  // Use consistent storage utilities
+  const characterSummaries = loadDataWithFallback('simple-dnd-journal-character-summaries', {});
   
   return {
     ...character,
@@ -247,34 +239,10 @@ export const getFormattedCharacterForAI = (character) => {
 
 // Format entries for AI processing (with summaries for older entries, full content for recent)
 export const getFormattedEntriesForAI = () => {
-  // Import storage and utility functions dynamically to avoid circular dependency
-  const loadJournalData = () => {
-    try {
-      return JSON.parse(localStorage.getItem('simple-dnd-journal') || '{}');
-    } catch {
-      return { character: {}, entries: [] };
-    }
-  };
-  
-  const loadEntrySummaries = () => {
-    try {
-      return JSON.parse(localStorage.getItem('simple-dnd-journal-summaries') || '{}');
-    } catch {
-      return {};
-    }
-  };
-  
-  const loadMetaSummaries = () => {
-    try {
-      return JSON.parse(localStorage.getItem('simple-dnd-journal-meta-summaries') || '{}');
-    } catch {
-      return {};
-    }
-  };
-  
-  const journalData = loadJournalData();
-  const entrySummaries = loadEntrySummaries();
-  const metaSummaries = loadMetaSummaries();
+  // Use consistent storage utilities
+  const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, { character: {}, entries: [] });
+  const entrySummaries = loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
+  const metaSummaries = loadDataWithFallback('simple-dnd-journal-meta-summaries', {});
   
   const sortedEntries = [...(journalData.entries || [])].sort((a, b) => b.timestamp - a.timestamp);
   const recentEntries = sortedEntries.slice(0, 5); // Keep 5 most recent entries in full
