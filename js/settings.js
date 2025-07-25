@@ -8,6 +8,7 @@ import {
   STORAGE_KEYS 
 } from './utils.js';
 import { getSummaryStats, autoSummarizeEntries } from './summarization.js';
+import { clearAllSummaries } from './summary-storage.js';
 import { 
   getIntrospectionPromptForPreview,
   isAIEnabled
@@ -160,6 +161,11 @@ const setupEventHandlers = () => {
     generateSummariesButton.addEventListener('click', handleGenerateSummaries);
   }
   
+  const clearSummariesButton = document.getElementById('clear-summaries');
+  if (clearSummariesButton) {
+    clearSummariesButton.addEventListener('click', handleClearSummaries);
+  }
+  
   const showPromptButton = document.getElementById('show-ai-prompt');
   if (showPromptButton) {
     showPromptButton.addEventListener('click', handleShowAIPrompt);
@@ -234,6 +240,13 @@ const updateSummaryStats = () => {
       if (metaSummaryStatEl) metaSummaryStatEl.style.display = 'none';
       if (metaEntriesStatEl) metaEntriesStatEl.style.display = 'none';
     }
+    
+    // Enable/disable clear summaries button based on whether there are summaries to clear
+    const clearSummariesButton = document.getElementById('clear-summaries');
+    if (clearSummariesButton) {
+      const hasSummaries = stats.totalSummaries > 0;
+      clearSummariesButton.disabled = !hasSummaries;
+    }
   } catch (error) {
     console.error('Failed to load summary stats:', error);
     // Hide stats on error
@@ -260,6 +273,36 @@ const handleGenerateSummaries = async () => {
     }
   } catch (error) {
     alert('Failed to generate summaries: ' + error.message);
+  } finally {
+    button.textContent = originalText;
+    button.disabled = false;
+  }
+};
+
+// Handle clear summaries button
+const handleClearSummaries = async () => {
+  const button = document.getElementById('clear-summaries');
+  if (!button) return;
+  
+  // Confirm before clearing
+  if (!confirm('Are you sure you want to clear all summaries? This action cannot be undone.')) {
+    return;
+  }
+  
+  const originalText = button.textContent;
+  button.textContent = 'Clearing...';
+  button.disabled = true;
+  
+  try {
+    const result = clearAllSummaries();
+    if (result.success) {
+      alert('All summaries have been cleared successfully.');
+      updateSummaryStats();
+    } else {
+      alert('Failed to clear summaries: ' + result.error);
+    }
+  } catch (error) {
+    alert('Failed to clear summaries: ' + error.message);
   } finally {
     button.textContent = originalText;
     button.disabled = false;

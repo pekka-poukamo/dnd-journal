@@ -173,3 +173,34 @@
 #ai-prompt-preview.expanded {
   display: block !important;
 }
+
+/* Summary actions */
+.summary-actions {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.summary-actions .btn {
+  flex: 1;
+  min-width: 180px;
+}
+
+/* Danger button variant */
+.btn-danger {
+  background: #dc3545;
+  color: white;
+  border: var(--border-width) solid #dc3545;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+  border-color: #c82333;
+  color: white;
+}
+
+.btn-danger:disabled {
+  background: #6c757d;
+  border-color: #6c757d;
+  cursor: not-allowed;
+}
