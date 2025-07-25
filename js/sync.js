@@ -284,9 +284,3 @@ export const createYjsSync = () => {
     _getState: () => syncState
   };
 };
-
-// Test compatibility layer - maintain global exports for testing
-if (typeof global !== 'undefined') {
-  global.createYjsSync = createYjsSync;
-  global.SYNC_CONFIG = SYNC_CONFIG;
-}

@@ -405,29 +405,3 @@ const formatDate = (timestamp) => {
     day: 'numeric'
   });
 };
-
-// Test compatibility layer - maintain global exports for testing
-if (typeof global !== 'undefined') {
-  global.Summarization = {
-    SUMMARIZATION_CONFIGS,
-    analyzeContent,
-    processSummary,
-    processBatch,
-    createStorageManager,
-    generateMissingSummaries,
-    generateMissingMetaSummaries,
-    generateMissingCharacterSummaries,
-    getFormattedEntriesForAI,
-    getFormattedCharacterForAI,
-    getSummaryStats,
-    initializeSummarization,
-    getEntriesNeedingSummaries,
-    groupSummariesForMeta,
-    getCharacterDetailsNeedingSummaries,
-    generateCharacterDetailSummary,
-    loadStoredCharacterSummaries,
-    saveStoredCharacterSummaries,
-    META_SUMMARY_CONFIG: SUMMARIZATION_CONFIGS.metaSummaries,
-    CHARACTER_SUMMARY_CONFIG: SUMMARIZATION_CONFIGS.character
-  };
-}

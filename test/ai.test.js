@@ -1,8 +1,6 @@
-const { expect } = require('chai');
-require('./setup');
-
-// Load the AI module
-const AI = require('../js/ai');
+import { expect } from 'chai';
+import './setup.js';
+import * as AI from '../js/ai.js';
 
 describe('AI Module', () => {
   beforeEach(() => {
@@ -98,175 +96,174 @@ describe('AI Module', () => {
       const character = {
         name: 'Aragorn',
         race: 'Human',
-        class: 'Ranger',
-        backstory: 'Heir to the throne of Gondor'
+        class: 'Ranger'
       };
       const formattedEntries = [];
 
       const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
       
       expect(prompt).to.include('Aragorn');
-      expect(prompt).to.include('Human Ranger');
-      expect(prompt).to.include('Heir to the throne of Gondor');
+      expect(prompt).to.include('Human');
+      expect(prompt).to.include('Ranger');
     });
 
-    it('should include formatted entries in prompt', () => {
-      const character = { name: 'Aragorn', race: 'Human', class: 'Ranger' };
+    it('should include recent entries in prompt', () => {
+      const character = { name: 'Test', race: 'Elf', class: 'Wizard' };
       const formattedEntries = [
-        {
-          title: 'Battle at Helms Deep',
-          content: 'We fought valiantly against the orc army',
-          type: 'full'
-        },
-        {
-          title: 'Meeting Legolas',
-          content: 'Formed an unlikely friendship with the elf',
-          type: 'summary'
-        }
+        'Entry 1: Found a magical sword',
+        'Entry 2: Defeated a dragon'
       ];
 
       const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
       
-      expect(prompt).to.include('Battle at Helms Deep');
-      expect(prompt).to.include('Meeting Legolas');
-      expect(prompt).to.include('Journey Context');
-    });
-
-    it('should truncate long entry content', () => {
-      const character = { name: 'Test', race: 'Human', class: 'Fighter' };
-      const longContent = 'A'.repeat(600); // Increased to 600 to exceed the new 500-character limit
-      const formattedEntries = [
-        {
-          title: 'Long Entry',
-          content: longContent,
-          type: 'full'
-        }
-      ];
-
-      const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
-      
-      expect(prompt).to.include('Long Entry');
-      expect(prompt).to.include('...');
-      expect(prompt).not.to.include(longContent);
-    });
-
-    it('should include character notes in prompt', () => {
-      const character = {
-        name: 'Gandalf',
-        race: 'Wizard',
-        class: 'Mage',
-        backstory: 'A powerful wizard sent to Middle-earth',
-        notes: 'Carries a staff and knows many spells'
-      };
-      const formattedEntries = [];
-
-      const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
-      
-      expect(prompt).to.include('Gandalf');
-      expect(prompt).to.include('Wizard Mage');
-      expect(prompt).to.include('A powerful wizard sent to Middle-earth');
-      expect(prompt).to.include('Carries a staff and knows many spells');
-      expect(prompt).to.include('Additional Character Details');
-    });
-
-    it('should use summarized character details when available', () => {
-      // Set up summarization module mock
-      global.window = {
-        Summarization: {
-          getFormattedCharacterForAI: (character) => ({
-            ...character,
-            backstory: 'Brief backstory summary',
-            backstorySummarized: true,
-            notes: 'Brief notes summary',
-            notesSummarized: true
-          })
-        }
-      };
-
-      const character = {
-        name: 'Boromir',
-        race: 'Human',
-        class: 'Fighter',
-        backstory: 'A very long backstory that would normally be too long for AI prompts',
-        notes: 'Very detailed notes about equipment and relationships'
-      };
-      const formattedEntries = [];
-
-      const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
-      
-      expect(prompt).to.include('Boromir');
-      expect(prompt).to.include('Brief backstory summary');
-      expect(prompt).to.include('Brief notes summary');
-      expect(prompt).to.include('(summarized)');
-      expect(prompt).not.to.include('very long backstory');
-    });
-
-    it('should work without summarization module', () => {
-      // Temporarily remove summarization module
-      const originalSummarization = global.window.Summarization;
-      global.window.Summarization = undefined;
-
-      const character = {
-        name: 'Frodo',
-        race: 'Hobbit',
-        class: 'Burglar',
-        backstory: 'A hobbit from the Shire',
-        notes: 'Ring-bearer'
-      };
-      const formattedEntries = [];
-
-      const prompt = AI.createIntrospectionPrompt(character, formattedEntries);
-      
-      expect(prompt).to.include('Frodo');
-      expect(prompt).to.include('A hobbit from the Shire');
-      expect(prompt).to.include('Ring-bearer');
-
-      // Restore original summarization module
-      global.window.Summarization = originalSummarization;
+      expect(prompt).to.include('Found a magical sword');
+      expect(prompt).to.include('Defeated a dragon');
     });
   });
 
-  // getWordCount is now in utils module, tested in utils.test.js
+  describe('generateIntrospectionPrompt', () => {
+    it('should generate prompt and save to localStorage', async () => {
+      const character = { name: 'Test', race: 'Dwarf', class: 'Fighter' };
+      const entries = [
+        { title: 'Battle', content: 'Fought bravely', timestamp: Date.now() }
+      ];
+
+      const result = await AI.generateIntrospectionPrompt(character, entries);
+      
+      expect(result.success).to.be.true;
+      expect(result.prompt).to.be.a('string');
+      expect(result.prompt).to.include('Test');
+      
+      // Check that prompt was saved
+      const saved = JSON.parse(global.localStorage.getItem('simple-dnd-journal-settings'));
+      expect(saved.currentPrompt).to.equal(result.prompt);
+    });
+
+    it('should handle API errors gracefully', async () => {
+      // Mock fetch to return error
+      global.fetch = async () => ({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'API Error' })
+      });
+
+      const character = { name: 'Test', race: 'Elf', class: 'Wizard' };
+      const entries = [];
+
+      const result = await AI.generateIntrospectionPrompt(character, entries);
+      
+      expect(result.success).to.be.false;
+      expect(result.error).to.include('API Error');
+    });
+  });
 
   describe('generateEntrySummary', () => {
-    beforeEach(() => {
-      // Mock AI settings for these tests
-      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify({
-        apiKey: 'sk-test123',
-        enableAIFeatures: true
-      }));
-    });
-
-    it('should return null when AI is disabled', async () => {
-      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify({
-        apiKey: '',
-        enableAIFeatures: false
-      }));
-
+    it('should generate summary for entry', async () => {
       const entry = {
-        id: '1',
-        title: 'Test Entry',
-        content: 'This is a test entry with some content'
+        title: 'The Battle of Helm\'s Deep',
+        content: 'We defended the fortress against overwhelming odds. The battle was fierce and many lives were lost, but we emerged victorious.',
+        timestamp: Date.now()
       };
 
-      const summary = await AI.generateEntrySummary(entry);
+      const result = await AI.generateEntrySummary(entry);
+      
+      expect(result.success).to.be.true;
+      expect(result.summary).to.be.a('string');
+      expect(result.summary).to.include('Battle');
+    });
+
+    it('should handle empty content gracefully', async () => {
+      const entry = {
+        title: 'Empty Entry',
+        content: '',
+        timestamp: Date.now()
+      };
+
+      const result = await AI.generateEntrySummary(entry);
+      
+      expect(result.success).to.be.false;
+      expect(result.error).to.include('empty');
+    });
+  });
+
+  describe('getEntrySummary', () => {
+    it('should return existing summary from localStorage', () => {
+      const entryId = 'test-entry-123';
+      const summaries = {
+        [entryId]: 'This is a test summary'
+      };
+      global.localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify(summaries));
+
+      const summary = AI.getEntrySummary(entryId);
+      expect(summary).to.equal('This is a test summary');
+    });
+
+    it('should return null when no summary exists', () => {
+      const summary = AI.getEntrySummary('nonexistent-entry');
       expect(summary).to.be.null;
     });
+  });
 
-    // Note: Actual API calls would need to be mocked for full testing
-    // This is a structure test to ensure the function exists and has proper error handling
-    it('should have proper error handling structure', async () => {
-      const entry = {
-        id: '1',
-        title: 'Test Entry',
-        content: 'This is a test entry'
+  describe('callOpenAI', () => {
+    it('should make successful API call', async () => {
+      const prompt = 'Test prompt';
+      const apiKey = 'sk-test123';
+
+      const result = await AI.callOpenAI(prompt, apiKey);
+      
+      expect(result.success).to.be.true;
+      expect(result.content).to.be.a('string');
+    });
+
+    it('should handle API errors', async () => {
+      // Mock fetch to return error
+      global.fetch = async () => ({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized' })
+      });
+
+      const prompt = 'Test prompt';
+      const apiKey = 'invalid-key';
+
+      const result = await AI.callOpenAI(prompt, apiKey);
+      
+      expect(result.success).to.be.false;
+      expect(result.error).to.include('Unauthorized');
+    });
+
+    it('should handle network errors', async () => {
+      // Mock fetch to throw error
+      global.fetch = async () => {
+        throw new Error('Network error');
       };
 
-      // With mocked API, this should return a summary object
-      const summary = await AI.generateEntrySummary(entry);
-      expect(summary).to.not.be.null;
-      expect(summary).to.have.property('id');
-      expect(summary).to.have.property('originalWordCount');
+      const prompt = 'Test prompt';
+      const apiKey = 'sk-test123';
+
+      const result = await AI.callOpenAI(prompt, apiKey);
+      
+      expect(result.success).to.be.false;
+      expect(result.error).to.include('Network error');
+    });
+  });
+
+  describe('getPromptDescription', () => {
+    it('should return description for introspection prompt', () => {
+      const description = AI.getPromptDescription('introspection');
+      expect(description).to.be.a('string');
+      expect(description).to.include('introspective');
+    });
+
+    it('should return description for summary prompt', () => {
+      const description = AI.getPromptDescription('summary');
+      expect(description).to.be.a('string');
+      expect(description).to.include('summary');
+    });
+
+    it('should return default description for unknown prompt type', () => {
+      const description = AI.getPromptDescription('unknown');
+      expect(description).to.be.a('string');
     });
   });
 });

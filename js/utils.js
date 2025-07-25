@@ -110,24 +110,3 @@ export const getCharacterFormFieldIds = () => [
 
 // Pure function to convert field ID to property name
 export const getPropertyNameFromFieldId = (fieldId) => fieldId.replace('character-', '');
-
-// Test compatibility layer - maintain global exports for testing
-if (typeof global !== 'undefined') {
-  global.Utils = {
-    STORAGE_KEYS,
-    safeParseJSON,
-    safeGetFromStorage,
-    safeSetToStorage,
-    loadDataWithFallback,
-    generateId,
-    formatDate,
-    getWordCount,
-    debounce,
-    isValidEntry,
-    createInitialJournalState,
-    createInitialSettings,
-    sortEntriesByDate,
-    getCharacterFormFieldIds,
-    getPropertyNameFromFieldId
-  };
-}

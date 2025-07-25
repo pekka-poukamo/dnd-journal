@@ -1,8 +1,6 @@
-const { expect } = require('chai');
-require('./setup');
-
-// Load the utils module - now available globally from test compatibility layer
-const Utils = global.Utils;
+import { expect } from 'chai';
+import './setup.js';
+import * as Utils from '../js/utils.js';
 
 describe('Utils Module', () => {
   beforeEach(() => {

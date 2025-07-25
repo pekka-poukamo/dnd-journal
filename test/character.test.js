@@ -1,54 +1,20 @@
-const path = require('path');
-const fs = require('fs');
-require('./setup');
-const { should } = require('chai');
-
-// Load the utils and character files as modules
-const utilsPath = path.join(__dirname, '../js/utils.js');
-const characterPath = path.join(__dirname, '../js/character.js');
-const utilsContent = fs.readFileSync(utilsPath, 'utf8');
-const characterContent = fs.readFileSync(characterPath, 'utf8');
-
-// Create a proper module context for character page
-function loadCharacterPage() {
-  // Clear localStorage before each test
-  localStorage.clear();
-  
-  // Reset DOM with simplified character form elements
-  document.body.innerHTML = `
-    <input type="text" id="character-name" />
-    <input type="text" id="character-race" />
-    <input type="text" id="character-class" />
-    <textarea id="character-backstory"></textarea>
-    <textarea id="character-notes"></textarea>
-  `;
-  
-  // Clear any existing globals
-  delete global.loadCharacterData;
-  delete global.saveCharacterData;
-  delete global.getCharacterFromForm;
-  delete global.populateForm;
-  
-  // Setup window object for utils
-  global.window = global.window || {};
-  
-  // Evaluate the utils code first to setup window.Utils
-  eval(utilsContent);
-  
-  // Evaluate the character code in the global context
-  eval(characterContent);
-  
-  return {
-    loadCharacterData: global.loadCharacterData,
-    saveCharacterData: global.saveCharacterData,
-    getCharacterFromForm: global.getCharacterFromForm,
-    populateForm: global.populateForm
-  };
-}
+import { expect } from 'chai';
+import './setup.js';
+import * as Character from '../js/character.js';
 
 describe('Character Page', function() {
   beforeEach(function() {
-    loadCharacterPage();
+    // Clear localStorage before each test
+    global.localStorage.clear();
+    
+    // Reset DOM with simplified character form elements
+    document.body.innerHTML = `
+      <input type="text" id="character-name" />
+      <input type="text" id="character-race" />
+      <input type="text" id="character-class" />
+      <textarea id="character-backstory"></textarea>
+      <textarea id="character-notes"></textarea>
+    `;
   });
 
   describe('Character Form Integration', function() {
@@ -61,13 +27,13 @@ describe('Character Page', function() {
         notes: 'Skilled with bow and arrow'
       };
 
-      populateForm(testCharacter);
+      Character.populateForm(testCharacter);
 
-      document.getElementById('character-name').value.should.equal('Legolas');
-      document.getElementById('character-race').value.should.equal('Elf');
-      document.getElementById('character-class').value.should.equal('Ranger');
-      document.getElementById('character-backstory').value.should.equal('A woodland elf from Mirkwood');
-      document.getElementById('character-notes').value.should.equal('Skilled with bow and arrow');
+      expect(document.getElementById('character-name').value).to.equal('Legolas');
+      expect(document.getElementById('character-race').value).to.equal('Elf');
+      expect(document.getElementById('character-class').value).to.equal('Ranger');
+      expect(document.getElementById('character-backstory').value).to.equal('A woodland elf from Mirkwood');
+      expect(document.getElementById('character-notes').value).to.equal('Skilled with bow and arrow');
     });
 
     it('should get character data from form', function() {
@@ -78,18 +44,18 @@ describe('Character Page', function() {
       document.getElementById('character-backstory').value = 'Son of Glóin';
       document.getElementById('character-notes').value = 'Carries a family axe';
 
-      const character = getCharacterFromForm();
+      const character = Character.getCharacterFromForm();
 
       // Test that form data is correctly extracted
-      character.name.should.equal('Gimli');
-      character.race.should.equal('Dwarf');
-      character.class.should.equal('Fighter');
-      character.backstory.should.equal('Son of Glóin');
-      character.notes.should.equal('Carries a family axe');
+      expect(character.name).to.equal('Gimli');
+      expect(character.race).to.equal('Dwarf');
+      expect(character.class).to.equal('Fighter');
+      expect(character.backstory).to.equal('Son of Glóin');
+      expect(character.notes).to.equal('Carries a family axe');
     });
 
     it('should handle empty form gracefully', function() {
-      const character = getCharacterFromForm();
+      const character = Character.getCharacterFromForm();
       const expectedState = {
         name: '',
         race: '',
@@ -98,55 +64,129 @@ describe('Character Page', function() {
         notes: ''
       };
       
-      character.should.deep.equal(expectedState);
+      expect(character).to.deep.equal(expectedState);
+    });
+
+    it('should handle partial form data', function() {
+      // Set only some form values
+      document.getElementById('character-name').value = 'Aragorn';
+      document.getElementById('character-race').value = 'Human';
+
+      const character = Character.getCharacterFromForm();
+
+      expect(character.name).to.equal('Aragorn');
+      expect(character.race).to.equal('Human');
+      expect(character.class).to.equal('');
+      expect(character.backstory).to.equal('');
+      expect(character.notes).to.equal('');
     });
   });
 
-  describe('Data Persistence', function() {
-    it('should save and load character data', function() {
+  describe('Character Data Persistence', function() {
+    it('should save character data to localStorage', function() {
+      const testCharacter = {
+        name: 'Frodo',
+        race: 'Hobbit',
+        class: 'Burglar',
+        backstory: 'A hobbit from the Shire',
+        notes: 'Ring-bearer'
+      };
+
+      Character.saveCharacterData(testCharacter);
+
+      const savedData = JSON.parse(global.localStorage.getItem('simple-dnd-journal'));
+      expect(savedData.character).to.deep.equal(testCharacter);
+    });
+
+    it('should load character data from localStorage', function() {
+      const testCharacter = {
+        name: 'Sam',
+        race: 'Hobbit',
+        class: 'Gardener',
+        backstory: 'Frodo\'s loyal companion',
+        notes: 'Carries cooking gear'
+      };
+
+      global.localStorage.setItem('simple-dnd-journal', JSON.stringify({
+        character: testCharacter,
+        entries: []
+      }));
+
+      const loadedCharacter = Character.loadCharacterData();
+      expect(loadedCharacter).to.deep.equal(testCharacter);
+    });
+
+    it('should return default character when no data exists', function() {
+      const loadedCharacter = Character.loadCharacterData();
+      const expectedDefault = {
+        name: '',
+        race: '',
+        class: '',
+        backstory: '',
+        notes: ''
+      };
+
+      expect(loadedCharacter).to.deep.equal(expectedDefault);
+    });
+
+    it('should handle corrupted localStorage data gracefully', function() {
+      global.localStorage.setItem('simple-dnd-journal', 'invalid-json');
+
+      const loadedCharacter = Character.loadCharacterData();
+      const expectedDefault = {
+        name: '',
+        race: '',
+        class: '',
+        backstory: '',
+        notes: ''
+      };
+
+      expect(loadedCharacter).to.deep.equal(expectedDefault);
+    });
+  });
+
+  describe('Form Field Integration', function() {
+    it('should handle all character form fields', function() {
       const testCharacter = {
         name: 'Gandalf',
-        race: 'Maia',
-        class: 'Wizard',
-        backstory: 'A wise wizard of great power',
-        notes: 'Carries a staff and sword'
+        race: 'Wizard',
+        class: 'Mage',
+        backstory: 'A powerful wizard sent to Middle-earth',
+        notes: 'Carries a staff and knows many spells'
       };
 
-      // Save character data
-      const saveResult = saveCharacterData(testCharacter);
-      saveResult.should.have.property('success', true);
+      Character.populateForm(testCharacter);
 
-      // Load character data and verify it was saved correctly
-      const loadedCharacter = loadCharacterData();
-      loadedCharacter.name.should.equal('Gandalf');
-      loadedCharacter.race.should.equal('Maia');
-      loadedCharacter.class.should.equal('Wizard');
-      loadedCharacter.backstory.should.equal('A wise wizard of great power');
-      loadedCharacter.notes.should.equal('Carries a staff and sword');
+      // Verify all fields are populated
+      const nameField = document.getElementById('character-name');
+      const raceField = document.getElementById('character-race');
+      const classField = document.getElementById('character-class');
+      const backstoryField = document.getElementById('character-backstory');
+      const notesField = document.getElementById('character-notes');
+
+      expect(nameField.value).to.equal('Gandalf');
+      expect(raceField.value).to.equal('Wizard');
+      expect(classField.value).to.equal('Mage');
+      expect(backstoryField.value).to.equal('A powerful wizard sent to Middle-earth');
+      expect(notesField.value).to.equal('Carries a staff and knows many spells');
     });
 
-    it('should preserve existing entries when saving character', function() {
-      // Setup existing data with entries
-      const existingData = {
-        character: { name: 'Old Character' },
-        entries: [
-          { id: '1', title: 'First Adventure', content: 'An epic quest' }
-        ]
+    it('should handle special characters in form data', function() {
+      const testCharacter = {
+        name: 'Éowyn',
+        race: 'Human',
+        class: 'Shield-maiden',
+        backstory: 'Daughter of Éomund, niece of Théoden',
+        notes: 'Wields a sword and shield'
       };
-      localStorage.setItem('simple-dnd-journal', JSON.stringify(existingData));
 
-      // Save new character data
-      const newCharacter = { name: 'New Character', class: 'Paladin' };
-      saveCharacterData(newCharacter);
+      Character.populateForm(testCharacter);
 
-      // Verify entries are preserved
-      const stored = JSON.parse(localStorage.getItem('simple-dnd-journal'));
-      stored.should.have.property('entries').that.is.an('array').with.length(1);
-      stored.entries[0].should.have.property('title', 'First Adventure');
-      stored.should.have.property('character');
-      stored.character.should.have.property('name', 'New Character');
+      expect(document.getElementById('character-name').value).to.equal('Éowyn');
+      expect(document.getElementById('character-race').value).to.equal('Human');
+      expect(document.getElementById('character-class').value).to.equal('Shield-maiden');
+      expect(document.getElementById('character-backstory').value).to.equal('Daughter of Éomund, niece of Théoden');
+      expect(document.getElementById('character-notes').value).to.equal('Wields a sword and shield');
     });
   });
-
-
 });

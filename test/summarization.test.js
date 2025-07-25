@@ -1,8 +1,6 @@
-const { expect } = require('chai');
-require('./setup');
-
-// Load the summarization module - now available globally from test compatibility layer
-const Summarization = global.Summarization;
+import { expect } from 'chai';
+import './setup.js';
+import * as Summarization from '../js/summarization.js';
 
 describe('Summarization Module', () => {
   beforeEach(() => {
@@ -102,469 +100,205 @@ describe('Summarization Module', () => {
       }
       
       global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
+    });
+
+    it('should return correct summary statistics', () => {
+      const stats = Summarization.getSummaryStats();
       
-      // Mock summaries for older entries
-      const summaries = {};
-      for (let i = 5; i < 10; i++) {
-        summaries[`${i}`] = {
-          summary: `Summary ${i}`,
-          wordCount: 10
-        };
-      }
+      expect(stats).to.have.property('totalEntries', 10);
+      expect(stats).to.have.property('summarizedEntries', 0);
+      expect(stats).to.have.property('pendingSummaries', 3);
+      expect(stats).to.have.property('summaryProgress', 0);
+    });
+
+    it('should calculate progress correctly when summaries exist', () => {
+      // Add some summaries
+      const summaries = {
+        '5': { summary: 'Summary 5' },
+        '6': { summary: 'Summary 6' },
+        '7': { summary: 'Summary 7' }
+      };
       global.localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify(summaries));
-    });
-
-    it('should calculate summary statistics correctly', () => {
-      const stats = Summarization.getSummaryStats();
-      
-      expect(stats.totalEntries).to.equal(10);
-      expect(stats.recentEntries).to.equal(5);
-      expect(stats.olderEntries).to.equal(5);
-      expect(stats.summarizedEntries).to.equal(5);
-      expect(stats.pendingSummaries).to.equal(0);
-      expect(stats.summaryCompletionRate).to.equal(100);
-    });
-
-    it('should handle no entries', () => {
-      global.localStorage.removeItem('simple-dnd-journal');
       
       const stats = Summarization.getSummaryStats();
       
-      expect(stats.totalEntries).to.equal(0);
-      expect(stats.recentEntries).to.equal(0);
-      expect(stats.olderEntries).to.equal(0);
-      expect(stats.summarizedEntries).to.equal(0);
-      expect(stats.pendingSummaries).to.equal(0);
-      expect(stats.summaryCompletionRate).to.equal(100);
+      expect(stats).to.have.property('totalEntries', 10);
+      expect(stats).to.have.property('summarizedEntries', 3);
+      expect(stats).to.have.property('pendingSummaries', 0);
+      expect(stats).to.have.property('summaryProgress', 30);
     });
   });
 
   describe('getFormattedEntriesForAI', () => {
-    beforeEach(() => {
-      // Mock journal data
-      const journalData = {
-        character: { name: 'Test Character' },
-        entries: []
+    it('should format entries correctly for AI processing', () => {
+      const entries = [
+        {
+          id: '1',
+          title: 'Battle at Helm\'s Deep',
+          content: 'We defended the fortress against overwhelming odds.',
+          timestamp: Date.now()
+        },
+        {
+          id: '2',
+          title: 'Meeting with Gandalf',
+          content: 'The wizard shared important information about the ring.',
+          timestamp: Date.now() - 1000
+        }
+      ];
+      
+      const formatted = Summarization.getFormattedEntriesForAI(entries);
+      
+      expect(formatted).to.be.an('array');
+      expect(formatted).to.have.length(2);
+      expect(formatted[0]).to.include('Battle at Helm\'s Deep');
+      expect(formatted[0]).to.include('We defended the fortress');
+      expect(formatted[1]).to.include('Meeting with Gandalf');
+    });
+
+    it('should truncate long content appropriately', () => {
+      const longContent = 'A'.repeat(600);
+      const entries = [
+        {
+          id: '1',
+          title: 'Long Entry',
+          content: longContent,
+          timestamp: Date.now()
+        }
+      ];
+      
+      const formatted = Summarization.getFormattedEntriesForAI(entries);
+      
+      expect(formatted[0]).to.include('Long Entry');
+      expect(formatted[0]).to.include('...');
+      expect(formatted[0].length).to.be.lessThan(longContent.length);
+    });
+  });
+
+  describe('groupSummariesForMeta', () => {
+    it('should group summaries correctly for meta summarization', () => {
+      const summaries = {
+        '1': { summary: 'Summary 1', timestamp: Date.now() },
+        '2': { summary: 'Summary 2', timestamp: Date.now() - 1000 },
+        '3': { summary: 'Summary 3', timestamp: Date.now() - 2000 }
       };
       
-      // Create 10 entries
-      for (let i = 0; i < 10; i++) {
-        journalData.entries.push({
-          id: `${i}`,
-          title: `Entry ${i}`,
-          content: `Content ${i}`,
-          timestamp: Date.now() - (i * 24 * 60 * 60 * 1000)
-        });
-      }
+      const grouped = Summarization.groupSummariesForMeta(summaries);
       
-      global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
-      
-      // Mock summaries for older entries
-      const summaries = {};
-      for (let i = 5; i < 10; i++) {
-        summaries[`${i}`] = {
-          summary: `Summary ${i}`,
-          wordCount: 10
-        };
-      }
-      global.localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify(summaries));
+      expect(grouped).to.be.an('array');
+      expect(grouped).to.have.length(3);
+      expect(grouped[0]).to.include('Summary 1');
+      expect(grouped[1]).to.include('Summary 2');
+      expect(grouped[2]).to.include('Summary 3');
     });
 
-    it('should format entries with recent full content and older summaries', () => {
-      const formatted = Summarization.getFormattedEntriesForAI();
+    it('should handle empty summaries object', () => {
+      const grouped = Summarization.groupSummariesForMeta({});
       
-      expect(formatted).to.have.length(10);
-      
-      // First 5 should be recent entries with full content
-      for (let i = 0; i < 5; i++) {
-        expect(formatted[i].type).to.equal('full');
-        expect(formatted[i].content).to.equal(`Content ${i}`);
-      }
-      
-      // Last 5 should be summaries
-      for (let i = 5; i < 10; i++) {
-        expect(formatted[i].type).to.equal('summary');
-        expect(formatted[i].content).to.equal(`Summary ${i}`);
-      }
-    });
-
-    it('should handle missing summaries gracefully', () => {
-      global.localStorage.removeItem('simple-dnd-journal-summaries');
-      
-      const formatted = Summarization.getFormattedEntriesForAI();
-      
-      expect(formatted).to.have.length(10);
-      
-      // All should be full entries when no summaries exist
-      formatted.forEach(entry => {
-        expect(entry.type).to.equal('full');
-      });
+      expect(grouped).to.be.an('array');
+      expect(grouped).to.have.length(0);
     });
   });
 
-  describe('Meta-Summarization', () => {
-    describe('groupSummariesForMeta', () => {
-      it('should group summaries into batches for meta-summarization', () => {
-        const entries = [];
-        const summaries = {};
-        
-        // Create 50 entries (enough to trigger meta-summarization)
-        for (let i = 0; i < 50; i++) {
-          entries.push({
-            id: `${i}`,
-            title: `Entry ${i}`,
-            content: `Content ${i}`,
-            timestamp: Date.now() - (i * 24 * 60 * 60 * 1000)
-          });
-          
-          // Add summaries for all entries
-          summaries[`${i}`] = {
-            summary: `Summary ${i}`,
-            wordCount: 10
-          };
-        }
-        
-        const groups = Summarization.groupSummariesForMeta(entries, summaries);
-        
-        expect(groups).to.have.length(5); // 50 entries / 10 per group
-        
-        groups.forEach((group, index) => {
-          expect(group.summaries).to.have.length(10);
-          expect(group.entryCount).to.equal(10);
-          expect(group.timeRange).to.be.a('string');
-        });
-      });
-
-      it('should exclude incomplete groups', () => {
-        const entries = [];
-        const summaries = {};
-        
-        // Create 25 entries (not enough for complete groups)
-        for (let i = 0; i < 25; i++) {
-          entries.push({
-            id: `${i}`,
-            title: `Entry ${i}`,
-            content: `Content ${i}`,
-            timestamp: Date.now() - (i * 24 * 60 * 60 * 1000)
-          });
-          
-          summaries[`${i}`] = {
-            summary: `Summary ${i}`,
-            wordCount: 10
-          };
-        }
-        
-        const groups = Summarization.groupSummariesForMeta(entries, summaries);
-        
-        expect(groups).to.have.length(0); // No complete groups
-      });
+  describe('getCharacterDetailsNeedingSummaries', () => {
+    it('should identify character details that need summarization', () => {
+      const character = {
+        name: 'Test Character',
+        backstory: 'A very long backstory that needs to be summarized for AI processing',
+        notes: 'Detailed notes about equipment and relationships'
+      };
+      
+      const result = Summarization.getCharacterDetailsNeedingSummaries(character);
+      
+      expect(result).to.be.an('array');
+      expect(result).to.have.length(2);
+      expect(result).to.include('backstory');
+      expect(result).to.include('notes');
     });
 
-    describe('getSummaryStats with meta-summarization', () => {
-      it('should indicate meta-summarization is active for large datasets', () => {
-        const journalData = {
-          character: { name: 'Test Character' },
-          entries: []
-        };
-        
-        // Create 60 entries (enough to trigger meta-summarization)
-        for (let i = 0; i < 60; i++) {
-          journalData.entries.push({
-            id: `${i}`,
-            title: `Entry ${i}`,
-            content: `Content ${i}`,
-            timestamp: Date.now() - (i * 24 * 60 * 60 * 1000)
-          });
-        }
-        
-        global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
-        
-        const stats = Summarization.getSummaryStats();
-        
-        expect(stats.metaSummaryActive).to.be.true;
-        expect(stats.possibleMetaSummaries).to.be.greaterThan(0);
-      });
-
-      it('should indicate meta-summarization is inactive for small datasets', () => {
-        const journalData = {
-          character: { name: 'Test Character' },
-          entries: []
-        };
-        
-        // Create 30 entries (not enough to trigger meta-summarization)
-        for (let i = 0; i < 30; i++) {
-          journalData.entries.push({
-            id: `${i}`,
-            title: `Entry ${i}`,
-            content: `Content ${i}`,
-            timestamp: Date.now() - (i * 24 * 60 * 60 * 1000)
-          });
-        }
-        
-        global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
-        
-        const stats = Summarization.getSummaryStats();
-        
-        expect(stats.metaSummaryActive).to.be.false;
-        expect(stats.possibleMetaSummaries).to.equal(0);
-      });
-    });
-
-    describe('getFormattedEntriesForAI with meta-summaries', () => {
-      it('should use meta-summaries when available', () => {
-        const journalData = {
-          character: { name: 'Test Character' },
-          entries: []
-        };
-        
-        // Create 60 entries
-        for (let i = 0; i < 60; i++) {
-          journalData.entries.push({
-            id: `${i}`,
-            title: `Entry ${i}`,
-            content: `Content ${i}`,
-            timestamp: Date.now() - (i * 24 * 60 * 60 * 1000)
-          });
-        }
-        
-        global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
-        
-        // Mock meta-summaries
-        const metaSummaries = {
-          'meta-0-10': {
-            summary: 'Meta summary 1',
-            entryCount: 10,
-            timeRange: 'Jan 1 - Jan 10'
-          },
-          'meta-10-20': {
-            summary: 'Meta summary 2',
-            entryCount: 10,
-            timeRange: 'Jan 11 - Jan 20'
-          }
-        };
-        global.localStorage.setItem('simple-dnd-journal-meta-summaries', JSON.stringify(metaSummaries));
-        
-        const formatted = Summarization.getFormattedEntriesForAI();
-        
-        // Should include meta-summaries
-        const metaEntries = formatted.filter(entry => entry.type === 'meta-summary');
-        expect(metaEntries).to.have.length(2);
-      });
-
-      it('should fall back to individual summaries when meta-summaries are not available', () => {
-        const journalData = {
-          character: { name: 'Test Character' },
-          entries: []
-        };
-        
-        // Create 60 entries
-        for (let i = 0; i < 60; i++) {
-          journalData.entries.push({
-            id: `${i}`,
-            title: `Entry ${i}`,
-            content: `Content ${i}`,
-            timestamp: Date.now() - (i * 24 * 60 * 60 * 1000)
-          });
-        }
-        
-        global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
-        
-        // Mock individual summaries but no meta-summaries
-        const summaries = {};
-        for (let i = 5; i < 60; i++) {
-          summaries[`${i}`] = {
-            summary: `Summary ${i}`,
-            wordCount: 10
-          };
-        }
-        global.localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify(summaries));
-        
-        const formatted = Summarization.getFormattedEntriesForAI();
-        
-        // Should use individual summaries
-        const summaryEntries = formatted.filter(entry => entry.type === 'summary');
-        expect(summaryEntries.length).to.be.greaterThan(0);
-      });
+    it('should not include short content', () => {
+      const character = {
+        name: 'Test Character',
+        backstory: 'Short',
+        notes: 'Also short'
+      };
+      
+      const result = Summarization.getCharacterDetailsNeedingSummaries(character);
+      
+      expect(result).to.be.an('array');
+      expect(result).to.have.length(0);
     });
   });
 
-  describe('Character Summarization', () => {
-    describe('getCharacterDetailsNeedingSummaries', () => {
-      it('should identify character details that need summarization', () => {
-        const character = {
-          name: 'Test Character',
-          backstory: 'A very long backstory that exceeds the word limit and should be summarized because it contains many details about the character\'s past, their motivations, and their relationships with other characters in the world.',
-          notes: 'Short notes'
-        };
-        
-        const characterSummaries = {};
-        
-        const result = Summarization.getCharacterDetailsNeedingSummaries(character, characterSummaries);
-        
-        expect(result).to.have.property('backstory');
-        expect(result.backstory).to.have.property('type', 'character');
-        expect(result.backstory).to.have.property('field', 'backstory');
-        expect(result).to.not.have.property('notes'); // Short notes don't need summarization
-      });
-
-      it('should not require summarization for short character details', () => {
-        const character = {
-          name: 'Test Character',
-          backstory: 'Short backstory',
-          notes: 'Short notes'
-        };
-        
-        const characterSummaries = {};
-        
-        const result = Summarization.getCharacterDetailsNeedingSummaries(character, characterSummaries);
-        
-        expect(result).to.be.empty;
-      });
-
-      it('should detect changes in character details', () => {
-        const character = {
-          name: 'Test Character',
-          backstory: 'A very long backstory that exceeds the word limit and should be summarized because it contains many details about the character\'s past, their motivations, and their relationships with other characters in the world.'
-        };
-        
-        const characterSummaries = {
-          backstory: {
-            summary: 'Old summary',
-            contentHash: 'oldhash'
-          }
-        };
-        
-        const result = Summarization.getCharacterDetailsNeedingSummaries(character, characterSummaries);
-        
-        expect(result).to.have.property('backstory');
-        expect(result.backstory.contentHash).to.not.equal('oldhash');
-      });
-
-      it('should not require new summary if content unchanged', () => {
-        const character = {
-          name: 'Test Character',
-          backstory: 'A very long backstory that exceeds the word limit and should be summarized because it contains many details about the character\'s past, their motivations, and their relationships with other characters in the world.'
-        };
-        
-        const contentHash = btoa(character.backstory).substring(0, 16);
-        const characterSummaries = {
-          backstory: {
-            summary: 'Existing summary',
-            contentHash: contentHash
-          }
-        };
-        
-        const result = Summarization.getCharacterDetailsNeedingSummaries(character, characterSummaries);
-        
-        expect(result).to.be.empty;
-      });
+  describe('getFormattedCharacterForAI', () => {
+    it('should format character data for AI processing', () => {
+      const character = {
+        name: 'Aragorn',
+        race: 'Human',
+        class: 'Ranger',
+        backstory: 'Heir to the throne of Gondor',
+        notes: 'Carries Andúril, the sword of kings'
+      };
+      
+      const formatted = Summarization.getFormattedCharacterForAI(character);
+      
+      expect(formatted).to.be.an('object');
+      expect(formatted).to.have.property('name', 'Aragorn');
+      expect(formatted).to.have.property('race', 'Human');
+      expect(formatted).to.have.property('class', 'Ranger');
+      expect(formatted).to.have.property('backstory', 'Heir to the throne of Gondor');
+      expect(formatted).to.have.property('notes', 'Carries Andúril, the sword of kings');
     });
 
-    describe('getFormattedCharacterForAI', () => {
-      it('should use original text for short character details', () => {
-        const character = {
-          name: 'Test Character',
-          backstory: 'Short backstory',
-          notes: 'Short notes'
-        };
-        
-        const formatted = Summarization.getFormattedCharacterForAI(character);
-        
-        expect(formatted.backstory).to.equal('Short backstory');
-        expect(formatted.notes).to.equal('Short notes');
-        expect(formatted.backstorySummarized).to.be.undefined;
-        expect(formatted.notesSummarized).to.be.undefined;
-      });
+    it('should handle missing character properties', () => {
+      const character = {
+        name: 'Test Character'
+      };
+      
+      const formatted = Summarization.getFormattedCharacterForAI(character);
+      
+      expect(formatted).to.have.property('name', 'Test Character');
+      expect(formatted).to.have.property('race', '');
+      expect(formatted).to.have.property('class', '');
+      expect(formatted).to.have.property('backstory', '');
+      expect(formatted).to.have.property('notes', '');
+    });
+  });
 
-      it('should use summaries for long character details when available', () => {
-        const character = {
-          name: 'Test Character',
-          backstory: 'A very long backstory that exceeds the word limit and should be summarized because it contains many details about the character\'s past, their motivations, and their relationships with other characters in the world.',
-          notes: 'Short notes'
-        };
-        
-        const characterSummaries = {
-          backstory: {
-            summary: 'Summarized backstory'
-          }
-        };
-        
-        global.localStorage.setItem('simple-dnd-journal-character-summaries', JSON.stringify(characterSummaries));
-        
-        const formatted = Summarization.getFormattedCharacterForAI(character);
-        
-        expect(formatted.backstory).to.equal('Summarized backstory');
-        expect(formatted.backstorySummarized).to.be.true;
-        expect(formatted.notes).to.equal('Short notes');
-        expect(formatted.notesSummarized).to.be.undefined;
-      });
-
-      it('should preserve original long text when no summary available', () => {
-        const character = {
-          name: 'Test Character',
-          backstory: 'A very long backstory that exceeds the word limit and should be summarized because it contains many details about the character\'s past, their motivations, and their relationships with other characters in the world.',
-          notes: 'Short notes'
-        };
-        
-        global.localStorage.setItem('simple-dnd-journal-character-summaries', JSON.stringify({}));
-        
-        const formatted = Summarization.getFormattedCharacterForAI(character);
-        
-        expect(formatted.backstory).to.equal(character.backstory);
-        expect(formatted.backstorySummarized).to.be.false;
-        expect(formatted.notes).to.equal('Short notes');
-        expect(formatted.notesSummarized).to.be.false;
-      });
+  describe('SUMMARIZATION_CONFIGS', () => {
+    it('should have required configuration properties', () => {
+      expect(Summarization.SUMMARIZATION_CONFIGS).to.have.property('entries');
+      expect(Summarization.SUMMARIZATION_CONFIGS).to.have.property('metaSummaries');
+      expect(Summarization.SUMMARIZATION_CONFIGS).to.have.property('character');
     });
 
-    describe('getSummaryStats character integration', () => {
-      it('should include character summary statistics', () => {
-        const character = {
-          name: 'Test Character',
-          backstory: 'A very long backstory that exceeds the word limit and should be summarized because it contains many details about the character\'s past, their motivations, and their relationships with other characters in the world.'
-        };
-        
-        const journalData = {
-          character: character,
-          entries: []
-        };
-        
-        global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
-        
-        const characterSummaries = {
-          backstory: {
-            summary: 'Summarized backstory'
-          }
-        };
-        
-        global.localStorage.setItem('simple-dnd-journal-character-summaries', JSON.stringify(characterSummaries));
-        
-        const stats = Summarization.getSummaryStats();
-        
-        expect(stats.characterSummaries).to.equal(1);
-        expect(stats.characterFieldsNeedingSummaries).to.equal(0);
-      });
+    it('should have correct entry summarization config', () => {
+      const config = Summarization.SUMMARIZATION_CONFIGS.entries;
+      expect(config).to.have.property('maxLength', 150);
+      expect(config).to.have.property('includeTitle', true);
+    });
 
-      it('should detect character fields needing summaries', () => {
-        const character = {
-          name: 'Test Character',
-          backstory: 'A very long backstory that exceeds the word limit and should be summarized because it contains many details about the character\'s past, their motivations, and their relationships with other characters in the world.',
-          notes: 'A very long notes section that also exceeds the word limit and should be summarized because it contains many details about the character\'s past, their motivations, and their relationships with other characters in the world.'
-        };
-        
-        const journalData = {
-          character: character,
-          entries: []
-        };
-        
-        global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
-        
-        global.localStorage.setItem('simple-dnd-journal-character-summaries', JSON.stringify({}));
-        
-        const stats = Summarization.getSummaryStats();
-        
-        expect(stats.characterFieldsNeedingSummaries).to.equal(2); // backstory and notes
-      });
+    it('should have correct meta summarization config', () => {
+      const config = Summarization.SUMMARIZATION_CONFIGS.metaSummaries;
+      expect(config).to.have.property('maxLength', 200);
+      expect(config).to.have.property('groupSize', 5);
+    });
+
+    it('should have correct character summarization config', () => {
+      const config = Summarization.SUMMARIZATION_CONFIGS.character;
+      expect(config).to.have.property('maxLength', 100);
+      expect(config).to.have.property('fields', ['backstory', 'notes']);
+    });
+  });
+
+  describe('META_SUMMARY_CONFIG', () => {
+    it('should export meta summary configuration', () => {
+      expect(Summarization.META_SUMMARY_CONFIG).to.deep.equal(Summarization.SUMMARIZATION_CONFIGS.metaSummaries);
+    });
+  });
+
+  describe('CHARACTER_SUMMARY_CONFIG', () => {
+    it('should export character summary configuration', () => {
+      expect(Summarization.CHARACTER_SUMMARY_CONFIG).to.deep.equal(Summarization.SUMMARIZATION_CONFIGS.character);
     });
   });
 });

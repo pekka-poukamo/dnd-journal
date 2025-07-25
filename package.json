@@ -2,6 +2,7 @@
   "name": "dnd-journal",
   "version": "1.0.0",
   "description": "A lightweight, static D&D journal app focused on core functionality: note-taking, character tracking, and AI-powered roleplay prompts.",
+  "type": "module",
   "main": "index.html",
   "scripts": {
     "start": "npx http-server . -p 3000 -o",

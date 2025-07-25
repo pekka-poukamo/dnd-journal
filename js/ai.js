@@ -228,17 +228,3 @@ export const getEntrySummary = async (entry) => {
 export const getPromptDescription = () => {
   return 'Narrative-focused introspection with 3 core questions + 1 unobvious question';
 };
-
-// Test compatibility layer - maintain global exports for testing
-if (typeof global !== 'undefined') {
-  global.AI = {
-    loadAISettings,
-    isAIEnabled,
-    createIntrospectionPrompt,
-    generateIntrospectionPrompt,
-    generateEntrySummary,
-    getEntrySummary,
-    callOpenAI,
-    getPromptDescription
-  };
-}
