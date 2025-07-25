@@ -20,7 +20,6 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components/character-summary.css">
     <link rel="stylesheet" href="css/components/ai-prompt.css">
-    <link rel="stylesheet" href="css/components/sync-status.css">
     
     <!-- Yjs Sync Enhancement (ADR-0003) - Optional libraries for cross-device sync -->
     <script src="https://unpkg.com/yjs@13.6.10/dist/yjs.js"></script>
@@ -54,52 +53,6 @@
                     <p class="ai-prompt__text" id="ai-prompt-text">
                         Loading your personalized reflection prompt...
                     </p>
-                </div>
-            </section>
-
-            <!-- Sync Status Section -->
-            <section id="sync-status" class="sync-status" style="display: none;">
-                <div class="sync-status__header">
-                    <h2 class="sync-status__title">Sync Status</h2>
-                    <button id="sync-refresh-btn" class="btn btn-secondary btn-small">Refresh</button>
-                </div>
-                
-                <div class="sync-status__content">
-                    <div class="sync-status__indicator">
-                        <span class="sync-status__dot" id="sync-status-dot"></span>
-                        <span class="sync-status__text" id="sync-status-text">Checking sync...</span>
-                    </div>
-                    
-                    <div class="sync-status__details" id="sync-status-details" style="display: none;">
-                        <div class="sync-status__grid">
-                            <div class="sync-status__field">
-                                <label class="sync-status__label">Device ID</label>
-                                <span id="sync-device-id" class="sync-status__value">-</span>
-                            </div>
-                            <div class="sync-status__field">
-                                <label class="sync-status__label">Connected Servers</label>
-                                <span id="sync-connected-servers" class="sync-status__value">0</span>
-                            </div>
-                            <div class="sync-status__field">
-                                <label class="sync-status__label">Last Updated</label>
-                                <span id="sync-last-updated" class="sync-status__value">Never</span>
-                            </div>
-                        </div>
-                        
-                        <div class="sync-status__servers" id="sync-servers-list" style="display: none;">
-                            <h4>Server Status</h4>
-                            <div id="sync-servers-details"></div>
-                        </div>
-                        
-                        <div class="sync-status__troubleshooting" id="sync-troubleshooting" style="display: none;">
-                            <h4>Troubleshooting</h4>
-                            <div class="troubleshooting-actions">
-                                <button id="sync-force-upload" class="btn btn-secondary btn-small">Force Upload</button>
-                                <button id="sync-force-download" class="btn btn-secondary btn-small">Force Download</button>
-                                <button id="sync-clear-cache" class="btn btn-secondary btn-small">Clear Sync Cache</button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </section>
 
@@ -141,7 +94,7 @@
                         <textarea id="entry-content" class="form-textarea" rows="4" placeholder="Write your notes here..."></textarea>
                     </div>
                     <div class="form-group">
-                        <button type="button" id="add-entry-btn" class="button button--primary">Add Entry</button>
+                        <button type="button" id="add-entry-btn" class="btn btn-primary">Add Entry</button>
                     </div>
                 </form>
             </section>

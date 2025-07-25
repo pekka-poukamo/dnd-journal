@@ -64,31 +64,54 @@
                     </div>
                     
                     <div class="form-group">
-                        <button id="test-sync-server" class="button button--secondary">
+                        <button id="test-sync-server" class="btn btn-secondary">
                             Test Sync Server
                         </button>
                         <div id="sync-test-result" class="api-test-result"></div>
                     </div>
                     
                     <div class="form-group" id="sync-status-details" style="display: none;">
-                        <div class="sync-status-panel">
-                            <h3>Current Sync Status</h3>
-                            <div class="stats-grid">
-                                <div class="stat-item">
-                                    <span class="stat-label">Device ID:</span>
-                                    <span class="stat-value" id="settings-device-id">Loading...</span>
+                        <div class="sync-status">
+                            <div class="sync-status__header">
+                                <h3>Sync Status</h3>
+                                <button id="sync-refresh-btn" class="btn btn-secondary">Refresh</button>
+                            </div>
+                            
+                            <div class="sync-status__content">
+                                <div class="sync-status__indicator">
+                                    <span class="sync-status__dot" id="sync-status-dot"></span>
+                                    <span class="sync-status__text" id="sync-status-text">Checking sync...</span>
                                 </div>
-                                <div class="stat-item">
-                                    <span class="stat-label">Connection Status:</span>
-                                    <span class="stat-value" id="settings-connection-status">Checking...</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-label">Connected Servers:</span>
-                                    <span class="stat-value" id="settings-connected-servers">0</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-label">Last Sync:</span>
-                                    <span class="stat-value" id="settings-last-sync">Never</span>
+                                
+                                <div class="sync-status__details">
+                                    <div class="sync-status__grid">
+                                        <div class="sync-status__field">
+                                            <label class="sync-status__label">Device ID</label>
+                                            <span id="sync-device-id" class="sync-status__value">-</span>
+                                        </div>
+                                        <div class="sync-status__field">
+                                            <label class="sync-status__label">Connected Servers</label>
+                                            <span id="sync-connected-servers" class="sync-status__value">0</span>
+                                        </div>
+                                        <div class="sync-status__field">
+                                            <label class="sync-status__label">Last Updated</label>
+                                            <span id="sync-last-updated" class="sync-status__value">Never</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="sync-status__servers" id="sync-servers-list" style="display: none;">
+                                        <h4>Server Status</h4>
+                                        <div id="sync-servers-details"></div>
+                                    </div>
+                                    
+                                    <div class="sync-status__troubleshooting" id="sync-troubleshooting" style="display: none;">
+                                        <h4>Troubleshooting</h4>
+                                        <div class="troubleshooting-actions">
+                                            <button id="sync-force-upload" class="btn btn-secondary">Force Upload</button>
+                                            <button id="sync-force-download" class="btn btn-secondary">Force Download</button>
+                                            <button id="sync-clear-cache" class="btn btn-secondary">Clear Sync Cache</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -122,7 +145,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <button id="test-api-key" class="button button--secondary" disabled>
+                        <button id="test-api-key" class="btn btn-secondary" disabled>
                             Test API Key
                         </button>
                         <div id="api-test-result" class="api-test-result"></div>
@@ -160,7 +183,7 @@
                             <div class="progress-bar">
                                 <div class="progress-fill" id="summary-progress"></div>
                             </div>
-                            <button id="generate-summaries" class="button button--secondary">
+                            <button id="generate-summaries" class="btn btn-secondary">
                                 Generate Missing Summaries
                             </button>
                         </div>
