@@ -20,7 +20,6 @@
     "coverage:plan": "c8 --reporter=json-summary npm test && node scripts/coverage-auto.cjs plan",
     "coverage:stubs": "node scripts/coverage-auto.cjs stubs",
     "pre-commit": "./scripts/pre-commit.sh",
-    "install-hooks": "cp scripts/git-hooks/pre-push .git/hooks/pre-push",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
     "deploy": "surge .",
     "deploy:domain": "surge . dnd-journal.surge.sh",
