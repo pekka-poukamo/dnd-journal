@@ -191,13 +191,16 @@ export const createEntryElement = (entry) => {
   entryDiv.appendChild(header);
   entryDiv.appendChild(content);
   
-  // Add collapsible summary section if AI is enabled
+  // Add collapsible summary section if AI is enabled (async)
   if (isAIEnabled()) {
-    const summary = aiGetEntrySummary(entry);
-    if (summary) {
-      const summarySection = createSummarySection(summary);
-      entryDiv.appendChild(summarySection);
-    }
+    aiGetEntrySummary(entry).then(summary => {
+      if (summary && summary.summary) {
+        const summarySection = createSummarySection(summary.summary);
+        entryDiv.appendChild(summarySection);
+      }
+    }).catch(error => {
+      console.error('Failed to get entry summary:', error);
+    });
   }
   
   return entryDiv;
@@ -340,6 +343,7 @@ export const renderEntries = () => {
   }
   
   const sortedEntries = sortEntriesByDate(state.entries);
+  
   sortedEntries.forEach(entry => {
     const entryElement = createEntryElement(entry);
     entriesList.appendChild(entryElement);
@@ -467,16 +471,28 @@ export const displayCharacterSummary = () => {
 // Display AI prompt
 export const displayAIPrompt = async () => {
   const aiPromptText = document.getElementById('ai-prompt-text');
-  if (!aiPromptText) return;
+  const aiPromptSection = document.getElementById('ai-prompt-section');
+  if (!aiPromptText || !aiPromptSection) return;
+  
+  // Hide section initially if AI is not enabled
+  if (!isAIEnabled()) {
+    aiPromptSection.style.display = 'none';
+    return;
+  }
   
   try {
     const prompt = await generateIntrospectionPrompt(state.character, state.entries);
     if (prompt) {
       aiPromptText.innerHTML = formatAIPrompt(prompt);
+      // Make the AI prompt section visible
+      aiPromptSection.style.display = 'block';
+    } else {
+      aiPromptSection.style.display = 'none';
     }
   } catch (error) {
     console.error('Failed to generate AI prompt:', error);
     aiPromptText.innerHTML = '<p>Unable to generate AI prompt at this time.</p>';
+    aiPromptSection.style.display = 'block';
   }
 };
 
@@ -518,7 +534,11 @@ export const formatAIPrompt = (prompt) => {
 export const setupEventHandlers = () => {
   const addEntryBtn = document.getElementById('add-entry-btn');
   if (addEntryBtn) {
-    addEntryBtn.addEventListener('click', addEntry);
+    addEntryBtn.addEventListener('click', () => {
+      addEntry().catch(error => {
+        console.error('Failed to add entry:', error);
+      });
+    });
   }
   
   const regeneratePromptBtn = document.getElementById('regenerate-prompt-btn');
@@ -535,7 +555,9 @@ export const setupEventHandlers = () => {
   const handleEnterKey = (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      addEntry();
+      addEntry().catch(error => {
+        console.error('Failed to add entry:', error);
+      });
     }
   };
   
