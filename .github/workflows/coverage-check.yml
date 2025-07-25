@@ -5,8 +5,45 @@ on: [pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
     - run: npm ci
-    - run: npm run test:coverage
+    - name: Run coverage
+      run: |
+        npm run test:coverage > coverage-output.txt 2>&1
+        echo "Coverage completed"
+    - name: Post coverage comment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const output = fs.readFileSync('coverage-output.txt', 'utf8');
+          
+          // Extract the coverage table
+          const lines = output.split('\n');
+          const tableStart = lines.findIndex(line => line.includes('File'));
+          const tableEnd = lines.findIndex((line, index) => index > tableStart && line.includes('---'));
+          
+          let coverageTable = '';
+          if (tableStart !== -1 && tableEnd !== -1) {
+            coverageTable = lines.slice(tableStart, tableEnd + 1).join('\n');
+          }
+          
+          const commentBody = `## 📊 Coverage Report
+
+\`\`\`
+${coverageTable}
+\`\`\`
+
+**Command to run locally:** \`npm run test:coverage\``;
+
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: commentBody
+          });
