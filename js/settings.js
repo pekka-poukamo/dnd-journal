@@ -9,7 +9,7 @@ import {
 } from './utils.js';
 import { getSummaryStats, autoSummarizeEntries } from './summarization.js';
 import { 
-  createCompletePromptForPreview,
+  getIntrospectionPromptForPreview,
   isAIEnabled
 } from './ai.js';
 
@@ -283,8 +283,8 @@ const handleShowAIPrompt = async () => {
       // Load current journal data
       const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
       
-      // Create the complete prompt using the AI module function
-      const promptData = createCompletePromptForPreview(journalData.character, journalData.entries);
+      // Get the prompt that would be sent to AI using the AI module function
+      const promptData = getIntrospectionPromptForPreview(journalData.character, journalData.entries);
       
       if (!promptData) {
         contentDiv.innerHTML = `<div class="error">AI features are not properly configured. Please check your API key and settings.</div>`;

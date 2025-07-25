@@ -135,8 +135,8 @@ export const callOpenAI = async (prompt, maxTokens = 400) => {
   }
 };
 
-// Helper function to prepare prompt data (shared by generateIntrospectionPrompt and createCompletePromptForPreview)
-const prepareIntrospectionPromptData = (character, entries) => {
+// Generate introspection prompt
+export const generateIntrospectionPrompt = async (character, entries) => {
   if (!isAIEnabled()) {
     return null;
   }
@@ -145,28 +145,8 @@ const prepareIntrospectionPromptData = (character, entries) => {
     // Use formatted entries that include summaries for older entries
     const formattedEntries = getFormattedEntriesForAI();
     const promptText = createIntrospectionPrompt(character, formattedEntries);
+    const response = await callOpenAI(promptText);
     
-    return {
-      promptText,
-      systemPrompt: NARRATIVE_INTROSPECTION_PROMPT,
-      userPrompt: promptText
-    };
-  } catch (error) {
-    console.error('Failed to prepare introspection prompt data:', error);
-    return null;
-  }
-};
-
-// Generate introspection prompt
-export const generateIntrospectionPrompt = async (character, entries) => {
-  const promptData = prepareIntrospectionPromptData(character, entries);
-  
-  if (!promptData) {
-    return null;
-  }
-
-  try {
-    const response = await callOpenAI(promptData.promptText);
     return response;
   } catch (error) {
     console.error('Failed to generate introspection prompt:', error);
@@ -238,29 +218,35 @@ export const getPromptDescription = () => {
   return 'Narrative-focused introspection with 3 core questions + 1 unobvious question';
 };
 
-// Create complete prompt structure for preview (reuses generateIntrospectionPrompt logic without API call)
-export const createCompletePromptForPreview = (character, entries) => {
-  const promptData = prepareIntrospectionPromptData(character, entries);
-  
-  if (!promptData) {
+// Get the prompt that would be sent to AI (for preview purposes - reuses exact same logic as generateIntrospectionPrompt)
+export const getIntrospectionPromptForPreview = (character, entries) => {
+  if (!isAIEnabled()) {
     return null;
   }
 
-  // Return the complete prompt structure including messages format for OpenAI
-  return {
-    systemPrompt: promptData.systemPrompt,
-    userPrompt: promptData.userPrompt,
-    messages: [
-      {
-        role: 'system',
-        content: promptData.systemPrompt
-      },
-      {
-        role: 'user', 
-        content: promptData.userPrompt
-      }
-    ]
-  };
+  try {
+    // Use the exact same logic as generateIntrospectionPrompt but return the prompt instead of calling API
+    const formattedEntries = getFormattedEntriesForAI();
+    const userPrompt = createIntrospectionPrompt(character, formattedEntries);
+    
+    return {
+      systemPrompt: NARRATIVE_INTROSPECTION_PROMPT,
+      userPrompt: userPrompt,
+      messages: [
+        {
+          role: 'system',
+          content: NARRATIVE_INTROSPECTION_PROMPT
+        },
+        {
+          role: 'user', 
+          content: userPrompt
+        }
+      ]
+    };
+  } catch (error) {
+    console.error('Failed to create prompt for preview:', error);
+    return null;
+  }
 };
 
 // =============================================================================

@@ -321,7 +321,7 @@ describe('AI Module', function() {
     });
   });
 
-  describe('createCompletePromptForPreview', function() {
+  describe('getIntrospectionPromptForPreview', function() {
     beforeEach(function() {
       global.resetLocalStorage();
       
@@ -337,7 +337,7 @@ describe('AI Module', function() {
       const character = { name: 'Test Character', class: 'Fighter' };
       const entries = [];
       
-      const result = AI.createCompletePromptForPreview(character, entries);
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
       
       expect(result).to.be.an('object');
       expect(result).to.have.property('systemPrompt');
@@ -353,7 +353,7 @@ describe('AI Module', function() {
       const character = { name: 'Elara', race: 'Elf', class: 'Ranger' };
       const entries = [];
       
-      const result = AI.createCompletePromptForPreview(character, entries);
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
       
       expect(result.userPrompt).to.include('Elara');
       expect(result.userPrompt).to.include('Elf');
@@ -366,7 +366,7 @@ describe('AI Module', function() {
       const character = { name: 'Test Character', class: 'Fighter' };
       const entries = [];
       
-      const result = AI.createCompletePromptForPreview(character, entries);
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
       
       expect(result).to.be.null;
     });
@@ -376,7 +376,7 @@ describe('AI Module', function() {
       const character = null; // Invalid character data
       const entries = null; // Invalid entries data
       
-      const result = AI.createCompletePromptForPreview(character, entries);
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
       
       // Should handle gracefully and either return valid data or null
       expect(result).to.satisfy(val => val === null || (typeof val === 'object' && val.systemPrompt && val.userPrompt));
@@ -386,7 +386,7 @@ describe('AI Module', function() {
       const character = { name: 'Test Character', class: 'Fighter' };
       const entries = [];
       
-      const result = AI.createCompletePromptForPreview(character, entries);
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
       
       expect(result).to.not.be.null;
       expect(result.systemPrompt).to.include('D&D storytelling companion');
@@ -405,7 +405,7 @@ describe('AI Module', function() {
         }
       ];
       
-      const result = AI.createCompletePromptForPreview(character, entries);
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
       
       expect(result).to.not.be.null;
       expect(result.userPrompt).to.include('Test Hero');
