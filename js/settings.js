@@ -284,7 +284,7 @@ const handleShowAIPrompt = async () => {
       const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
       
       // Get the prompt that would be sent to AI using the AI module function
-      const promptData = getIntrospectionPromptForPreview(journalData.character, journalData.entries);
+      const promptData = await getIntrospectionPromptForPreview(journalData.character, journalData.entries);
       
       if (!promptData) {
         contentDiv.innerHTML = `<div class="error">AI features are not properly configured. Please check your API key and settings.</div>`;
@@ -295,6 +295,9 @@ const handleShowAIPrompt = async () => {
       
       // Format for display using the prompt data from AI module
       contentDiv.innerHTML = `
+        <div class="token-count">
+          <strong>Estimated Token Count:</strong> ${promptData.totalTokens} tokens
+        </div>
         <div class="system-prompt">
           <strong>System Prompt:</strong><br>
           ${promptData.systemPrompt.replace(/\n/g, '<br>')}

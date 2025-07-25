@@ -135,6 +135,18 @@
   word-wrap: break-word;
 }
 
+.prompt-content .token-count {
+  background: var(--color-accent);
+  color: white;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--space-md);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+}
+
 .prompt-content h4 {
   margin: 0 0 var(--space-sm) 0;
   font-family: var(--font-heading);
