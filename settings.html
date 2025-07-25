@@ -20,6 +20,12 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components/character-form.css">
     <link rel="stylesheet" href="css/components/settings.css">
+    <link rel="stylesheet" href="css/components/sync-status.css">
+    
+    <!-- Yjs Sync Enhancement - Optional libraries for cross-device sync -->
+    <script src="https://unpkg.com/yjs@13.6.10/dist/yjs.js"></script>
+    <script src="https://unpkg.com/y-websocket@1.5.4/dist/y-websocket.js"></script>
+    <script src="https://unpkg.com/y-indexeddb@9.0.12/dist/y-indexeddb.js"></script>
 </head>
 <body>
     <header>
@@ -39,6 +45,41 @@
             <a href="index.html" class="nav-back">← Back to Journal</a>
             
             <div class="grid">
+                <section>
+                    <h2>Sync Configuration</h2>
+                    <div class="form-group">
+                        <label for="sync-server" class="form-label">
+                            Custom Sync Server (Optional)
+                        </label>
+                        <input 
+                            type="text" 
+                            id="sync-server" 
+                            class="form-input" 
+                            placeholder="wss://your-server.com:1234 or ws://192.168.1.100:1234"
+                        >
+                        <p class="form-help">
+                            Leave empty to use default public servers. Enter a WebSocket URL to use your own server.
+                            <a href="https://github.com/yjs/y-websocket" target="_blank">Learn how to set up your own sync server</a>
+                        </p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button id="test-sync-server" class="btn btn-secondary">
+                            Test Sync Server
+                        </button>
+                        <div id="sync-test-result" class="api-test-result"></div>
+                    </div>
+                    
+                    <div class="form-group" id="sync-status-simple" style="display: none;">
+                        <label class="form-label">Sync Status</label>
+                        <div class="sync-indicator">
+                            <span class="sync-dot" id="sync-dot"></span>
+                            <span id="sync-text">Checking...</span>
+                        </div>
+                        <p class="form-help" id="sync-help">Device syncing status will appear here.</p>
+                    </div>
+                </section>
+
                 <section>
                     <h2>AI Features</h2>
                     <div class="form-group">
@@ -66,7 +107,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <button id="test-api-key" class="button button--secondary" disabled>
+                        <button id="test-api-key" class="btn btn-secondary" disabled>
                             Test API Key
                         </button>
                         <div id="api-test-result" class="api-test-result"></div>
@@ -104,7 +145,7 @@
                             <div class="progress-bar">
                                 <div class="progress-fill" id="summary-progress"></div>
                             </div>
-                            <button id="generate-summaries" class="button button--secondary">
+                            <button id="generate-summaries" class="btn btn-secondary">
                                 Generate Missing Summaries
                             </button>
                         </div>
@@ -115,6 +156,7 @@
     </main>
 
     <script type="module" src="js/utils.js"></script>
+    <script type="module" src="js/sync.js"></script>
     <script type="module" src="js/ai.js"></script>
     <script type="module" src="js/summarization.js"></script>
     <script type="module" src="js/settings.js"></script>

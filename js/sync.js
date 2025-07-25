@@ -12,7 +12,10 @@ let syncState = {
   ymap: null,
   providers: [],
   callbacks: [],
-  indexeddbProvider: null
+  indexeddbProvider: null,
+  lastModified: null,
+  connectionAttempts: 0,
+  errors: []
 };
 
 // Check if Yjs libraries are available
@@ -87,8 +90,11 @@ const getSyncConfig = () => {
     }
   } catch (e) {}
   
-  // Default to public relays
-  return [];
+  // Default to more reliable public relays
+  return [
+    'wss://demos.yjs.dev',
+    'wss://y-websocket.herokuapp.com'
+  ];
 };
 
 // Setup network providers
@@ -96,42 +102,47 @@ const setupNetworking = (state) => {
   if (!state.isAvailable || !state.ydoc) return state;
   
   const providers = [];
-  
-  // Get configured servers or use defaults
-  const configuredServers = getSyncConfig();
-  const defaultRelays = [
-    'wss://demos.yjs.dev',
-    'wss://y-websocket.herokuapp.com'
-  ];
-  
-  const servers = configuredServers.length > 0 ? configuredServers : defaultRelays;
+  const servers = getSyncConfig();
   
   servers.forEach(serverUrl => {
     try {
-      providers.push(new window.WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc));
-      // Connecting to sync server
+      const provider = new window.WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc);
+      providers.push(provider);
+      console.log(`Connecting to sync server: ${serverUrl}`);
     } catch (e) {
-              console.error(`Failed to connect to ${serverUrl}:`, e);
+      console.error(`Failed to connect to ${serverUrl}:`, e);
+      syncState.errors.push(`Failed to connect to ${serverUrl}: ${e.message}`);
     }
   });
   
   // Setup connection monitoring
   const monitoredProviders = providers.map(provider => {
-    provider.on('status', () => {
+    provider.on('status', (event) => {
       const wasConnected = syncState.isConnected;
       const isConnected = providers.some(p => p.wsconnected);
       
       if (!wasConnected && isConnected) {
-        // Sync connected
+        console.log('Sync connected');
+        syncState.connectionAttempts = 0;
+        syncState.errors = [];
       } else if (wasConnected && !isConnected) {
-        // Sync disconnected
+        console.log('Sync disconnected');
       }
       
       syncState = { ...syncState, isConnected };
+      notifyCallbacks(syncState);
     });
     
-    provider.on('connection-error', () => {
-      // Sync connection error, continuing offline
+    provider.on('connection-error', (error) => {
+      console.warn('Sync connection error, continuing offline:', error);
+      syncState.connectionAttempts++;
+      syncState.errors.push(`Connection error: ${error.message || 'Unknown error'}`);
+      notifyCallbacks(syncState);
+    });
+    
+    provider.on('connection-close', (event) => {
+      console.log('Sync connection closed:', event);
+      notifyCallbacks(syncState);
     });
     
     return provider;
@@ -144,8 +155,9 @@ const setupNetworking = (state) => {
 const setupObservers = (state) => {
   if (!state.isAvailable || !state.ymap) return state;
   
-  state.ymap.observe(() => {
-          // Remote changes detected
+  state.ymap.observe((event) => {
+    console.log('Remote changes detected');
+    syncState.lastModified = Date.now();
     notifyCallbacks(syncState);
   });
   
@@ -173,11 +185,15 @@ const setSyncData = (data) => {
   }
   
   try {
+    const timestamp = Date.now();
     syncState.ymap.set('data', data);
-    syncState.ymap.set('lastModified', Date.now());
+    syncState.ymap.set('lastModified', timestamp);
     syncState.ymap.set('deviceId', getDeviceId());
+    syncState.lastModified = timestamp;
+    console.log('Data uploaded to sync');
   } catch (e) {
     console.error('Failed to set Yjs data:', e);
+    syncState.errors.push(`Failed to upload data: ${e.message}`);
   }
 };
 
@@ -214,19 +230,31 @@ const getSyncStatus = () => {
       available: false, 
       reason: 'Yjs not loaded',
       deviceId,
-      connected: false
+      connected: false,
+      lastModified: null,
+      connectionAttempts: 0,
+      errors: [],
+      providers: []
     };
   }
   
+  const connectedProviders = syncState.providers.filter(p => p.wsconnected);
+  
   return {
     available: true,
-    reason: 'Yjs loaded successfully',
+    reason: syncState.isConnected ? 'Connected and syncing' : 'Available but not connected',
     connected: syncState.isConnected,
     deviceId,
+    lastModified: syncState.lastModified,
+    connectionAttempts: syncState.connectionAttempts,
+    errors: [...syncState.errors],
     providers: syncState.providers.map(p => ({
       url: p.url,
-      connected: p.wsconnected || false
-    }))
+      connected: p.wsconnected || false,
+      wsReadyState: p.ws ? p.ws.readyState : null
+    })),
+    connectedCount: connectedProviders.length,
+    totalProviders: syncState.providers.length
   };
 };
 
@@ -243,6 +271,8 @@ const getDeviceId = () => {
     return 'device-test-' + Math.random().toString(36).substr(2, 9);
   }
 };
+
+
 
 // Clean shutdown
 const teardownSync = () => {
@@ -267,7 +297,10 @@ const teardownSync = () => {
     ymap: null,
     providers: [],
     callbacks: [],
-    indexeddbProvider: null
+    indexeddbProvider: null,
+    lastModified: null,
+    connectionAttempts: 0,
+    errors: []
   };
 };
 

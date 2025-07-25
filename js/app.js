@@ -392,6 +392,8 @@ export const setupEventHandlers = () => {
     regeneratePromptBtn.addEventListener('click', regenerateAIPrompt);
   }
   
+
+  
   // Enter key to add entry
   const titleInput = document.getElementById('entry-title');
   const contentTextarea = document.getElementById('entry-content');
@@ -407,12 +409,13 @@ export const setupEventHandlers = () => {
   if (contentTextarea) contentTextarea.addEventListener('keydown', handleEnterKey);
 };
 
+
+
 // Setup sync listener for real-time updates
 export const setupSyncListener = () => {
   if (yjsSync && yjsSync.isAvailable) {
-    yjsSync.onUpdate(() => {
+    yjsSync.onChange((syncData) => {
       // Reload data from sync
-      const syncData = yjsSync.getData();
       if (syncData) {
         state = { ...state, ...syncData };
         renderEntries();
@@ -421,6 +424,8 @@ export const setupSyncListener = () => {
     });
   }
 };
+
+
 
 // Initialize app
 export const init = async () => {

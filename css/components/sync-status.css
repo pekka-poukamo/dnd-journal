@@ -1,0 +1,42 @@
+/* Simple Sync Status - Minimal Implementation */
+
+.sync-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  transition: background-color 0.3s ease;
+}
+
+.sync-dot.connected {
+  background: #10b981; /* Green */
+}
+
+.sync-dot.connecting {
+  background: #f59e0b; /* Amber */
+  animation: pulse 2s infinite;
+}
+
+.sync-dot.disconnected {
+  background: #ef4444; /* Red */
+}
+
+.sync-dot.unavailable {
+  background: var(--text-secondary); /* Gray */
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

@@ -8,6 +8,21 @@ A simple D&D journal built with vanilla JavaScript.
 
 Open `index.html` in a browser.
 
+## Cross-Device Sync
+
+The journal supports real-time sync across multiple devices using Yjs.
+
+### Sync Status
+
+Check the sync status in Settings page. Journal automatically syncs across devices when online.
+
+### Setting Up Your Own Sync Server
+
+For private or local sync:
+1. Install y-websocket server: `npm install -g y-websocket`
+2. Run server: `HOST=0.0.0.0 PORT=1234 npx y-websocket`
+3. Configure in Settings: `ws://your-server-ip:1234`
+
 ## Development
 
 ```bash
