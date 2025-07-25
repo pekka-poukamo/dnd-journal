@@ -3,10 +3,17 @@
 import { 
   loadDataWithFallback, 
   createInitialSettings, 
+  createInitialJournalState,
   safeSetToStorage, 
   STORAGE_KEYS 
 } from './utils.js';
 import { getSummaryStats, autoSummarizeEntries } from './summarization.js';
+import { 
+  createIntrospectionPrompt, 
+  getFormattedEntriesForAI, 
+  getFormattedCharacterForAI,
+  isAIEnabled 
+} from './ai.js';
 
 import { createYjsSync } from './sync.js';
 
@@ -109,6 +116,7 @@ const handleSettingsChange = () => {
   const apiKeyInput = document.getElementById('api-key');
   const enableAIInput = document.getElementById('enable-ai-features');
   const testButton = document.getElementById('test-api-key');
+  const showPromptButton = document.getElementById('show-ai-prompt');
 
   if (!apiKeyInput || !enableAIInput || !testButton) return;
 
@@ -121,6 +129,11 @@ const handleSettingsChange = () => {
   
   // Enable/disable test button based on API key presence
   testButton.disabled = !settings.apiKey;
+  
+  // Enable/disable show prompt button based on AI being enabled
+  if (showPromptButton) {
+    showPromptButton.disabled = !isAIEnabled();
+  }
   
   // Update summary stats display
   updateSummaryStats();
@@ -147,6 +160,11 @@ const setupEventHandlers = () => {
   const generateSummariesButton = document.getElementById('generate-summaries');
   if (generateSummariesButton) {
     generateSummariesButton.addEventListener('click', handleGenerateSummaries);
+  }
+  
+  const showPromptButton = document.getElementById('show-ai-prompt');
+  if (showPromptButton) {
+    showPromptButton.addEventListener('click', handleShowAIPrompt);
   }
   
   // Sync event handlers
@@ -247,6 +265,69 @@ const handleGenerateSummaries = async () => {
   } finally {
     button.textContent = originalText;
     button.disabled = false;
+  }
+};
+
+// Handle show AI prompt button
+const handleShowAIPrompt = async () => {
+  const button = document.getElementById('show-ai-prompt');
+  const previewDiv = document.getElementById('ai-prompt-preview');
+  const contentDiv = document.getElementById('ai-prompt-content');
+  
+  if (!button || !previewDiv || !contentDiv) return;
+  
+  // Toggle visibility
+  if (previewDiv.style.display === 'none') {
+    button.disabled = true;
+    button.textContent = 'Loading...';
+    
+    try {
+      // Load current journal data
+      const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
+      
+      // Get formatted data for AI
+      const formattedCharacter = getFormattedCharacterForAI(journalData.character);
+      const formattedEntries = getFormattedEntriesForAI();
+      
+      // Create the prompt
+      const promptText = createIntrospectionPrompt(formattedCharacter, formattedEntries);
+      
+      // Format for display
+      const systemPrompt = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
+
+Present exactly 4 questions as a simple numbered list without headings:
+
+1. A pivotal moment, memory, or relationship that has shaped who they are
+2. A current internal conflict, dilemma, or aspiration they're wrestling with  
+3. How recent events might change their path or reveal something new about them
+4. An unobvious, surprising question that explores an unconventional perspective, hidden motivation, or unexpected character truth
+
+Make questions specific to the character's situation and recent adventures. Focus on narrative depth and emotional truth.`;
+
+      contentDiv.innerHTML = `
+        <div class="system-prompt">
+          <strong>System Prompt:</strong><br>
+          ${systemPrompt.replace(/\n/g, '<br>')}
+        </div>
+        <div class="user-prompt">
+          <strong>User Prompt:</strong><br>
+          ${promptText.replace(/\n/g, '<br>')}
+        </div>
+      `;
+      
+      previewDiv.style.display = 'block';
+      button.textContent = 'Hide AI Prompt';
+    } catch (error) {
+      console.error('Failed to generate prompt preview:', error);
+      contentDiv.innerHTML = `<div class="error">Failed to generate prompt: ${error.message}</div>`;
+      previewDiv.style.display = 'block';
+      button.textContent = 'Hide AI Prompt';
+    } finally {
+      button.disabled = false;
+    }
+  } else {
+    previewDiv.style.display = 'none';
+    button.textContent = 'Show Current AI Prompt';
   }
 };
 
@@ -368,6 +449,7 @@ const populateForm = () => {
   const apiKeyInput = document.getElementById('api-key');
   const enableAIInput = document.getElementById('enable-ai-features');
   const testButton = document.getElementById('test-api-key');
+  const showPromptButton = document.getElementById('show-ai-prompt');
 
   if (apiKeyInput) {
     apiKeyInput.value = settings.apiKey;
@@ -379,6 +461,10 @@ const populateForm = () => {
 
   if (testButton) {
     testButton.disabled = !settings.apiKey;
+  }
+  
+  if (showPromptButton) {
+    showPromptButton.disabled = !isAIEnabled();
   }
   
   // Load sync server configuration
