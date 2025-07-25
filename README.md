@@ -8,6 +8,36 @@ A simple D&D journal built with vanilla JavaScript.
 
 Open `index.html` in a browser.
 
+## Cross-Device Sync
+
+The journal supports real-time sync across multiple devices using Yjs.
+
+### Sync Status
+
+Check the sync status on the main page:
+- **Green dot**: Connected and syncing
+- **Yellow dot**: Connecting...
+- **Red dot**: Connection failed - working offline
+- **Gray dot**: Sync unavailable
+
+### Troubleshooting Sync Issues
+
+If sync isn't working between devices:
+
+1. **Check Sync Status**: Look for the sync status indicator on the main page
+2. **Verify Connection**: Ensure both devices can access the internet
+3. **Same Network**: Both devices should access the same journal address
+4. **Clear Cache**: Use "Clear Sync Cache" button if issues persist
+5. **Force Sync**: Use "Force Upload" or "Force Download" for manual sync
+6. **Custom Server**: Configure your own sync server in Settings for better reliability
+
+### Setting Up Your Own Sync Server
+
+For private or local sync:
+1. Install y-websocket server: `npm install -g y-websocket`
+2. Run server: `HOST=0.0.0.0 PORT=1234 npx y-websocket`
+3. Configure in Settings: `ws://your-server-ip:1234`
+
 ## Development
 
 ```bash

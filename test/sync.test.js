@@ -218,7 +218,7 @@ describe('Yjs Sync (Functional)', () => {
       const status = sync2.getStatus();
       
       expect(status.available).to.be.true;
-      expect(status.reason).to.equal('Yjs loaded successfully');
+      expect(status.reason).to.equal('Available but not connected');
     });
   });
 

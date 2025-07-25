@@ -7,6 +7,16 @@ import {
   STORAGE_KEYS 
 } from './utils.js';
 
+import { createYjsSync } from './sync.js';
+
+// Initialize sync system
+let yjsSync = null;
+try {
+  yjsSync = createYjsSync();
+} catch (e) {
+  console.warn('Sync not available:', e);
+}
+
 // Load settings from localStorage
 export const loadSettings = () => {
   return loadDataWithFallback(
@@ -137,6 +147,25 @@ const setupEventHandlers = () => {
   if (generateSummariesButton) {
     generateSummariesButton.addEventListener('click', handleGenerateSummaries);
   }
+  
+  // Sync event handlers
+  const syncServerInput = document.getElementById('sync-server');
+  const testSyncButton = document.getElementById('test-sync-server');
+  
+  if (syncServerInput) {
+    syncServerInput.addEventListener('blur', () => {
+      const serverUrl = syncServerInput.value.trim();
+      if (serverUrl) {
+        localStorage.setItem('dnd-journal-sync-server', serverUrl);
+      } else {
+        localStorage.removeItem('dnd-journal-sync-server');
+      }
+    });
+  }
+  
+  if (testSyncButton) {
+    testSyncButton.addEventListener('click', handleSyncServerTest);
+  }
 };
 
 // Update summary stats display
@@ -221,6 +250,82 @@ const handleGenerateSummaries = async () => {
   }
 };
 
+// Test sync server connection
+const testSyncServer = async (serverUrl) => {
+  if (!serverUrl) {
+    return { success: false, error: 'No server URL provided' };
+  }
+  
+  if (!serverUrl.startsWith('ws://') && !serverUrl.startsWith('wss://')) {
+    return { success: false, error: 'Server URL must start with ws:// or wss://' };
+  }
+  
+  return new Promise((resolve) => {
+    try {
+      const testDoc = new window.Y.Doc();
+      const provider = new window.WebsocketProvider(serverUrl, 'test-connection', testDoc);
+      
+      const timeout = setTimeout(() => {
+        provider.destroy();
+        resolve({ success: false, error: 'Connection timeout' });
+      }, 5000);
+      
+      provider.on('status', (event) => {
+        if (provider.wsconnected) {
+          clearTimeout(timeout);
+          provider.destroy();
+          resolve({ success: true, message: 'Server connection successful!' });
+        }
+      });
+      
+      provider.on('connection-error', (error) => {
+        clearTimeout(timeout);
+        provider.destroy();
+        resolve({ success: false, error: error.message || 'Connection failed' });
+      });
+    } catch (error) {
+      resolve({ success: false, error: error.message });
+    }
+  });
+};
+
+// Update sync status in settings
+const updateSyncStatus = () => {
+  if (!yjsSync) return;
+  
+  const status = yjsSync.getStatus();
+  const statusDetails = document.getElementById('sync-status-details');
+  const deviceIdSpan = document.getElementById('settings-device-id');
+  const connectionStatusSpan = document.getElementById('settings-connection-status');
+  const connectedServersSpan = document.getElementById('settings-connected-servers');
+  const lastSyncSpan = document.getElementById('settings-last-sync');
+  
+  if (statusDetails && status.available) {
+    statusDetails.style.display = 'block';
+    
+    if (deviceIdSpan) {
+      deviceIdSpan.textContent = status.deviceId;
+    }
+    
+    if (connectionStatusSpan) {
+      connectionStatusSpan.textContent = status.connected ? 'Connected' : 'Disconnected';
+      connectionStatusSpan.style.color = status.connected ? '#10b981' : '#ef4444';
+    }
+    
+    if (connectedServersSpan) {
+      connectedServersSpan.textContent = `${status.connectedCount}/${status.totalProviders}`;
+    }
+    
+    if (lastSyncSpan) {
+      if (status.lastModified) {
+        lastSyncSpan.textContent = new Date(status.lastModified).toLocaleString();
+      } else {
+        lastSyncSpan.textContent = 'Never';
+      }
+    }
+  }
+};
+
 // Populate form with current settings
 const populateForm = () => {
   const settings = loadSettings();
@@ -241,13 +346,68 @@ const populateForm = () => {
     testButton.disabled = !settings.apiKey;
   }
   
+  // Load sync server configuration
+  const syncServerInput = document.getElementById('sync-server');
+  if (syncServerInput) {
+    // Try to load from sync config or localStorage
+    try {
+      const savedServer = localStorage.getItem('dnd-journal-sync-server');
+      if (savedServer) {
+        syncServerInput.value = savedServer;
+      }
+    } catch (e) {}
+  }
+  
   updateSummaryStats();
+  updateSyncStatus();
+};
+
+// Handle sync server test
+const handleSyncServerTest = async () => {
+  const syncServerInput = document.getElementById('sync-server');
+  const testButton = document.getElementById('test-sync-server');
+  const resultDiv = document.getElementById('sync-test-result');
+  
+  if (!syncServerInput || !testButton || !resultDiv) return;
+  
+  const serverUrl = syncServerInput.value.trim();
+  
+  testButton.disabled = true;
+  testButton.textContent = 'Testing...';
+  resultDiv.innerHTML = '';
+  
+  try {
+    const result = await testSyncServer(serverUrl);
+    
+    if (result.success) {
+      resultDiv.innerHTML = `<div class="test-success">✓ ${result.message}</div>`;
+      
+      // Save the server configuration
+      if (serverUrl) {
+        localStorage.setItem('dnd-journal-sync-server', serverUrl);
+      } else {
+        localStorage.removeItem('dnd-journal-sync-server');
+      }
+    } else {
+      resultDiv.innerHTML = `<div class="test-error">✗ ${result.error}</div>`;
+    }
+  } catch (error) {
+    resultDiv.innerHTML = `<div class="test-error">✗ Test failed: ${error.message}</div>`;
+  } finally {
+    testButton.disabled = false;
+    testButton.textContent = 'Test Sync Server';
+  }
 };
 
 // Initialize settings page
 const init = () => {
   populateForm();
   setupEventHandlers();
+  
+  // Update sync status periodically
+  if (yjsSync) {
+    setInterval(updateSyncStatus, 5000);
+  }
 };
 
 // Start when DOM is ready

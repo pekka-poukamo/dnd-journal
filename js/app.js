@@ -392,6 +392,27 @@ export const setupEventHandlers = () => {
     regeneratePromptBtn.addEventListener('click', regenerateAIPrompt);
   }
   
+  // Sync UI event handlers
+  const syncRefreshBtn = document.getElementById('sync-refresh-btn');
+  if (syncRefreshBtn) {
+    syncRefreshBtn.addEventListener('click', updateSyncStatusUI);
+  }
+  
+  const syncForceUploadBtn = document.getElementById('sync-force-upload');
+  if (syncForceUploadBtn) {
+    syncForceUploadBtn.addEventListener('click', handleForceUpload);
+  }
+  
+  const syncForceDownloadBtn = document.getElementById('sync-force-download');
+  if (syncForceDownloadBtn) {
+    syncForceDownloadBtn.addEventListener('click', handleForceDownload);
+  }
+  
+  const syncClearCacheBtn = document.getElementById('sync-clear-cache');
+  if (syncClearCacheBtn) {
+    syncClearCacheBtn.addEventListener('click', handleClearSyncCache);
+  }
+  
   // Enter key to add entry
   const titleInput = document.getElementById('entry-title');
   const contentTextarea = document.getElementById('entry-content');
@@ -407,18 +428,220 @@ export const setupEventHandlers = () => {
   if (contentTextarea) contentTextarea.addEventListener('keydown', handleEnterKey);
 };
 
+// Update sync status UI
+export const updateSyncStatusUI = () => {
+  const syncStatusSection = document.getElementById('sync-status');
+  const syncStatusDot = document.getElementById('sync-status-dot');
+  const syncStatusText = document.getElementById('sync-status-text');
+  const syncStatusDetails = document.getElementById('sync-status-details');
+  const syncDeviceId = document.getElementById('sync-device-id');
+  const syncConnectedServers = document.getElementById('sync-connected-servers');
+  const syncLastUpdated = document.getElementById('sync-last-updated');
+  const syncServersDetails = document.getElementById('sync-servers-details');
+  const syncServersList = document.getElementById('sync-servers-list');
+  const syncTroubleshooting = document.getElementById('sync-troubleshooting');
+  
+  if (!syncStatusSection) return;
+  
+  // Always show sync status if Yjs libraries are loaded
+  if (typeof window.Y !== 'undefined') {
+    syncStatusSection.style.display = 'block';
+  }
+  
+  if (!yjsSync) {
+    // Sync not initialized
+    if (syncStatusDot) {
+      syncStatusDot.className = 'sync-status__dot unavailable';
+    }
+    if (syncStatusText) {
+      syncStatusText.textContent = 'Sync not initialized';
+    }
+    return;
+  }
+  
+  const status = yjsSync.getStatus();
+  
+  // Update status indicator
+  if (syncStatusDot && syncStatusText) {
+    if (!status.available) {
+      syncStatusDot.className = 'sync-status__dot unavailable';
+      syncStatusText.textContent = 'Sync unavailable';
+    } else if (status.connected) {
+      syncStatusDot.className = 'sync-status__dot connected';
+      syncStatusText.textContent = `Connected (${status.connectedCount}/${status.totalProviders} servers)`;
+    } else if (status.connectionAttempts > 0) {
+      syncStatusDot.className = 'sync-status__dot disconnected';
+      syncStatusText.textContent = 'Connection failed - working offline';
+    } else {
+      syncStatusDot.className = 'sync-status__dot connecting';
+      syncStatusText.textContent = 'Connecting...';
+    }
+  }
+  
+  // Show details if available
+  if (status.available && syncStatusDetails) {
+    syncStatusDetails.style.display = 'block';
+    
+    if (syncDeviceId) {
+      syncDeviceId.textContent = status.deviceId;
+    }
+    
+    if (syncConnectedServers) {
+      syncConnectedServers.textContent = `${status.connectedCount}/${status.totalProviders}`;
+    }
+    
+    if (syncLastUpdated) {
+      if (status.lastModified) {
+        syncLastUpdated.textContent = new Date(status.lastModified).toLocaleString();
+      } else {
+        syncLastUpdated.textContent = 'Never';
+      }
+    }
+    
+    // Show server details if there are providers
+    if (status.providers && status.providers.length > 0 && syncServersList && syncServersDetails) {
+      syncServersList.style.display = 'block';
+      syncServersDetails.innerHTML = status.providers.map(provider => {
+        const statusClass = provider.connected ? 'connected' : 'disconnected';
+        const statusText = provider.connected ? 'Connected' : 'Disconnected';
+        return `
+          <div class="server-status">
+            <span class="server-status__url">${provider.url}</span>
+            <div class="server-status__indicator">
+              <span class="server-status__dot ${statusClass}"></span>
+              <span class="server-status__text">${statusText}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Show troubleshooting if there are issues
+    if (syncTroubleshooting) {
+      if (!status.connected || status.errors.length > 0) {
+        syncTroubleshooting.style.display = 'block';
+        
+        // Show error messages
+        if (status.errors.length > 0) {
+          const errorAlert = document.createElement('div');
+          errorAlert.className = 'sync-alert error';
+          errorAlert.innerHTML = `
+            <strong>Connection Issues:</strong><br>
+            ${status.errors.slice(-3).join('<br>')}
+          `;
+          syncTroubleshooting.insertBefore(errorAlert, syncTroubleshooting.firstChild);
+        }
+      } else {
+        syncTroubleshooting.style.display = 'none';
+      }
+    }
+  }
+};
+
 // Setup sync listener for real-time updates
 export const setupSyncListener = () => {
   if (yjsSync && yjsSync.isAvailable) {
-    yjsSync.onUpdate(() => {
+    yjsSync.onChange((syncData) => {
       // Reload data from sync
-      const syncData = yjsSync.getData();
       if (syncData) {
         state = { ...state, ...syncData };
         renderEntries();
         displayCharacterSummary();
+        updateSyncStatusUI();
       }
     });
+  }
+};
+
+// Handle force upload
+export const handleForceUpload = async () => {
+  if (!yjsSync) return;
+  
+  const button = document.getElementById('sync-force-upload');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Uploading...';
+  }
+  
+  try {
+    const result = yjsSync.forceUpload();
+    if (result.success) {
+      alert('Data uploaded successfully!');
+    } else {
+      alert(`Upload failed: ${result.error}`);
+    }
+  } catch (error) {
+    alert(`Upload failed: ${error.message}`);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Force Upload';
+    }
+    updateSyncStatusUI();
+  }
+};
+
+// Handle force download
+export const handleForceDownload = async () => {
+  if (!yjsSync) return;
+  
+  const button = document.getElementById('sync-force-download');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Downloading...';
+  }
+  
+  try {
+    const result = yjsSync.forceDownload();
+    if (result.success) {
+      // Reload the app with new data
+      loadData();
+      renderEntries();
+      displayCharacterSummary();
+      alert('Data downloaded successfully!');
+    } else {
+      alert(`Download failed: ${result.error}`);
+    }
+  } catch (error) {
+    alert(`Download failed: ${error.message}`);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Force Download';
+    }
+    updateSyncStatusUI();
+  }
+};
+
+// Handle clear sync cache
+export const handleClearSyncCache = async () => {
+  if (!yjsSync) return;
+  
+  if (!confirm('This will clear the sync cache. Are you sure?')) {
+    return;
+  }
+  
+  const button = document.getElementById('sync-clear-cache');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Clearing...';
+  }
+  
+  try {
+    const result = await yjsSync.clearSyncCache();
+    if (result.success) {
+      alert('Sync cache cleared successfully!');
+    } else {
+      alert(`Clear cache failed: ${result.error}`);
+    }
+  } catch (error) {
+    alert(`Clear cache failed: ${error.message}`);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Clear Sync Cache';
+    }
+    updateSyncStatusUI();
   }
 };
 
@@ -429,6 +652,12 @@ export const init = async () => {
   displayCharacterSummary();
   setupEventHandlers();
   setupSyncListener();
+  
+  // Initialize sync status UI
+  updateSyncStatusUI();
+  
+  // Update sync status periodically
+  setInterval(updateSyncStatusUI, 5000);
   
   // Initialize summarization if available
   if (typeof window !== 'undefined' && window.Summarization) {
