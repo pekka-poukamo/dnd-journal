@@ -322,6 +322,17 @@ describe('AI Module', function() {
   });
 
   describe('createCompletePromptForPreview', function() {
+    beforeEach(function() {
+      global.resetLocalStorage();
+      
+      // Set up AI settings to enable AI features
+      const testSettings = {
+        apiKey: 'sk-test123',
+        enableAIFeatures: true
+      };
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+    });
+
     it('should return complete prompt structure', function() {
       const character = { name: 'Test Character', class: 'Fighter' };
       const entries = [];
@@ -347,6 +358,17 @@ describe('AI Module', function() {
       expect(result.userPrompt).to.include('Elara');
       expect(result.userPrompt).to.include('Elf');
       expect(result.userPrompt).to.include('Ranger');
+    });
+
+    it('should return null when AI is not enabled', function() {
+      global.resetLocalStorage(); // Clear AI settings
+      
+      const character = { name: 'Test Character', class: 'Fighter' };
+      const entries = [];
+      
+      const result = AI.createCompletePromptForPreview(character, entries);
+      
+      expect(result).to.be.null;
     });
   });
 

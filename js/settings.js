@@ -286,6 +286,13 @@ const handleShowAIPrompt = async () => {
       // Create the complete prompt using the AI module function
       const promptData = createCompletePromptForPreview(journalData.character, journalData.entries);
       
+      if (!promptData) {
+        contentDiv.innerHTML = `<div class="error">AI features are not properly configured. Please check your API key and settings.</div>`;
+        previewDiv.style.display = 'block';
+        button.textContent = 'Hide AI Prompt';
+        return;
+      }
+      
       // Format for display using the prompt data from AI module
       contentDiv.innerHTML = `
         <div class="system-prompt">
