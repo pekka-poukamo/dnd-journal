@@ -91,6 +91,7 @@ const getSyncConfig = () => {
   } catch (e) {}
   
   // Default to more reliable public relays
+  // Note: These are demo servers - for production use, consider PartyKit, Liveblocks, or your own server
   return [
     'wss://demos.yjs.dev',
     'wss://y-websocket.herokuapp.com'
