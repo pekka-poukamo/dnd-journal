@@ -31,7 +31,7 @@ import {
 } from './utils.js';
 
 // Unified narrative-focused system prompt with unobvious question element
-const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
+export const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
 
 Present exactly 4 questions as a simple numbered list without headings:
 

@@ -12,7 +12,8 @@ import {
   createIntrospectionPrompt, 
   getFormattedEntriesForAI, 
   getFormattedCharacterForAI,
-  isAIEnabled 
+  isAIEnabled,
+  NARRATIVE_INTROSPECTION_PROMPT
 } from './ai.js';
 
 import { createYjsSync } from './sync.js';
@@ -292,22 +293,11 @@ const handleShowAIPrompt = async () => {
       // Create the prompt
       const promptText = createIntrospectionPrompt(formattedCharacter, formattedEntries);
       
-      // Format for display
-      const systemPrompt = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
-
-Present exactly 4 questions as a simple numbered list without headings:
-
-1. A pivotal moment, memory, or relationship that has shaped who they are
-2. A current internal conflict, dilemma, or aspiration they're wrestling with  
-3. How recent events might change their path or reveal something new about them
-4. An unobvious, surprising question that explores an unconventional perspective, hidden motivation, or unexpected character truth
-
-Make questions specific to the character's situation and recent adventures. Focus on narrative depth and emotional truth.`;
-
+      // Format for display using the actual system prompt from AI module
       contentDiv.innerHTML = `
         <div class="system-prompt">
           <strong>System Prompt:</strong><br>
-          ${systemPrompt.replace(/\n/g, '<br>')}
+          ${NARRATIVE_INTROSPECTION_PROMPT.replace(/\n/g, '<br>')}
         </div>
         <div class="user-prompt">
           <strong>User Prompt:</strong><br>
