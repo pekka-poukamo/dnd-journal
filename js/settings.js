@@ -252,14 +252,47 @@ const handleGenerateSummaries = async () => {
 
 // Test sync server connection
 const testSyncServer = async (serverUrl) => {
+  // If no Yjs libraries are available, return helpful error
+  if (typeof window.Y === 'undefined' || typeof window.WebsocketProvider === 'undefined') {
+    return { 
+      success: false, 
+      error: 'Sync libraries not loaded. Refresh the page to enable sync testing.' 
+    };
+  }
+
+  // If no custom server URL, test default public servers
   if (!serverUrl) {
-    return { success: false, error: 'No server URL provided' };
+    const defaultServers = [
+      'wss://demos.yjs.dev',
+      'wss://y-websocket.herokuapp.com'
+    ];
+    
+    // Test the first available public server
+    for (const server of defaultServers) {
+      const result = await testSingleServer(server);
+      if (result.success) {
+        return { 
+          success: true, 
+          message: `Default public sync server (${server}) is working!` 
+        };
+      }
+    }
+    
+    return { 
+      success: false, 
+      error: 'Unable to connect to default public sync servers' 
+    };
   }
   
   if (!serverUrl.startsWith('ws://') && !serverUrl.startsWith('wss://')) {
     return { success: false, error: 'Server URL must start with ws:// or wss://' };
   }
   
+  return await testSingleServer(serverUrl);
+};
+
+// Helper function to test a single server
+const testSingleServer = async (serverUrl) => {
   return new Promise((resolve) => {
     try {
       const testDoc = new window.Y.Doc();
@@ -298,10 +331,8 @@ const updateSimpleSyncStatus = () => {
   
   if (!syncSection) return;
   
-  // Show sync status if Yjs libraries are loaded
-  if (typeof window.Y !== 'undefined') {
-    syncSection.style.display = 'block';
-  }
+  // Always show sync status - requirement: "should display all the time, even using public servers"
+  syncSection.style.display = 'block';
   
   if (!yjsSync) {
     if (syncDot) syncDot.className = 'sync-dot unavailable';
@@ -398,7 +429,7 @@ const handleSyncServerTest = async () => {
     resultDiv.innerHTML = `<div class="test-error">✗ Test failed: ${error.message}</div>`;
   } finally {
     testButton.disabled = false;
-    testButton.textContent = 'Test Sync Server';
+    testButton.textContent = 'Test Sync Connection';
   }
 };
 
