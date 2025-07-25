@@ -46,6 +46,23 @@ npm run test:watch
 
 ## Test Coverage
 
+### Automated Coverage Checks
+- **`npm run coverage:warn`**: Non-blocking coverage warnings for development
+- **`npm run coverage:check`**: Strict 95% threshold check (ADR-0005 compliance)
+- **`npm run coverage:html`**: Detailed HTML coverage reports
+- **`npm run pre-commit`**: Pre-commit coverage warnings
+
+### Coverage Targets (ADR-0005 Compliance)
+- **Lines**: 95% target, 80% warning, 50% critical
+- **Functions**: 90% target, 70% warning, 40% critical  
+- **Branches**: 85% target, 65% warning, 35% critical
+
+### Current Coverage Status
+Run `npm run coverage:warn` for latest coverage report with:
+- 🟢 Files meeting targets
+- 🟡 Files needing improvement  
+- 🔴 Critical ADR-0005 violations
+
 ### Unit Tests (`app.test.js`)
 - **generateId**: Unique ID generation
 - **formatDate**: Date formatting functionality  

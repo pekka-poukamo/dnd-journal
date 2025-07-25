@@ -11,6 +11,15 @@ Open `index.html` in a browser.
 ```bash
 npm install
 npm test
+
+# Coverage analysis
+npm run test:coverage          # Basic coverage report
+npm run coverage:html          # Detailed HTML coverage report
+npm run coverage:warn          # Coverage warnings (used in CI)
+npm run coverage:check         # Strict coverage check (95% threshold)
+
+# Pre-commit checks
+npm run pre-commit            # Run coverage warnings before committing
 ```
 
 ## Architecture
