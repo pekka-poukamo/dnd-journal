@@ -63,7 +63,7 @@ export const isAIEnabled = () => {
 // Pure function to create introspection prompt
 export const createIntrospectionPrompt = (character, formattedEntries) => {
   // Use formatted character that may include summarized backstory/notes
-  const formattedCharacter = window.Summarization ? 
+  const formattedCharacter = typeof window !== 'undefined' && window.Summarization ? 
     window.Summarization.getFormattedCharacterForAI(character) : 
     character;
   
@@ -146,7 +146,7 @@ export const generateIntrospectionPrompt = async (character, entries) => {
   try {
     // Use formatted entries that include summaries for older entries
     let formattedEntries;
-    if (window.Summarization) {
+    if (typeof window !== 'undefined' && window.Summarization) {
       formattedEntries = window.Summarization.getFormattedEntriesForAI();
     } else {
       // Fallback: Get last 5 entries for context

@@ -132,27 +132,27 @@ ${summaryText}`;
 
 // Process a single summary item
 export const processSummary = async (item, config) => {
-  if (!window.AI || !window.AI.isAIEnabled()) {
-    return null;
+  // Check if AI is available via global object (for backward compatibility)
+  if (typeof window !== 'undefined' && window.AI && window.AI.isAIEnabled()) {
+    try {
+      const prompt = createAIPrompt(item, config);
+      const summary = await window.AI.callOpenAI(prompt, Math.max(50, item.targetWords * 2));
+      
+      return {
+        id: item.id || item.field,
+        type: item.type,
+        originalContent: item.content || item.title,
+        summary: summary,
+        wordCount: getWordCount(summary),
+        timestamp: Date.now(),
+        contentHash: item.contentHash || btoa(item.content || item.title).substring(0, 16)
+      };
+    } catch (error) {
+      console.error('Failed to process summary:', error);
+      return null;
+    }
   }
-
-  try {
-    const prompt = createAIPrompt(item, config);
-    const summary = await window.AI.callOpenAI(prompt, Math.max(50, item.targetWords * 2));
-    
-    return {
-      id: item.id || item.field,
-      type: item.type,
-      originalContent: item.content || item.title,
-      summary: summary,
-      wordCount: getWordCount(summary),
-      timestamp: Date.now(),
-      contentHash: item.contentHash || btoa(item.content || item.title).substring(0, 16)
-    };
-  } catch (error) {
-    console.error('Failed to process summary:', error);
-    return null;
-  }
+  return null;
 };
 
 // Process a batch of summary items
@@ -330,17 +330,16 @@ export const getSummaryStats = () => {
 
 // Initialize summarization system
 export const initializeSummarization = async () => {
-  if (!window.AI || !window.AI.isAIEnabled()) {
-    return;
-  }
-
-  try {
-    // Generate any missing summaries
-    await generateMissingSummaries();
-    await generateMissingMetaSummaries();
-    await generateMissingCharacterSummaries();
-  } catch (error) {
-    console.error('Failed to initialize summarization:', error);
+  // Check if AI is available via global object (for backward compatibility)
+  if (typeof window !== 'undefined' && window.AI && window.AI.isAIEnabled()) {
+    try {
+      // Generate any missing summaries
+      await generateMissingSummaries();
+      await generateMissingMetaSummaries();
+      await generateMissingCharacterSummaries();
+    } catch (error) {
+      console.error('Failed to initialize summarization:', error);
+    }
   }
 };
 

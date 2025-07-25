@@ -11,7 +11,7 @@ import {
   isValidEntry 
 } from './utils.js';
 
-import { generateIntrospectionPrompt } from './ai.js';
+import { generateIntrospectionPrompt, isAIEnabled, getEntrySummary as aiGetEntrySummary, generateEntrySummary as aiGenerateEntrySummary } from './ai.js';
 import { createYjsSync } from './sync.js';
 
 // Simple state management
@@ -74,10 +74,10 @@ export const saveData = () => {
 
 // Get entry summary from AI if available
 export const getEntrySummary = (entryId) => {
-  if (window.AI && window.AI.isAIEnabled()) {
+  if (isAIEnabled()) {
     const entry = state.entries.find(e => e.id === entryId);
     if (entry) {
-      return window.AI.getEntrySummary(entry);
+      return aiGetEntrySummary(entry);
     }
   }
   return null;
@@ -270,9 +270,9 @@ export const addEntry = async () => {
     focusEntryTitle();
     
     // Generate AI summary if available
-    if (window.AI && window.AI.isAIEnabled()) {
+    if (isAIEnabled()) {
       try {
-        await window.AI.generateEntrySummary(entry);
+        await aiGenerateEntrySummary(entry);
       } catch (error) {
         console.error('Failed to generate entry summary:', error);
       }
@@ -431,7 +431,7 @@ export const init = async () => {
   setupSyncListener();
   
   // Initialize summarization if available
-  if (window.Summarization) {
+  if (typeof window !== 'undefined' && window.Summarization) {
     try {
       await window.Summarization.initializeSummarization();
     } catch (error) {

@@ -154,7 +154,7 @@ const updateSummaryStats = () => {
   summaryStatsDiv.style.display = 'block';
   
   // Use the summarization module if available
-  if (window.Summarization) {
+  if (typeof window !== 'undefined' && window.Summarization) {
     const stats = window.Summarization.getSummaryStats();
     
     const totalEntriesEl = document.getElementById('total-entries');
@@ -188,6 +188,9 @@ const updateSummaryStats = () => {
       if (metaSummaryStatEl) metaSummaryStatEl.style.display = 'none';
       if (metaEntriesStatEl) metaEntriesStatEl.style.display = 'none';
     }
+  } else {
+    // Summarization not available, hide stats
+    summaryStatsDiv.style.display = 'none';
   }
 };
 
@@ -201,12 +204,14 @@ const handleGenerateSummaries = async () => {
   button.disabled = true;
   
   try {
-    if (window.Summarization) {
+    if (typeof window !== 'undefined' && window.Summarization) {
       const result = await window.Summarization.generateMissingSummaries();
       if (result) {
         alert(`Generated ${result.generated} summaries. ${result.remaining} remaining.`);
         updateSummaryStats();
       }
+    } else {
+      alert('Summarization not available');
     }
   } catch (error) {
     alert('Failed to generate summaries: ' + error.message);
