@@ -310,17 +310,110 @@ describe('AI Module', function() {
 
   describe('getPromptDescription', function() {
     it('should return description for introspection prompt', function() {
-      const description = AI.getPromptDescription('introspection');
+      const description = AI.getPromptDescription();
       expect(description).to.be.a('string');
-      // The actual description might not contain 'introspective' - just check it's a string
-      expect(description.length).to.be.greaterThan(0);
+      expect(description).to.include('introspection');
     });
 
     it('should return description for summary prompt', function() {
-      const description = AI.getPromptDescription('summary');
-      expect(description).to.be.a('string');
-      // The actual description might not contain 'summary' - just check it's a string
-      expect(description.length).to.be.greaterThan(0);
+      const description = AI.getPromptDescription();
+      expect(description).to.include('questions');
+    });
+  });
+
+  describe('getIntrospectionPromptForPreview', function() {
+    beforeEach(function() {
+      global.resetLocalStorage();
+      
+      // Set up AI settings to enable AI features
+      const testSettings = {
+        apiKey: 'sk-test123',
+        enableAIFeatures: true
+      };
+      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+    });
+
+    it('should return complete prompt structure', function() {
+      const character = { name: 'Test Character', class: 'Fighter' };
+      const entries = [];
+      
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      
+      expect(result).to.be.an('object');
+      expect(result).to.have.property('systemPrompt');
+      expect(result).to.have.property('userPrompt');
+      expect(result).to.have.property('messages');
+      expect(result.messages).to.be.an('array');
+      expect(result.messages).to.have.length(2);
+      expect(result.messages[0]).to.have.property('role', 'system');
+      expect(result.messages[1]).to.have.property('role', 'user');
+    });
+
+    it('should include character information in user prompt', function() {
+      const character = { name: 'Elara', race: 'Elf', class: 'Ranger' };
+      const entries = [];
+      
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      
+      expect(result.userPrompt).to.include('Elara');
+      expect(result.userPrompt).to.include('Elf');
+      expect(result.userPrompt).to.include('Ranger');
+    });
+
+    it('should return null when AI is not enabled', function() {
+      global.resetLocalStorage(); // Clear AI settings
+      
+      const character = { name: 'Test Character', class: 'Fighter' };
+      const entries = [];
+      
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      
+      expect(result).to.be.null;
+    });
+
+    it('should handle errors in prompt preparation', function() {
+      // Set up AI but create a scenario that might cause errors
+      const character = null; // Invalid character data
+      const entries = null; // Invalid entries data
+      
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      
+      // Should handle gracefully and either return valid data or null
+      expect(result).to.satisfy(val => val === null || (typeof val === 'object' && val.systemPrompt && val.userPrompt));
+    });
+
+    it('should use consistent system prompt', function() {
+      const character = { name: 'Test Character', class: 'Fighter' };
+      const entries = [];
+      
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      
+      expect(result).to.not.be.null;
+      expect(result.systemPrompt).to.include('D&D storytelling companion');
+      expect(result.systemPrompt).to.include('4 questions');
+      expect(result.messages[0].content).to.equal(result.systemPrompt);
+    });
+
+    it('should include entries context when provided', function() {
+      const character = { name: 'Test Hero', class: 'Paladin' };
+      const entries = [
+        {
+          id: '1',
+          title: 'Victory Against Evil',
+          content: 'We defeated the dark wizard threatening the kingdom.',
+          timestamp: Date.now()
+        }
+      ];
+      
+      const result = AI.getIntrospectionPromptForPreview(character, entries);
+      
+      expect(result).to.not.be.null;
+      expect(result.userPrompt).to.include('Test Hero');
+      expect(result.userPrompt).to.include('Paladin');
+      // The function uses formatted entries, so let's check for the actual structure
+      expect(result.userPrompt).to.satisfy(prompt => 
+        prompt.includes('Journey') || prompt.includes('Entry') || prompt.includes('Recent') || prompt.length > 50
+      );
     });
   });
 

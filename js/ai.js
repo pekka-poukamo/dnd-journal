@@ -31,7 +31,7 @@ import {
 } from './utils.js';
 
 // Unified narrative-focused system prompt with unobvious question element
-const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
+export const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
 
 Present exactly 4 questions as a simple numbered list without headings:
 
@@ -144,7 +144,6 @@ export const generateIntrospectionPrompt = async (character, entries) => {
   try {
     // Use formatted entries that include summaries for older entries
     const formattedEntries = getFormattedEntriesForAI();
-
     const promptText = createIntrospectionPrompt(character, formattedEntries);
     const response = await callOpenAI(promptText);
     
@@ -217,6 +216,37 @@ export const getEntrySummary = async (entry) => {
 // Helper function for prompt information
 export const getPromptDescription = () => {
   return 'Narrative-focused introspection with 3 core questions + 1 unobvious question';
+};
+
+// Get the prompt that would be sent to AI (for preview purposes - reuses exact same logic as generateIntrospectionPrompt)
+export const getIntrospectionPromptForPreview = (character, entries) => {
+  if (!isAIEnabled()) {
+    return null;
+  }
+
+  try {
+    // Use the exact same logic as generateIntrospectionPrompt but return the prompt instead of calling API
+    const formattedEntries = getFormattedEntriesForAI();
+    const userPrompt = createIntrospectionPrompt(character, formattedEntries);
+    
+    return {
+      systemPrompt: NARRATIVE_INTROSPECTION_PROMPT,
+      userPrompt: userPrompt,
+      messages: [
+        {
+          role: 'system',
+          content: NARRATIVE_INTROSPECTION_PROMPT
+        },
+        {
+          role: 'user', 
+          content: userPrompt
+        }
+      ]
+    };
+  } catch (error) {
+    console.error('Failed to create prompt for preview:', error);
+    return null;
+  }
 };
 
 // =============================================================================
