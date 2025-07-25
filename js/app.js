@@ -13,6 +13,7 @@ import {
 
 import { generateIntrospectionPrompt, isAIEnabled, getEntrySummary as aiGetEntrySummary, generateEntrySummary as aiGenerateEntrySummary } from './ai.js';
 import { createYjsSync } from './sync.js';
+import { runAutoSummarization } from './summarization.js';
 
 // Simple state management
 let state = createInitialJournalState();
@@ -435,13 +436,11 @@ export const init = async () => {
   setupEventHandlers();
   setupSyncListener();
   
-  // Initialize summarization if available
-  if (typeof window !== 'undefined' && window.Summarization) {
-    try {
-      await window.Summarization.initializeSummarization();
-    } catch (error) {
-      console.error('Failed to initialize summarization:', error);
-    }
+  // Initialize summarization
+  try {
+    await runAutoSummarization();
+  } catch (error) {
+    console.error('Failed to initialize summarization:', error);
   }
   
   // Display AI prompt

@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as Summarization from '../js/summarization.js';
+import * as SummaryStorage from '../js/summary-storage.js';
 
 describe('Summarization Module', () => {
   beforeEach(() => {
@@ -8,84 +9,165 @@ describe('Summarization Module', () => {
     global.localStorage.clear();
   });
 
-  describe('getEntriesNeedingSummaries', () => {
-    it('should identify recent and older entries correctly', () => {
-      const entries = [];
-      const summaries = {};
+  describe('WORD_THRESHOLDS', () => {
+    it('should have sensible word count thresholds', () => {
+      expect(Summarization.WORD_THRESHOLDS).to.have.property('ENTRY_SUMMARIZATION', 300);
+      expect(Summarization.WORD_THRESHOLDS).to.have.property('CHARACTER_FIELD', 150);
+      expect(Summarization.WORD_THRESHOLDS).to.have.property('META_SUMMARY_TRIGGER', 1000);
+      expect(Summarization.WORD_THRESHOLDS).to.have.property('SUMMARIES_PER_META', 10);
+    });
+  });
+
+  describe('TARGET_WORDS', () => {
+    it('should have appropriate target word counts', () => {
+      expect(Summarization.TARGET_WORDS).to.have.property('ENTRY_SUMMARY', 50);
+      expect(Summarization.TARGET_WORDS).to.have.property('CHARACTER_SUMMARY', 40);
+      expect(Summarization.TARGET_WORDS).to.have.property('META_SUMMARY', 100);
+    });
+  });
+
+  describe('needsSummarization', () => {
+    it('should identify content that needs summarization', () => {
+      const shortContent = 'word '.repeat(200); // 200 words
+      const longContent = 'word '.repeat(400); // 400 words
       
-      // Create 8 entries with different timestamps
-      for (let i = 0; i < 8; i++) {
-        entries.push({
-          id: `${i}`,
-          title: `Entry ${i}`,
-          content: `Content ${i}`,
-          timestamp: Date.now() - (i * 24 * 60 * 60 * 1000) // Each day older
-        });
-      }
-      
-      const result = Summarization.getEntriesNeedingSummaries(entries, summaries);
-      
-      // The function returns all entries that don't have summaries
-      // Since we have 8 entries and no summaries, all 8 need summaries
-      expect(result).to.be.an('array');
-      expect(result).to.have.length(8);
-      expect(result[0].id).to.equal('0');
-      expect(result[7].id).to.equal('7');
+      expect(Summarization.needsSummarization(shortContent)).to.be.false;
+      expect(Summarization.needsSummarization(longContent)).to.be.true;
     });
 
-    it('should exclude older entries that already have summaries', () => {
-      const entries = [];
-      const summaries = {};
+    it('should use custom threshold', () => {
+      const content = 'word '.repeat(100); // 100 words
       
-      // Create 7 entries
-      for (let i = 0; i < 7; i++) {
-        entries.push({
-          id: `${i}`,
-          title: `Entry ${i}`,
-          content: `Content ${i}`,
-          timestamp: Date.now() - (i * 24 * 60 * 60 * 1000)
-        });
-      }
+      expect(Summarization.needsSummarization(content, 50)).to.be.true;
+      expect(Summarization.needsSummarization(content, 150)).to.be.false;
+    });
+  });
+
+  describe('getEntriesNeedingSummary', () => {
+    it('should identify entries needing summarization', () => {
+      const entries = [
+        {
+          id: '1',
+          title: 'Short Entry',
+          content: 'word '.repeat(200), // Under threshold
+          timestamp: Date.now()
+        },
+        {
+          id: '2',
+          title: 'Long Entry',
+          content: 'word '.repeat(400), // Over threshold
+          timestamp: Date.now() - 1000
+        }
+      ];
       
-      // Add summaries for the first two older entries
-      summaries['5'] = { summary: 'Summary 5' };
-      summaries['6'] = { summary: 'Summary 6' };
+      const result = Summarization.getEntriesNeedingSummary(entries);
       
-      const result = Summarization.getEntriesNeedingSummaries(entries, summaries);
-      
-      // Since summaries exist for entries 5 and 6, only entries 0,1,2,3,4 need summaries
       expect(result).to.be.an('array');
-      expect(result).to.have.length(5);
-      expect(result.map(e => e.id)).to.include('0');
-      expect(result.map(e => e.id)).to.include('4');
-      expect(result.map(e => e.id)).to.not.include('5');
-      expect(result.map(e => e.id)).to.not.include('6');
+      expect(result).to.have.length(1);
+      expect(result[0].id).to.equal('2');
     });
 
-    it('should handle empty entries array', () => {
-      const entries = [];
-      const summaries = {};
+    it('should exclude entries that already have summaries', () => {
+      const entries = [
+        {
+          id: '1',
+          title: 'Long Entry 1',
+          content: 'word '.repeat(400),
+          timestamp: Date.now()
+        },
+        {
+          id: '2', 
+          title: 'Long Entry 2',
+          content: 'word '.repeat(400),
+          timestamp: Date.now() - 1000
+        }
+      ];
       
-      const result = Summarization.getEntriesNeedingSummaries(entries, summaries);
+      // Add summary for entry 1
+      SummaryStorage.saveEntrySummary('1', {
+        id: '1',
+        summary: 'Existing summary',
+        originalWordCount: 400,
+        summaryWordCount: 50,
+        timestamp: Date.now()
+      });
+      
+      const result = Summarization.getEntriesNeedingSummary(entries);
+      
+      expect(result).to.be.an('array');
+      expect(result).to.have.length(1);
+      expect(result[0].id).to.equal('2');
+    });
+  });
+
+  describe('getCharacterFieldsNeedingSummary', () => {
+    it('should identify character fields needing summarization', () => {
+      const character = {
+        name: 'Test Character',
+        backstory: 'word '.repeat(200), // Over threshold of 150
+        notes: 'word '.repeat(100), // Under threshold
+        race: 'Human'
+      };
+      
+      const result = Summarization.getCharacterFieldsNeedingSummary(character);
+      
+      expect(result).to.be.an('array');
+      expect(result).to.have.length(1);
+      expect(result[0].field).to.equal('backstory');
+      expect(result[0].content).to.equal(character.backstory);
+    });
+
+    it('should exclude fields that already have summaries with same content', () => {
+      const character = {
+        backstory: 'word '.repeat(200)
+      };
+      
+      const contentHash = btoa(character.backstory).substring(0, 16);
+      
+      // Add existing summary with same content hash
+      SummaryStorage.saveCharacterSummary('backstory', {
+        field: 'backstory',
+        summary: 'Existing summary',
+        contentHash: contentHash,
+        timestamp: Date.now()
+      });
+      
+      const result = Summarization.getCharacterFieldsNeedingSummary(character);
       
       expect(result).to.be.an('array');
       expect(result).to.have.length(0);
     });
+  });
 
-    it('should handle entries with fewer than 5 items', () => {
-      const entries = [
-        { id: '1', title: 'Entry 1', content: 'Content 1', timestamp: Date.now() },
-        { id: '2', title: 'Entry 2', content: 'Content 2', timestamp: Date.now() - 1000 }
-      ];
-      const summaries = {};
+  describe('shouldCreateMetaSummaries', () => {
+    it('should not create meta-summaries when under threshold', () => {
+      // Create some entry summaries but not enough
+      for (let i = 1; i <= 5; i++) {
+        SummaryStorage.saveEntrySummary(`${i}`, {
+          id: `${i}`,
+          summary: 'Test summary',
+          summaryWordCount: 50,
+          timestamp: Date.now()
+        });
+      }
       
-      const result = Summarization.getEntriesNeedingSummaries(entries, summaries);
+      const result = Summarization.shouldCreateMetaSummaries();
+      expect(result).to.be.false;
+    });
+
+    it('should create meta-summaries when threshold is exceeded', () => {
+      // Create enough entry summaries to exceed word threshold
+      for (let i = 1; i <= 12; i++) {
+        SummaryStorage.saveEntrySummary(`${i}`, {
+          id: `${i}`,
+          summary: 'word '.repeat(100), // 100 words each (1200 total > 1000 threshold)
+          summaryWordCount: 100,
+          timestamp: Date.now() - (i * 1000)
+        });
+      }
       
-      // With only 2 entries, both need summaries since none have summaries yet
-      expect(result).to.be.an('array');
-      expect(result).to.have.length(2);
-      expect(result[0].id).to.equal('1');
-      expect(result[1].id).to.equal('2');
+      const result = Summarization.shouldCreateMetaSummaries();
+      expect(result).to.be.true;
     });
   });
 
@@ -111,225 +193,103 @@ describe('Summarization Module', () => {
     });
 
     it('should return correct summary statistics', () => {
-      const stats = Summarization.getSummaryStats();
+      const stats = SummaryStorage.getSummaryStats();
       
       expect(stats).to.have.property('totalEntries', 10);
-      expect(stats).to.have.property('entriesWithSummaries', 0);
-      expect(stats).to.have.property('metaSummaryCount', 0);
-      expect(stats).to.have.property('characterSummaryCount', 0);
-      expect(stats).to.have.property('totalOriginalWords');
-      expect(stats).to.have.property('totalSummaryWords');
-      expect(stats).to.have.property('compressionRatio');
+      expect(stats).to.have.property('recentEntries', 5);
+      expect(stats).to.have.property('summarizedEntries', 0);
+      expect(stats).to.have.property('pendingSummaries', 5);
+      expect(stats).to.have.property('summaryCompletionRate');
+      expect(stats).to.have.property('metaSummaryActive', false);
     });
 
     it('should calculate progress correctly when summaries exist', () => {
       // Add some summaries
-      const summaries = {
-        '5': { summary: 'Summary 5', wordCount: 5 },
-        '6': { summary: 'Summary 6', wordCount: 6 },
-        '7': { summary: 'Summary 7', wordCount: 7 }
-      };
-      global.localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify(summaries));
-      
-      const stats = Summarization.getSummaryStats();
-      
-      expect(stats).to.have.property('totalEntries', 10);
-      expect(stats).to.have.property('entriesWithSummaries', 3);
-      expect(stats).to.have.property('totalSummaryWords', 18); // 5 + 6 + 7
-      expect(stats).to.have.property('compressionRatio');
-    });
-  });
-
-  describe('getFormattedEntriesForAI', () => {
-    it('should format entries correctly for AI processing', () => {
-      // Set up journal data in localStorage
-      const journalData = {
-        character: { name: 'Test Character' },
-        entries: [
-          {
-            id: '1',
-            title: 'Battle at Helm\'s Deep',
-            content: 'We defended the fortress against overwhelming odds.',
-            timestamp: Date.now()
-          },
-          {
-            id: '2',
-            title: 'Meeting with Gandalf',
-            content: 'The wizard shared important information about the ring.',
-            timestamp: Date.now() - 1000
-          }
-        ]
-      };
-      global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
-      
-      const formatted = Summarization.getFormattedEntriesForAI();
-      
-      expect(formatted).to.be.an('array');
-      expect(formatted).to.have.length(2);
-      expect(formatted[0].title).to.equal('Battle at Helm\'s Deep');
-      expect(formatted[0].content).to.include('We defended the fortress');
-      expect(formatted[1].title).to.equal('Meeting with Gandalf');
-    });
-
-    it('should truncate long content appropriately', () => {
-      const longContent = 'A'.repeat(600);
-      const journalData = {
-        character: { name: 'Test Character' },
-        entries: [
-          {
-            id: '1',
-            title: 'Long Entry',
-            content: longContent,
-            timestamp: Date.now()
-          }
-        ]
-      };
-      global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
-      
-      const formatted = Summarization.getFormattedEntriesForAI();
-      
-      expect(formatted[0].title).to.equal('Long Entry');
-      expect(formatted[0].content).to.equal(longContent); // No truncation in this function
-    });
-  });
-
-  describe('groupSummariesForMeta', () => {
-    it('should group summaries correctly for meta summarization', () => {
-      // Create 60 entries to meet the threshold (50)
-      const entries = [];
-      const summaries = {};
-      
-      for (let i = 1; i <= 60; i++) {
-        entries.push({
+      for (let i = 5; i <= 7; i++) {
+        SummaryStorage.saveEntrySummary(`${i}`, {
           id: `${i}`,
-          title: `Entry ${i}`,
-          content: `Content ${i}`,
-          timestamp: Date.now() - (i * 1000)
+          summary: `Summary ${i}`,
+          summaryWordCount: 50,
+          timestamp: Date.now()
         });
-        summaries[`${i}`] = { summary: `Summary ${i}` };
       }
       
-      const grouped = Summarization.groupSummariesForMeta(entries, summaries);
+      const stats = SummaryStorage.getSummaryStats();
       
-      expect(grouped).to.be.an('array');
-      expect(grouped).to.have.length(6); // 60 entries / 10 per group = 6 groups
-      expect(grouped[0]).to.have.property('summaries');
-      expect(grouped[0].summaries).to.have.length(10);
-    });
-
-    it('should handle empty summaries object', () => {
-      const entries = [];
-      const summaries = {};
-      const grouped = Summarization.groupSummariesForMeta(entries, summaries);
-      
-      expect(grouped).to.be.an('array');
-      expect(grouped).to.have.length(0);
+      expect(stats).to.have.property('totalEntries', 10);
+      expect(stats).to.have.property('summarizedEntries', 3);
+      expect(stats).to.have.property('pendingSummaries', 2); // 10 total - 5 recent - 3 summarized
+      expect(stats.summaryCompletionRate).to.equal(60); // 3/5 eligible entries
     });
   });
 
-  describe('getCharacterDetailsNeedingSummaries', () => {
-    it('should identify character details that need summarization', () => {
-      const character = {
-        name: 'Test Character',
-        backstory: 'A very long backstory that needs to be summarized for AI processing because it contains many words and exceeds the threshold for summarization. This is a detailed character background that includes their childhood, training, major life events, relationships, and motivations. The character has experienced significant trauma and growth throughout their journey, which has shaped their current personality and goals. Born in a small village on the outskirts of the kingdom, the character was raised by their grandmother after their parents were killed in a bandit raid. From an early age, they showed an aptitude for magic and were apprenticed to the local wizard. However, tragedy struck again when their master was killed by a dark sorcerer seeking ancient artifacts. This event set the character on a path of vengeance and justice, leading them to join the adventuring party. Throughout their travels, they have encountered numerous challenges and allies, each shaping their understanding of the world and their place in it. The character has developed a deep sense of responsibility for protecting the innocent and has become a respected leader within their group.',
-        notes: 'Detailed notes about equipment and relationships that also need summarization due to length. This includes a comprehensive list of magical items, weapons, armor, and other gear. The character has formed many important relationships with NPCs and other party members, each with their own complex dynamics and history. Their primary weapon is a enchanted longsword that glows with inner light, given to them by their mentor before his death. They also carry a staff of the archmage, a powerful artifact that enhances their spellcasting abilities. Their armor is made of mithril and bears protective runes. Among their magical items are a ring of protection, a cloak of elvenkind, and a bag of holding containing various potions and scrolls. The character has formed close bonds with several NPCs including the village elder who helped them after their parents death, the blacksmith who crafted their armor, and the merchant who supplies them with magical components. Within the party, they have a particularly strong friendship with the rogue, who shares their sense of justice, and a more complex relationship with the paladin, who sometimes questions their methods.'
+  describe('Storage Integration', () => {
+    it('should save and load entry summaries', () => {
+      const summary = {
+        id: 'test-entry',
+        summary: 'Test summary content',
+        originalWordCount: 300,
+        summaryWordCount: 50,
+        timestamp: Date.now()
       };
-      const characterSummaries = {};
       
-      const result = Summarization.getCharacterDetailsNeedingSummaries(character, characterSummaries);
+      SummaryStorage.saveEntrySummary('test-entry', summary);
+      const loaded = SummaryStorage.loadEntrySummaries();
       
-      expect(result).to.be.an('object');
-      expect(result).to.have.property('backstory');
-      expect(result).to.have.property('notes');
-      expect(result.backstory).to.have.property('field', 'backstory');
-      expect(result.notes).to.have.property('field', 'notes');
+      expect(loaded).to.have.property('test-entry');
+      expect(loaded['test-entry']).to.deep.equal(summary);
     });
 
-    it('should not include short content', () => {
-      const character = {
-        name: 'Test Character',
-        backstory: 'Short',
-        notes: 'Also short'
+    it('should save and load character summaries', () => {
+      const summary = {
+        field: 'backstory',
+        summary: 'Character backstory summary',
+        originalWordCount: 200,
+        summaryWordCount: 40,
+        timestamp: Date.now()
       };
-      const characterSummaries = {};
       
-      const result = Summarization.getCharacterDetailsNeedingSummaries(character, characterSummaries);
+      SummaryStorage.saveCharacterSummary('backstory', summary);
+      const loaded = SummaryStorage.loadCharacterSummaries();
       
-      expect(result).to.be.an('object');
-      expect(Object.keys(result)).to.have.length(0);
+      expect(loaded).to.have.property('backstory');
+      expect(loaded.backstory).to.deep.equal(summary);
+    });
+
+    it('should save and load meta-summaries', () => {
+      const metaSummary = {
+        id: 'meta-1',
+        title: 'Adventures Summary (10 entries)',
+        summary: 'Meta summary of adventures',
+        includedSummaryIds: ['1', '2', '3'],
+        timestamp: Date.now()
+      };
+      
+      SummaryStorage.saveMetaSummary('meta-1', metaSummary);
+      const loaded = SummaryStorage.loadMetaSummaries();
+      
+      expect(loaded).to.have.property('meta-1');
+      expect(loaded['meta-1']).to.deep.equal(metaSummary);
     });
   });
 
-  describe('getFormattedCharacterForAI', () => {
-    it('should format character data for AI processing', () => {
-      const character = {
-        name: 'Aragorn',
-        race: 'Human',
-        class: 'Ranger',
-        backstory: 'Heir to the throne of Gondor',
-        notes: 'Carries Andúril, the sword of kings'
-      };
+  describe('Error Handling', () => {
+    it('should handle corrupted localStorage gracefully', () => {
+      // Corrupt the storage
+      global.localStorage.setItem('simple-dnd-journal-summaries', 'invalid json');
       
-      const formatted = Summarization.getFormattedCharacterForAI(character);
-      
-      expect(formatted).to.be.an('object');
-      expect(formatted).to.have.property('name', 'Aragorn');
-      expect(formatted).to.have.property('race', 'Human');
-      expect(formatted).to.have.property('class', 'Ranger');
-      expect(formatted).to.have.property('backstory', 'Heir to the throne of Gondor');
-      expect(formatted).to.have.property('notes', 'Carries Andúril, the sword of kings');
+      const summaries = SummaryStorage.loadEntrySummaries();
+      expect(summaries).to.deep.equal({});
     });
 
-    it('should handle missing character properties', () => {
-      const character = {
-        name: 'Test Character'
-      };
+    it('should handle missing localStorage keys gracefully', () => {
+      const summaries = SummaryStorage.loadEntrySummaries();
+      const characterSummaries = SummaryStorage.loadCharacterSummaries();
+      const metaSummaries = SummaryStorage.loadMetaSummaries();
       
-      const formatted = Summarization.getFormattedCharacterForAI(character);
-      
-      expect(formatted).to.have.property('name', 'Test Character');
-      expect(formatted).to.have.property('backstorySummarized', false);
-      expect(formatted).to.have.property('notesSummarized', false);
-      expect(formatted).to.have.property('backstory', undefined);
-      expect(formatted).to.have.property('notes', undefined);
+      expect(summaries).to.deep.equal({});
+      expect(characterSummaries).to.deep.equal({});
+      expect(metaSummaries).to.deep.equal({});
     });
   });
-
-  describe('SUMMARIZATION_CONFIGS', () => {
-    it('should have required configuration properties', () => {
-      expect(Summarization.SUMMARIZATION_CONFIGS).to.have.property('entries');
-      expect(Summarization.SUMMARIZATION_CONFIGS).to.have.property('metaSummaries');
-      expect(Summarization.SUMMARIZATION_CONFIGS).to.have.property('character');
-    });
-
-    it('should have correct entry summarization config', () => {
-      const config = Summarization.SUMMARIZATION_CONFIGS.entries;
-      expect(config).to.have.property('storageKey');
-      expect(config).to.have.property('recentCount', 5);
-      expect(config).to.have.property('batchSize', 3);
-      expect(config).to.have.property('targetCompressionRatio', 0.3);
-    });
-
-    it('should have correct meta summarization config', () => {
-      const config = Summarization.SUMMARIZATION_CONFIGS.metaSummaries;
-      expect(config).to.have.property('storageKey');
-      expect(config).to.have.property('triggerThreshold', 50);
-      expect(config).to.have.property('summariesPerGroup', 10);
-      expect(config).to.have.property('maxWords', 200);
-      expect(config).to.have.property('batchSize', 2);
-    });
-
-    it('should have correct character summarization config', () => {
-      const config = Summarization.SUMMARIZATION_CONFIGS.character;
-      expect(config).to.have.property('storageKey');
-      expect(config).to.have.property('fields');
-      expect(config.fields).to.deep.equal(['backstory', 'notes']);
-      expect(config).to.have.property('maxWordsBeforeSummary', 100);
-      expect(config).to.have.property('targetWords', 50);
-      expect(config).to.have.property('batchSize', 2);
-    });
-  });
-
-  // Note: META_SUMMARY_CONFIG and CHARACTER_SUMMARY_CONFIG exports were removed
-  // in favor of using SUMMARIZATION_CONFIGS.metaSummaries and SUMMARIZATION_CONFIGS.character directly
 });
