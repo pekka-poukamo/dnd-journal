@@ -1,5 +1,7 @@
 const { JSDOM } = require('jsdom');
 const chai = require('chai');
+const fs = require('fs');
+const path = require('path');
 
 // Enable should syntax
 chai.should();
@@ -70,5 +72,58 @@ global.fetch = async (url, options) => {
     json: async () => ({})
   };
 };
+
+// Load ES6 modules for testing
+const loadModule = (modulePath) => {
+  try {
+    const fullPath = path.resolve(__dirname, '..', modulePath);
+    const moduleCode = fs.readFileSync(fullPath, 'utf8');
+    
+    // Create a module-like environment
+    const moduleExports = {};
+    const moduleRequire = (path) => {
+      // Mock require for internal dependencies
+      if (path === './utils.js') {
+        return global.Utils;
+      }
+      if (path === '../js/utils.js') {
+        return global.Utils;
+      }
+      if (path === '../sync-config.js') {
+        return global.SYNC_CONFIG;
+      }
+      throw new Error(`Mock require not implemented for: ${path}`);
+    };
+    
+    // Create a function that simulates the module execution
+    const moduleFunction = new Function('exports', 'require', 'module', moduleCode);
+    
+    // Execute the module
+    moduleFunction(moduleExports, moduleRequire, { exports: moduleExports });
+    
+    return moduleExports;
+  } catch (error) {
+    console.error(`Failed to load module ${modulePath}:`, error);
+    return {};
+  }
+};
+
+// Load modules and make them available globally
+const loadModules = () => {
+  // Load utils first since other modules depend on it
+  global.Utils = loadModule('js/utils.js');
+  
+  // Load other modules
+  global.AI = loadModule('js/ai.js');
+  global.Summarization = loadModule('js/summarization.js');
+  global.SYNC_CONFIG = loadModule('sync-config.js');
+  
+  // Load sync module
+  const syncModule = loadModule('js/sync.js');
+  global.createYjsSync = syncModule.createYjsSync;
+};
+
+// Initialize modules
+loadModules();
 
 module.exports = { chai, should: chai.should() };

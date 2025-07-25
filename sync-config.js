@@ -1,7 +1,7 @@
 // D&D Journal Sync Configuration
 // Edit this file to set your sync server
 
-window.SYNC_CONFIG = {
+export const SYNC_CONFIG = {
   // Your sync server URL (leave empty to use default public relays)
   server: '',
   

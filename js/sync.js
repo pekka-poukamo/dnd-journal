@@ -2,6 +2,8 @@
 // Maintains localStorage as primary store while adding cross-device sync
 // Follows ADR-0002: Functional Programming Only
 
+import { SYNC_CONFIG } from '../sync-config.js';
+
 // Sync state management
 let syncState = {
   isAvailable: false,
@@ -80,8 +82,8 @@ const setupPersistence = (state) => {
 const getSyncConfig = () => {
   // Use config file setting if available
   try {
-    if (window.SYNC_CONFIG && window.SYNC_CONFIG.server) {
-      return [window.SYNC_CONFIG.server];
+    if (SYNC_CONFIG && SYNC_CONFIG.server) {
+      return [SYNC_CONFIG.server];
     }
   } catch (e) {}
   
@@ -144,13 +146,11 @@ const setupObservers = (state) => {
   
   state.ymap.observe(() => {
           // Remote changes detected
-    notifyCallbacks(state);
+    notifyCallbacks(syncState);
   });
   
   return state;
 };
-
-
 
 // Get current data from Yjs
 const getSyncData = () => {
@@ -235,8 +235,6 @@ const getDeviceId = () => {
   }
 };
 
-
-
 // Clean shutdown
 const teardownSync = () => {
   if (syncState.providers) {
@@ -265,7 +263,7 @@ const teardownSync = () => {
 };
 
 // Public API object (following functional pattern)
-const createYjsSync = () => {
+export const createYjsSync = () => {
   // Initialize on creation
   syncState = initializeSync();
   
@@ -287,9 +285,8 @@ const createYjsSync = () => {
   };
 };
 
-// Export for different module systems
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { createYjsSync, getSyncData, setSyncData, onSyncChange, getSyncStatus };
-} else {
-  window.createYjsSync = createYjsSync;
+// Test compatibility layer - maintain global exports for testing
+if (typeof global !== 'undefined') {
+  global.createYjsSync = createYjsSync;
+  global.SYNC_CONFIG = SYNC_CONFIG;
 }

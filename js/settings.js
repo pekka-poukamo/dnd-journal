@@ -1,45 +1,27 @@
 // Settings Page - AI Configuration & Data Management
 
-// Get utils reference - works in both browser and test environment
-const getUtils = () => {
-  if (typeof window !== 'undefined' && window.Utils) return window.Utils;
-  if (typeof global !== 'undefined' && global.Utils) return global.Utils;
-  try {
-    return require('./utils.js');
-  } catch (e) {
-    try {
-      return require('../js/utils.js');
-    } catch (e2) {
-      // Fallback for tests
-      return {
-        loadDataWithFallback: (key, fallback) => fallback,
-        createInitialSettings: () => ({ apiKey: '', enableAIFeatures: false }),
-        safeSetToStorage: () => ({ success: true }),
-        STORAGE_KEYS: { SETTINGS: 'simple-dnd-journal-settings' }
-      };
-    }
-  }
-};
-
-const utils = getUtils();
+import { 
+  loadDataWithFallback, 
+  createInitialSettings, 
+  safeSetToStorage, 
+  STORAGE_KEYS 
+} from './utils.js';
 
 // Load settings from localStorage
-const loadSettings = () => {
-  return utils.loadDataWithFallback(
-    utils.STORAGE_KEYS.SETTINGS, 
-    utils.createInitialSettings()
+export const loadSettings = () => {
+  return loadDataWithFallback(
+    STORAGE_KEYS.SETTINGS, 
+    createInitialSettings()
   );
 };
 
 // Save settings to localStorage
-const saveSettings = (settings) => {
-  return utils.safeSetToStorage(utils.STORAGE_KEYS.SETTINGS, settings);
+export const saveSettings = (settings) => {
+  return safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
 };
 
-
-
 // Test API key with OpenAI
-const testApiKey = async (apiKey) => {
+export const testApiKey = async (apiKey) => {
   if (!apiKey || !apiKey.startsWith('sk-')) {
     return { success: false, error: 'Invalid API key format' };
   }
@@ -132,8 +114,6 @@ const handleSettingsChange = () => {
   // Update summary stats display
   updateSummaryStats();
 };
-
-
 
 // Setup event handlers
 const setupEventHandlers = () => {
@@ -267,10 +247,3 @@ const init = () => {
 
 // Start when DOM is ready
 document.addEventListener('DOMContentLoaded', init);
-
-// Export functions for testing
-if (typeof global !== 'undefined') {
-  global.loadSettings = loadSettings;
-  global.saveSettings = saveSettings;
-  global.testApiKey = testApiKey;
-}
