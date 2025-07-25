@@ -21,36 +21,10 @@
     <link rel="stylesheet" href="css/components/navigation.css">
     <link rel="stylesheet" href="css/components/character-form.css">
     
-    <!-- Yjs Sync Enhancement (ADR-0003) - Optional libraries for cross-device sync -->
-    <!-- Using jsDelivr CDN for better reliability than unpkg -->
-    <script src="https://cdn.jsdelivr.net/npm/yjs@13.6.27/dist/yjs.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/y-websocket@3.0.0/dist/y-websocket.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/y-indexeddb@9.0.12/dist/y-indexeddb.js"></script>
-    
-    <!-- Fallback script in case jsDelivr fails -->
-    <script>
-        window.addEventListener('load', function() {
-            // Check if primary CDN libraries loaded
-            if (typeof window.Y === 'undefined') {
-                console.warn('Primary CDN failed, loading fallback from unpkg');
-                // Create and append fallback script tags
-                var scripts = [
-                    'https://unpkg.com/yjs@13.6.27/dist/yjs.js',
-                    'https://unpkg.com/y-websocket@3.0.0/dist/y-websocket.js',
-                    'https://unpkg.com/y-indexeddb@9.0.12/dist/y-indexeddb.js'
-                ];
-                
-                scripts.forEach(function(src) {
-                    var script = document.createElement('script');
-                    script.src = src;
-                    script.onerror = function() {
-                        console.error('Failed to load fallback script:', src);
-                    };
-                    document.head.appendChild(script);
-                });
-            }
-        });
-    </script>
+    <!-- Yjs Sync Enhancement (ADR-0003) - Self-hosted libraries for cross-device sync -->
+    <script src="vendor/yjs.js"></script>
+    <script src="vendor/y-websocket.js"></script>
+    <script src="vendor/y-indexeddb.js"></script>
 </head>
 <body>
     <header>
