@@ -7,7 +7,6 @@ import {
   safeSetToStorage, 
   STORAGE_KEYS 
 } from './utils.js';
-import { getSummaryStats, autoSummarizeEntries } from './summarization.js';
 import { clearAll } from './summarization.js';
 import { 
   getIntrospectionPromptForPreview,
@@ -133,9 +132,6 @@ const handleSettingsChange = () => {
   if (showPromptButton) {
     showPromptButton.disabled = !isAIEnabled();
   }
-  
-  // Update summary stats display
-  updateSummaryStats();
 };
 
 // Setup event handlers
@@ -156,11 +152,6 @@ const setupEventHandlers = () => {
     testButton.addEventListener('click', handleApiKeyTest);
   }
 
-  const generateSummariesButton = document.getElementById('generate-summaries');
-  if (generateSummariesButton) {
-    generateSummariesButton.addEventListener('click', handleGenerateSummaries);
-  }
-  
   const clearSummariesButton = document.getElementById('clear-summaries');
   if (clearSummariesButton) {
     clearSummariesButton.addEventListener('click', handleClearSummaries);
@@ -191,93 +182,9 @@ const setupEventHandlers = () => {
   }
 };
 
-// Update summary stats display
-const updateSummaryStats = () => {
-  const settings = loadSettings();
-  const summaryStatsDiv = document.getElementById('summary-stats');
-  
-  if (!summaryStatsDiv) return;
-  
-  if (!settings.enableAIFeatures || !settings.apiKey) {
-    summaryStatsDiv.style.display = 'none';
-    return;
-  }
-  
-  summaryStatsDiv.style.display = 'block';
-  
-  // Use the summarization module
-  try {
-    const stats = getSummaryStats();
-    
-    const totalEntriesEl = document.getElementById('total-entries');
-    const recentEntriesEl = document.getElementById('recent-entries');
-    const summarizedEntriesEl = document.getElementById('summarized-entries');
-    const pendingSummariesEl = document.getElementById('pending-summaries');
-    const progressFill = document.getElementById('summary-progress');
-    
-    // Meta-summary elements
-    const metaSummaryStatEl = document.getElementById('meta-summary-stat');
-    const metaSummariesEl = document.getElementById('meta-summaries');
-    const metaEntriesStatEl = document.getElementById('meta-entries-stat');
-    const metaEntriesEl = document.getElementById('meta-entries');
-    
-    if (totalEntriesEl) totalEntriesEl.textContent = stats.totalEntries;
-    if (recentEntriesEl) recentEntriesEl.textContent = stats.recentEntries;
-    if (summarizedEntriesEl) summarizedEntriesEl.textContent = stats.summarizedEntries;
-    if (pendingSummariesEl) pendingSummariesEl.textContent = stats.pendingSummaries;
-    
-    if (progressFill) {
-      progressFill.style.width = `${stats.summaryCompletionRate}%`;
-    }
-    
-    // Show meta-summary stats if meta-summarization is active
-    if (stats.metaSummaryActive) {
-      if (metaSummaryStatEl) metaSummaryStatEl.style.display = 'flex';
-      if (metaEntriesStatEl) metaEntriesStatEl.style.display = 'flex';
-      if (metaSummariesEl) metaSummariesEl.textContent = stats.metaSummaries;
-      if (metaEntriesEl) metaEntriesEl.textContent = stats.entriesInMetaSummaries;
-    } else {
-      if (metaSummaryStatEl) metaSummaryStatEl.style.display = 'none';
-      if (metaEntriesStatEl) metaEntriesStatEl.style.display = 'none';
-    }
-    
-    // Enable/disable clear summaries button based on whether there are summaries to clear
-    const clearSummariesButton = document.getElementById('clear-summaries');
-    if (clearSummariesButton) {
-      const hasSummaries = stats.totalSummaries > 0;
-      clearSummariesButton.disabled = !hasSummaries;
-    }
-  } catch (error) {
-    console.error('Failed to load summary stats:', error);
-    // Hide stats on error
-    summaryStatsDiv.style.display = 'none';
-  }
-};
 
-// Handle generate summaries button
-const handleGenerateSummaries = async () => {
-  const button = document.getElementById('generate-summaries');
-  if (!button) return;
-  
-  const originalText = button.textContent;
-  button.textContent = 'Generating...';
-  button.disabled = true;
-  
-  try {
-    const result = await autoSummarizeEntries();
-    if (result && result.length > 0) {
-      alert(`Generated ${result.length} summaries.`);
-      updateSummaryStats();
-    } else {
-      alert('No summaries needed at this time.');
-    }
-  } catch (error) {
-    alert('Failed to generate summaries: ' + error.message);
-  } finally {
-    button.textContent = originalText;
-    button.disabled = false;
-  }
-};
+
+
 
 // Handle clear summaries button
 const handleClearSummaries = async () => {
@@ -297,7 +204,6 @@ const handleClearSummaries = async () => {
     const result = clearAll();
     if (result) {
       alert('All summaries have been cleared successfully.');
-      updateSummaryStats();
     } else {
       alert('Failed to clear summaries.');
     }
@@ -515,7 +421,6 @@ const populateForm = () => {
     } catch (e) {}
   }
   
-  updateSummaryStats();
   updateSimpleSyncStatus();
 };
 
