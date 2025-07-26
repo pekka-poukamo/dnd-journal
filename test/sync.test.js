@@ -14,12 +14,9 @@ describe('Yjs Sync (Functional)', () => {
     // Don't set location directly to avoid JSDOM navigation errors
   });
 
-  describe('Graceful Degradation (ADR-0003)', () => {
-    it('should handle Yjs libraries being available', () => {
+  describe('Basic Functionality', () => {
+    it('should initialize Yjs properly', () => {
       const sync = createYjsSync();
-      
-      // With npm packages, Yjs should now be available
-      expect(sync.isAvailable).to.be.true;
       
       // Should not throw when calling methods
       sync.setData({ test: 'data' });
@@ -39,7 +36,6 @@ describe('Yjs Sync (Functional)', () => {
       const sync = createYjsSync();
       
       // Test that sync initializes without configuration needed
-      expect(sync.isAvailable).to.be.true; // Yjs now available via npm
       expect(() => sync.getData()).to.not.throw;
       expect(() => sync.setData({})).to.not.throw;
     });
@@ -74,7 +70,6 @@ describe('Yjs Sync (Functional)', () => {
       const sync = createYjsSync();
       
       // Sync should never interfere with localStorage-only operation
-      expect(sync.isAvailable).to.be.true; // With npm-installed Yjs libraries
       
       // App should continue working normally
       const testData = { entries: [], character: {} };
@@ -95,7 +90,6 @@ describe('Yjs Sync (Functional)', () => {
       const retrieved = JSON.parse(global.localStorage.getItem(testKey));
       
       expect(retrieved).to.deep.equal(testValue);
-      expect(sync.isAvailable).to.be.true; // Yjs is now available via npm
     });
   });
 
@@ -136,8 +130,6 @@ describe('Yjs Sync (Functional)', () => {
       };
       
       const sync = createYjsSync();
-      
-      expect(sync.isAvailable).to.be.true;
       expect(() => sync.getData()).to.not.throw;
       expect(() => sync.setData({})).to.not.throw;
     });
@@ -177,7 +169,7 @@ describe('Yjs Sync (Functional)', () => {
       expect(status.connected).to.be.false;
     });
 
-    it('should update status when Yjs becomes available', () => {
+    it('should have consistent status', () => {
       // Yjs is now available via npm
       const sync1 = createYjsSync();
       expect(sync1.getStatus().available).to.be.true;

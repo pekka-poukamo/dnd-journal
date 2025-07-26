@@ -277,13 +277,6 @@ const handleShowAIPrompt = async () => {
 
 // Test sync server connection
 const testSyncServer = async (serverUrl) => {
-  // If no Yjs libraries are available, return helpful error
-  if (typeof Y === 'undefined' || typeof WebsocketProvider === 'undefined') {
-    return { 
-      success: false, 
-      error: 'Sync libraries not loaded. Refresh the page to enable sync testing.' 
-    };
-  }
 
   // If no custom server URL, test default public servers
   if (!serverUrl) {
