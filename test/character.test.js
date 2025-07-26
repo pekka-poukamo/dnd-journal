@@ -286,6 +286,28 @@ describe('Character Page', function() {
       });
 
       it('should display collapsible summaries when they exist', function() {
+        // Test new combined summary format
+        const testSummaries = {
+          'character:combined': {
+            content: 'A comprehensive character summary including backstory and notes',
+            words: 50,
+            timestamp: Date.now()
+          }
+        };
+        
+        global.localStorage.setItem('simple-summaries', JSON.stringify(testSummaries));
+        
+        Character.displayCharacterSummaries();
+        
+        const summariesContent = document.getElementById('summaries-content');
+        expect(summariesContent.innerHTML).to.include('Character Summary');
+        expect(summariesContent.innerHTML).to.include('entry-summary');
+        expect(summariesContent.innerHTML).to.include('entry-summary__toggle');
+        expect(summariesContent.innerHTML).to.include('entry-summary__content');
+      });
+
+      it('should display individual summaries for backward compatibility', function() {
+        // Test backward compatibility with individual field summaries
         const testSummaries = {
           'character:backstory': {
             content: 'A detailed backstory summary',
@@ -304,11 +326,9 @@ describe('Character Page', function() {
         Character.displayCharacterSummaries();
         
         const summariesContent = document.getElementById('summaries-content');
-        expect(summariesContent.innerHTML).to.include('Backstory Summary');
-        expect(summariesContent.innerHTML).to.include('Notes Summary');
+        expect(summariesContent.innerHTML).to.include('Backstory');
+        expect(summariesContent.innerHTML).to.include('Notes');
         expect(summariesContent.innerHTML).to.include('entry-summary');
-        expect(summariesContent.innerHTML).to.include('entry-summary__toggle');
-        expect(summariesContent.innerHTML).to.include('entry-summary__content');
       });
 
       it('should handle missing DOM elements gracefully', function() {
@@ -350,9 +370,9 @@ describe('Character Page', function() {
       it('should include word count and timestamp in toggle label', function() {
         const timestamp = Date.now();
         const testSummaries = {
-          'character:backstory': {
-            content: 'A detailed backstory summary',
-            words: 25,
+          'character:combined': {
+            content: 'A comprehensive character summary',
+            words: 45,
             timestamp: timestamp
           }
         };
@@ -362,8 +382,8 @@ describe('Character Page', function() {
         Character.displayCharacterSummaries();
         
         const toggle = document.querySelector('.entry-summary__toggle');
-        expect(toggle.innerHTML).to.include('25 words');
-        expect(toggle.innerHTML).to.include('Backstory Summary');
+        expect(toggle.innerHTML).to.include('45 words');
+        expect(toggle.innerHTML).to.include('Character Summary');
       });
 
       it('should handle summaries with missing or empty content', function() {
@@ -467,9 +487,9 @@ describe('Character Page', function() {
     describe('Edge cases and error handling', function() {
       it('should handle missing timestamp in summary data', function() {
         const testSummaries = {
-          'character:backstory': {
+          'character:combined': {
             content: 'A summary without timestamp',
-            words: 25
+            words: 35
             // Missing timestamp
           }
         };
@@ -479,7 +499,7 @@ describe('Character Page', function() {
         Character.displayCharacterSummaries();
         
         const summariesContent = document.getElementById('summaries-content');
-        expect(summariesContent.innerHTML).to.include('Backstory Summary');
+        expect(summariesContent.innerHTML).to.include('Character Summary');
         expect(summariesContent.innerHTML).to.include('Unknown date');
       });
 
