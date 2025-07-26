@@ -163,12 +163,18 @@ describe('D&D Journal Integration Tests', function() {
     expect(Utils.isValidEntry(validEntry)).to.be.true;
 
     // Test corrupted data handling
-    // First set some state to make sure it gets reset
+    // Put corrupted data in localStorage first
+    global.localStorage.setItem(Utils.STORAGE_KEYS.JOURNAL, 'invalid json');
+    
+    // Reset state to initial before testing
+    App.resetState();
+    
+    // Verify reset worked
+    expect(App.state.character.name).to.equal('');
+    
+    // Set some state to test that loadData resets it
     App.state.character.name = 'SomeExistingName';
     App.state.entries = [{ id: '1', title: 'test', content: 'test', timestamp: Date.now() }];
-    
-    // Put corrupted data in localStorage
-    global.localStorage.setItem(Utils.STORAGE_KEYS.JOURNAL, 'invalid json');
     
     // Should load default state without throwing, and reset to initial values
     expect(() => App.loadData()).to.not.throw();

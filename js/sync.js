@@ -22,6 +22,16 @@ let syncState = {
 
 // Initialize Yjs sync system
 const initializeSync = () => {
+  // Don't initialize in test environment to prevent hanging
+  if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') {
+    throw new Error('Yjs sync disabled in test environment');
+  }
+  
+  // Don't initialize in non-browser environments
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    throw new Error('Yjs sync requires browser environment');
+  }
+  
   try {
     const ydoc = new Y.Doc();
     const ymap = ydoc.getMap('journal');
