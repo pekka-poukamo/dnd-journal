@@ -4,6 +4,11 @@ import chai from 'chai';
 // Enable should syntax
 chai.should();
 
+// Increase max listeners to prevent warnings during tests
+if (typeof process !== 'undefined' && process.setMaxListeners) {
+  process.setMaxListeners(30);
+}
+
 // Setup DOM environment (JSDOM sets up window, document, navigator, HTMLElement)
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
   url: 'http://localhost',
@@ -86,13 +91,13 @@ global.WebSocket = class MockWebSocket {
     this.onmessage = null;
     this.onerror = null;
     
-    // Simulate connection failure after a short delay
-    setTimeout(() => {
+    // Simulate connection failure immediately to speed up tests
+    setImmediate(() => {
       this.readyState = 3; // CLOSED
       if (this.onerror) {
         this.onerror(new Error('Mock WebSocket connection failed'));
       }
-    }, 10);
+    });
   }
   
   send(data) {
@@ -118,7 +123,8 @@ global.console = {
 global.fetch = async function(url, options) {
   // Mock OpenAI API responses
   if (url.includes('openai.com')) {
-    await new Promise(function(resolve) { setTimeout(resolve, 10); });
+    // Use setImmediate for faster test execution
+    await new Promise(function(resolve) { setImmediate(resolve); });
     return {
       ok: true,
       status: 200,
@@ -143,6 +149,20 @@ global.fetch = async function(url, options) {
 // Add cleanup function to reset localStorage between tests
 global.resetLocalStorage = () => {
   global.localStorage = createLocalStorageMock();
+};
+
+// Add cleanup function to reset all globals between tests
+global.resetTestGlobals = () => {
+  global.localStorage = createLocalStorageMock();
+  global.testStorage = {};
+  // Reset console to prevent noise during tests
+  global.console = {
+    error: function() {},
+    warn: function() {},
+    log: function() {},
+    info: function() {},
+    debug: function() {}
+  };
 };
 
 export { chai };

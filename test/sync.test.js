@@ -6,17 +6,41 @@ import './setup.js';
 import { createYjsSync } from '../js/sync.js';
 
 describe('Yjs Sync (Functional)', () => {
+  let createdSyncs = [];
+  
+  // Helper function to create and track sync instances
+  const createTrackedSync = () => {
+    const sync = createYjsSync();
+    createdSyncs.push(sync);
+    return sync;
+  };
+  
   beforeEach(() => {
     global.testStorage = {};
     global.window.Y = undefined;
     global.window.WebsocketProvider = undefined;
     global.window.IndexeddbPersistence = undefined;
+    createdSyncs = [];
     // Don't set location directly to avoid JSDOM navigation errors
+  });
+  
+  afterEach(() => {
+    // Clean up all sync instances to prevent memory leaks
+    createdSyncs.forEach(sync => {
+      if (sync && typeof sync.teardown === 'function') {
+        try {
+          sync.teardown();
+        } catch (e) {
+          // Ignore teardown errors in tests
+        }
+      }
+    });
+    createdSyncs = [];
   });
 
   describe('Basic Functionality', () => {
     it('should initialize Yjs properly', () => {
-      const sync = createYjsSync();
+      const sync = createTrackedSync();
       
       // Should not throw when calling methods
       sync.setData({ test: 'data' });
@@ -24,7 +48,7 @@ describe('Yjs Sync (Functional)', () => {
     });
 
     it('should indicate availability in status', () => {
-      const sync = createYjsSync();
+      const sync = createTrackedSync();
       const status = sync.getStatus();
       
       expect(status.available).to.be.true;
@@ -33,7 +57,7 @@ describe('Yjs Sync (Functional)', () => {
 
   describe('Configuration Management', () => {
     it('should use repo-level configuration', () => {
-      const sync = createYjsSync();
+      const sync = createTrackedSync();
       
       // Test that sync initializes without configuration needed
       expect(() => sync.getData()).to.not.throw;
@@ -41,7 +65,7 @@ describe('Yjs Sync (Functional)', () => {
     });
 
     it('should generate and persist device IDs', () => {
-      const sync = createYjsSync();
+      const sync = createTrackedSync();
       const deviceId1 = sync.getDeviceId();
       
       expect(deviceId1).to.be.a('string');
@@ -215,7 +239,7 @@ describe('Yjs Sync (Functional)', () => {
 
   describe('Teardown', () => {
     it('should clean up resources on teardown', () => {
-      const sync = createYjsSync();
+      const sync = createTrackedSync();
       
       // Should not throw when teardown is called
       expect(() => sync.teardown()).to.not.throw;
@@ -226,7 +250,7 @@ describe('Yjs Sync (Functional)', () => {
     });
 
     it('should handle multiple teardown calls', () => {
-      const sync = createYjsSync();
+      const sync = createTrackedSync();
       
       expect(() => sync.teardown()).to.not.throw;
       expect(() => sync.teardown()).to.not.throw; // Second call should not throw
