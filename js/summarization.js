@@ -48,6 +48,16 @@ const countWords = (text) => {
   return text.trim().split(/\s+/).filter(w => w.length > 0).length;
 };
 
+// Calculate target summary length based on logarithm of original text word count
+const calculateLogTargetLength = (text) => {
+  const wordCount = countWords(text);
+  if (wordCount < 200) return 0; // Don't summarize short text
+  
+  // Base: 150 words, scaled by log10 of word count
+  const logFactor = Math.log10(Math.max(wordCount, 10));
+  return Math.max(150, Math.floor(150 * logFactor));
+};
+
 const shouldSummarize = (text) => countWords(text) >= 200; // Increased from 100
 
 // =============================================================================
@@ -55,7 +65,7 @@ const shouldSummarize = (text) => countWords(text) >= 200; // Increased from 100
 // =============================================================================
 
 // Summarize any content with a key
-export const summarize = async (key, text, targetLength = WORDS_PER_SUMMARY) => {
+export const summarize = async (key, text, targetLength = null) => {
   if (!shouldSummarize(text)) return null;
 
   // Check cache first
@@ -69,7 +79,9 @@ export const summarize = async (key, text, targetLength = WORDS_PER_SUMMARY) => 
   if (!isAPIAvailable()) return null;
 
   try {
-    const prompt = `Summarize in ${targetLength} words: ${text}`;
+    // Use logarithmic scaling by default, or provided targetLength
+    const summaryLength = targetLength || calculateLogTargetLength(text);
+    const prompt = `Summarize in ${summaryLength} words: ${text}`;
     const summary = await callSummarize(prompt);
     
     if (!summary) return null;
@@ -103,7 +115,8 @@ const createMetaIfNeeded = async (summaries) => {
       .slice(0, 5);
     
     const combinedText = oldest.map(([, summary]) => summary.content).join(' ');
-    const targetWords = WORDS_PER_SUMMARY * 2;
+    // Use logarithmic scaling for meta-summary length
+    const targetWords = calculateLogTargetLength(combinedText);
     
     try {
       const metaSummary = await callMetaSummarize(combinedText, targetWords);

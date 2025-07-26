@@ -102,9 +102,7 @@ const getFormattedCharacter = async (character) => {
   
   // If content is substantial, try to create summary
   if (totalWords > 200) {
-    const logFactor = Math.log10(Math.max(totalWords, 10));
-    const targetLength = Math.max(150, Math.floor(150 * logFactor));
-    const summary = await summarize('character:combined', combinedText, targetLength);
+    const summary = await summarize('character:combined', combinedText);
     
     if (summary) {
       return {

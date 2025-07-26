@@ -192,14 +192,10 @@ export const generateCharacterSummaries = async () => {
     
     // Only summarize if there's substantial content
     if (totalWords > 100) {
-      // Calculate summary length based on log of total word count
-      // Base: 150 words, scaled by log10 of total words
-      const logFactor = Math.log10(Math.max(totalWords, 10));
-      const targetLength = Math.max(150, Math.floor(150 * logFactor));
-      
       // Use character:combined as the key for the unified summary
+      // The summarization module will automatically calculate logarithmic length
       const summaryKey = 'character:combined';
-      const summary = await summarize(summaryKey, combinedText, targetLength);
+      const summary = await summarize(summaryKey, combinedText);
       
       if (summary) {
         displayCharacterSummaries();
