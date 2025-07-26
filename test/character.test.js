@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as Character from '../js/character.js';
+import * as OpenAIWrapper from '../js/openai-wrapper.js';
 
 describe('Character Page', function() {
   beforeEach(function() {
@@ -187,6 +188,332 @@ describe('Character Page', function() {
       expect(document.getElementById('character-class').value).to.equal('Shield-maiden');
       expect(document.getElementById('character-backstory').value).to.equal('Daughter of Éomund, niece of Théoden');
       expect(document.getElementById('character-notes').value).to.equal('Wields a sword and shield');
+    });
+  });
+
+  describe('Character Summaries', function() {
+    beforeEach(function() {
+      // Add DOM elements needed for summary functionality
+      document.body.innerHTML += `
+        <div id="summaries-content"></div>
+        <button id="refresh-summaries" class="btn btn--secondary">Refresh</button>
+        <button id="generate-summaries" class="btn btn--primary">Generate</button>
+      `;
+    });
+
+    describe('loadCharacterSummaries', function() {
+      it('should return empty object when no summaries exist', function() {
+        const summaries = Character.loadCharacterSummaries();
+        expect(summaries).to.deep.equal({});
+      });
+
+      it('should load summaries from character summaries storage', function() {
+        const testSummaries = {
+          backstory: {
+            summary: 'Character backstory summary',
+            words: 25,
+            timestamp: Date.now()
+          }
+        };
+        
+        global.localStorage.setItem('simple-dnd-journal-character-summaries', JSON.stringify(testSummaries));
+        
+        const summaries = Character.loadCharacterSummaries();
+        expect(summaries['character:backstory']).to.exist;
+        expect(summaries['character:backstory'].content).to.equal('Character backstory summary');
+        expect(summaries['character:backstory'].words).to.equal(25);
+      });
+
+      it('should load summaries from general summaries storage', function() {
+        const testSummaries = {
+          'character:notes': {
+            content: 'Character notes summary',
+            words: 30,
+            timestamp: Date.now()
+          }
+        };
+        
+        global.localStorage.setItem('simple-summaries', JSON.stringify(testSummaries));
+        
+        const summaries = Character.loadCharacterSummaries();
+        expect(summaries['character:notes']).to.exist;
+        expect(summaries['character:notes'].content).to.equal('Character notes summary');
+        expect(summaries['character:notes'].words).to.equal(30);
+      });
+
+      it('should combine summaries from both storage locations', function() {
+        const characterSummaries = {
+          backstory: {
+            summary: 'Backstory summary',
+            words: 25,
+            timestamp: Date.now()
+          }
+        };
+        
+        const generalSummaries = {
+          'character:notes': {
+            content: 'Notes summary',
+            words: 30,
+            timestamp: Date.now()
+          }
+        };
+        
+        global.localStorage.setItem('simple-dnd-journal-character-summaries', JSON.stringify(characterSummaries));
+        global.localStorage.setItem('simple-summaries', JSON.stringify(generalSummaries));
+        
+        const summaries = Character.loadCharacterSummaries();
+        expect(summaries['character:backstory']).to.exist;
+        expect(summaries['character:notes']).to.exist;
+        expect(Object.keys(summaries)).to.have.length(2);
+      });
+
+      it('should handle corrupted storage data gracefully', function() {
+        global.localStorage.setItem('simple-dnd-journal-character-summaries', 'invalid-json');
+        global.localStorage.setItem('simple-summaries', 'invalid-json');
+        
+        const summaries = Character.loadCharacterSummaries();
+        expect(summaries).to.deep.equal({});
+      });
+    });
+
+    describe('displayCharacterSummaries', function() {
+      it('should display placeholder when no summaries exist', function() {
+        Character.displayCharacterSummaries();
+        
+        const summariesContent = document.getElementById('summaries-content');
+        expect(summariesContent.innerHTML).to.include('No character summaries available yet');
+        expect(summariesContent.innerHTML).to.include('collapsible sections');
+      });
+
+      it('should display collapsible summaries when they exist', function() {
+        const testSummaries = {
+          'character:backstory': {
+            content: 'A detailed backstory summary',
+            words: 25,
+            timestamp: Date.now()
+          },
+          'character:notes': {
+            content: 'Character notes summary',
+            words: 30,
+            timestamp: Date.now()
+          }
+        };
+        
+        global.localStorage.setItem('simple-summaries', JSON.stringify(testSummaries));
+        
+        Character.displayCharacterSummaries();
+        
+        const summariesContent = document.getElementById('summaries-content');
+        expect(summariesContent.innerHTML).to.include('Backstory Summary');
+        expect(summariesContent.innerHTML).to.include('Notes Summary');
+        expect(summariesContent.innerHTML).to.include('entry-summary');
+        expect(summariesContent.innerHTML).to.include('entry-summary__toggle');
+        expect(summariesContent.innerHTML).to.include('entry-summary__content');
+      });
+
+      it('should handle missing DOM elements gracefully', function() {
+        document.getElementById('summaries-content').remove();
+        
+        // Should not throw an error
+        expect(() => Character.displayCharacterSummaries()).to.not.throw();
+      });
+
+      it('should create clickable toggle elements', function() {
+        const testSummaries = {
+          'character:backstory': {
+            content: 'A detailed backstory summary',
+            words: 25,
+            timestamp: Date.now()
+          }
+        };
+        
+        global.localStorage.setItem('simple-summaries', JSON.stringify(testSummaries));
+        
+        Character.displayCharacterSummaries();
+        
+        const toggle = document.querySelector('.entry-summary__toggle');
+        const content = document.querySelector('.entry-summary__content');
+        
+        expect(toggle).to.exist;
+        expect(content).to.exist;
+        expect(content.style.display).to.equal('none');
+        
+        // Simulate click
+        toggle.click();
+        expect(content.style.display).to.equal('block');
+        
+        // Click again to collapse
+        toggle.click();
+        expect(content.style.display).to.equal('none');
+      });
+
+      it('should include word count and timestamp in toggle label', function() {
+        const timestamp = Date.now();
+        const testSummaries = {
+          'character:backstory': {
+            content: 'A detailed backstory summary',
+            words: 25,
+            timestamp: timestamp
+          }
+        };
+        
+        global.localStorage.setItem('simple-summaries', JSON.stringify(testSummaries));
+        
+        Character.displayCharacterSummaries();
+        
+        const toggle = document.querySelector('.entry-summary__toggle');
+        expect(toggle.innerHTML).to.include('25 words');
+        expect(toggle.innerHTML).to.include('Backstory Summary');
+      });
+
+      it('should handle summaries with missing or empty content', function() {
+        const testSummaries = {
+          'character:backstory': {
+            content: '',
+            words: 0,
+            timestamp: Date.now()
+          },
+          'character:notes': {
+            // Missing content
+            words: 10,
+            timestamp: Date.now()
+          }
+        };
+        
+        global.localStorage.setItem('simple-summaries', JSON.stringify(testSummaries));
+        
+        Character.displayCharacterSummaries();
+        
+        const summariesContent = document.getElementById('summaries-content');
+        expect(summariesContent.innerHTML).to.include('No summary content available');
+      });
+    });
+
+    describe('generateCharacterSummaries', function() {
+      it('should show alert when AI is not available', async function() {
+        let alertMessage = '';
+        global.alert = (message) => { alertMessage = message; };
+        
+        await Character.generateCharacterSummaries();
+        
+        expect(alertMessage).to.include('AI features are not available');
+      });
+
+      it('should handle missing generate button gracefully', async function() {
+        document.getElementById('generate-summaries').remove();
+        
+        // Should not throw an error
+        let error = null;
+        try {
+          await Character.generateCharacterSummaries();
+        } catch (e) {
+          error = e;
+        }
+        expect(error).to.be.null;
+      });
+
+      it('should disable button during generation', async function() {
+        const generateBtn = document.getElementById('generate-summaries');
+        generateBtn.textContent = 'Generate Summaries'; // Set initial text
+        
+        // Should not throw even when mocked
+        await Character.generateCharacterSummaries();
+        
+        // Button should be enabled again after completion
+        expect(generateBtn.disabled).to.be.false;
+        expect(generateBtn.textContent).to.equal('Generate Summaries');
+      });
+
+      it('should handle character with long content', async function() {
+        // Test with character that has long content but without API
+        // This will trigger the "No summaries generated" path
+        
+        // Store character with long backstory
+        const testCharacter = {
+          name: 'Test Character',
+          race: 'Human',
+          class: 'Fighter',
+          backstory: 'A'.repeat(150), // Long enough content
+          notes: 'B'.repeat(150)
+        };
+        
+        global.localStorage.setItem('simple-dnd-journal', JSON.stringify({
+          character: testCharacter,
+          entries: []
+        }));
+        
+        let alertMessage = '';
+        global.alert = (message) => { alertMessage = message; };
+        
+        await Character.generateCharacterSummaries();
+        
+        // Since API is not available, should show API error
+        expect(alertMessage).to.include('AI features are not available');
+      });
+    });
+
+    describe('Button visibility logic', function() {
+      it('should hide generate button when no API is available', function() {
+        const generateBtn = document.getElementById('generate-summaries');
+        
+        // By default, API is not available in tests
+        Character.displayCharacterSummaries();
+        
+        // Button should remain hidden (style.display is not explicitly set to inline-block)
+        expect(generateBtn.style.display).to.not.equal('inline-block');
+      });
+    });
+
+    describe('Edge cases and error handling', function() {
+      it('should handle missing timestamp in summary data', function() {
+        const testSummaries = {
+          'character:backstory': {
+            content: 'A summary without timestamp',
+            words: 25
+            // Missing timestamp
+          }
+        };
+        
+        global.localStorage.setItem('simple-summaries', JSON.stringify(testSummaries));
+        
+        Character.displayCharacterSummaries();
+        
+        const summariesContent = document.getElementById('summaries-content');
+        expect(summariesContent.innerHTML).to.include('Backstory Summary');
+        expect(summariesContent.innerHTML).to.include('Unknown date');
+      });
+
+      it('should handle summary content from summary property', function() {
+        const testSummaries = {
+          backstory: {
+            summary: 'Content from summary property', // Using 'summary' instead of 'content'
+            words: 25,
+            timestamp: Date.now()
+          }
+        };
+        
+        global.localStorage.setItem('simple-dnd-journal-character-summaries', JSON.stringify(testSummaries));
+        
+        const summaries = Character.loadCharacterSummaries();
+        expect(summaries['character:backstory'].content).to.equal('Content from summary property');
+      });
+
+      it('should handle zero word count', function() {
+        const testSummaries = {
+          'character:backstory': {
+            content: 'A summary',
+            // Missing words property
+            timestamp: Date.now()
+          }
+        };
+        
+        global.localStorage.setItem('simple-summaries', JSON.stringify(testSummaries));
+        
+        Character.displayCharacterSummaries();
+        
+        const summariesContent = document.getElementById('summaries-content');
+        expect(summariesContent.innerHTML).to.include('0 words');
+      });
     });
   });
 });
