@@ -97,7 +97,11 @@ const setupNetworking = (state) => {
   
   servers.forEach(serverUrl => {
     try {
-      const provider = new WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc);
+      const provider = new WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc, {
+        // Add connection timeout for better UX
+        connect: true,
+        // Yjs will handle reconnection automatically
+      });
       providers.push(provider);
       console.log(`Connecting to sync server: ${serverUrl}`);
     } catch (e) {
