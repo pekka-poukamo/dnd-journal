@@ -22,6 +22,8 @@ This directory contains Architecture Decision Records (ADRs) that document the k
 | [ADR-0009](0009-minimal-pwa-for-ios-installation.md) | Minimal PWA for iOS Installation | Accepted |
 | [ADR-0010](0010-es6-modules-only.md) | ES6 Modules Only | Accepted |
 | [ADR-0011](0011-test-state-isolation.md) | Test State Isolation | Accepted |
+| [ADR-0012](0012-radically-simple-summarization.md) | Clean Summarization & Storytelling Architecture | Accepted |
+| [ADR-0013](0013-radical-simplicity-principle.md) | Radical Simplicity Principle | Accepted |
 
 ## For AI Agents
 
