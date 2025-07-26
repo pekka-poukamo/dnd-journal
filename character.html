@@ -22,17 +22,7 @@
     <link rel="stylesheet" href="css/components/navigation.css">
     <link rel="stylesheet" href="css/components/character-form.css">
     
-    <!-- Yjs Sync Enhancement (ADR-0003) - Optional libraries for cross-device sync -->
-    <script type="module">
-        import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.27/+esm';
-        import { WebsocketProvider } from 'https://cdn.jsdelivr.net/npm/y-websocket@3/+esm';
-        import { IndexeddbPersistence } from 'https://cdn.jsdelivr.net/npm/y-indexeddb@9/+esm';
-        
-        // Make Yjs available globally for backward compatibility
-        window.Y = Y;
-        window.WebsocketProvider = WebsocketProvider;
-        window.IndexeddbPersistence = IndexeddbPersistence;
-    </script>
+    <!-- Yjs Sync Enhancement (ADR-0003) - Imported directly in JS modules -->
 </head>
 <body>
     <header class="tabs">
@@ -104,7 +94,7 @@
 
     <script type="module" src="js/utils.js"></script>
     <script src="sync-config.js"></script>
-    <script src="js/sync.js"></script>
+    <script type="module" src="js/sync.js"></script>
     <script type="module" src="js/character.js"></script>
 </body>
 </html>

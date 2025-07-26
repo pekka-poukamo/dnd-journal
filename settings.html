@@ -23,17 +23,7 @@
     <link rel="stylesheet" href="css/components/settings.css">
     <link rel="stylesheet" href="css/components/sync-status.css">
     
-    <!-- Yjs Sync Enhancement - Optional libraries for cross-device sync -->
-    <script type="module">
-        import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.27/+esm';
-        import { WebsocketProvider } from 'https://cdn.jsdelivr.net/npm/y-websocket@3/+esm';
-        import { IndexeddbPersistence } from 'https://cdn.jsdelivr.net/npm/y-indexeddb@9/+esm';
-        
-        // Make Yjs available globally for backward compatibility
-        window.Y = Y;
-        window.WebsocketProvider = WebsocketProvider;
-        window.IndexeddbPersistence = IndexeddbPersistence;
-    </script>
+    <!-- Yjs Sync Enhancement - Imported directly in JS modules -->
     
     <!-- js-tiktoken - OpenAI token counting library -->
     <script src="https://unpkg.com/js-tiktoken@1.0.20/dist/index.umd.js"></script>

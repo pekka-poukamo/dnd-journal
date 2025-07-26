@@ -2,6 +2,9 @@
 // Maintains localStorage as primary store while adding cross-device sync
 // Follows ADR-0002: Functional Programming Only
 
+import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.27/+esm';
+import { WebsocketProvider } from 'https://cdn.jsdelivr.net/npm/y-websocket@3/+esm';
+import { IndexeddbPersistence } from 'https://cdn.jsdelivr.net/npm/y-indexeddb@9/+esm';
 import { SYNC_CONFIG } from '../sync-config.js';
 
 // Sync state management
@@ -21,9 +24,9 @@ let syncState = {
 // Check if Yjs libraries are available
 const checkYjsAvailability = () => {
   try {
-    return typeof window.Y !== 'undefined' && 
-           typeof window.WebsocketProvider !== 'undefined' &&
-           typeof window.IndexeddbPersistence !== 'undefined';
+    return typeof Y !== 'undefined' && 
+           typeof WebsocketProvider !== 'undefined' &&
+           typeof IndexeddbPersistence !== 'undefined';
   } catch (e) {
     return false;
   }
@@ -39,7 +42,7 @@ const initializeSync = () => {
   }
 
   try {
-    const ydoc = new window.Y.Doc();
+    const ydoc = new Y.Doc();
     const ymap = ydoc.getMap('journal');
     
     const newState = {
@@ -67,7 +70,7 @@ const setupPersistence = (state) => {
   if (!state.isAvailable || !state.ydoc) return state;
   
   try {
-    const indexeddbProvider = new window.IndexeddbPersistence('dnd-journal-sync', state.ydoc);
+    const indexeddbProvider = new IndexeddbPersistence('dnd-journal-sync', state.ydoc);
     
     indexeddbProvider.on('synced', () => {
       // Yjs local persistence ready
@@ -107,7 +110,7 @@ const setupNetworking = (state) => {
   
   servers.forEach(serverUrl => {
     try {
-      const provider = new window.WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc);
+      const provider = new WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc);
       providers.push(provider);
       console.log(`Connecting to sync server: ${serverUrl}`);
     } catch (e) {

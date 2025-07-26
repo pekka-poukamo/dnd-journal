@@ -1,5 +1,7 @@
 // Settings Page - AI Configuration & Data Management
 
+import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.27/+esm';
+import { WebsocketProvider } from 'https://cdn.jsdelivr.net/npm/y-websocket@3/+esm';
 import { 
   loadDataWithFallback, 
   createInitialSettings, 
@@ -276,7 +278,7 @@ const handleShowAIPrompt = async () => {
 // Test sync server connection
 const testSyncServer = async (serverUrl) => {
   // If no Yjs libraries are available, return helpful error
-  if (typeof window.Y === 'undefined' || typeof window.WebsocketProvider === 'undefined') {
+  if (typeof Y === 'undefined' || typeof WebsocketProvider === 'undefined') {
     return { 
       success: false, 
       error: 'Sync libraries not loaded. Refresh the page to enable sync testing.' 
@@ -319,8 +321,8 @@ const testSyncServer = async (serverUrl) => {
 const testSingleServer = async (serverUrl) => {
   return new Promise((resolve) => {
     try {
-      const testDoc = new window.Y.Doc();
-      const provider = new window.WebsocketProvider(serverUrl, 'test-connection', testDoc);
+      const testDoc = new Y.Doc();
+      const provider = new WebsocketProvider(serverUrl, 'test-connection', testDoc);
       
       const timeout = setTimeout(() => {
         provider.destroy();
