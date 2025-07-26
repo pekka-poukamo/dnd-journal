@@ -4,6 +4,7 @@
 import { loadDataWithFallback, STORAGE_KEYS, createInitialJournalState } from './utils.js';
 import { createSystemPromptFunction, isAPIAvailable } from './openai-wrapper.js';
 import { getAllSummaries, summarize } from './summarization.js';
+import { getFormattedCharacterForAI } from './character.js';
 
 // =============================================================================
 // STORYTELLING CONFIGURATION
@@ -75,26 +76,6 @@ const getFormattedEntries = async (entries) => {
   return [...formattedContent, ...metaFormatted];
 };
 
-// Get formatted character with automatic summarization for long fields
-const getFormattedCharacter = async (character) => {
-  const formatted = { ...character };
-  
-  // Auto-summarize long character fields
-  const fieldsToCheck = ['backstory', 'notes'];
-  
-  for (const field of fieldsToCheck) {
-    if (character[field] && character[field].length > 200) {
-      const summaryKey = `character:${field}`;
-      const summary = await summarize(summaryKey, character[field]);
-      if (summary) {
-        formatted[field] = `${summary} (summarized)`;
-      }
-    }
-  }
-  
-  return formatted;
-};
-
 // =============================================================================
 // STORYTELLING FUNCTIONS
 // =============================================================================
@@ -109,20 +90,25 @@ export const generateQuestions = async (character = null, entries = null) => {
   const finalEntries = entries || journal.entries || [];
 
   // Format character info with auto-summarization
-  const formattedChar = await getFormattedCharacter(finalCharacter);
+  const formattedChar = await getFormattedCharacterForAI(finalCharacter);
   const charInfo = formattedChar.name ? 
     `${formattedChar.name}, a ${formattedChar.race || 'character'} ${formattedChar.class || 'adventurer'}` :
     'your character';
     
-  const backstory = formattedChar.backstory ? `\n\nCharacter Background:\n${formattedChar.backstory}` : '';
-  const notes = formattedChar.notes ? `\n\nCharacter Notes:\n${formattedChar.notes}` : '';
+  // Handle both new combined summary format and original format
+  const characterDetails = formattedChar.summary ? 
+    `\n\nCharacter Details:\n${formattedChar.summary}` :
+    [
+      formattedChar.backstory ? `\n\nCharacter Background:\n${formattedChar.backstory}` : '',
+      formattedChar.notes ? `\n\nCharacter Notes:\n${formattedChar.notes}` : ''
+    ].join('');
   
   // Format entries with comprehensive summaries
   const formattedEntries = await getFormattedEntries(finalEntries);
   const entriesContext = formattedEntries.length > 0 ? 
     `\n\n=== ADVENTURE HISTORY ===\n${formattedEntries.join('\n\n')}` : '';
 
-  const prompt = `Character: ${charInfo}${backstory}${notes}${entriesContext}
+  const prompt = `Character: ${charInfo}${characterDetails}${entriesContext}
 
 Create 4 introspective questions for this character based on their complete history and development.`;
 
@@ -149,7 +135,7 @@ export const getCharacterContext = async () => {
   const character = journal.character || {};
   const entries = journal.entries || [];
   
-  const formattedCharacter = await getFormattedCharacter(character);
+  const formattedCharacter = await getFormattedCharacterForAI(character);
   const formattedEntries = await getFormattedEntries(entries);
   
   // Calculate total context length

@@ -68,23 +68,30 @@ export const loadCharacterSummaries = () => {
   // Combine summaries from both sources
   const combinedSummaries = {};
   
-  // Add from dedicated character summaries storage (format: fieldname: {summary, timestamp, etc})
-  Object.keys(characterSummaries).forEach(field => {
-    if (characterSummaries[field]) {
-      combinedSummaries[`character:${field}`] = {
-        content: characterSummaries[field].summary || characterSummaries[field].content,
-        words: characterSummaries[field].words || 0,
-        timestamp: characterSummaries[field].timestamp
-      };
-    }
-  });
-  
-  // Add from general summaries storage (format: character:fieldname: {content, words, timestamp})
-  Object.keys(generalSummaries).forEach(key => {
-    if (key.startsWith('character:')) {
-      combinedSummaries[key] = generalSummaries[key];
-    }
-  });
+  // Prioritize new combined summary format
+  if (generalSummaries['character:combined']) {
+    combinedSummaries['character:combined'] = generalSummaries['character:combined'];
+  } else {
+    // Fallback to individual field summaries for backward compatibility
+    
+    // Add from dedicated character summaries storage (format: fieldname: {summary, timestamp, etc})
+    Object.keys(characterSummaries).forEach(field => {
+      if (characterSummaries[field]) {
+        combinedSummaries[`character:${field}`] = {
+          content: characterSummaries[field].summary || characterSummaries[field].content,
+          words: characterSummaries[field].words || 0,
+          timestamp: characterSummaries[field].timestamp
+        };
+      }
+    });
+    
+    // Add from general summaries storage (format: character:fieldname: {content, words, timestamp})
+    Object.keys(generalSummaries).forEach(key => {
+      if (key.startsWith('character:') && key !== 'character:combined') {
+        combinedSummaries[key] = generalSummaries[key];
+      }
+    });
+  }
   
   return combinedSummaries;
 };
@@ -118,14 +125,16 @@ export const displayCharacterSummaries = () => {
   const summariesHTML = summaryKeys.map(key => {
     const summary = summaries[key];
     const fieldName = key.replace('character:', '');
-    const displayName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+    const displayName = fieldName === 'combined' 
+      ? 'Character Summary' 
+      : fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
     const timestamp = summary.timestamp ? formatDate(summary.timestamp) : 'Unknown date';
     const wordCount = summary.words || 0;
     
     return `
       <div class="entry-summary">
         <button class="entry-summary__toggle" type="button">
-          <span class="entry-summary__label">${displayName} Summary (${wordCount} words, ${timestamp})</span>
+          <span class="entry-summary__label">${displayName} (${wordCount} words, ${timestamp})</span>
           <span class="entry-summary__icon">▼</span>
         </button>
         <div class="entry-summary__content" style="display: none;">
@@ -169,24 +178,33 @@ export const generateCharacterSummaries = async () => {
   }
   
   try {
-    const fieldsToSummarize = ['backstory', 'notes'];
-    let generated = 0;
+    // Combine all character data into single text
+    const combinedText = [
+      character.name ? `Name: ${character.name}` : '',
+      character.race ? `Race: ${character.race}` : '',
+      character.class ? `Class: ${character.class}` : '',
+      character.backstory || '',
+      character.notes || ''
+    ].filter(text => text.length > 0).join('\n\n');
     
-    for (const field of fieldsToSummarize) {
-      if (character[field] && character[field].length > 100) {
-        const summaryKey = `character:${field}`;
-        const summary = await summarize(summaryKey, character[field]);
-        if (summary) {
-          generated++;
-        }
+    // Count total words in combined text
+    const totalWords = combinedText.trim().split(/\s+/).filter(w => w.length > 0).length;
+    
+    // Only summarize if there's substantial content
+    if (totalWords >= 150) {
+      // Use character:combined as the key for the unified summary
+      // The summarization module will automatically calculate logarithmic length
+      const summaryKey = 'character:combined';
+      const summary = await summarize(summaryKey, combinedText);
+      
+      if (summary) {
+        displayCharacterSummaries();
+        alert('Generated character summary.');
+      } else {
+        alert('No summary was generated. Summary may already exist.');
       }
-    }
-    
-    if (generated > 0) {
-      displayCharacterSummaries();
-      alert(`Generated ${generated} character summary(ies).`);
     } else {
-      alert('No summaries were generated. Character fields may be too short or summaries may already exist.');
+      alert('Character information is too short to summarize. Need at least 150 words.');
     }
     
   } catch (error) {
@@ -199,6 +217,47 @@ export const generateCharacterSummaries = async () => {
       generateBtn.textContent = 'Generate Summaries';
     }
   }
+};
+
+// Get formatted character with automatic summarization for storytelling context
+export const getFormattedCharacterForAI = async (character) => {
+  // Check if we have a combined character summary
+  const summaries = loadDataWithFallback('simple-summaries', {});
+  const combinedSummary = summaries['character:combined'];
+  
+  if (combinedSummary) {
+    // Use the combined summary for storytelling context
+    return {
+      name: character.name || 'Unnamed Character',
+      summary: `${combinedSummary.content} (summarized)`
+    };
+  }
+  
+  // Fallback: Create combined text and potentially summarize
+  const combinedText = [
+    character.name ? `Name: ${character.name}` : '',
+    character.race ? `Race: ${character.race}` : '',
+    character.class ? `Class: ${character.class}` : '',
+    character.backstory || '',
+    character.notes || ''
+  ].filter(text => text.length > 0).join('\n\n');
+  
+  const totalWords = combinedText.trim().split(/\s+/).filter(w => w.length > 0).length;
+  
+  // If content is substantial, try to create summary
+  if (totalWords >= 150) {
+    const summary = await summarize('character:combined', combinedText);
+    
+    if (summary) {
+      return {
+        name: character.name || 'Unnamed Character',
+        summary: `${summary} (summarized)`
+      };
+    }
+  }
+  
+  // Fallback to original character data
+  return { ...character };
 };
 
 // Function to auto-save character data
