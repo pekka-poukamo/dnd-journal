@@ -710,8 +710,8 @@ describe('D&D Journal App', function() {
   });
 
   describe('Sync Functions', function() {
-    it('should handle setupSyncListener when sync is not available', function() {
-      // Since yjsSync is null in test environment, this tests the early return path
+    it('should setup sync listener without errors', function() {
+      // Sync is always available now via npm packages
       expect(() => App.setupSyncListener()).to.not.throw();
     });
   });

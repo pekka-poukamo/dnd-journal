@@ -18,12 +18,7 @@ import {
 import { createYjsSync } from './sync.js';
 
 // Initialize sync system
-let yjsSync = null;
-try {
-  yjsSync = createYjsSync();
-} catch (e) {
-  console.warn('Sync not available:', e);
-}
+const yjsSync = createYjsSync();
 
 // Load settings from localStorage
 export const loadSettings = () => {
@@ -353,21 +348,10 @@ const updateSimpleSyncStatus = () => {
   // Always show sync status - requirement: "should display all the time, even using public servers"
   syncSection.style.display = 'block';
   
-  if (!yjsSync) {
-    if (syncDot) syncDot.className = 'sync-dot unavailable';
-    if (syncText) syncText.textContent = 'Sync unavailable';
-    if (syncHelp) syncHelp.textContent = 'Sync libraries not loaded.';
-    return;
-  }
-  
   const status = yjsSync.getStatus();
   
   if (syncDot && syncText && syncHelp) {
-    if (!status.available) {
-      syncDot.className = 'sync-dot unavailable';
-      syncText.textContent = 'Sync unavailable';
-      syncHelp.textContent = 'Sync is not available.';
-    } else if (status.connected) {
+    if (status.connected) {
       syncDot.className = 'sync-dot connected';
       syncText.textContent = 'Connected';
       syncHelp.textContent = 'Your journal is syncing across devices.';
@@ -464,9 +448,7 @@ const init = () => {
   setupEventHandlers();
   
   // Update sync status periodically
-  if (yjsSync) {
-    setInterval(updateSimpleSyncStatus, 5000);
-  }
+  setInterval(updateSimpleSyncStatus, 5000);
 };
 
 // Start when DOM is ready

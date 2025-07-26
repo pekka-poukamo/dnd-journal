@@ -19,12 +19,7 @@ import { runAutoSummarization, summarize, getSummary } from './summarization.js'
 let state = createInitialJournalState();
 
 // Initialize Yjs sync enhancement (ADR-0003)
-let yjsSync = null;
-try {
-  yjsSync = createYjsSync();
-} catch (e) {
-      // Yjs sync not available, using localStorage-only mode
-}
+const yjsSync = createYjsSync();
 
 // Simple markdown parser for basic formatting
 export const parseMarkdown = (text) => {
@@ -112,25 +107,23 @@ export const loadData = () => {
   }
   
   // Initialize Yjs with current localStorage data (ADR-0003)
-  if (yjsSync && yjsSync.isAvailable) {
-    const syncData = yjsSync.getData();
-    if (syncData) {
-      // Merge remote data if available and newer
-      const localTime = state.lastModified || 0;
-      const remoteTime = syncData.lastModified || 0;
-      
-      if (remoteTime > localTime) {
-        // Loading newer data from sync
-        state = { ...state, ...syncData };
-        safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
-      } else {
-        // Upload current data to sync
-        yjsSync.setData(state);
-      }
+  const syncData = yjsSync.getData();
+  if (syncData) {
+    // Merge remote data if available and newer
+    const localTime = state.lastModified || 0;
+    const remoteTime = syncData.lastModified || 0;
+    
+    if (remoteTime > localTime) {
+      // Loading newer data from sync
+      state = { ...state, ...syncData };
+      safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
     } else {
-      // First time - upload current localStorage data
+      // Upload current data to sync
       yjsSync.setData(state);
     }
+  } else {
+    // First time - upload current localStorage data
+    yjsSync.setData(state);
   }
 };
 
@@ -139,10 +132,8 @@ export const saveData = () => {
   state.lastModified = Date.now();
   const result = safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
   
-  // Update sync if available
-  if (yjsSync && yjsSync.isAvailable) {
-    yjsSync.setData(state);
-  }
+  // Update sync
+  yjsSync.setData(state);
   
   return result;
 };
@@ -578,16 +569,14 @@ export const setupEventHandlers = () => {
 
 // Setup sync listener for real-time updates
 export const setupSyncListener = () => {
-  if (yjsSync && yjsSync.isAvailable) {
-    yjsSync.onChange((syncData) => {
-      // Reload data from sync
-      if (syncData) {
-        state = { ...state, ...syncData };
-        renderEntries();
-        displayCharacterSummary();
-      }
-    });
-  }
+  yjsSync.onChange((syncData) => {
+    // Reload data from sync
+    if (syncData) {
+      state = { ...state, ...syncData };
+      renderEntries();
+      displayCharacterSummary();
+    }
+  });
 };
 
 
