@@ -7,7 +7,7 @@
   "scripts": {
     "start": "npx http-server . -p 3000 -o",
     "build": "echo 'No build step needed - static site' && exit 0",
-    "test": "mocha test/**/*.test.js --timeout 5000 --reporter spec",
+    "test": "node --experimental-modules node_modules/.bin/mocha test/**/*.test.js --timeout 5000 --reporter spec",
     "test:watch": "mocha test/**/*.test.js --watch --timeout 5000",
     "coverage": "c8 npm test",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
