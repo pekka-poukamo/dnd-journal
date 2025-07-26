@@ -101,7 +101,7 @@ const getFormattedCharacter = async (character) => {
   const totalWords = combinedText.trim().split(/\s+/).filter(w => w.length > 0).length;
   
   // If content is substantial, try to create summary
-  if (totalWords > 200) {
+  if (totalWords >= 150) {
     const summary = await summarize('character:combined', combinedText);
     
     if (summary) {

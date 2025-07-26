@@ -191,7 +191,7 @@ export const generateCharacterSummaries = async () => {
     const totalWords = combinedText.trim().split(/\s+/).filter(w => w.length > 0).length;
     
     // Only summarize if there's substantial content
-    if (totalWords > 100) {
+    if (totalWords >= 150) {
       // Use character:combined as the key for the unified summary
       // The summarization module will automatically calculate logarithmic length
       const summaryKey = 'character:combined';
@@ -204,7 +204,7 @@ export const generateCharacterSummaries = async () => {
         alert('No summary was generated. Summary may already exist.');
       }
     } else {
-      alert('Character information is too short to summarize. Add more backstory or notes.');
+      alert('Character information is too short to summarize. Need at least 150 words.');
     }
     
   } catch (error) {
