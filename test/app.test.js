@@ -503,7 +503,7 @@ describe('D&D Journal App', function() {
       expect(() => App.displayAIPrompt()).to.not.throw();
     });
 
-    it('should get entry summaries', function() {
+    it('should get entry summaries', async function() {
       App.state.entries.push({
         id: '1',
         title: 'Test Entry',
@@ -511,7 +511,7 @@ describe('D&D Journal App', function() {
         timestamp: Date.now()
       });
 
-      const summary = App.getEntrySummary('1');
+      const summary = await App.getEntrySummary('1');
       // Should return null since AI is not available in test environment
       expect(summary).to.be.null;
     });

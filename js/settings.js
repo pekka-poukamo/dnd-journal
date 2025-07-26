@@ -8,7 +8,7 @@ import {
   STORAGE_KEYS 
 } from './utils.js';
 import { getSummaryStats, autoSummarizeEntries } from './summarization.js';
-import { clearAllSummaries } from './summary-storage.js';
+import { clearAll } from './summarization.js';
 import { 
   getIntrospectionPromptForPreview,
   isAIEnabled
@@ -294,12 +294,12 @@ const handleClearSummaries = async () => {
   button.disabled = true;
   
   try {
-    const result = clearAllSummaries();
-    if (result.success) {
+    const result = clearAll();
+    if (result) {
       alert('All summaries have been cleared successfully.');
       updateSummaryStats();
     } else {
-      alert('Failed to clear summaries: ' + result.error);
+      alert('Failed to clear summaries.');
     }
   } catch (error) {
     alert('Failed to clear summaries: ' + error.message);
