@@ -1,4 +1,4 @@
-# ADR-0012: Radically Simple Summarization
+# ADR-0012: Clean Summarization & Storytelling Architecture
 
 ## Status
 Accepted
@@ -7,94 +7,97 @@ Accepted
 The summarization module was overly complex with mixed responsibilities, tight coupling, and difficult maintenance. A previous attempt at a "content-agnostic" architecture resulted in 6 modules and 1000+ lines of code, which was still too complex.
 
 ## Decision
-Implement a **radically simple** summarization system with just **3 files and ~400 lines total**.
+Implement a **clean, separated architecture** with **3 focused modules**.
 
 ### Architecture:
-1. **`simple-summary.js`** (152 lines) - Core summarization with auto meta-summaries
-2. **`simple-ai.js`** (116 lines) - AI calls for storytelling and summaries  
-3. **`simple-dnd.js`** (120 lines) - D&D journal integration
+1. **`openai-wrapper.js`** (103 lines) - Pure OpenAI interface with currying
+2. **`summarization.js`** (178 lines) - Content-agnostic summarization with caching
+3. **`storytelling.js`** (171 lines) - D&D narrative questions using summaries
 
 ### Core Functions:
-- `summarize(key, text)` - Summarize any content
-- `getAllSummaries()` - Get all summaries for AI
-- `generateQuestions(character, entries)` - D&D storytelling questions
-- `autoSummarizeAll()` - Process all journal content
-- `getStatus()` - Simple health check
+- `summarize(key, text)` - Summarize any content with caching
+- `getAllSummaries()` - Get all summaries for AI context
+- `generateQuestions(character, entries)` - D&D storytelling with comprehensive context
+- `createSystemPromptFunction()` / `createUserPromptFunction()` - Curried AI functions
 
 ## Rationale
 
-### Radical Simplicity
-- **Single Purpose**: Each file has one clear job
-- **Minimal Interface**: 5 main functions total
-- **No Abstraction Layers**: Direct implementation without over-engineering
-- **Easy to Understand**: Any developer can read and modify in minutes
+### Clean Separation of Concerns
+- **Pure OpenAI Wrapper**: Generic interface with curried functions, no domain logic
+- **Content-Agnostic Summarization**: Works with any key/text pair, includes caching
+- **Smart Storytelling**: Uses summaries automatically, provides comprehensive context
+- **No Coupling**: Each module handles its own AI function creation
 
-### Automatic Intelligence
+### Intelligent Caching and Context
+- **Summary Caching**: Checks cache before generating, prevents duplicate AI calls
 - **Auto Meta-Summaries**: After 10 summaries, combines 5 oldest automatically
-- **Constant Length**: Maintains ~400 words total regardless of content volume
-- **Smart Defaults**: 30 words per summary, 60 for meta-summaries
-- **No Configuration**: Works out of the box with sensible defaults
+- **Comprehensive Context**: ~2000 words total context for storytelling
+- **Smart Length Management**: Maintains target lengths through intelligent grouping
 
-### Content Agnostic
-- **Key-Value**: Any `(key, text)` pair can be summarized
-- **Type Prefixes**: `entry:123`, `character:backstory`, `meta:456`
-- **Universal**: Works with journal entries, character fields, any text
+### Key-Based Architecture
+- **Direct Keys**: Each entry uses `entry:${id}` for summarization
+- **Character Fields**: Auto-summarizes long backstory/notes with `character:${field}`
+- **No Pattern Matching**: Direct key usage instead of regex patterns
+- **Predictable Caching**: Each piece of content has dedicated cache key
 
 ## Implementation
 
 ### Usage Examples:
 ```javascript
-// Summarize anything
-const summary = await summarize('entry:123', longText);
+// Pure OpenAI wrapper with currying
+const summarizeFn = createUserPromptFunction({ temperature: 0.3 });
+const storyFn = createSystemPromptFunction("Storytelling prompt...", { temperature: 0.8 });
 
-// Auto-process all D&D content  
-const results = await autoSummarizeAll();
+// Content-agnostic summarization with caching
+const summary = await summarize('entry:123', longText); // Checks cache first
+const allSummaries = getAllSummaries(); // For AI context
 
-// Get AI questions
-const questions = await getIntrospectionQuestions();
-
-// Check status
-const status = getStatus(); // { healthy: true, totalWords: 380 }
+// D&D storytelling with comprehensive context
+const questions = await generateQuestions(); // Uses summaries automatically
+const context = await getCharacterContext(); // Debug context
 ```
 
-### Meta-Summary Logic:
-1. Keep individual summaries until 10 exist
-2. Combine 5 oldest into one meta-summary
-3. Delete the original 5 summaries
-4. Repeat as needed to maintain constant total length
+### Key Features:
+1. **Caching**: Summary checks cache before generating new content
+2. **Auto Character Summarization**: Long backstory/notes automatically summarized
+3. **Comprehensive Context**: Recent entries + summaries + meta-summaries (~2000 words)
+4. **Meta-Summary Logic**: After 10 summaries, combines 5 oldest into meta-summary
+5. **Direct Keys**: Each entry/character field has specific summarization key
 
 ## Consequences
 
 ### Positive
-- **Maintainable**: ~400 lines vs 1000+ in complex version
-- **Understandable**: Clear, direct implementation
+- **Clean Architecture**: Clear separation between wrapper, summarization, and storytelling
+- **Efficient Caching**: Prevents duplicate AI calls through intelligent cache checks
+- **Comprehensive Context**: Storytelling gets full context through automatic summary usage
 - **Functional**: Follows ADR-0002 functional programming principles
-- **Testable**: Simple pure functions
-- **Performant**: Minimal overhead, intelligent length management
+- **Maintainable**: Each module has single responsibility
+- **Performance**: Curried functions and caching optimize AI usage
 
 ### Negative
-- **Less Flexible**: Fewer configuration options
-- **Fixed Logic**: Meta-summary strategy is hardcoded
-- **Basic Features**: No advanced querying or analytics
+- **Async Complexity**: Character and entry formatting now requires await
+- **Fixed Strategy**: Meta-summary logic is hardcoded
+- **Cache Dependencies**: Modules now depend on storage for performance
 
 ## Compliance
 
 ### Required Usage
-- Use `simple-dnd.js` functions for D&D journal integration
-- Use `simple-summary.js` directly only for non-D&D content
+- Use `openai-wrapper.js` for all AI function creation with currying
+- Use `summarization.js` for any content summarization needs
+- Use `storytelling.js` for D&D narrative generation
 - All functions remain pure and follow functional programming
 
 ### Forbidden
-- Adding complex configuration systems
-- Creating abstraction layers
-- Expanding beyond the core use case
-- Breaking the 500-line total limit per file
+- Adding domain-specific functions to the OpenAI wrapper
+- Bypassing cache checks in summarization
+- Pattern matching instead of direct key usage
+- Creating new AI integration modules outside this architecture
 
 ## Migration
-1. Replace old summarization imports with `simple-dnd.js` functions
-2. Update any direct AI calls to use `simple-ai.js`
-3. Remove old complex modules
-4. Test that auto-summarization still works
+1. Replace old AI calls with curried functions from `openai-wrapper.js`
+2. Update summarization to use `summarization.js` with caching
+3. Update storytelling to use `storytelling.js` with comprehensive context
+4. Ensure all entry/character summarization uses direct keys
 
 ## Future
-This architecture should remain stable and simple. Any "improvements" that add significant complexity should be rejected in favor of maintaining radical simplicity.
+This architecture provides clean separation while maintaining efficiency through caching and intelligent context management. Changes should preserve the separation of concerns and caching behavior.
