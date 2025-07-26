@@ -204,3 +204,44 @@
   border-color: #6c757d;
   cursor: not-allowed;
 }
+
+/* Save button styles */
+.btn-primary:disabled {
+  background: #6c757d;
+  border-color: #6c757d;
+  color: white;
+  cursor: not-allowed;
+}
+
+/* Success state for save buttons */
+.btn.btn-success {
+  background: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+
+/* Settings section separation */
+.settings-section-actions {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: var(--border-width) solid var(--color-border-light);
+}
+
+/* Test result styles for sync */
+.test-success {
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  padding: var(--space-sm);
+  border-radius: var(--border-radius);
+  margin-top: var(--space-sm);
+}
+
+.test-error {
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: var(--space-sm);
+  border-radius: var(--border-radius);
+  margin-top: var(--space-sm);
+}

@@ -118,7 +118,7 @@ const handleApiKeyTest = async () => {
   showApiTestResult(result);
 };
 
-// Handle settings form changes
+// Handle settings form changes (without auto-saving)
 const handleSettingsChange = () => {
   const apiKeyInput = document.getElementById('api-key');
   const enableAIInput = document.getElementById('enable-ai-features');
@@ -127,19 +127,91 @@ const handleSettingsChange = () => {
 
   if (!apiKeyInput || !enableAIInput || !testButton) return;
 
+  const apiKey = apiKeyInput.value.trim();
+  const enableAI = enableAIInput.checked;
+  
+  // Enable/disable test button based on API key presence
+  testButton.disabled = !apiKey;
+  
+  // Enable/disable show prompt button based on AI being enabled (check current saved state)
+  if (showPromptButton) {
+    showPromptButton.disabled = !isAIEnabled();
+  }
+};
+
+// Handle AI settings save
+const handleSaveAISettings = () => {
+  const apiKeyInput = document.getElementById('api-key');
+  const enableAIInput = document.getElementById('enable-ai-features');
+  const saveButton = document.getElementById('save-ai-settings');
+
+  if (!apiKeyInput || !enableAIInput || !saveButton) return;
+
   const settings = {
     apiKey: apiKeyInput.value.trim(),
     enableAIFeatures: enableAIInput.checked
   };
 
-  saveSettings(settings);
+  const originalText = saveButton.textContent;
+  saveButton.textContent = 'Saving...';
+  saveButton.disabled = true;
+
+  try {
+    saveSettings(settings);
+    saveButton.textContent = 'Saved!';
+    
+    // Update UI state after saving
+    handleSettingsChange();
+    
+    // Reset button after a delay
+    setTimeout(() => {
+      saveButton.textContent = originalText;
+      saveButton.disabled = false;
+    }, 1500);
+  } catch (error) {
+    console.error('Failed to save AI settings:', error);
+    saveButton.textContent = 'Error';
+    setTimeout(() => {
+      saveButton.textContent = originalText;
+      saveButton.disabled = false;
+    }, 1500);
+  }
+};
+
+// Handle sync settings save
+const handleSaveSyncSettings = () => {
+  const syncServerInput = document.getElementById('sync-server');
+  const saveButton = document.getElementById('save-sync-settings');
+
+  if (!syncServerInput || !saveButton) return;
+
+  const serverUrl = syncServerInput.value.trim();
+  const originalText = saveButton.textContent;
   
-  // Enable/disable test button based on API key presence
-  testButton.disabled = !settings.apiKey;
-  
-  // Enable/disable show prompt button based on AI being enabled
-  if (showPromptButton) {
-    showPromptButton.disabled = !isAIEnabled();
+  saveButton.textContent = 'Saving...';
+  saveButton.disabled = true;
+
+  try {
+    if (serverUrl) {
+      localStorage.setItem('dnd-journal-sync-server', serverUrl);
+    } else {
+      localStorage.removeItem('dnd-journal-sync-server');
+    }
+    
+    saveButton.textContent = 'Saved!';
+    
+    // Reset button after a delay
+    setTimeout(() => {
+      saveButton.textContent = originalText;
+      saveButton.disabled = false;
+    }, 1500);
+  } catch (error) {
+    console.error('Failed to save sync settings:', error);
+    saveButton.textContent = 'Error';
+    setTimeout(() => {
+      saveButton.textContent = originalText;
+      saveButton.disabled = false;
+    }, 1500);
   }
 };
 
@@ -148,9 +220,10 @@ const setupEventHandlers = () => {
   const apiKeyInput = document.getElementById('api-key');
   const enableAIInput = document.getElementById('enable-ai-features');
   const testButton = document.getElementById('test-api-key');
+  
+  // Listen for input changes to update UI state (without auto-saving)
   if (apiKeyInput) {
     apiKeyInput.addEventListener('input', handleSettingsChange);
-    apiKeyInput.addEventListener('blur', handleSettingsChange);
   }
 
   if (enableAIInput) {
@@ -171,23 +244,25 @@ const setupEventHandlers = () => {
     showPromptButton.addEventListener('click', handleShowAIPrompt);
   }
   
+  // AI settings save button
+  const saveAIButton = document.getElementById('save-ai-settings');
+  if (saveAIButton) {
+    saveAIButton.addEventListener('click', handleSaveAISettings);
+  }
+  
   // Sync event handlers
   const syncServerInput = document.getElementById('sync-server');
   const testSyncButton = document.getElementById('test-sync-server');
+  const saveSyncButton = document.getElementById('save-sync-settings');
   
-  if (syncServerInput) {
-    syncServerInput.addEventListener('blur', () => {
-      const serverUrl = syncServerInput.value.trim();
-      if (serverUrl) {
-        localStorage.setItem('dnd-journal-sync-server', serverUrl);
-      } else {
-        localStorage.removeItem('dnd-journal-sync-server');
-      }
-    });
-  }
+  // No auto-saving on blur for sync server input
   
   if (testSyncButton) {
     testSyncButton.addEventListener('click', handleSyncServerTest);
+  }
+  
+  if (saveSyncButton) {
+    saveSyncButton.addEventListener('click', handleSaveSyncSettings);
   }
 };
 
@@ -310,8 +385,45 @@ const testSyncServer = async (serverUrl) => {
     };
   }
   
+  // Validate server URL format with better error messages
   if (!serverUrl.startsWith('ws://') && !serverUrl.startsWith('wss://')) {
-    return { success: false, error: 'Server URL must start with ws:// or wss://' };
+    // Check for common mistakes like email addresses
+    if (serverUrl.includes('@')) {
+      return { 
+        success: false, 
+        error: 'Server URL cannot be an email address. Use a WebSocket URL like ws://your-server.com:1234' 
+      };
+    }
+    
+    // Check for HTTP URLs
+    if (serverUrl.startsWith('http://') || serverUrl.startsWith('https://')) {
+      return { 
+        success: false, 
+        error: 'Use WebSocket URLs (ws:// or wss://) instead of HTTP URLs' 
+      };
+    }
+    
+    // Generic format error
+    return { 
+      success: false, 
+      error: 'Server URL must start with ws:// (unsecured) or wss:// (secured). Example: ws://192.168.1.100:1234' 
+    };
+  }
+  
+  // Additional validation for URL structure
+  try {
+    const url = new URL(serverUrl);
+    if (!url.hostname) {
+      return { 
+        success: false, 
+        error: 'Invalid server hostname in URL' 
+      };
+    }
+  } catch (e) {
+    return { 
+      success: false, 
+      error: 'Invalid URL format. Use format like ws://hostname:port or wss://hostname:port' 
+    };
   }
   
   return await testSingleServer(serverUrl);

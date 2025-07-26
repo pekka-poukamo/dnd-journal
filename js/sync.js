@@ -75,14 +75,22 @@ const setupPersistence = (state) => {
   }
 };
 
-// Simple sync configuration
+// Simple sync configuration with validation
 const getSyncConfig = () => {
   // Use config file setting if available
   try {
     if (SYNC_CONFIG && SYNC_CONFIG.server) {
-      return [SYNC_CONFIG.server];
+      const server = SYNC_CONFIG.server.trim();
+      if (server && isValidWebSocketUrl(server)) {
+        return [server];
+      } else if (server) {
+        console.warn('Invalid sync server URL configured:', server);
+        // Fall through to default servers
+      }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Error loading sync config:', e);
+  }
   
   // Default to more reliable public relays
   // Note: These are demo servers - for production use, consider PartyKit, Liveblocks, or your own server
@@ -92,6 +100,29 @@ const getSyncConfig = () => {
   ];
 };
 
+// Validate WebSocket URL format
+const isValidWebSocketUrl = (url) => {
+  if (!url || typeof url !== 'string') {
+    return false;
+  }
+  
+  // Check for obvious invalid formats
+  if (url.includes('@')) {
+    return false; // Email address
+  }
+  
+  if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+    return false; // Not a WebSocket URL
+  }
+  
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname && parsedUrl.hostname.length > 0;
+  } catch (e) {
+    return false;
+  }
+};
+
 // Setup network providers
 const setupNetworking = (state) => {
   
@@ -99,6 +130,13 @@ const setupNetworking = (state) => {
   const servers = getSyncConfig();
   
   servers.forEach(serverUrl => {
+    // Additional validation before attempting connection
+    if (!isValidWebSocketUrl(serverUrl)) {
+      console.error(`Invalid WebSocket URL: ${serverUrl}`);
+      syncState.errors.push(`Invalid WebSocket URL: ${serverUrl}`);
+      return;
+    }
+    
     try {
       const provider = new WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc, {
         // Add connection timeout for better UX
