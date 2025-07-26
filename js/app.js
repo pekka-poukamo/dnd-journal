@@ -18,8 +18,14 @@ import { runAutoSummarization, summarize, getSummary } from './summarization.js'
 // Simple state management
 let state = createInitialJournalState();
 
-// Initialize Yjs sync enhancement (ADR-0003)
-const yjsSync = createYjsSync();
+// Initialize Yjs sync enhancement (ADR-0003) - lazy initialization
+let yjsSync = null;
+const getYjsSync = () => {
+  if (!yjsSync) {
+    yjsSync = createYjsSync();
+  }
+  return yjsSync;
+};
 
 // Simple markdown parser for basic formatting
 export const parseMarkdown = (text) => {
@@ -107,7 +113,7 @@ export const loadData = () => {
   }
   
   // Initialize Yjs with current localStorage data (ADR-0003)
-  const syncData = yjsSync.getData();
+  const syncData = getYjsSync().getData();
   if (syncData) {
     // Merge remote data if available and newer
     const localTime = state.lastModified || 0;
@@ -117,14 +123,14 @@ export const loadData = () => {
       // Loading newer data from sync
       state = { ...state, ...syncData };
       safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
+          } else {
+        // Upload current data to sync
+        getYjsSync().setData(state);
+      }
     } else {
-      // Upload current data to sync
-      yjsSync.setData(state);
+      // First time - upload current localStorage data
+      getYjsSync().setData(state);
     }
-  } else {
-    // First time - upload current localStorage data
-    yjsSync.setData(state);
-  }
 };
 
 // Save state to localStorage and sync - enhanced for ADR-0003
@@ -133,7 +139,7 @@ export const saveData = () => {
   const result = safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
   
   // Update sync
-  yjsSync.setData(state);
+  getYjsSync().setData(state);
   
   return result;
 };
@@ -569,7 +575,7 @@ export const setupEventHandlers = () => {
 
 // Setup sync listener for real-time updates
 export const setupSyncListener = () => {
-  yjsSync.onChange((syncData) => {
+  getYjsSync().onChange((syncData) => {
     // Reload data from sync
     if (syncData) {
       state = { ...state, ...syncData };
@@ -612,8 +618,10 @@ export const resetState = () => {
 // Export state for testing
 export { state };
 
-// Start when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+// Start when DOM is ready (only in browser environment)
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('DOMContentLoaded', init);
+}
 
 // Export for testing (backward compatibility)
 if (typeof global !== 'undefined') {

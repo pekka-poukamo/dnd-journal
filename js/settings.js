@@ -17,8 +17,14 @@ import {
 
 import { createYjsSync } from './sync.js';
 
-// Initialize sync system
-const yjsSync = createYjsSync();
+// Initialize sync system - lazy initialization
+let yjsSync = null;
+const getYjsSync = () => {
+  if (!yjsSync) {
+    yjsSync = createYjsSync();
+  }
+  return yjsSync;
+};
 
 // Load settings from localStorage
 export const loadSettings = () => {
@@ -348,7 +354,7 @@ const updateSimpleSyncStatus = () => {
   // Always show sync status - requirement: "should display all the time, even using public servers"
   syncSection.style.display = 'block';
   
-  const status = yjsSync.getStatus();
+  const status = getYjsSync().getStatus();
   
   if (syncDot && syncText && syncHelp) {
     if (status.connected) {
@@ -447,9 +453,13 @@ const init = () => {
   populateForm();
   setupEventHandlers();
   
-  // Update sync status periodically
-  setInterval(updateSimpleSyncStatus, 5000);
+  // Update sync status periodically (only in browser, not in tests)
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    setInterval(updateSimpleSyncStatus, 5000);
+  }
 };
 
-// Start when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+// Start when DOM is ready (only in browser environment)
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('DOMContentLoaded', init);
+}
