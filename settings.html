@@ -18,6 +18,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@100;300;400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components/tabs.css">
     <link rel="stylesheet" href="css/components/character-form.css">
     <link rel="stylesheet" href="css/components/settings.css">
     <link rel="stylesheet" href="css/components/sync-status.css">
@@ -31,15 +32,14 @@
     <script src="https://unpkg.com/js-tiktoken@1.0.20/dist/index.umd.js"></script>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <div class="header-nav">
-                <h1>Settings</h1>
-                <nav>
-                    <a href="index.html">Journal</a>
-                    <a href="character.html">Character</a>
-                </nav>
-            </div>
+    <header class="tabs">
+        <div class="tabs__container">
+            <h1 class="tabs__title">D&D Journal</h1>
+            <nav class="tabs__nav">
+                <a href="index.html" class="tabs__tab">Journal</a>
+                <a href="character.html" class="tabs__tab">Character</a>
+                <a href="settings.html" class="tabs__tab tabs__tab--active">Settings</a>
+            </nav>
         </div>
     </header>
     
