@@ -77,22 +77,45 @@ const getFormattedEntries = async (entries) => {
 
 // Get formatted character with automatic summarization for long fields
 const getFormattedCharacter = async (character) => {
-  const formatted = { ...character };
+  // Check if we have a combined character summary
+  const summaries = loadDataWithFallback('simple-summaries', {});
+  const combinedSummary = summaries['character:combined'];
   
-  // Auto-summarize long character fields
-  const fieldsToCheck = ['backstory', 'notes'];
+  if (combinedSummary) {
+    // Use the combined summary for storytelling context
+    return {
+      name: character.name || 'Unnamed Character',
+      summary: `${combinedSummary.content} (summarized)`
+    };
+  }
   
-  for (const field of fieldsToCheck) {
-    if (character[field] && character[field].length > 200) {
-      const summaryKey = `character:${field}`;
-      const summary = await summarize(summaryKey, character[field]);
-      if (summary) {
-        formatted[field] = `${summary} (summarized)`;
-      }
+  // Fallback: Create combined text and potentially summarize
+  const combinedText = [
+    character.name ? `Name: ${character.name}` : '',
+    character.race ? `Race: ${character.race}` : '',
+    character.class ? `Class: ${character.class}` : '',
+    character.backstory || '',
+    character.notes || ''
+  ].filter(text => text.length > 0).join('\n\n');
+  
+  const totalWords = combinedText.trim().split(/\s+/).filter(w => w.length > 0).length;
+  
+  // If content is substantial, try to create summary
+  if (totalWords > 200) {
+    const logFactor = Math.log10(Math.max(totalWords, 10));
+    const targetLength = Math.max(150, Math.floor(150 * logFactor));
+    const summary = await summarize('character:combined', combinedText, targetLength);
+    
+    if (summary) {
+      return {
+        name: character.name || 'Unnamed Character',
+        summary: `${summary} (summarized)`
+      };
     }
   }
   
-  return formatted;
+  // Fallback to original character data
+  return { ...character };
 };
 
 // =============================================================================
@@ -114,15 +137,20 @@ export const generateQuestions = async (character = null, entries = null) => {
     `${formattedChar.name}, a ${formattedChar.race || 'character'} ${formattedChar.class || 'adventurer'}` :
     'your character';
     
-  const backstory = formattedChar.backstory ? `\n\nCharacter Background:\n${formattedChar.backstory}` : '';
-  const notes = formattedChar.notes ? `\n\nCharacter Notes:\n${formattedChar.notes}` : '';
+  // Handle both new combined summary format and original format
+  const characterDetails = formattedChar.summary ? 
+    `\n\nCharacter Details:\n${formattedChar.summary}` :
+    [
+      formattedChar.backstory ? `\n\nCharacter Background:\n${formattedChar.backstory}` : '',
+      formattedChar.notes ? `\n\nCharacter Notes:\n${formattedChar.notes}` : ''
+    ].join('');
   
   // Format entries with comprehensive summaries
   const formattedEntries = await getFormattedEntries(finalEntries);
   const entriesContext = formattedEntries.length > 0 ? 
     `\n\n=== ADVENTURE HISTORY ===\n${formattedEntries.join('\n\n')}` : '';
 
-  const prompt = `Character: ${charInfo}${backstory}${notes}${entriesContext}
+  const prompt = `Character: ${charInfo}${characterDetails}${entriesContext}
 
 Create 4 introspective questions for this character based on their complete history and development.`;
 

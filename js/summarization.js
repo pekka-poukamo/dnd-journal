@@ -55,7 +55,7 @@ const shouldSummarize = (text) => countWords(text) >= 200; // Increased from 100
 // =============================================================================
 
 // Summarize any content with a key
-export const summarize = async (key, text) => {
+export const summarize = async (key, text, targetLength = WORDS_PER_SUMMARY) => {
   if (!shouldSummarize(text)) return null;
 
   // Check cache first
@@ -69,7 +69,7 @@ export const summarize = async (key, text) => {
   if (!isAPIAvailable()) return null;
 
   try {
-    const prompt = `Summarize in ${WORDS_PER_SUMMARY} words: ${text}`;
+    const prompt = `Summarize in ${targetLength} words: ${text}`;
     const summary = await callSummarize(prompt);
     
     if (!summary) return null;
