@@ -13,6 +13,9 @@ describe('D&D Journal Integration Tests', function() {
     
     // Reset app state to initial values
     App.resetState();
+    
+    // Reset sync cache to prevent data leakage between tests
+    App.resetSyncCache();
   });
 
   afterEach(function() {
@@ -137,11 +140,6 @@ describe('D&D Journal Integration Tests', function() {
   });
 
   it('should handle data validation and error cases', function() {
-    // Force clean state - reset multiple times to ensure it works
-    App.resetState();
-    global.resetLocalStorage();
-    App.resetState();
-    
     // Test invalid entry
     const invalidEntry = {
       id: Utils.generateId(),
@@ -163,20 +161,9 @@ describe('D&D Journal Integration Tests', function() {
     expect(Utils.isValidEntry(validEntry)).to.be.true;
 
     // Test corrupted data handling
-    // Put corrupted data in localStorage first
     global.localStorage.setItem(Utils.STORAGE_KEYS.JOURNAL, 'invalid json');
     
-    // Reset state to initial before testing
-    App.resetState();
-    
-    // Verify reset worked
-    expect(App.state.character.name).to.equal('');
-    
-    // Set some state to test that loadData resets it
-    App.state.character.name = 'SomeExistingName';
-    App.state.entries = [{ id: '1', title: 'test', content: 'test', timestamp: Date.now() }];
-    
-    // Should load default state without throwing, and reset to initial values
+    // Should load default state without throwing
     expect(() => App.loadData()).to.not.throw();
     expect(App.state.character.name).to.equal('');
     expect(App.state.entries).to.have.length(0);

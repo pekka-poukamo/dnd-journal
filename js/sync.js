@@ -272,6 +272,21 @@ const teardownSync = () => {
   };
 };
 
+// Reset sync state (for testing)
+export const resetSyncState = () => {
+  syncState = {
+    isConnected: false,
+    ydoc: null,
+    ymap: null,
+    providers: [],
+    callbacks: [],
+    indexeddbProvider: null,
+    lastModified: null,
+    connectionAttempts: 0,
+    errors: []
+  };
+};
+
 // Public API object (following functional pattern)
 export const createYjsSync = () => {
   // Initialize on creation

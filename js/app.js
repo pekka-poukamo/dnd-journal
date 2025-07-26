@@ -12,7 +12,7 @@ import {
 } from './utils.js';
 
 import { generateIntrospectionPrompt, isAIEnabled } from './ai.js';
-import { createYjsSync } from './sync.js';
+import { createYjsSync, resetSyncState } from './sync.js';
 import { runAutoSummarization, summarize, getSummary } from './summarization.js';
 
 // Simple state management
@@ -123,27 +123,30 @@ export const loadData = () => {
   }
   
   // Initialize Yjs with current localStorage data (ADR-0003)
-  const sync = getYjsSync();
-  const syncData = sync ? sync.getData() : null;
-  if (syncData) {
-    // Merge remote data if available and newer
-    const localTime = state.lastModified || 0;
-    const remoteTime = syncData.lastModified || 0;
-    
-    if (remoteTime > localTime) {
-      // Loading newer data from sync
-      state = { ...state, ...syncData };
-      safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
-          } else {
-        // Upload current data to sync
+  // Only use sync if localStorage data was loaded successfully
+  if (result.success && result.data) {
+    const sync = getYjsSync();
+    const syncData = sync ? sync.getData() : null;
+    if (syncData) {
+      // Merge remote data if available and newer
+      const localTime = state.lastModified || 0;
+      const remoteTime = syncData.lastModified || 0;
+      
+      if (remoteTime > localTime) {
+        // Loading newer data from sync
+        state = { ...state, ...syncData };
+        safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
+            } else {
+          // Upload current data to sync
+          const syncForUpload = getYjsSync();
+          if (syncForUpload) syncForUpload.setData(state);
+        }
+      } else {
+        // First time - upload current localStorage data
         const syncForUpload = getYjsSync();
         if (syncForUpload) syncForUpload.setData(state);
       }
-    } else {
-      // First time - upload current localStorage data
-      const syncForUpload = getYjsSync();
-      if (syncForUpload) syncForUpload.setData(state);
-    }
+  }
 };
 
 // Save state to localStorage and sync - enhanced for ADR-0003
@@ -636,11 +639,18 @@ export const resetState = () => {
   }
 };
 
+// Reset sync cache (for testing)
+export const resetSyncCache = () => {
+  yjsSync = null;
+  resetSyncState();
+};
+
 // Export state for testing
 export { state };
 
-// Start when DOM is ready (only in browser environment)
-if (typeof document !== 'undefined' && document.addEventListener) {
+// Start when DOM is ready (only in browser environment, not in tests)
+if (typeof document !== 'undefined' && document.addEventListener && 
+    !(typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test')) {
   document.addEventListener('DOMContentLoaded', init);
 }
 
