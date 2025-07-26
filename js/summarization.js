@@ -53,8 +53,8 @@ const calculateLogTargetLength = (text) => {
   const wordCount = countWords(text);
   if (wordCount < 200) return 0; // Don't summarize short text
   
-  // Target: 50 * ln(wordCount) words to keep summaries long enough
-  return Math.max(150, Math.floor(50 * Math.log(wordCount)));
+  // Target: 20 * ln(wordCount) words
+  return Math.max(150, Math.floor(20 * Math.log(wordCount)));
 };
 
 const shouldSummarize = (text) => countWords(text) >= 200; // Increased from 100
