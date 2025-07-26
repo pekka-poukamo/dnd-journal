@@ -3,7 +3,7 @@
 
 import { loadDataWithFallback, STORAGE_KEYS, createInitialJournalState } from './utils.js';
 import { createSystemPromptFunction, isAPIAvailable } from './openai-wrapper.js';
-import { getAllSummaries, getSummariesByPattern } from './summarization.js';
+import { getAllSummaries, getSummariesByPattern, summarize } from './summarization.js';
 
 // =============================================================================
 // STORYTELLING CONFIGURATION
@@ -32,53 +32,61 @@ const callStorytelling = createSystemPromptFunction(STORYTELLING_PROMPT, {
 // CONTENT FORMATTING FOR AI
 // =============================================================================
 
-// Get formatted entries for AI context (mix of recent + summaries)
+// Get comprehensive formatted entries for AI context
 const getFormattedEntries = (entries) => {
-  // Get recent entries (last 2 in full)
   const sortedEntries = [...entries].sort((a, b) => b.timestamp - a.timestamp);
-  const recentEntries = sortedEntries.slice(0, 2);
+  const formattedContent = [];
+  let wordCount = 0;
+  const targetWords = 1500; // Leave room for character info
   
-  // Get entry summaries
+  // Add recent entries in full (last 3)
+  const recentEntries = sortedEntries.slice(0, 3);
+  recentEntries.forEach(entry => {
+    const content = `Recent Adventure: ${entry.title}\n${entry.content}`;
+    formattedContent.push(content);
+    wordCount += content.split(/\s+/).length;
+  });
+  
+  // Add individual summaries for older entries
   const entrySummaries = getSummariesByPattern('^entry:');
+  entrySummaries.forEach(summary => {
+    if (wordCount < targetWords) {
+      const content = `Past Adventure: ${summary.content}`;
+      formattedContent.push(content);
+      wordCount += content.split(/\s+/).length;
+    }
+  });
   
-  // Get meta-summaries
+  // Add meta-summaries for broader historical context
   const allSummaries = getAllSummaries();
   const metaSummaries = allSummaries.filter(s => s.type === 'meta');
-  
-  const formattedContent = [];
-  
-  // Add recent entries in full
-  recentEntries.forEach(entry => {
-    formattedContent.push(`Recent: ${entry.title} - ${entry.content.substring(0, 300)}...`);
-  });
-  
-  // Add individual summaries
-  entrySummaries.slice(0, 3).forEach(summary => {
-    formattedContent.push(`Summary: ${summary.content}`);
-  });
-  
-  // Add meta-summaries for broader context
-  metaSummaries.slice(0, 2).forEach(meta => {
-    formattedContent.push(`Adventures: ${meta.content}`);
+  metaSummaries.forEach(meta => {
+    if (wordCount < targetWords) {
+      const content = `Adventure Chronicles: ${meta.content}`;
+      formattedContent.push(content);
+      wordCount += content.split(/\s+/).length;
+    }
   });
   
   return formattedContent;
 };
 
-// Get formatted character with summaries if available
-const getFormattedCharacter = (character) => {
-  // Get character field summaries
-  const charSummaries = getSummariesByPattern('^character:');
-  
+// Get formatted character with automatic summarization for long fields
+const getFormattedCharacter = async (character) => {
   const formatted = { ...character };
   
-  // Replace long fields with summaries if available
-  charSummaries.forEach(summary => {
-    const field = summary.key.replace('character:', '');
+  // Auto-summarize long character fields
+  const fieldsToCheck = ['backstory', 'notes'];
+  
+  for (const field of fieldsToCheck) {
     if (character[field] && character[field].length > 200) {
-      formatted[field] = `${summary.content} (summarized)`;
+      const summaryKey = `character:${field}`;
+      const summary = await summarize(summaryKey, character[field]);
+      if (summary) {
+        formatted[field] = `${summary} (summarized)`;
+      }
     }
-  });
+  }
   
   return formatted;
 };
@@ -96,23 +104,23 @@ export const generateQuestions = async (character = null, entries = null) => {
   const finalCharacter = character || journal.character || {};
   const finalEntries = entries || journal.entries || [];
 
-  // Format character info
-  const formattedChar = getFormattedCharacter(finalCharacter);
+  // Format character info with auto-summarization
+  const formattedChar = await getFormattedCharacter(finalCharacter);
   const charInfo = formattedChar.name ? 
     `${formattedChar.name}, a ${formattedChar.race || 'character'} ${formattedChar.class || 'adventurer'}` :
     'your character';
     
-  const backstory = formattedChar.backstory ? `\n\nBackground: ${formattedChar.backstory}` : '';
-  const notes = formattedChar.notes ? `\n\nNotes: ${formattedChar.notes}` : '';
+  const backstory = formattedChar.backstory ? `\n\nCharacter Background:\n${formattedChar.backstory}` : '';
+  const notes = formattedChar.notes ? `\n\nCharacter Notes:\n${formattedChar.notes}` : '';
   
-  // Format entries with summaries
+  // Format entries with comprehensive summaries
   const formattedEntries = getFormattedEntries(finalEntries);
   const entriesContext = formattedEntries.length > 0 ? 
-    `\n\nAdventures:\n${formattedEntries.join('\n')}` : '';
+    `\n\n=== ADVENTURE HISTORY ===\n${formattedEntries.join('\n\n')}` : '';
 
   const prompt = `Character: ${charInfo}${backstory}${notes}${entriesContext}
 
-Create 4 introspective questions for this character.`;
+Create 4 introspective questions for this character based on their complete history and development.`;
 
   try {
     return await callStorytelling(prompt);
@@ -132,14 +140,27 @@ export const getIntrospectionQuestions = async () => {
 // =============================================================================
 
 // Get all available context for character (for debugging/preview)
-export const getCharacterContext = () => {
+export const getCharacterContext = async () => {
   const journal = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
   const character = journal.character || {};
   const entries = journal.entries || [];
   
+  const formattedCharacter = await getFormattedCharacter(character);
+  const formattedEntries = getFormattedEntries(entries);
+  
+  // Calculate total context length
+  const characterText = JSON.stringify(formattedCharacter);
+  const entriesText = formattedEntries.join(' ');
+  const totalWords = (characterText + entriesText).split(/\s+/).length;
+  
   return {
-    character: getFormattedCharacter(character),
-    entries: getFormattedEntries(entries),
+    character: formattedCharacter,
+    entries: formattedEntries,
+    contextLength: {
+      totalWords,
+      characterWords: characterText.split(/\s+/).length,
+      entriesWords: entriesText.split(/\s+/).length
+    },
     summaryStats: {
       totalSummaries: getAllSummaries().length,
       entrySummaries: getSummariesByPattern('^entry:').length,
