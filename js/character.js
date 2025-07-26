@@ -93,44 +93,25 @@ export const loadCharacterSummaries = () => {
 export const displayCharacterSummaries = () => {
   const summariesContent = document.getElementById('summaries-content');
   const generateBtn = document.getElementById('generate-summaries');
-  const clearBtn = document.getElementById('clear-summaries');
   
   if (!summariesContent) return;
   
   const summaries = loadCharacterSummaries();
   const summaryKeys = Object.keys(summaries);
   
-  // Update button visibility based on API availability and content
-  const apiAvailable = isAPIAvailable();
-  const character = loadCharacterData();
-  const hasContent = (character.backstory && character.backstory.length > 50) || 
-                    (character.notes && character.notes.length > 50);
-  
-  if (generateBtn) {
-    generateBtn.style.display = apiAvailable ? 'inline-block' : 'none';
-    generateBtn.disabled = !hasContent;
-    generateBtn.title = !apiAvailable ? 'Configure API key in Settings to use AI features' :
-                       !hasContent ? 'Add more content to backstory or notes (50+ words) to generate summaries' :
-                       'Generate AI summaries for character fields';
-  }
-  
-  if (clearBtn) {
-    clearBtn.style.display = summaryKeys.length > 0 ? 'inline-block' : 'none';
-  }
-  
   if (summaryKeys.length === 0) {
-    const message = !apiAvailable ? 
-      'No character summaries available. Configure your API key in Settings to enable AI-generated summaries.' :
-      !hasContent ?
-      'No character summaries available yet. Write a detailed backstory or notes (100+ words) and use the "Generate Summaries" button to create AI summaries.' :
-      'No character summaries available yet. Use the "Generate Summaries" button to create AI summaries of your character content.';
-      
     summariesContent.innerHTML = `
       <div class="summary-placeholder">
-        <p>${message}</p>
+        <p>No character summaries available yet. Character summaries are automatically generated when your backstory or notes become lengthy.</p>
       </div>
     `;
+    if (generateBtn) generateBtn.style.display = 'none';
     return;
+  }
+  
+  // Show generate button if API is available
+  if (generateBtn && isAPIAvailable()) {
+    generateBtn.style.display = 'inline-block';
   }
   
   // Display summaries
@@ -169,17 +150,6 @@ export const generateCharacterSummaries = async () => {
     return;
   }
   
-  // Check if there's enough content
-  const fieldsToSummarize = ['backstory', 'notes'];
-  const eligibleFields = fieldsToSummarize.filter(field => 
-    character[field] && character[field].length > 100
-  );
-  
-  if (eligibleFields.length === 0) {
-    alert('No fields have enough content to summarize. Please add more details to your backstory or notes (100+ words).');
-    return;
-  }
-  
   // Disable button and show loading
   if (generateBtn) {
     generateBtn.disabled = true;
@@ -187,35 +157,24 @@ export const generateCharacterSummaries = async () => {
   }
   
   try {
+    const fieldsToSummarize = ['backstory', 'notes'];
     let generated = 0;
-    let skipped = 0;
     
-    for (const field of eligibleFields) {
-      const summaryKey = `character:${field}`;
-      
-      // Check if summary already exists
-      const existingSummaries = loadCharacterSummaries();
-      if (existingSummaries[summaryKey]) {
-        skipped++;
-        continue;
-      }
-      
-      const summary = await summarize(summaryKey, character[field]);
-      if (summary) {
-        generated++;
+    for (const field of fieldsToSummarize) {
+      if (character[field] && character[field].length > 100) {
+        const summaryKey = `character:${field}`;
+        const summary = await summarize(summaryKey, character[field]);
+        if (summary) {
+          generated++;
+        }
       }
     }
     
-    displayCharacterSummaries();
-    
-    if (generated > 0 && skipped > 0) {
-      alert(`Generated ${generated} new summary(ies). ${skipped} summary(ies) already existed.`);
-    } else if (generated > 0) {
+    if (generated > 0) {
+      displayCharacterSummaries();
       alert(`Generated ${generated} character summary(ies).`);
-    } else if (skipped > 0) {
-      alert('All eligible fields already have summaries. Use "Clear All" to regenerate.');
     } else {
-      alert('No summaries were generated. Please try again.');
+      alert('No summaries were generated. Character fields may be too short or summaries may already exist.');
     }
     
   } catch (error) {
@@ -227,35 +186,6 @@ export const generateCharacterSummaries = async () => {
       generateBtn.disabled = false;
       generateBtn.textContent = 'Generate Summaries';
     }
-  }
-};
-
-// Clear all character summaries
-export const clearCharacterSummaries = () => {
-  if (!confirm('Are you sure you want to delete all character summaries? This action cannot be undone.')) {
-    return;
-  }
-  
-  try {
-    // Clear from both storage locations
-    safeSetToStorage(STORAGE_KEYS.CHARACTER_SUMMARIES, {});
-    
-    // Clear character summaries from general summaries storage
-    const generalSummaries = loadDataWithFallback('simple-summaries', {});
-    const filteredSummaries = {};
-    Object.keys(generalSummaries).forEach(key => {
-      if (!key.startsWith('character:')) {
-        filteredSummaries[key] = generalSummaries[key];
-      }
-    });
-    safeSetToStorage('simple-summaries', filteredSummaries);
-    
-    displayCharacterSummaries();
-    alert('All character summaries have been cleared.');
-    
-  } catch (error) {
-    console.error('Error clearing character summaries:', error);
-    alert('Error clearing summaries. Please try again.');
   }
 };
 
@@ -282,7 +212,6 @@ const setupAutoSave = () => {
 const setupSummaryEventListeners = () => {
   const refreshBtn = document.getElementById('refresh-summaries');
   const generateBtn = document.getElementById('generate-summaries');
-  const clearBtn = document.getElementById('clear-summaries');
   
   if (refreshBtn) {
     refreshBtn.addEventListener('click', displayCharacterSummaries);
@@ -290,24 +219,6 @@ const setupSummaryEventListeners = () => {
   
   if (generateBtn) {
     generateBtn.addEventListener('click', generateCharacterSummaries);
-  }
-  
-  if (clearBtn) {
-    clearBtn.addEventListener('click', clearCharacterSummaries);
-  }
-  
-  // Auto-refresh summaries when character content changes
-  const backstoryField = document.getElementById('character-backstory');
-  const notesField = document.getElementById('character-notes');
-  
-  const debouncedRefresh = debounce(displayCharacterSummaries, 1000);
-  
-  if (backstoryField) {
-    backstoryField.addEventListener('input', debouncedRefresh);
-  }
-  
-  if (notesField) {
-    notesField.addEventListener('input', debouncedRefresh);
   }
 };
 

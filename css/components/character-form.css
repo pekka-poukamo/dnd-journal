@@ -49,15 +49,6 @@
   line-height: var(--line-height-normal);
 }
 
-/* Section descriptions */
-.section-description {
-  margin-bottom: var(--space-md);
-  font-family: var(--font-body);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  line-height: var(--line-height-normal);
-}
-
 /* Character Summaries Section */
 .character-summaries {
   background: var(--color-surface);
@@ -140,17 +131,6 @@
 .summary-actions .btn {
   padding: var(--space-xs) var(--space-md);
   font-size: var(--font-size-sm);
-}
-
-.summary-actions .btn--danger {
-  background-color: #dc3545;
-  border-color: #dc3545;
-  color: white;
-}
-
-.summary-actions .btn--danger:hover {
-  background-color: #c82333;
-  border-color: #bd2130;
 }
 
 /* Form field styling within character form */
