@@ -22,11 +22,11 @@ We establish **Radical Simplicity** as the fundamental architectural principle t
 **Radical Simplicity** means choosing the simplest possible solution that meets the requirements, even if it requires writing more code or sacrificing some features. It means:
 
 1. **Preferring explicit over implicit** - Clear, verbose code over clever shortcuts
-2. **Choosing fewer abstractions** - Direct solutions over generalized frameworks
+2. **Choosing the right level of abstraction** - Simple, focused abstractions that eliminate duplication
 3. **Minimizing dependencies** - Built-in features over external libraries
 4. **Reducing layers** - Flat structures over deep hierarchies
 5. **Eliminating indirection** - Direct calls over event systems or observers
-6. **Favoring duplication over coupling** - Copy code rather than create shared abstractions
+6. **Creating simple, reusable functions** - Extract common patterns into clear, single-purpose functions
 
 ## Consequences
 ### Positive
@@ -38,10 +38,10 @@ We establish **Radical Simplicity** as the fundamental architectural principle t
 - Clear decision-making framework
 
 ### Negative
-- May require more verbose code
-- Could lead to some code duplication
-- Might reject genuinely useful optimizations
+- May require more verbose code in some cases
+- Might reject overly complex optimizations
 - May not scale to very large applications
+- Requires discipline to find the right abstraction level
 
 ## Compliance
 **Decision Framework**: For every architectural, functional, or code decision, ask:
@@ -54,6 +54,7 @@ If the answer to questions 2-3 is "yes" or question 1 or 4 is "no", choose a sim
 
 **Required Patterns:**
 - Single responsibility functions and modules
+- Simple, focused abstractions that eliminate code duplication
 - Direct function calls over event systems
 - Plain objects over complex data structures
 - Native browser APIs over libraries
@@ -72,22 +73,37 @@ If the answer to questions 2-3 is "yes" or question 1 or 4 is "no", choose a sim
 
 **Architecture Examples:**
 ```javascript
-// ✅ Radically Simple
-const saveEntry = (entry) => {
-  const entries = JSON.parse(localStorage.getItem('entries')) || [];
-  entries.push(entry);
-  localStorage.setItem('entries', JSON.stringify(entries));
+// ✅ Radically Simple - Single, reusable function eliminates duplication
+const saveToStorage = (key, item, items) => {
+  const allItems = JSON.parse(localStorage.getItem(key)) || [];
+  allItems.push(item);
+  localStorage.setItem(key, JSON.stringify(allItems));
 };
 
-// ❌ Too Complex
+const saveEntry = (entry) => saveToStorage('entries', entry);
+const saveCharacter = (character) => saveToStorage('characters', character);
+
+// ❌ Too Complex - Over-engineered abstraction
 class EntryRepository {
   constructor(storage, serializer, validator) {
     this.storage = storage;
     this.serializer = serializer;
     this.validator = validator;
   }
-  save(entry) { /* abstraction layers */ }
+  save(entry) { /* multiple abstraction layers */ }
 }
+
+// ❌ Code Duplication - Not radically simple
+const saveEntry = (entry) => {
+  const entries = JSON.parse(localStorage.getItem('entries')) || [];
+  entries.push(entry);
+  localStorage.setItem('entries', JSON.stringify(entries));
+};
+const saveCharacter = (character) => {
+  const characters = JSON.parse(localStorage.getItem('characters')) || [];
+  characters.push(character);
+  localStorage.setItem('characters', JSON.stringify(characters));
+};
 ```
 
 **Feature Examples:**
@@ -110,7 +126,7 @@ class SummarizationEngine {
 
 ### Code Level
 - Write the most straightforward code that solves the problem
-- Prefer explicit repetition over clever abstraction
+- Extract common patterns into simple, reusable functions
 - Use the smallest possible function signatures
 - Minimize conditional logic and branching
 - Choose descriptive names over brevity
