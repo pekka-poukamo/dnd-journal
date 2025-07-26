@@ -51,7 +51,7 @@ const getFormattedEntries = async (entries) => {
   const olderEntries = sortedEntries.slice(3);
   for (const entry of olderEntries) {
     if (wordCount < targetWords && entry.id) {
-      const summary = await summarize(`entry:${entry.id}`, entry.content);
+      const summary = await summarize(entry.id, entry.content);
       if (summary) {
         const content = `Past Adventure: ${entry.title} - ${summary}`;
         formattedContent.push(content);
