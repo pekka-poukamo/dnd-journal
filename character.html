@@ -23,9 +23,16 @@
     <link rel="stylesheet" href="css/components/character-form.css">
     
     <!-- Yjs Sync Enhancement (ADR-0003) - Optional libraries for cross-device sync -->
-    <script src="https://unpkg.com/yjs@13/dist/yjs.js"></script>
-    <script src="https://unpkg.com/y-websocket@3/dist/y-websocket.js"></script>
-    <script src="https://unpkg.com/y-indexeddb@9/dist/y-indexeddb.js"></script>
+    <script type="module">
+        import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.27/+esm';
+        import { WebsocketProvider } from 'https://cdn.jsdelivr.net/npm/y-websocket@3/+esm';
+        import { IndexeddbPersistence } from 'https://cdn.jsdelivr.net/npm/y-indexeddb@9/+esm';
+        
+        // Make Yjs available globally for backward compatibility
+        window.Y = Y;
+        window.WebsocketProvider = WebsocketProvider;
+        window.IndexeddbPersistence = IndexeddbPersistence;
+    </script>
 </head>
 <body>
     <header class="tabs">
