@@ -102,7 +102,7 @@ export const displayCharacterSummaries = () => {
   if (summaryKeys.length === 0) {
     summariesContent.innerHTML = `
       <div class="summary-placeholder">
-        <p>No character summaries available yet. Character summaries are automatically generated when your backstory or notes become lengthy.</p>
+        <p>No character summaries available yet. Character summaries are automatically generated when your backstory or notes become lengthy. Generated summaries will appear here as collapsible sections.</p>
       </div>
     `;
     if (generateBtn) generateBtn.style.display = 'none';
@@ -114,30 +114,42 @@ export const displayCharacterSummaries = () => {
     generateBtn.style.display = 'inline-block';
   }
   
-  // Display summaries
+  // Display summaries using collapsible sections
   const summariesHTML = summaryKeys.map(key => {
     const summary = summaries[key];
     const fieldName = key.replace('character:', '');
     const displayName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
     const timestamp = summary.timestamp ? formatDate(summary.timestamp) : 'Unknown date';
+    const wordCount = summary.words || 0;
     
     return `
-      <div class="summary-item">
-        <div class="summary-header">
-          <h3>${displayName} Summary</h3>
-          <span class="summary-date">${timestamp}</span>
-        </div>
-        <div class="summary-content">
+      <div class="entry-summary">
+        <button class="entry-summary__toggle" type="button">
+          <span class="entry-summary__label">${displayName} Summary (${wordCount} words, ${timestamp})</span>
+          <span class="entry-summary__icon">▼</span>
+        </button>
+        <div class="entry-summary__content" style="display: none;">
           <p>${summary.content || summary.summary || 'No summary content available'}</p>
-        </div>
-        <div class="summary-meta">
-          <span class="word-count">${summary.words || 0} words</span>
         </div>
       </div>
     `;
   }).join('');
   
   summariesContent.innerHTML = summariesHTML;
+  
+  // Add click handlers for collapsible functionality
+  const toggles = summariesContent.querySelectorAll('.entry-summary__toggle');
+  toggles.forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const content = toggle.nextElementSibling;
+      const icon = toggle.querySelector('.entry-summary__icon');
+      const isExpanded = content.style.display !== 'none';
+      
+      content.style.display = isExpanded ? 'none' : 'block';
+      icon.textContent = isExpanded ? '▼' : '▲';
+      toggle.classList.toggle('entry-summary__toggle--expanded', !isExpanded);
+    });
+  });
 };
 
 // Generate summaries for character fields
