@@ -11,9 +11,9 @@ import {
   isValidEntry 
 } from './utils.js';
 
-import { generateIntrospectionPrompt, isAIEnabled, getEntrySummary as aiGetEntrySummary, generateEntrySummary as aiGenerateEntrySummary } from './ai.js';
+import { generateIntrospectionPrompt, isAIEnabled } from './ai.js';
 import { createYjsSync } from './sync.js';
-import { runAutoSummarization } from './summarization.js';
+import { runAutoSummarization, summarize, getSummary } from './summarization.js';
 
 // Simple state management
 let state = createInitialJournalState();
@@ -147,15 +147,24 @@ export const saveData = () => {
   return result;
 };
 
-// Get entry summary from AI if available
+// Get entry summary from new summarization module
 export const getEntrySummary = (entryId) => {
+  // First check if we have a cached summary
+  const cachedSummary = getSummary(entryId);
+  if (cachedSummary) {
+    return Promise.resolve({ summary: cachedSummary });
+  }
+  
+  // If no cached summary and AI is enabled, try to generate one
   if (isAIEnabled()) {
     const entry = state.entries.find(e => e.id === entryId);
-    if (entry) {
-      return aiGetEntrySummary(entry);
+    if (entry && entry.content) {
+      return summarize(entryId, entry.content).then(summary => {
+        return summary ? { summary } : null;
+      });
     }
   }
-  return null;
+  return Promise.resolve(null);
 };
 
 // Create DOM element for an entry
@@ -191,9 +200,9 @@ export const createEntryElement = (entry) => {
   entryDiv.appendChild(header);
   entryDiv.appendChild(content);
   
-  // Add collapsible summary section if AI is enabled (async)
+  // Add collapsible summary section if available (async)
   if (isAIEnabled()) {
-    aiGetEntrySummary(entry).then(summary => {
+    getEntrySummary(entry.id).then(summary => {
       if (summary && summary.summary) {
         const summarySection = createSummarySection(summary.summary);
         entryDiv.appendChild(summarySection);
@@ -388,9 +397,9 @@ export const addEntry = async () => {
     focusEntryTitle();
     
     // Generate AI summary if available
-    if (isAIEnabled()) {
+    if (isAIEnabled() && entry.content) {
       try {
-        await aiGenerateEntrySummary(entry);
+        await summarize(entry.id, entry.content);
       } catch (error) {
         console.error('Failed to generate entry summary:', error);
       }
