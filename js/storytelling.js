@@ -34,18 +34,19 @@ const callStorytelling = createSystemPromptFunction(STORYTELLING_PROMPT, {
 
 // Get comprehensive formatted entries for AI context
 const getFormattedEntries = async (entries) => {
-  const sortedEntries = [...entries].sort((a, b) => b.timestamp - a.timestamp);
-  const formattedContent = [];
+  const sortedEntries = [...entries].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  let formattedContent = [];
   let wordCount = 0;
   const targetWords = 1500; // Leave room for character info
   
   // Add recent entries in full (last 3)
   const recentEntries = sortedEntries.slice(0, 3);
-  recentEntries.forEach(entry => {
+  const recentFormatted = recentEntries.map(entry => {
     const content = `Recent Adventure: ${entry.title}\n${entry.content}`;
-    formattedContent.push(content);
     wordCount += content.split(/\s+/).length;
+    return content;
   });
+  formattedContent = [...formattedContent, ...recentFormatted];
   
   // Add summaries for older entries using their IDs
   const olderEntries = sortedEntries.slice(3);
@@ -54,7 +55,7 @@ const getFormattedEntries = async (entries) => {
       const summary = await summarize(entry.id, entry.content);
       if (summary) {
         const content = `Past Adventure: ${entry.title} - ${summary}`;
-        formattedContent.push(content);
+        formattedContent = [...formattedContent, content];
         wordCount += content.split(/\s+/).length;
       }
     }
@@ -63,15 +64,15 @@ const getFormattedEntries = async (entries) => {
   // Add meta-summaries for broader historical context
   const allSummaries = getAllSummaries();
   const metaSummaries = allSummaries.filter(s => s.type === 'meta');
-  metaSummaries.forEach(meta => {
-    if (wordCount < targetWords) {
+  const metaFormatted = metaSummaries
+    .filter(() => wordCount < targetWords)
+    .map(meta => {
       const content = `Adventure Chronicles: ${meta.content}`;
-      formattedContent.push(content);
       wordCount += content.split(/\s+/).length;
-    }
-  });
+      return content;
+    });
   
-  return formattedContent;
+  return [...formattedContent, ...metaFormatted];
 };
 
 // Get formatted character with automatic summarization for long fields

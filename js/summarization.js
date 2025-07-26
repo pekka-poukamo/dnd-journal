@@ -96,7 +96,7 @@ const createMetaIfNeeded = async (summaries) => {
   const regularSummaries = entries.filter(([key]) => !key.startsWith('meta:'));
   
   if (regularSummaries.length >= META_TRIGGER) {
-    const oldest = regularSummaries
+    const oldest = [...regularSummaries]
       .sort(([,a], [,b]) => a.timestamp - b.timestamp)
       .slice(0, 5);
     
@@ -144,7 +144,7 @@ export const getAllSummaries = () => {
       type: key.startsWith('meta:') ? 'meta' : 'regular',
       timestamp: data.timestamp
     }))
-    .sort((a, b) => b.timestamp - a.timestamp);
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 };
 
 // Get summaries by key pattern
