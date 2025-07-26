@@ -112,10 +112,14 @@ export const loadData = () => {
   const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
   if (result.success && result.data) {
     state = { ...state, ...result.data };
-    // Update global state reference for tests
-    if (typeof global !== 'undefined') {
-      global.state = state;
-    }
+  } else {
+    // Reset to initial state if data loading fails (corrupted data, etc.)
+    state = createInitialJournalState();
+  }
+  
+  // Update global state reference for tests
+  if (typeof global !== 'undefined') {
+    global.state = state;
   }
   
   // Initialize Yjs with current localStorage data (ADR-0003)
@@ -621,7 +625,11 @@ export const init = async () => {
 
 // Reset state to initial values (for testing)
 export const resetState = () => {
-  state = createInitialJournalState();
+  const initialState = createInitialJournalState();
+  state = { ...initialState };
+  // Force update all properties
+  state.character = { ...initialState.character };
+  state.entries = [...initialState.entries];
   // Update global state reference for tests
   if (typeof global !== 'undefined') {
     global.state = state;
