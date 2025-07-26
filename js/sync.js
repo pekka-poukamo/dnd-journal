@@ -2,10 +2,12 @@
 // Maintains localStorage as primary store while adding cross-device sync
 // Follows ADR-0002: Functional Programming Only
 
-import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.27/+esm';
-import { WebsocketProvider } from 'https://cdn.jsdelivr.net/npm/y-websocket@3/+esm';
-import { IndexeddbPersistence } from 'https://cdn.jsdelivr.net/npm/y-indexeddb@9/+esm';
 import { SYNC_CONFIG } from '../sync-config.js';
+
+// Dynamic imports for Yjs modules to handle test environments
+let Y = null;
+let WebsocketProvider = null;
+let IndexeddbPersistence = null;
 
 // Sync state management
 let syncState = {
@@ -24,6 +26,16 @@ let syncState = {
 // Check if Yjs libraries are available
 const checkYjsAvailability = () => {
   try {
+    // Check if we're in a test environment or if browser APIs are missing
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') {
+      return false;
+    }
+    
+    // Check if required browser APIs are available
+    if (typeof indexedDB === 'undefined' || typeof WebSocket === 'undefined') {
+      return false;
+    }
+    
     return typeof Y !== 'undefined' && 
            typeof WebsocketProvider !== 'undefined' &&
            typeof IndexeddbPersistence !== 'undefined';

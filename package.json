@@ -36,17 +36,21 @@
   },
   "homepage": "https://dnd-journal.surge.sh",
   "devDependencies": {
-    "http-server": "^14.1.1",
-    "surge": "^0.23.1",
-    "mocha": "^10.2.0",
+    "c8": "^8.0.1",
     "chai": "^4.3.10",
+    "http-server": "^14.1.1",
     "jsdom": "^23.0.0",
-    "c8": "^8.0.1"
+    "mocha": "^10.2.0",
+    "surge": "^0.23.1"
   },
   "optionalDependencies": {
-    "y-websocket": "^1.5.0"
+    "y-websocket": "^1.5.4"
   },
   "engines": {
     "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "y-indexeddb": "^9.0.12",
+    "yjs": "^13.6.27"
   }
 }
