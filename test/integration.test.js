@@ -13,6 +13,9 @@ describe('D&D Journal Integration Tests', function() {
     
     // Reset app state to initial values
     App.resetState();
+    
+    // Reset sync cache to prevent data leakage between tests
+    App.resetSyncCache();
   });
 
   afterEach(function() {

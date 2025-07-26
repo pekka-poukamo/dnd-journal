@@ -6,47 +6,75 @@ import './setup.js';
 import { createYjsSync } from '../js/sync.js';
 
 describe('Yjs Sync (Functional)', () => {
+  let createdSyncs = [];
+  
+  // Enable sync testing for this test suite
+  before(() => {
+    global.enableSyncTests = true;
+  });
+  
+  after(() => {
+    global.enableSyncTests = false;
+  });
+  
+  // Helper function to create and track sync instances
+  const createTrackedSync = () => {
+    const sync = createYjsSync();
+    createdSyncs.push(sync);
+    return sync;
+  };
+  
   beforeEach(() => {
     global.testStorage = {};
     global.window.Y = undefined;
     global.window.WebsocketProvider = undefined;
     global.window.IndexeddbPersistence = undefined;
+    createdSyncs = [];
     // Don't set location directly to avoid JSDOM navigation errors
   });
+  
+  afterEach(() => {
+    // Clean up all sync instances to prevent memory leaks
+    createdSyncs.forEach(sync => {
+      if (sync && typeof sync.teardown === 'function') {
+        try {
+          sync.teardown();
+        } catch (e) {
+          // Ignore teardown errors in tests
+        }
+      }
+    });
+    createdSyncs = [];
+  });
 
-  describe('Graceful Degradation (ADR-0003)', () => {
-    it('should handle missing Yjs libraries gracefully', () => {
-      const sync = createYjsSync();
-      
-      expect(sync.isAvailable).to.be.false;
-      expect(sync.getData()).to.be.null;
+  describe('Basic Functionality', () => {
+    it('should initialize Yjs properly', () => {
+      const sync = createTrackedSync();
       
       // Should not throw when calling methods
       sync.setData({ test: 'data' });
       expect(() => sync.onChange(() => {})).to.not.throw;
     });
 
-    it('should indicate unavailability in status', () => {
-      const sync = createYjsSync();
+    it('should indicate availability in status', () => {
+      const sync = createTrackedSync();
       const status = sync.getStatus();
       
-      expect(status.available).to.be.false;
-      expect(status.reason).to.equal('Yjs not loaded');
+      expect(status.available).to.be.true;
     });
   });
 
   describe('Configuration Management', () => {
     it('should use repo-level configuration', () => {
-      const sync = createYjsSync();
+      const sync = createTrackedSync();
       
       // Test that sync initializes without configuration needed
-      expect(sync.isAvailable).to.be.false; // Yjs not available in test
       expect(() => sync.getData()).to.not.throw;
       expect(() => sync.setData({})).to.not.throw;
     });
 
     it('should generate and persist device IDs', () => {
-      const sync = createYjsSync();
+      const sync = createTrackedSync();
       const deviceId1 = sync.getDeviceId();
       
       expect(deviceId1).to.be.a('string');
@@ -75,7 +103,6 @@ describe('Yjs Sync (Functional)', () => {
       const sync = createYjsSync();
       
       // Sync should never interfere with localStorage-only operation
-      expect(sync.isAvailable).to.be.false; // Without Yjs libraries
       
       // App should continue working normally
       const testData = { entries: [], character: {} };
@@ -96,7 +123,6 @@ describe('Yjs Sync (Functional)', () => {
       const retrieved = JSON.parse(global.localStorage.getItem(testKey));
       
       expect(retrieved).to.deep.equal(testValue);
-      expect(sync.isAvailable).to.be.false; // Should not affect sync status
     });
   });
 
@@ -137,8 +163,6 @@ describe('Yjs Sync (Functional)', () => {
       };
       
       const sync = createYjsSync();
-      
-      expect(sync.isAvailable).to.be.false;
       expect(() => sync.getData()).to.not.throw;
       expect(() => sync.setData({})).to.not.throw;
     });
@@ -172,16 +196,16 @@ describe('Yjs Sync (Functional)', () => {
       expect(status).to.have.property('deviceId');
       expect(status).to.have.property('connected');
       
-      expect(status.available).to.be.false; // Yjs not available in test
+      expect(status.available).to.be.true; // Yjs available via npm
       expect(status.reason).to.be.a('string');
       expect(status.deviceId).to.be.a('string');
       expect(status.connected).to.be.false;
     });
 
-    it('should update status when Yjs becomes available', () => {
-      // Initially no Yjs
+    it('should have consistent status', () => {
+      // Yjs is now available via npm
       const sync1 = createYjsSync();
-      expect(sync1.getStatus().available).to.be.false;
+      expect(sync1.getStatus().available).to.be.true;
       
       // Mock Yjs availability
       global.window.Y = {
@@ -224,7 +248,7 @@ describe('Yjs Sync (Functional)', () => {
 
   describe('Teardown', () => {
     it('should clean up resources on teardown', () => {
-      const sync = createYjsSync();
+      const sync = createTrackedSync();
       
       // Should not throw when teardown is called
       expect(() => sync.teardown()).to.not.throw;
@@ -235,7 +259,7 @@ describe('Yjs Sync (Functional)', () => {
     });
 
     it('should handle multiple teardown calls', () => {
-      const sync = createYjsSync();
+      const sync = createTrackedSync();
       
       expect(() => sync.teardown()).to.not.throw;
       expect(() => sync.teardown()).to.not.throw; // Second call should not throw

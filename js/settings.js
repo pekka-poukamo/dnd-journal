@@ -1,5 +1,7 @@
 // Settings Page - AI Configuration & Data Management
 
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
 import { 
   loadDataWithFallback, 
   createInitialSettings, 
@@ -15,13 +17,20 @@ import {
 
 import { createYjsSync } from './sync.js';
 
-// Initialize sync system
+// Initialize sync system - lazy initialization
 let yjsSync = null;
-try {
-  yjsSync = createYjsSync();
-} catch (e) {
-  console.warn('Sync not available:', e);
-}
+const getYjsSync = () => {
+  if (!yjsSync) {
+    try {
+      yjsSync = createYjsSync();
+    } catch (e) {
+      // In test environment or when browser APIs aren't available
+      // Silently fail - sync not available
+      return null;
+    }
+  }
+  return yjsSync;
+};
 
 // Load settings from localStorage
 export const loadSettings = () => {
@@ -275,13 +284,6 @@ const handleShowAIPrompt = async () => {
 
 // Test sync server connection
 const testSyncServer = async (serverUrl) => {
-  // If no Yjs libraries are available, return helpful error
-  if (typeof window.Y === 'undefined' || typeof window.WebsocketProvider === 'undefined') {
-    return { 
-      success: false, 
-      error: 'Sync libraries not loaded. Refresh the page to enable sync testing.' 
-    };
-  }
 
   // If no custom server URL, test default public servers
   if (!serverUrl) {
@@ -319,8 +321,8 @@ const testSyncServer = async (serverUrl) => {
 const testSingleServer = async (serverUrl) => {
   return new Promise((resolve) => {
     try {
-      const testDoc = new window.Y.Doc();
-      const provider = new window.WebsocketProvider(serverUrl, 'test-connection', testDoc);
+      const testDoc = new Y.Doc();
+      const provider = new WebsocketProvider(serverUrl, 'test-connection', testDoc);
       
       const timeout = setTimeout(() => {
         provider.destroy();
@@ -358,21 +360,19 @@ const updateSimpleSyncStatus = () => {
   // Always show sync status - requirement: "should display all the time, even using public servers"
   syncSection.style.display = 'block';
   
-  if (!yjsSync) {
+  const sync = getYjsSync();
+  if (!sync) {
+    // Sync not available
     if (syncDot) syncDot.className = 'sync-dot unavailable';
     if (syncText) syncText.textContent = 'Sync unavailable';
-    if (syncHelp) syncHelp.textContent = 'Sync libraries not loaded.';
+    if (syncHelp) syncHelp.textContent = 'Sync not available in this environment';
     return;
   }
   
-  const status = yjsSync.getStatus();
+  const status = sync.getStatus();
   
   if (syncDot && syncText && syncHelp) {
-    if (!status.available) {
-      syncDot.className = 'sync-dot unavailable';
-      syncText.textContent = 'Sync unavailable';
-      syncHelp.textContent = 'Sync is not available.';
-    } else if (status.connected) {
+    if (status.connected) {
       syncDot.className = 'sync-dot connected';
       syncText.textContent = 'Connected';
       syncHelp.textContent = 'Your journal is syncing across devices.';
@@ -468,11 +468,13 @@ const init = () => {
   populateForm();
   setupEventHandlers();
   
-  // Update sync status periodically
-  if (yjsSync) {
+  // Update sync status periodically (only in browser, not in tests)
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     setInterval(updateSimpleSyncStatus, 5000);
   }
 };
 
-// Start when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+// Start when DOM is ready (only in browser environment)
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('DOMContentLoaded', init);
+}

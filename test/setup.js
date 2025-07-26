@@ -4,6 +4,11 @@ import chai from 'chai';
 // Enable should syntax
 chai.should();
 
+// Increase max listeners to prevent warnings during tests
+if (typeof process !== 'undefined' && process.setMaxListeners) {
+  process.setMaxListeners(30);
+}
+
 // Setup DOM environment (JSDOM sets up window, document, navigator, HTMLElement)
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
   url: 'http://localhost',
@@ -43,6 +48,70 @@ if (!global.atob) {
   global.atob = function(str) { return Buffer.from(str, 'base64').toString('binary'); };
 }
 
+// Mock IndexedDB for Yjs
+global.indexedDB = {
+  open: function(name, version) {
+    return {
+      addEventListener: function() {},
+      removeEventListener: function() {},
+      result: {
+        objectStoreNames: { contains: () => false },
+        createObjectStore: () => ({
+          createIndex: () => {},
+          transaction: () => ({
+            objectStore: () => ({
+              put: () => ({ addEventListener: () => {} }),
+              get: () => ({ addEventListener: () => {} }),
+              delete: () => ({ addEventListener: () => {} })
+            })
+          })
+        }),
+        transaction: () => ({
+          objectStore: () => ({
+            put: () => ({ addEventListener: () => {} }),
+            get: () => ({ addEventListener: () => {} }),
+            delete: () => ({ addEventListener: () => {} })
+          })
+        })
+      },
+      onsuccess: null,
+      onerror: null
+    };
+  }
+};
+
+// Mock WebSocket for Yjs
+global.WebSocket = class MockWebSocket {
+  constructor(url, protocols) {
+    this.url = url;
+    this.protocols = protocols;
+    this.readyState = 0; // CONNECTING
+    this.onopen = null;
+    this.onclose = null;
+    this.onmessage = null;
+    this.onerror = null;
+    
+    // Simulate connection failure immediately to speed up tests
+    setImmediate(() => {
+      this.readyState = 3; // CLOSED
+      if (this.onerror) {
+        this.onerror(new Error('Mock WebSocket connection failed'));
+      }
+    });
+  }
+  
+  send(data) {
+    // Mock send - do nothing
+  }
+  
+  close() {
+    this.readyState = 3; // CLOSED
+    if (this.onclose) {
+      this.onclose({ code: 1000, reason: 'Normal closure' });
+    }
+  }
+};
+
 global.console = {
   error: function() {},
   warn: function() {},
@@ -54,7 +123,8 @@ global.console = {
 global.fetch = async function(url, options) {
   // Mock OpenAI API responses
   if (url.includes('openai.com')) {
-    await new Promise(function(resolve) { setTimeout(resolve, 10); });
+    // Use setImmediate for faster test execution
+    await new Promise(function(resolve) { setImmediate(resolve); });
     return {
       ok: true,
       status: 200,
@@ -79,6 +149,20 @@ global.fetch = async function(url, options) {
 // Add cleanup function to reset localStorage between tests
 global.resetLocalStorage = () => {
   global.localStorage = createLocalStorageMock();
+};
+
+// Add cleanup function to reset all globals between tests
+global.resetTestGlobals = () => {
+  global.localStorage = createLocalStorageMock();
+  global.testStorage = {};
+  // Reset console to prevent noise during tests
+  global.console = {
+    error: function() {},
+    warn: function() {},
+    log: function() {},
+    info: function() {},
+    debug: function() {}
+  };
 };
 
 export { chai };

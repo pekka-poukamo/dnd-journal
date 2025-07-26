@@ -2,11 +2,13 @@
 // Maintains localStorage as primary store while adding cross-device sync
 // Follows ADR-0002: Functional Programming Only
 
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import { IndexeddbPersistence } from 'y-indexeddb';
 import { SYNC_CONFIG } from '../sync-config.js';
 
 // Sync state management
 let syncState = {
-  isAvailable: false,
   isConnected: false,
   ydoc: null,
   ymap: null,
@@ -18,33 +20,27 @@ let syncState = {
   errors: []
 };
 
-// Check if Yjs libraries are available
-const checkYjsAvailability = () => {
-  try {
-    return typeof window.Y !== 'undefined' && 
-           typeof window.WebsocketProvider !== 'undefined' &&
-           typeof window.IndexeddbPersistence !== 'undefined';
-  } catch (e) {
-    return false;
-  }
-};
-
 // Initialize Yjs sync system
 const initializeSync = () => {
-  const isAvailable = checkYjsAvailability();
-  
-  if (!isAvailable) {
-    // Yjs not available, using localStorage-only mode
-    return { ...syncState, isAvailable: false };
+  // Don't initialize in non-browser environments
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    throw new Error('Yjs sync requires browser environment');
   }
-
+  
+  // Allow sync tests to run by checking for explicit sync testing flag
+  if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') {
+    // Only disable if not explicitly testing sync functionality
+    if (!process.env.ENABLE_SYNC_TESTS && !global.enableSyncTests) {
+      throw new Error('Yjs sync disabled in test environment');
+    }
+  }
+  
   try {
-    const ydoc = new window.Y.Doc();
+    const ydoc = new Y.Doc();
     const ymap = ydoc.getMap('journal');
     
     const newState = {
       ...syncState,
-      isAvailable: true,
       ydoc,
       ymap
     };
@@ -58,16 +54,14 @@ const initializeSync = () => {
     return syncState;
   } catch (e) {
     console.error('Failed to setup Yjs:', e);
-    return { ...syncState, isAvailable: false };
+    throw e; // Let the error bubble up since Yjs should always be available now
   }
 };
 
 // Setup IndexedDB persistence
 const setupPersistence = (state) => {
-  if (!state.isAvailable || !state.ydoc) return state;
-  
   try {
-    const indexeddbProvider = new window.IndexeddbPersistence('dnd-journal-sync', state.ydoc);
+    const indexeddbProvider = new IndexeddbPersistence('dnd-journal-sync', state.ydoc);
     
     indexeddbProvider.on('synced', () => {
       // Yjs local persistence ready
@@ -100,14 +94,17 @@ const getSyncConfig = () => {
 
 // Setup network providers
 const setupNetworking = (state) => {
-  if (!state.isAvailable || !state.ydoc) return state;
   
   const providers = [];
   const servers = getSyncConfig();
   
   servers.forEach(serverUrl => {
     try {
-      const provider = new window.WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc);
+      const provider = new WebsocketProvider(serverUrl, 'dnd-journal', state.ydoc, {
+        // Add connection timeout for better UX
+        connect: true,
+        // Yjs will handle reconnection automatically
+      });
       providers.push(provider);
       console.log(`Connecting to sync server: ${serverUrl}`);
     } catch (e) {
@@ -154,8 +151,6 @@ const setupNetworking = (state) => {
 
 // Setup change observers
 const setupObservers = (state) => {
-  if (!state.isAvailable || !state.ymap) return state;
-  
   state.ymap.observe((event) => {
     console.log('Remote changes detected');
     syncState.lastModified = Date.now();
@@ -167,10 +162,6 @@ const setupObservers = (state) => {
 
 // Get current data from Yjs
 const getSyncData = () => {
-  if (!syncState.isAvailable || !syncState.ymap) {
-    return null; // Indicates to use localStorage
-  }
-  
   try {
     return syncState.ymap.get('data') || null;
   } catch (e) {
@@ -181,10 +172,6 @@ const getSyncData = () => {
 
 // Save data to Yjs
 const setSyncData = (data) => {
-  if (!syncState.isAvailable || !syncState.ymap) {
-    return; // Graceful degradation
-  }
-  
   try {
     const timestamp = Date.now();
     syncState.ymap.set('data', data);
@@ -208,8 +195,6 @@ const onSyncChange = (callback) => {
 
 // Notify all callbacks of changes
 const notifyCallbacks = (state) => {
-  if (!state.isAvailable) return;
-  
   const data = getSyncData();
   if (data) {
     state.callbacks.forEach(callback => {
@@ -225,20 +210,6 @@ const notifyCallbacks = (state) => {
 // Get sync status
 const getSyncStatus = () => {
   const deviceId = getDeviceId();
-  
-  if (!syncState.isAvailable) {
-    return { 
-      available: false, 
-      reason: 'Yjs not loaded',
-      deviceId,
-      connected: false,
-      lastModified: null,
-      connectionAttempts: 0,
-      errors: [],
-      providers: []
-    };
-  }
-  
   const connectedProviders = syncState.providers.filter(p => p.wsconnected);
   
   return {
@@ -292,7 +263,21 @@ const teardownSync = () => {
   }
   
   syncState = {
-    isAvailable: false,
+    isConnected: false,
+    ydoc: null,
+    ymap: null,
+    providers: [],
+    callbacks: [],
+    indexeddbProvider: null,
+    lastModified: null,
+    connectionAttempts: 0,
+    errors: []
+  };
+};
+
+// Reset sync state (for testing)
+export const resetSyncState = () => {
+  syncState = {
     isConnected: false,
     ydoc: null,
     ymap: null,
@@ -312,7 +297,6 @@ export const createYjsSync = () => {
   
   return {
     // Read-only properties
-    get isAvailable() { return syncState.isAvailable; },
     get isConnected() { return syncState.isConnected; },
     
     // Methods

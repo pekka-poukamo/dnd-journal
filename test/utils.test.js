@@ -156,7 +156,7 @@ describe('Utils Module', function() {
       setTimeout(() => {
         expect(callCount).to.equal(1);
         done();
-      }, 150);
+      }, 110);
     });
   });
 

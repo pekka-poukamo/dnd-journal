@@ -12,19 +12,26 @@ import {
 } from './utils.js';
 
 import { generateIntrospectionPrompt, isAIEnabled } from './ai.js';
-import { createYjsSync } from './sync.js';
+import { createYjsSync, resetSyncState } from './sync.js';
 import { runAutoSummarization, summarize, getSummary } from './summarization.js';
 
 // Simple state management
 let state = createInitialJournalState();
 
-// Initialize Yjs sync enhancement (ADR-0003)
+// Initialize Yjs sync enhancement (ADR-0003) - lazy initialization
 let yjsSync = null;
-try {
-  yjsSync = createYjsSync();
-} catch (e) {
-      // Yjs sync not available, using localStorage-only mode
-}
+const getYjsSync = () => {
+  if (!yjsSync) {
+    try {
+      yjsSync = createYjsSync();
+    } catch (e) {
+      // In test environment or when browser APIs aren't available
+      // Silently fail - sync not available
+      return null;
+    }
+  }
+  return yjsSync;
+};
 
 // Simple markdown parser for basic formatting
 export const parseMarkdown = (text) => {
@@ -105,15 +112,21 @@ export const loadData = () => {
   const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
   if (result.success && result.data) {
     state = { ...state, ...result.data };
-    // Update global state reference for tests
-    if (typeof global !== 'undefined') {
-      global.state = state;
-    }
+  } else {
+    // Reset to initial state if data loading fails (corrupted data, etc.)
+    state = createInitialJournalState();
+  }
+  
+  // Update global state reference for tests
+  if (typeof global !== 'undefined') {
+    global.state = state;
   }
   
   // Initialize Yjs with current localStorage data (ADR-0003)
-  if (yjsSync && yjsSync.isAvailable) {
-    const syncData = yjsSync.getData();
+  // Only use sync if localStorage data was loaded successfully
+  if (result.success && result.data) {
+    const sync = getYjsSync();
+    const syncData = sync ? sync.getData() : null;
     if (syncData) {
       // Merge remote data if available and newer
       const localTime = state.lastModified || 0;
@@ -123,14 +136,16 @@ export const loadData = () => {
         // Loading newer data from sync
         state = { ...state, ...syncData };
         safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
+            } else {
+          // Upload current data to sync
+          const syncForUpload = getYjsSync();
+          if (syncForUpload) syncForUpload.setData(state);
+        }
       } else {
-        // Upload current data to sync
-        yjsSync.setData(state);
+        // First time - upload current localStorage data
+        const syncForUpload = getYjsSync();
+        if (syncForUpload) syncForUpload.setData(state);
       }
-    } else {
-      // First time - upload current localStorage data
-      yjsSync.setData(state);
-    }
   }
 };
 
@@ -139,10 +154,9 @@ export const saveData = () => {
   state.lastModified = Date.now();
   const result = safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
   
-  // Update sync if available
-  if (yjsSync && yjsSync.isAvailable) {
-    yjsSync.setData(state);
-  }
+  // Update sync
+  const sync = getYjsSync();
+  if (sync) sync.setData(state);
   
   return result;
 };
@@ -578,16 +592,17 @@ export const setupEventHandlers = () => {
 
 // Setup sync listener for real-time updates
 export const setupSyncListener = () => {
-  if (yjsSync && yjsSync.isAvailable) {
-    yjsSync.onChange((syncData) => {
-      // Reload data from sync
-      if (syncData) {
-        state = { ...state, ...syncData };
-        renderEntries();
-        displayCharacterSummary();
-      }
-    });
-  }
+  const sync = getYjsSync();
+  if (!sync) return; // No sync available
+  
+  sync.onChange((syncData) => {
+    // Reload data from sync
+    if (syncData) {
+      state = { ...state, ...syncData };
+      renderEntries();
+      displayCharacterSummary();
+    }
+  });
 };
 
 
@@ -613,18 +628,31 @@ export const init = async () => {
 
 // Reset state to initial values (for testing)
 export const resetState = () => {
-  state = createInitialJournalState();
+  const initialState = createInitialJournalState();
+  state = { ...initialState };
+  // Force update all properties
+  state.character = { ...initialState.character };
+  state.entries = [...initialState.entries];
   // Update global state reference for tests
   if (typeof global !== 'undefined') {
     global.state = state;
   }
 };
 
+// Reset sync cache (for testing)
+export const resetSyncCache = () => {
+  yjsSync = null;
+  resetSyncState();
+};
+
 // Export state for testing
 export { state };
 
-// Start when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+// Start when DOM is ready (only in browser environment, not in tests)
+if (typeof document !== 'undefined' && document.addEventListener && 
+    !(typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test')) {
+  document.addEventListener('DOMContentLoaded', init);
+}
 
 // Export for testing (backward compatibility)
 if (typeof global !== 'undefined') {
