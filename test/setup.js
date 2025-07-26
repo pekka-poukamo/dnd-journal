@@ -43,6 +43,70 @@ if (!global.atob) {
   global.atob = function(str) { return Buffer.from(str, 'base64').toString('binary'); };
 }
 
+// Mock IndexedDB for Yjs
+global.indexedDB = {
+  open: function(name, version) {
+    return {
+      addEventListener: function() {},
+      removeEventListener: function() {},
+      result: {
+        objectStoreNames: { contains: () => false },
+        createObjectStore: () => ({
+          createIndex: () => {},
+          transaction: () => ({
+            objectStore: () => ({
+              put: () => ({ addEventListener: () => {} }),
+              get: () => ({ addEventListener: () => {} }),
+              delete: () => ({ addEventListener: () => {} })
+            })
+          })
+        }),
+        transaction: () => ({
+          objectStore: () => ({
+            put: () => ({ addEventListener: () => {} }),
+            get: () => ({ addEventListener: () => {} }),
+            delete: () => ({ addEventListener: () => {} })
+          })
+        })
+      },
+      onsuccess: null,
+      onerror: null
+    };
+  }
+};
+
+// Mock WebSocket for Yjs
+global.WebSocket = class MockWebSocket {
+  constructor(url, protocols) {
+    this.url = url;
+    this.protocols = protocols;
+    this.readyState = 0; // CONNECTING
+    this.onopen = null;
+    this.onclose = null;
+    this.onmessage = null;
+    this.onerror = null;
+    
+    // Simulate connection failure after a short delay
+    setTimeout(() => {
+      this.readyState = 3; // CLOSED
+      if (this.onerror) {
+        this.onerror(new Error('Mock WebSocket connection failed'));
+      }
+    }, 10);
+  }
+  
+  send(data) {
+    // Mock send - do nothing
+  }
+  
+  close() {
+    this.readyState = 3; // CLOSED
+    if (this.onclose) {
+      this.onclose({ code: 1000, reason: 'Normal closure' });
+    }
+  }
+};
+
 global.console = {
   error: function() {},
   warn: function() {},

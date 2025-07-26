@@ -15,23 +15,22 @@ describe('Yjs Sync (Functional)', () => {
   });
 
   describe('Graceful Degradation (ADR-0003)', () => {
-    it('should handle missing Yjs libraries gracefully', () => {
+    it('should handle Yjs libraries being available', () => {
       const sync = createYjsSync();
       
-      expect(sync.isAvailable).to.be.false;
-      expect(sync.getData()).to.be.null;
+      // With npm packages, Yjs should now be available
+      expect(sync.isAvailable).to.be.true;
       
       // Should not throw when calling methods
       sync.setData({ test: 'data' });
       expect(() => sync.onChange(() => {})).to.not.throw;
     });
 
-    it('should indicate unavailability in status', () => {
+    it('should indicate availability in status', () => {
       const sync = createYjsSync();
       const status = sync.getStatus();
       
-      expect(status.available).to.be.false;
-      expect(status.reason).to.equal('Yjs not loaded');
+      expect(status.available).to.be.true;
     });
   });
 
@@ -40,7 +39,7 @@ describe('Yjs Sync (Functional)', () => {
       const sync = createYjsSync();
       
       // Test that sync initializes without configuration needed
-      expect(sync.isAvailable).to.be.false; // Yjs not available in test
+      expect(sync.isAvailable).to.be.true; // Yjs now available via npm
       expect(() => sync.getData()).to.not.throw;
       expect(() => sync.setData({})).to.not.throw;
     });
@@ -75,7 +74,7 @@ describe('Yjs Sync (Functional)', () => {
       const sync = createYjsSync();
       
       // Sync should never interfere with localStorage-only operation
-      expect(sync.isAvailable).to.be.false; // Without Yjs libraries
+      expect(sync.isAvailable).to.be.true; // With npm-installed Yjs libraries
       
       // App should continue working normally
       const testData = { entries: [], character: {} };
@@ -96,7 +95,7 @@ describe('Yjs Sync (Functional)', () => {
       const retrieved = JSON.parse(global.localStorage.getItem(testKey));
       
       expect(retrieved).to.deep.equal(testValue);
-      expect(sync.isAvailable).to.be.false; // Should not affect sync status
+      expect(sync.isAvailable).to.be.true; // Yjs is now available via npm
     });
   });
 
@@ -138,7 +137,7 @@ describe('Yjs Sync (Functional)', () => {
       
       const sync = createYjsSync();
       
-      expect(sync.isAvailable).to.be.false;
+      expect(sync.isAvailable).to.be.true;
       expect(() => sync.getData()).to.not.throw;
       expect(() => sync.setData({})).to.not.throw;
     });
@@ -172,16 +171,16 @@ describe('Yjs Sync (Functional)', () => {
       expect(status).to.have.property('deviceId');
       expect(status).to.have.property('connected');
       
-      expect(status.available).to.be.false; // Yjs not available in test
+      expect(status.available).to.be.true; // Yjs available via npm
       expect(status.reason).to.be.a('string');
       expect(status.deviceId).to.be.a('string');
       expect(status.connected).to.be.false;
     });
 
     it('should update status when Yjs becomes available', () => {
-      // Initially no Yjs
+      // Yjs is now available via npm
       const sync1 = createYjsSync();
-      expect(sync1.getStatus().available).to.be.false;
+      expect(sync1.getStatus().available).to.be.true;
       
       // Mock Yjs availability
       global.window.Y = {
