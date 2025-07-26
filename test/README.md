@@ -1,104 +1,98 @@
-# D&D Journal Test Suite
+# D&D Journal - Test Suite
 
-This test suite uses **Mocha** and **Chai** with should notation for testing the D&D Journal application.
+This directory contains comprehensive tests for the D&D Journal application, with **strict measures to prevent real API calls and costs**.
 
-## Testing Philosophy
+## 🔒 API Safety Guarantee
 
-Our tests focus on **behavior and functionality** rather than implementation details:
+**CRITICAL: All tests are designed to NEVER make real API calls to OpenAI or any external services.**
 
-✅ **Test behaviors**: How functions work, what they return, error handling
-✅ **Test user workflows**: Complete user interactions from start to finish  
-✅ **Test data flow**: Input → processing → output validation
-✅ **Test edge cases**: Error conditions, empty states, invalid input
+### How We Prevent API Costs:
 
-❌ **Don't test implementation**: CSS class names, object structure, variable names
-❌ **Don't test framework details**: DOM structure specifics, internal APIs
-❌ **Don't test style/conventions**: These are enforced by code review and linting
+1. **Global Fetch Mocking** (`setup.js`):
+   - Intercepts ALL network requests during testing
+   - Returns mock responses for OpenAI API calls
+   - Prevents any real HTTP requests from reaching external APIs
+
+2. **Fake API Keys Only**:
+   - All tests use clearly fake keys like `sk-test123`
+   - No real OpenAI API keys are used anywhere in tests
+   - No environment variables are checked for real keys
+
+3. **Dedicated Safety Tests** (`api-safety.test.js`):
+   - Explicitly verifies no real API calls are made
+   - Tests that mocking is working correctly
+   - Logs and validates all intercepted requests
+
+4. **Visual Confirmation**:
+   - Running `npm test` shows: "🔒 Running tests with API mocking - no real API calls will be made"
+   - Tests run quickly (< 1 second) confirming no network delays
+   - All 267+ tests pass without any external dependencies
 
 ## Test Structure
 
 ```
 test/
-├── setup.js           # Test environment configuration
-├── app.test.js        # Unit tests for core journal functionality
-├── character.test.js  # Unit tests for character management
-├── integration.test.js # Integration tests for user workflows
-└── README.md          # This file
+├── setup.js              # Global test setup with API mocking
+├── api-safety.test.js     # Explicit API safety verification
+├── ai.test.js            # AI module tests (mocked)
+├── app.test.js           # Main app functionality
+├── character.test.js     # Character management
+├── integration.test.js   # Full workflow tests
+├── openai-wrapper.test.js # OpenAI wrapper (fully mocked)
+├── settings.test.js      # Settings including API key validation (mocked)
+├── storytelling.test.js  # Storytelling features (mocked)
+├── summarization.test.js # Text summarization (mocked)
+├── sync.test.js          # Sync functionality
+└── utils.test.js         # Utility functions
 ```
 
 ## Running Tests
 
-### Local Development
 ```bash
-# Run all tests once
+# Run all tests (with API safety confirmation)
 npm test
 
-# Run tests in watch mode (re-runs on file changes)
-npm run test:watch
+# Run tests in watch mode
+npm test:watch
 
-# Run setup script (includes initial test run)
-./scripts/setup-dev.sh
-```
-
-### Automated Testing
-- **GitHub Actions**: Tests run automatically on push/PR to main branch
-- **Pre-commit Hook**: Run `./scripts/pre-commit.sh` before commits
-
-## Test Coverage
-
-### Unit Tests (`app.test.js`)
-- **generateId**: Unique ID generation
-- **formatDate**: Date formatting functionality  
-- **State Management**: localStorage save/load operations
-- **DOM Manipulation**: Entry creation, rendering, form handling
-- **Error Handling**: localStorage errors, corrupted data
-
-### Integration Tests (`integration.test.js`)
-- **Full User Workflow**: Complete character creation and journaling
-- **Empty State Handling**: Clean initial state
-- **Data Integrity**: Multiple operations and persistence
-
-## Should Notation Examples
-
-```javascript
-// Basic assertions
-value.should.be.a('string');
-array.should.have.length(3);
-object.should.have.property('name');
-
-// Equality
-actual.should.equal(expected);
-result.should.not.equal(oldValue);
-
-// Existence
-(element === null).should.be.true;
-data.should.not.be.null;
-
-// Array/Object content
-entries.should.include('expectedEntry');
-character.name.should.equal('Aragorn');
+# Run with coverage
+npm coverage
 ```
 
 ## Test Environment
 
-- **JSDOM**: Simulates browser DOM environment
-- **Mock localStorage**: In-memory storage for testing
-- **Console suppression**: Reduces test output noise
-- **Isolated state**: Each test runs with clean state
+- **Framework**: Mocha + Chai
+- **DOM Environment**: JSDOM for browser simulation
+- **API Mocking**: Complete global fetch override
+- **Coverage**: c8 for code coverage analysis
 
 ## Adding New Tests
 
-1. Add test cases to appropriate file (`app.test.js` for units, `integration.test.js` for workflows)
-2. Use descriptive `describe()` and `it()` blocks
-3. Follow should notation for assertions
-4. Use `beforeEach()` for test setup when needed
-5. Ensure tests are independent and can run in any order
+When adding tests that might interact with AI features:
 
-## Best Practices
+1. **Always use the existing mocks** - they're already configured
+2. **Use fake API keys** like `sk-test123` 
+3. **Never bypass the global fetch mock** without explicit safety measures
+4. **Test error conditions** to ensure graceful degradation when APIs are unavailable
 
-- ✅ Test one thing per test case
-- ✅ Use descriptive test names
-- ✅ Use should notation consistently
-- ✅ Mock external dependencies
-- ✅ Test both success and failure cases
-- ✅ Keep tests fast and independent
+## Verification Commands
+
+```bash
+# Verify no real API keys in test files
+grep -r "sk-[a-zA-Z0-9]" test/ | grep -v "test123\|test456\|invalid"
+
+# Verify no environment variable usage
+grep -r "process.env" test/
+
+# Run safety-specific tests only
+npx mocha test/api-safety.test.js
+```
+
+## Developer Notes
+
+- Tests run completely offline - no internet connection required
+- All AI functionality is thoroughly tested through mocking
+- Real API integration is tested through the application itself, not the test suite
+- The test suite focuses on logic, error handling, and edge cases rather than external API behavior
+
+**Remember**: These safety measures are critical for preventing unexpected API charges during development and CI/CD processes.

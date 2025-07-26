@@ -51,8 +51,16 @@ global.console = {
   debug: function() {}
 };
 
+// =============================================================================
+// CRITICAL: GLOBAL FETCH MOCK - PREVENTS REAL API CALLS AND COSTS
+// =============================================================================
+// This mock intercepts ALL network requests during testing to ensure:
+// 1. No real API calls are made to OpenAI or any external services
+// 2. No API costs are incurred during test runs
+// 3. Tests run predictably without network dependencies
+// 4. All OpenAI API calls return consistent mock responses
 global.fetch = async function(url, options) {
-  // Mock OpenAI API responses
+  // Mock OpenAI API responses to prevent real API calls and costs
   if (url.includes('openai.com')) {
     await new Promise(function(resolve) { setTimeout(resolve, 10); });
     return {
@@ -69,6 +77,8 @@ global.fetch = async function(url, options) {
       }
     };
   }
+  
+  // All other URLs return 404 to prevent accidental real requests
   return {
     ok: false,
     status: 404,

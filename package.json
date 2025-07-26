@@ -7,7 +7,7 @@
   "scripts": {
     "start": "npx http-server . -p 3000 -o",
     "build": "echo 'No build step needed - static site' && exit 0",
-    "test": "mocha test/**/*.test.js --timeout 10000",
+    "test": "echo '🔒 Running tests with API mocking - no real API calls will be made' && mocha test/**/*.test.js --timeout 10000",
     "test:watch": "mocha test/**/*.test.js --watch --timeout 10000",
     "coverage": "c8 npm test",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
