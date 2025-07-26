@@ -1,7 +1,7 @@
 // Settings Page - AI Configuration & Data Management
 
-import * as Y from 'yjs';
-import { WebsocketProvider } from 'y-websocket';
+import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.27/+esm';
+import { WebsocketProvider } from 'https://cdn.jsdelivr.net/npm/y-websocket@3/+esm';
 import { 
   loadDataWithFallback, 
   createInitialSettings, 
