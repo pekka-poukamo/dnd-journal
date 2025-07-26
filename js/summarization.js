@@ -1,7 +1,7 @@
 // Summarization - Pure content summarization with auto meta-summaries
 // Following functional programming principles and style guide
 
-import { loadDataWithFallback, safeSetToStorage, generateId } from './utils.js';
+import { loadDataWithFallback, safeSetToStorage, generateId, createInitialJournalState, STORAGE_KEYS } from './utils.js';
 import { createUserPromptFunction, createTemplateFunction, isAPIAvailable } from './openai-wrapper.js';
 
 // =============================================================================
@@ -57,7 +57,6 @@ const shouldSummarize = (text) => countWords(text) >= 100;
 // Summarize any content with a key
 export const summarize = async (key, text) => {
   if (!shouldSummarize(text)) return null;
-  if (!isAPIAvailable()) return null;
 
   // Check cache first
   const summaries = loadSummaries();
@@ -65,6 +64,9 @@ export const summarize = async (key, text) => {
   if (existing) {
     return existing.content;
   }
+
+  // Only check AI availability if we need to generate new content
+  if (!isAPIAvailable()) return null;
 
   try {
     const prompt = `Summarize in ${WORDS_PER_SUMMARY} words: ${text}`;
@@ -142,7 +144,7 @@ export const getAllSummaries = () => {
       key,
       content: data.content,
       type: key.startsWith('meta:') ? 'meta' : 'regular',
-      timestamp: data.timestamp
+      timestamp: data.timestamp || 0
     }))
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 };
@@ -181,4 +183,76 @@ export const getStats = () => {
 export const clearAll = () => {
   saveSummaries({});
   return true;
+};
+
+// =============================================================================
+// LEGACY COMPATIBILITY FUNCTIONS
+// =============================================================================
+
+// Legacy function for settings page compatibility
+export const getSummaryStats = () => {
+  const stats = getStats();
+  const journal = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
+  const totalEntries = (journal.entries || []).length;
+  const recentEntries = Math.min(totalEntries, 5); // Consider last 5 entries as recent
+  
+  return {
+    totalEntries,
+    recentEntries,
+    summarizedEntries: stats.count,
+    pendingSummaries: Math.max(0, recentEntries - stats.count),
+    summaryCompletionRate: recentEntries > 0 ? Math.round((stats.count / recentEntries) * 100) : 0,
+    metaSummaryActive: stats.metaSummaries > 0
+  };
+};
+
+// Legacy function for auto-summarization - simplified for new architecture
+export const autoSummarizeEntries = async () => {
+  const journal = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
+  const entries = journal.entries || [];
+  const results = [];
+  
+  // Only summarize recent entries that need it
+  const recentEntries = entries
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+    .slice(0, 5); // Last 5 entries
+  
+  for (const entry of recentEntries) {
+    if (entry.content && entry.content.length > 500) { // Only long entries
+      const summary = await summarize(entry.id, entry.content);
+      if (summary) {
+        results.push({
+          id: entry.id,
+          title: entry.title,
+          summary: summary,
+          status: 'success'
+        });
+      }
+    }
+  }
+  
+  return results;
+};
+
+// Legacy function for full auto-summarization run
+export const runAutoSummarization = async () => {
+  try {
+    const entrySummaries = await autoSummarizeEntries();
+    
+    return {
+      entrySummaries,
+      characterSummaries: [], // Character summarization handled by storytelling module
+      metaSummary: null, // Meta-summaries are automatic
+      totalProcessed: entrySummaries.length
+    };
+  } catch (error) {
+    console.error('Auto-summarization failed:', error);
+    return {
+      entrySummaries: [],
+      characterSummaries: [],
+      metaSummary: null,
+      totalProcessed: 0,
+      error: error.message
+    };
+  }
 };
