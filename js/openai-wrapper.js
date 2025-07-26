@@ -22,7 +22,7 @@ const callOpenAI = async (systemPrompt, userPrompt, options = {}) => {
   const settings = loadDataWithFallback(STORAGE_KEYS.SETTINGS, createInitialSettings());
   const defaultOptions = {
     model: 'gpt-4.1-mini',
-    maxTokens: 400,
+    maxTokens: 1200, // Increased from 400
     temperature: 0.7
   };
   

@@ -25,7 +25,7 @@ Make questions specific to their character and adventures.`;
 // Create storytelling function with fixed prompt and settings
 const callStorytelling = createSystemPromptFunction(STORYTELLING_PROMPT, { 
   temperature: 0.8, 
-  maxTokens: 400 
+  maxTokens: 800 // Increased from 400
 });
 
 // =============================================================================
