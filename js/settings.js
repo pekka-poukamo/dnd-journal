@@ -21,7 +21,13 @@ import { createYjsSync } from './sync.js';
 let yjsSync = null;
 const getYjsSync = () => {
   if (!yjsSync) {
-    yjsSync = createYjsSync();
+    try {
+      yjsSync = createYjsSync();
+    } catch (e) {
+      // In test environment or when browser APIs aren't available
+      // Silently fail - sync not available
+      return null;
+    }
   }
   return yjsSync;
 };
@@ -354,7 +360,16 @@ const updateSimpleSyncStatus = () => {
   // Always show sync status - requirement: "should display all the time, even using public servers"
   syncSection.style.display = 'block';
   
-  const status = getYjsSync().getStatus();
+  const sync = getYjsSync();
+  if (!sync) {
+    // Sync not available
+    if (syncDot) syncDot.className = 'sync-dot unavailable';
+    if (syncText) syncText.textContent = 'Sync unavailable';
+    if (syncHelp) syncHelp.textContent = 'Sync not available in this environment';
+    return;
+  }
+  
+  const status = sync.getStatus();
   
   if (syncDot && syncText && syncHelp) {
     if (status.connected) {

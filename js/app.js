@@ -22,7 +22,13 @@ let state = createInitialJournalState();
 let yjsSync = null;
 const getYjsSync = () => {
   if (!yjsSync) {
-    yjsSync = createYjsSync();
+    try {
+      yjsSync = createYjsSync();
+    } catch (e) {
+      // In test environment or when browser APIs aren't available
+      // Silently fail - sync not available
+      return null;
+    }
   }
   return yjsSync;
 };
@@ -113,7 +119,8 @@ export const loadData = () => {
   }
   
   // Initialize Yjs with current localStorage data (ADR-0003)
-  const syncData = getYjsSync().getData();
+  const sync = getYjsSync();
+  const syncData = sync ? sync.getData() : null;
   if (syncData) {
     // Merge remote data if available and newer
     const localTime = state.lastModified || 0;
@@ -125,11 +132,13 @@ export const loadData = () => {
       safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
           } else {
         // Upload current data to sync
-        getYjsSync().setData(state);
+        const syncForUpload = getYjsSync();
+        if (syncForUpload) syncForUpload.setData(state);
       }
     } else {
       // First time - upload current localStorage data
-      getYjsSync().setData(state);
+      const syncForUpload = getYjsSync();
+      if (syncForUpload) syncForUpload.setData(state);
     }
 };
 
@@ -139,7 +148,8 @@ export const saveData = () => {
   const result = safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
   
   // Update sync
-  getYjsSync().setData(state);
+  const sync = getYjsSync();
+  if (sync) sync.setData(state);
   
   return result;
 };
@@ -575,7 +585,10 @@ export const setupEventHandlers = () => {
 
 // Setup sync listener for real-time updates
 export const setupSyncListener = () => {
-  getYjsSync().onChange((syncData) => {
+  const sync = getYjsSync();
+  if (!sync) return; // No sync available
+  
+  sync.onChange((syncData) => {
     // Reload data from sync
     if (syncData) {
       state = { ...state, ...syncData };

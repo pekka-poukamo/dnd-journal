@@ -29,6 +29,8 @@ jobs:
       
     - name: Run tests
       run: npm test
+      env:
+        NODE_ENV: test
       
     - name: Validate static files
       run: npm run validate
