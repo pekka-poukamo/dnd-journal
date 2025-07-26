@@ -59,6 +59,13 @@ export const summarize = async (key, text) => {
   if (!shouldSummarize(text)) return null;
   if (!isAPIAvailable()) return null;
 
+  // Check cache first
+  const summaries = loadSummaries();
+  const existing = summaries[key];
+  if (existing) {
+    return existing.content;
+  }
+
   try {
     const prompt = `Summarize in ${WORDS_PER_SUMMARY} words: ${text}`;
     const summary = await callSummarize(prompt);
@@ -66,7 +73,6 @@ export const summarize = async (key, text) => {
     if (!summary) return null;
 
     // Store the summary
-    const summaries = loadSummaries();
     summaries[key] = {
       content: summary,
       words: countWords(summary),
