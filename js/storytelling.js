@@ -3,7 +3,7 @@
 
 import { loadDataWithFallback, STORAGE_KEYS, createInitialJournalState } from './utils.js';
 import { createSystemPromptFunction, isAPIAvailable } from './openai-wrapper.js';
-import { getAllSummaries, getSummariesByPattern, summarize } from './summarization.js';
+import { getAllSummaries, summarize } from './summarization.js';
 
 // =============================================================================
 // STORYTELLING CONFIGURATION
@@ -33,7 +33,7 @@ const callStorytelling = createSystemPromptFunction(STORYTELLING_PROMPT, {
 // =============================================================================
 
 // Get comprehensive formatted entries for AI context
-const getFormattedEntries = (entries) => {
+const getFormattedEntries = async (entries) => {
   const sortedEntries = [...entries].sort((a, b) => b.timestamp - a.timestamp);
   const formattedContent = [];
   let wordCount = 0;
@@ -47,15 +47,18 @@ const getFormattedEntries = (entries) => {
     wordCount += content.split(/\s+/).length;
   });
   
-  // Add individual summaries for older entries
-  const entrySummaries = getSummariesByPattern('^entry:');
-  entrySummaries.forEach(summary => {
-    if (wordCount < targetWords) {
-      const content = `Past Adventure: ${summary.content}`;
-      formattedContent.push(content);
-      wordCount += content.split(/\s+/).length;
+  // Add summaries for older entries using their IDs
+  const olderEntries = sortedEntries.slice(3);
+  for (const entry of olderEntries) {
+    if (wordCount < targetWords && entry.id) {
+      const summary = await summarize(`entry:${entry.id}`, entry.content);
+      if (summary) {
+        const content = `Past Adventure: ${entry.title} - ${summary}`;
+        formattedContent.push(content);
+        wordCount += content.split(/\s+/).length;
+      }
     }
-  });
+  }
   
   // Add meta-summaries for broader historical context
   const allSummaries = getAllSummaries();
@@ -114,7 +117,7 @@ export const generateQuestions = async (character = null, entries = null) => {
   const notes = formattedChar.notes ? `\n\nCharacter Notes:\n${formattedChar.notes}` : '';
   
   // Format entries with comprehensive summaries
-  const formattedEntries = getFormattedEntries(finalEntries);
+  const formattedEntries = await getFormattedEntries(finalEntries);
   const entriesContext = formattedEntries.length > 0 ? 
     `\n\n=== ADVENTURE HISTORY ===\n${formattedEntries.join('\n\n')}` : '';
 
@@ -146,7 +149,7 @@ export const getCharacterContext = async () => {
   const entries = journal.entries || [];
   
   const formattedCharacter = await getFormattedCharacter(character);
-  const formattedEntries = getFormattedEntries(entries);
+  const formattedEntries = await getFormattedEntries(entries);
   
   // Calculate total context length
   const characterText = JSON.stringify(formattedCharacter);
@@ -163,9 +166,8 @@ export const getCharacterContext = async () => {
     },
     summaryStats: {
       totalSummaries: getAllSummaries().length,
-      entrySummaries: getSummariesByPattern('^entry:').length,
-      characterSummaries: getSummariesByPattern('^character:').length,
-      metaSummaries: getAllSummaries().filter(s => s.type === 'meta').length
+      metaSummaries: getAllSummaries().filter(s => s.type === 'meta').length,
+      regularSummaries: getAllSummaries().filter(s => s.type === 'regular').length
     }
   };
 };
