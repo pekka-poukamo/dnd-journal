@@ -4,6 +4,7 @@
 import { loadDataWithFallback, STORAGE_KEYS, createInitialJournalState } from './utils.js';
 import { createSystemPromptFunction, isAPIAvailable } from './openai-wrapper.js';
 import { getAllSummaries, summarize } from './summarization.js';
+import { getFormattedCharacterForAI } from './character.js';
 
 // =============================================================================
 // STORYTELLING CONFIGURATION
@@ -75,47 +76,6 @@ const getFormattedEntries = async (entries) => {
   return [...formattedContent, ...metaFormatted];
 };
 
-// Get formatted character with automatic summarization for long fields
-const getFormattedCharacter = async (character) => {
-  // Check if we have a combined character summary
-  const summaries = loadDataWithFallback('simple-summaries', {});
-  const combinedSummary = summaries['character:combined'];
-  
-  if (combinedSummary) {
-    // Use the combined summary for storytelling context
-    return {
-      name: character.name || 'Unnamed Character',
-      summary: `${combinedSummary.content} (summarized)`
-    };
-  }
-  
-  // Fallback: Create combined text and potentially summarize
-  const combinedText = [
-    character.name ? `Name: ${character.name}` : '',
-    character.race ? `Race: ${character.race}` : '',
-    character.class ? `Class: ${character.class}` : '',
-    character.backstory || '',
-    character.notes || ''
-  ].filter(text => text.length > 0).join('\n\n');
-  
-  const totalWords = combinedText.trim().split(/\s+/).filter(w => w.length > 0).length;
-  
-  // If content is substantial, try to create summary
-  if (totalWords >= 150) {
-    const summary = await summarize('character:combined', combinedText);
-    
-    if (summary) {
-      return {
-        name: character.name || 'Unnamed Character',
-        summary: `${summary} (summarized)`
-      };
-    }
-  }
-  
-  // Fallback to original character data
-  return { ...character };
-};
-
 // =============================================================================
 // STORYTELLING FUNCTIONS
 // =============================================================================
@@ -130,7 +90,7 @@ export const generateQuestions = async (character = null, entries = null) => {
   const finalEntries = entries || journal.entries || [];
 
   // Format character info with auto-summarization
-  const formattedChar = await getFormattedCharacter(finalCharacter);
+  const formattedChar = await getFormattedCharacterForAI(finalCharacter);
   const charInfo = formattedChar.name ? 
     `${formattedChar.name}, a ${formattedChar.race || 'character'} ${formattedChar.class || 'adventurer'}` :
     'your character';
@@ -175,7 +135,7 @@ export const getCharacterContext = async () => {
   const character = journal.character || {};
   const entries = journal.entries || [];
   
-  const formattedCharacter = await getFormattedCharacter(character);
+  const formattedCharacter = await getFormattedCharacterForAI(character);
   const formattedEntries = await getFormattedEntries(entries);
   
   // Calculate total context length

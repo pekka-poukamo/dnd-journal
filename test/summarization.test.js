@@ -17,7 +17,7 @@ describe('Summarization Module', () => {
       expect(result).to.be.null;
     });
 
-    it('should return null for short text under 200 words', async () => {
+    it('should return null for short text under 150 words', async () => {
       const shortText = 'This is a short text with only a few words.';
       const result = await Summarization.summarize('test-key', shortText);
       expect(result).to.be.null;

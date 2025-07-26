@@ -219,6 +219,47 @@ export const generateCharacterSummaries = async () => {
   }
 };
 
+// Get formatted character with automatic summarization for storytelling context
+export const getFormattedCharacterForAI = async (character) => {
+  // Check if we have a combined character summary
+  const summaries = loadDataWithFallback('simple-summaries', {});
+  const combinedSummary = summaries['character:combined'];
+  
+  if (combinedSummary) {
+    // Use the combined summary for storytelling context
+    return {
+      name: character.name || 'Unnamed Character',
+      summary: `${combinedSummary.content} (summarized)`
+    };
+  }
+  
+  // Fallback: Create combined text and potentially summarize
+  const combinedText = [
+    character.name ? `Name: ${character.name}` : '',
+    character.race ? `Race: ${character.race}` : '',
+    character.class ? `Class: ${character.class}` : '',
+    character.backstory || '',
+    character.notes || ''
+  ].filter(text => text.length > 0).join('\n\n');
+  
+  const totalWords = combinedText.trim().split(/\s+/).filter(w => w.length > 0).length;
+  
+  // If content is substantial, try to create summary
+  if (totalWords >= 150) {
+    const summary = await summarize('character:combined', combinedText);
+    
+    if (summary) {
+      return {
+        name: character.name || 'Unnamed Character',
+        summary: `${summary} (summarized)`
+      };
+    }
+  }
+  
+  // Fallback to original character data
+  return { ...character };
+};
+
 // Function to auto-save character data
 const autoSave = () => {
   const character = getCharacterFromForm();
