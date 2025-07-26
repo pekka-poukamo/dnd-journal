@@ -8,6 +8,15 @@ import { createYjsSync } from '../js/sync.js';
 describe('Yjs Sync (Functional)', () => {
   let createdSyncs = [];
   
+  // Enable sync testing for this test suite
+  before(() => {
+    global.enableSyncTests = true;
+  });
+  
+  after(() => {
+    global.enableSyncTests = false;
+  });
+  
   // Helper function to create and track sync instances
   const createTrackedSync = () => {
     const sync = createYjsSync();
