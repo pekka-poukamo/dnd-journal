@@ -156,7 +156,7 @@ Please create 4 introspective questions (3 core narrative + 1 unobvious) that wo
 };
 
 // Call OpenAI API for text generation
-export const callOpenAI = async (prompt, maxTokens = 400) => {
+export const callOpenAI = async (prompt, maxTokens = 1200) => {
   const settings = loadAISettings();
   
   if (!settings.apiKey) {
@@ -201,7 +201,7 @@ export const callOpenAI = async (prompt, maxTokens = 400) => {
 };
 
 // Call OpenAI API specifically for summarization (without narrative system prompt)
-export const callOpenAIForSummarization = async (prompt, maxTokens = 400) => {
+export const callOpenAIForSummarization = async (prompt, maxTokens = 1200) => {
   const settings = loadAISettings();
   
   if (!settings.apiKey) {
@@ -267,15 +267,15 @@ export const generateEntrySummary = async (entry) => {
 
   try {
     const wordCount = getWordCount(entry.content);
-    // Use logarithmic scale for target length
-    const targetLength = Math.max(10, Math.floor(Math.log10(wordCount) * 20));
+    // Use proportional word count based on original length, with much higher targets
+    const targetLength = Math.max(100, Math.min(300, Math.floor(wordCount * 0.25))); // 25% of original, min 100, max 300 words
     
-    const prompt = `Summarize this text in ${targetLength} words.
+    const prompt = `Summarize this text in approximately ${targetLength} words, capturing the key events, decisions, and character developments.
 
 Title: ${entry.title}
 Content: ${entry.content}`;
 
-    const summary = await callOpenAIForSummarization(prompt, targetLength * 2);
+    const summary = await callOpenAIForSummarization(prompt, targetLength * 4); // Much higher token limit
     
     return {
       id: entry.id,

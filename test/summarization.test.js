@@ -17,7 +17,7 @@ describe('Summarization Module', () => {
       expect(result).to.be.null;
     });
 
-    it('should return null for short text under 100 words', async () => {
+    it('should return null for short text under 200 words', async () => {
       const shortText = 'This is a short text with only a few words.';
       const result = await Summarization.summarize('test-key', shortText);
       expect(result).to.be.null;
@@ -47,8 +47,8 @@ describe('Summarization Module', () => {
     });
 
     it('should handle text exactly at threshold', async () => {
-      // Create text with exactly 100 words
-      const words = Array(100).fill('word').join(' ');
+      // Create text with exactly 200 words
+      const words = Array(200).fill('word').join(' ');
       const result = await Summarization.summarize('test-key', words);
       expect(result).to.be.null; // Will be null due to no AI availability
     });
@@ -283,7 +283,7 @@ describe('Summarization Module', () => {
 
       const result = Summarization.getStats();
       result.totalWords.should.equal(500);
-      result.withinTarget.should.be.false; // 500 > 400
+      result.withinTarget.should.be.true; // 500 < 2000 (new target)
     });
 
     it('should handle missing words property', () => {

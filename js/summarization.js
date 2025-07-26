@@ -9,8 +9,8 @@ import { createUserPromptFunction, createTemplateFunction, isAPIAvailable } from
 // =============================================================================
 
 const STORAGE_KEY = 'simple-summaries';
-const TARGET_TOTAL_WORDS = 400;
-const WORDS_PER_SUMMARY = 30;
+const TARGET_TOTAL_WORDS = 2000; // Increased from 400
+const WORDS_PER_SUMMARY = 150; // Increased from 30
 const META_TRIGGER = 10;
 
 // =============================================================================
@@ -20,7 +20,7 @@ const META_TRIGGER = 10;
 // Create summarization function (no system prompt, low temperature)
 const callSummarize = createUserPromptFunction({ 
   temperature: 0.3, 
-  maxTokens: 200 
+  maxTokens: 800 // Increased from 200
 });
 
 // Create meta-summarization function with template
@@ -29,7 +29,7 @@ const createMetaSummaryPrompt = (combinedText, targetWords) =>
 
 const callMetaSummarize = createTemplateFunction(createMetaSummaryPrompt, {
   temperature: 0.3,
-  maxTokens: 200
+  maxTokens: 1200 // Increased from 200
 });
 
 // =============================================================================
@@ -48,7 +48,7 @@ const countWords = (text) => {
   return text.trim().split(/\s+/).filter(w => w.length > 0).length;
 };
 
-const shouldSummarize = (text) => countWords(text) >= 100;
+const shouldSummarize = (text) => countWords(text) >= 200; // Increased from 100
 
 // =============================================================================
 // CORE SUMMARIZATION
@@ -218,7 +218,7 @@ export const autoSummarizeEntries = async () => {
     .slice(0, 5); // Last 5 entries
   
   for (const entry of recentEntries) {
-    if (entry.content && entry.content.length > 500) { // Only long entries
+    if (entry.content && countWords(entry.content) >= 200) { // Use word count instead of character length
       const summary = await summarize(entry.id, entry.content);
       if (summary) {
         results.push({
