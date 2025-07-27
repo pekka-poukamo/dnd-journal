@@ -22,7 +22,16 @@
     <link rel="stylesheet" href="css/components/navigation.css">
     <link rel="stylesheet" href="css/components/character-form.css">
     
-    <!-- Yjs Sync Enhancement (ADR-0003) - Imported directly in JS modules -->
+    <!-- Import Map for YJS modules -->
+    <script type="importmap">
+    {
+      "imports": {
+        "yjs": "./node_modules/yjs/dist/yjs.mjs",
+        "y-websocket": "./node_modules/y-websocket/src/y-websocket.js",
+        "y-indexeddb": "./node_modules/y-indexeddb/src/y-indexeddb.js"
+      }
+    }
+    </script>
 </head>
 <body>
     <header class="tabs">
