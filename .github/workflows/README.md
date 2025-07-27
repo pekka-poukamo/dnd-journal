@@ -9,7 +9,7 @@
 - Pushes to `main` branch  
 
 **What it does**:
-1. ✅ Runs tests on Node.js 16.x, 18.x, and 20.x
+1. ✅ Runs tests on Node.js 16.x, 18.x, 20.x, and 22.x
 2. 📊 Generates coverage report (80% target)
 3. 💬 Comments coverage status on PRs
 
