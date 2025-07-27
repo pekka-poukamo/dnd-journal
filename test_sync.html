@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sync Test</title>
+</head>
+<body>
+    <h1>Sync Test</h1>
+    <div id="output"></div>
+    <button onclick="testSync()">Test Sync</button>
+    <button onclick="setServer()">Set Server</button>
+    
+    <script>
+        function log(msg) {
+            document.getElementById('output').innerHTML += '<p>' + msg + '</p>';
+            console.log(msg);
+        }
+        
+        function setServer() {
+            localStorage.setItem('dnd-journal-sync-server', 'ws://192.168.1.104:1234');
+            log('Set server to ws://192.168.1.104:1234');
+        }
+        
+        function testSync() {
+            log('Testing sync configuration...');
+            
+            // Check localStorage
+            const saved = localStorage.getItem('dnd-journal-sync-server');
+            log('Saved server: ' + saved);
+            
+            // Test sync config module
+            import('./sync-config.js').then(module => {
+                log('Sync config loaded');
+                log('Config server: ' + module.SYNC_CONFIG.server);
+            }).catch(e => {
+                log('Error loading sync config: ' + e.message);
+            });
+        }
+    </script>
+</body>
+</html>

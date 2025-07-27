@@ -156,7 +156,15 @@ export const saveData = () => {
   
   // Update sync
   const sync = getYjsSync();
-  if (sync) sync.setData(state);
+  if (sync) {
+    console.log('Saving data to sync:', { 
+      entryCount: state.entries ? state.entries.length : 0,
+      isConnected: sync.isConnected 
+    });
+    sync.setData(state);
+  } else {
+    console.log('No sync available - data saved to localStorage only');
+  }
   
   return result;
 };
@@ -606,17 +614,67 @@ export const setupEventHandlers = () => {
 
 
 
+// Update sync status indicator
+const updateSyncStatus = (status, text, title = '') => {
+  const statusElement = document.getElementById('sync-status');
+  const dotElement = document.getElementById('sync-dot');
+  const textElement = document.getElementById('sync-text');
+  
+  if (!statusElement || !dotElement || !textElement) return;
+  
+  // Show status indicator
+  statusElement.style.display = 'flex';
+  statusElement.title = title;
+  
+  // Remove all status classes
+  dotElement.className = 'sync-dot';
+  
+  // Add current status class
+  dotElement.classList.add(status);
+  textElement.textContent = text;
+  
+  console.log(`Sync status: ${status} - ${text}`);
+};
+
 // Setup sync listener for real-time updates
 export const setupSyncListener = () => {
   const sync = getYjsSync();
-  if (!sync) return; // No sync available
+  if (!sync) {
+    updateSyncStatus('local-only', 'Local only', 'Data is only stored locally');
+    return;
+  }
+  
+  // Initial status
+  updateSyncStatus('connecting', 'Connecting...', 'Attempting to connect to sync server');
+  
+  // Monitor sync status
+  const checkSyncStatus = () => {
+    if (sync.isConnected) {
+      updateSyncStatus('connected', 'Synced', 'Connected to sync server - data is being synchronized');
+    } else {
+      updateSyncStatus('disconnected', 'Offline', 'Not connected to sync server - data is only stored locally');
+    }
+  };
+  
+  // Check status periodically
+  setInterval(checkSyncStatus, 5000);
+  checkSyncStatus(); // Initial check
   
   sync.onChange((syncData) => {
+    console.log('Received sync data:', syncData);
     // Reload data from sync
     if (syncData) {
+      const previousEntryCount = state.entries ? state.entries.length : 0;
       state = { ...state, ...syncData };
       renderEntries();
       displayCharacterSummary();
+      
+      // Show sync activity
+      const newEntryCount = state.entries ? state.entries.length : 0;
+      if (newEntryCount !== previousEntryCount) {
+        updateSyncStatus('connected', 'Sync updated', 'Data synchronized from another device');
+        setTimeout(() => checkSyncStatus(), 2000); // Reset to normal status
+      }
     }
   });
 };

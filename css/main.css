@@ -597,3 +597,48 @@ section {
     padding: var(--space-md);
   }
 }
+
+/* Sync Status Indicator */
+.sync-status {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+
+.sync-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.sync-dot.connected {
+  background-color: #10b981; /* Green */
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+.sync-dot.connecting {
+  background-color: #f59e0b; /* Orange */
+  animation: pulse 2s infinite;
+}
+
+.sync-dot.disconnected {
+  background-color: #ef4444; /* Red */
+}
+
+.sync-dot.local-only {
+  background-color: #6b7280; /* Gray */
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
