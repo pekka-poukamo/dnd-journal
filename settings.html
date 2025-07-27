@@ -6,6 +6,7 @@
     <title>Settings - D&D Journal</title>
     
     <!-- PWA -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="D&D Journal">
     <link rel="manifest" href="manifest.json">
@@ -23,7 +24,16 @@
     <link rel="stylesheet" href="css/components/settings.css">
     <link rel="stylesheet" href="css/components/sync-status.css">
     
-    <!-- Yjs Sync Enhancement - Imported directly in JS modules -->
+    <!-- Import Map for YJS modules -->
+    <script type="importmap">
+    {
+      "imports": {
+        "yjs": "./node_modules/yjs/dist/yjs.mjs",
+        "y-websocket": "./node_modules/y-websocket/src/y-websocket.js",
+        "y-indexeddb": "./node_modules/y-indexeddb/src/y-indexeddb.js"
+      }
+    }
+    </script>
     
     <!-- js-tiktoken - OpenAI token counting library -->
     <script src="https://unpkg.com/js-tiktoken@1.0.20/dist/index.umd.js"></script>
@@ -159,7 +169,6 @@
     <script type="module" src="js/utils.js"></script>
     <script type="module" src="js/sync.js"></script>
     <script type="module" src="js/ai.js"></script>
-    <script type="module" src="js/summary-storage.js"></script>
     <script type="module" src="js/summarization.js"></script>
     <script type="module" src="js/settings.js"></script>
 </body>
