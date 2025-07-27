@@ -133,8 +133,30 @@ export const loadData = () => {
       const remoteTime = syncData.lastModified || 0;
       
       if (remoteTime > localTime) {
-        // Loading newer data from sync
-        state = { ...state, ...syncData };
+        // Loading newer data from sync with character data protection
+        const originalCharacter = { ...state.character };
+        let mergedCharacter = originalCharacter;
+        
+        if (syncData.character) {
+          // Merge character data intelligently
+          mergedCharacter = {
+            name: (originalCharacter.name && originalCharacter.name.trim()) || syncData.character.name || '',
+            race: (originalCharacter.race && originalCharacter.race.trim()) || syncData.character.race || '',
+            class: (originalCharacter.class && originalCharacter.class.trim()) || syncData.character.class || '',
+            backstory: (originalCharacter.backstory && originalCharacter.backstory.trim()) || syncData.character.backstory || '',
+            notes: (originalCharacter.notes && originalCharacter.notes.trim()) || syncData.character.notes || ''
+          };
+          
+          // If sync data has more complete character info, use sync data
+          const localCompleteness = Object.values(originalCharacter).filter(v => v && v.trim()).length;
+          const syncCompleteness = Object.values(syncData.character).filter(v => v && v.trim()).length;
+          
+          if (syncCompleteness > localCompleteness) {
+            mergedCharacter = { ...syncData.character };
+          }
+        }
+        
+        state = { ...state, ...syncData, character: mergedCharacter };
         safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
       } else {
         // Upload current data to sync
@@ -662,10 +684,38 @@ export const setupSyncListener = () => {
   
   sync.onChange((syncData) => {
     console.log('Received sync data:', syncData);
-    // Reload data from sync
+    // Reload data from sync with character data protection
     if (syncData) {
       const previousEntryCount = state.entries ? state.entries.length : 0;
-      state = { ...state, ...syncData };
+      
+      // Preserve character data if it exists locally and is newer or more complete
+      let mergedCharacter = state.character;
+      if (syncData.character) {
+        // Merge character data field by field, preserving non-empty local values
+        mergedCharacter = {
+          name: (state.character.name && state.character.name.trim()) || syncData.character.name || '',
+          race: (state.character.race && state.character.race.trim()) || syncData.character.race || '',
+          class: (state.character.class && state.character.class.trim()) || syncData.character.class || '',
+          backstory: (state.character.backstory && state.character.backstory.trim()) || syncData.character.backstory || '',
+          notes: (state.character.notes && state.character.notes.trim()) || syncData.character.notes || ''
+        };
+        
+        // If sync has more complete character data, prefer sync data
+        const localCharacterCompleteness = Object.values(state.character).filter(v => v && v.trim()).length;
+        const syncCharacterCompleteness = Object.values(syncData.character).filter(v => v && v.trim()).length;
+        
+        if (syncCharacterCompleteness > localCharacterCompleteness) {
+          mergedCharacter = { ...syncData.character };
+        }
+      }
+      
+      // Update state with merged data
+      state = { 
+        ...state, 
+        ...syncData,
+        character: mergedCharacter
+      };
+      
       renderEntries();
       displayCharacterSummary();
       
@@ -681,6 +731,19 @@ export const setupSyncListener = () => {
 
 
 
+// Function to trigger sync update (called from character module)
+export const triggerSyncUpdate = () => {
+  // Reload current state from localStorage and sync it
+  const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
+  if (result.success && result.data) {
+    state = { ...state, ...result.data };
+    const sync = getYjsSync();
+    if (sync) {
+      sync.setData(state);
+    }
+  }
+};
+
 // Initialize app
 export const init = async () => {
   loadData();
@@ -688,6 +751,11 @@ export const init = async () => {
   displayCharacterSummary();
   setupEventHandlers();
   setupSyncListener();
+  
+  // Make sync trigger available globally for character module
+  if (typeof window !== 'undefined') {
+    window.triggerSyncUpdate = triggerSyncUpdate;
+  }
   
   // Initialize summarization
   try {

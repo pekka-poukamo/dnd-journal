@@ -31,10 +31,27 @@ export const saveCharacterData = (characterData) => {
   
   const updatedData = {
     ...currentData,
-    character: characterData
+    character: characterData,
+    lastModified: Date.now()
   };
   
   return safeSetToStorage(STORAGE_KEYS.JOURNAL, updatedData);
+};
+
+// Enhanced save function that also triggers sync updates
+export const saveCharacterDataWithSync = (characterData) => {
+  const saveResult = saveCharacterData(characterData);
+  
+  // Trigger sync update if available (for integration with app.js sync)
+  if (typeof window !== 'undefined' && window.triggerSyncUpdate) {
+    try {
+      window.triggerSyncUpdate();
+    } catch (e) {
+      console.warn('Could not trigger sync update:', e);
+    }
+  }
+  
+  return saveResult;
 };
 
 // Pure function to get character data from form
@@ -263,7 +280,7 @@ export const getFormattedCharacterForAI = async (character) => {
 // Function to auto-save character data
 const autoSave = () => {
   const character = getCharacterFromForm();
-  saveCharacterData(character);
+  saveCharacterDataWithSync(character);
 };
 
 // Setup auto-save with debouncing
