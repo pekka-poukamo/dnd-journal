@@ -1,17 +1,16 @@
 # GitHub Workflows
 
-## Test Suite (`test.yml`)
+## Test Suite (`tests.yml`)
 
 **Purpose**: Automated test suite running on PR creation and changes.
 
 **Triggers**:
-- Pull requests to `main` branch
-- Pushes to `main` branch  
+- Pull requests to any branch
+- Pushes to any branch  
 
 **What it does**:
-1. ✅ Runs tests on Node.js 16.x, 18.x, 20.x, and 22.x
-2. 📊 Generates coverage report (80% target)
-3. 💬 Comments coverage status on PRs
+1. ✅ Runs tests on Node.js 22
+2. 📊 Ensures code quality before merging
 
 **Commands used**:
 - `npm ci` - Install dependencies
