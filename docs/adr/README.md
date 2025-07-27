@@ -14,6 +14,7 @@ This directory contains Architecture Decision Records (ADRs) that document the k
 |-----|-------|--------|
 | [ADR-0001](0001-use-vanilla-javascript-only.md) | Use Vanilla JavaScript Only | Accepted |
 | [ADR-0002](0002-functional-programming-only.md) | Functional Programming Only | Accepted |
+| [ADR-0003](0003-yjs-sync-enhancement.md) | Yjs Sync Enhancement for Cross-Device Persistence | Accepted |
 | [ADR-0004](0004-localStorage-only-persistence.md) | localStorage Only for Persistence | Accepted |
 | [ADR-0005](0005-mandatory-testing.md) | Mandatory Testing for All Code | Accepted |
 | [ADR-0006](0006-no-build-tools.md) | No Build Tools or Bundlers | Accepted |
@@ -24,6 +25,7 @@ This directory contains Architecture Decision Records (ADRs) that document the k
 | [ADR-0011](0011-test-state-isolation.md) | Test State Isolation | Accepted |
 | [ADR-0012](0012-radically-simple-summarization.md) | Clean Summarization & Storytelling Architecture | Accepted |
 | [ADR-0013](0013-radical-simplicity-principle.md) | Radical Simplicity Principle | Accepted |
+| [ADR-0014](0014-local-first-modules-via-npm-and-import-maps.md) | Local-First Modules via npm and Import Maps | Accepted |
 
 ## For AI Agents
 
