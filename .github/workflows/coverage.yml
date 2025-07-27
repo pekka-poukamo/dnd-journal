@@ -1,0 +1,122 @@
+name: Coverage Report
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run coverage
+        run: npm run coverage
+
+      - name: Coverage comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Read coverage report
+            let coverage;
+            try {
+              coverage = JSON.parse(fs.readFileSync('coverage/coverage-final.json', 'utf8'));
+            } catch (error) {
+              console.log('No coverage report found');
+              return;
+            }
+            
+            // Get changed files from PR
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            
+            const changedJsFiles = files
+              .filter(file => file.filename.startsWith('js/') && file.filename.endsWith('.js'))
+              .map(file => file.filename);
+            
+            if (changedJsFiles.length === 0) {
+              console.log('No JavaScript files changed');
+              return;
+            }
+            
+            // Build coverage table
+            let table = '## 📊 Coverage Report\n\n';
+            table += '| File | Lines Covered | Percentage |\n';
+            table += '|------|---------------|------------|\n';
+            
+            let hasLowCoverage = false;
+            
+            for (const file of changedJsFiles) {
+              const filePath = `${process.cwd()}/${file}`;
+              const fileData = coverage[filePath];
+              
+              if (fileData) {
+                const lines = fileData.s;
+                const covered = Object.values(lines).filter(hit => hit > 0).length;
+                const total = Object.values(lines).length;
+                const percentage = total > 0 ? Math.round((covered / total) * 100) : 100;
+                
+                const status = percentage >= 80 ? '✅' : '⚠️';
+                if (percentage < 80) hasLowCoverage = true;
+                
+                table += `| \`${file}\` | ${covered}/${total} | ${status} ${percentage}% |\n`;
+              } else {
+                table += `| \`${file}\` | - | ❓ No data |\n`;
+              }
+            }
+            
+            table += '\n**Coverage target: 80%**';
+            
+            if (hasLowCoverage) {
+              table += '\n\n⚠️ Some files are below the 80% coverage target. Consider adding more tests.';
+            }
+            
+            // Find existing coverage comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const coverageComment = comments.find(comment => 
+              comment.user.login === 'github-actions[bot]' && 
+              comment.body.includes('📊 Coverage Report')
+            );
+            
+            // Update or create comment
+            if (coverageComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: coverageComment.id,
+                body: table
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: table
+              });
+            }
