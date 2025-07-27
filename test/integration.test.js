@@ -280,6 +280,9 @@ describe('D&D Journal Integration Tests', function() {
   // Note: Test for character name display functionality is covered by unit tests
   // in app.test.js "Display Character Summary" section and "Simple Character Data" section
 
+  // Note: Character display functionality is comprehensively tested in app.test.js
+  // including the specific "Puoskari" character and localStorage fallback mechanism
+
   it('should handle character data persistence across page navigation simulation', function() {
     // This test simulates navigating from character page to journal page
     
@@ -400,6 +403,47 @@ describe('D&D Journal Integration Tests', function() {
     expect(document.getElementById('display-name').textContent).to.equal('Unnamed Character');
     expect(document.getElementById('display-race').textContent).to.equal('Elf');
     expect(document.getElementById('display-class').textContent).to.equal('Ranger');
+
+    // Clean up DOM elements
+    nameEl.remove();
+    raceEl.remove();
+    classEl.remove();
+  });
+
+  it('should handle potential sync override issue with character data', function() {
+    // This test checks if there's an issue with how character data is merged/loaded
+    
+    // Set up DOM elements for journal page
+    const nameEl = document.createElement('span');
+    nameEl.id = 'display-name';
+    const raceEl = document.createElement('span');
+    raceEl.id = 'display-race';
+    const classEl = document.createElement('span');
+    classEl.id = 'display-class';
+    
+    document.body.appendChild(nameEl);
+    document.body.appendChild(raceEl);
+    document.body.appendChild(classEl);
+
+    // Simulate the exact scenario: character data exists but might be getting overridden
+    App.resetState();
+    
+    // Set character data in app state directly
+    App.state.character = {
+      name: 'Puoskari',
+      race: 'Human', 
+      class: 'Thief Artificer',
+      backstory: 'A skilled artificer and thief',
+      notes: 'Expert in both mechanics and stealth'
+    };
+
+    // Now test displayCharacterSummary directly
+    App.displayCharacterSummary();
+
+    // This should work correctly if the issue isn't in displayCharacterSummary
+    expect(document.getElementById('display-name').textContent).to.equal('Puoskari');
+    expect(document.getElementById('display-race').textContent).to.equal('Human');
+    expect(document.getElementById('display-class').textContent).to.equal('Thief Artificer');
 
     // Clean up DOM elements
     nameEl.remove();

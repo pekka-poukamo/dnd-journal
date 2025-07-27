@@ -489,7 +489,18 @@ export const displayCharacterSummary = () => {
   
   if (!nameEl || !raceEl || !classEl) return;
   
-  const summary = createSimpleCharacterData(state.character);
+  let characterToDisplay = state.character;
+  
+  // Defensive fallback: If state character has no name, check localStorage directly
+  // This prevents character data loss due to sync issues or timing problems
+  if (!characterToDisplay.name || characterToDisplay.name.trim() === '') {
+    const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
+    if (result.success && result.data && result.data.character && result.data.character.name) {
+      characterToDisplay = result.data.character;
+    }
+  }
+  
+  const summary = createSimpleCharacterData(characterToDisplay);
   
   // Format for minimal display
   nameEl.textContent = summary.name;

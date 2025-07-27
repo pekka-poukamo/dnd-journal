@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as App from '../js/app.js';
+import * as Utils from '../js/utils.js';
 
 describe('D&D Journal App', function() {
   beforeEach(function() {
@@ -377,6 +378,35 @@ describe('D&D Journal App', function() {
       expect(result.race).to.equal('Elf');
       expect(result.class).to.equal('Ranger');
     });
+
+    it('should handle specific character name "Puoskari"', function() {
+      const character = {
+        name: 'Puoskari',
+        race: 'Human',
+        class: 'Thief Artificer',
+        backstory: 'A skilled artificer and thief'
+      };
+      
+      const result = App.createSimpleCharacterData(character);
+      
+      expect(result.name).to.equal('Puoskari');
+      expect(result.race).to.equal('Human');
+      expect(result.class).to.equal('Thief Artificer');
+    });
+
+    it('should handle character names with special characters', function() {
+      const character = {
+        name: 'Rögnvald',
+        race: 'Human',
+        class: 'Skald'
+      };
+      
+      const result = App.createSimpleCharacterData(character);
+      
+      expect(result.name).to.equal('Rögnvald');
+      expect(result.race).to.equal('Human');
+      expect(result.class).to.equal('Skald');
+    });
   });
 
   describe('Display Character Summary', function() {
@@ -432,6 +462,38 @@ describe('D&D Journal App', function() {
       expect(document.getElementById('display-name').textContent).to.equal('Unnamed Character');
       expect(document.getElementById('display-race').textContent).to.equal('—');
       expect(document.getElementById('display-class').textContent).to.equal('—');
+    });
+
+    it('should use localStorage fallback when state character is empty but localStorage has data', function() {
+      // Set up localStorage with character data
+      const journalData = {
+        character: {
+          name: 'Puoskari',
+          race: 'Human',
+          class: 'Thief Artificer',
+          backstory: 'A skilled artificer and thief',
+          notes: 'Expert in both mechanics and stealth'
+        },
+        entries: []
+      };
+      
+      Utils.safeSetToStorage(Utils.STORAGE_KEYS.JOURNAL, journalData);
+      
+      // Set state character to empty (simulating sync override or timing issue)
+      App.state.character = {
+        name: '',
+        race: '',
+        class: '',
+        backstory: '',
+        notes: ''
+      };
+      
+      // Display should fallback to localStorage data
+      App.displayCharacterSummary();
+      
+      expect(document.getElementById('display-name').textContent).to.equal('Puoskari');
+      expect(document.getElementById('display-race').textContent).to.equal('Human');
+      expect(document.getElementById('display-class').textContent).to.equal('Thief Artificer');
     });
   });
 
