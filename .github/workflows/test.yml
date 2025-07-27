@@ -16,7 +16,7 @@ jobs:
         node-version: [16, 18, 20, 22]
     
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v3
       
       - name: Setup Node.js ${{ matrix.node-version }}
@@ -30,21 +30,3 @@ jobs:
       
       - name: Run tests
         run: npm test
-      
-      - name: Generate coverage report
-        if: matrix.node-version == 20
-        run: npm run coverage
-      
-      - name: Comment coverage on PR
-        if: github.event_name == 'pull_request' && matrix.node-version == 20
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: coverage
-          message: |
-            ## 📊 Coverage Report
-            
-            Coverage target: **80%**
-            
-            Run `npm run coverage` locally to see detailed coverage information.
-            
-            All tests must pass before merging. ✅
