@@ -122,7 +122,7 @@ export const loadData = () => {
     global.state = state;
   }
   
-  // Initialize Yjs with current localStorage data (ADR-0003)
+    // Initialize Yjs with current localStorage data (ADR-0003)
   // Only use sync if localStorage data was loaded successfully
   if (result.success && result.data) {
     const sync = getYjsSync();
@@ -136,16 +136,16 @@ export const loadData = () => {
         // Loading newer data from sync
         state = { ...state, ...syncData };
         safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
-            } else {
-          // Upload current data to sync
-          const syncForUpload = getYjsSync();
-          if (syncForUpload) syncForUpload.setData(state);
-        }
       } else {
-        // First time - upload current localStorage data
+        // Upload current data to sync
         const syncForUpload = getYjsSync();
         if (syncForUpload) syncForUpload.setData(state);
       }
+    } else {
+      // First time - upload current localStorage data
+      const syncForUpload = getYjsSync();
+      if (syncForUpload) syncForUpload.setData(state);
+    }
   }
 };
 
@@ -486,9 +486,10 @@ export const displayCharacterSummary = () => {
   
   const summary = createSimpleCharacterData(state.character);
   
+  // Format for minimal display
   nameEl.textContent = summary.name;
-  raceEl.textContent = summary.race;
-  classEl.textContent = summary.class;
+  raceEl.textContent = summary.race === 'Unknown' ? '—' : summary.race;
+  classEl.textContent = summary.class === 'Unknown' ? '—' : summary.class;
 };
 
 // Display AI prompt
@@ -497,9 +498,11 @@ export const displayAIPrompt = async () => {
   const aiPromptSection = document.getElementById('ai-prompt-section');
   if (!aiPromptText || !aiPromptSection) return;
   
-  // Hide section initially if AI is not enabled
+  // Always show the section, but adjust content based on AI status
+  aiPromptSection.style.display = 'block';
+  
   if (!isAIEnabled()) {
-    aiPromptSection.style.display = 'none';
+    aiPromptText.innerHTML = '<p class="ai-prompt__empty-state">Enable AI features in Settings to get personalized reflection prompts for your journal sessions.</p>';
     return;
   }
   
@@ -507,15 +510,12 @@ export const displayAIPrompt = async () => {
     const prompt = await generateIntrospectionPrompt(state.character, state.entries);
     if (prompt) {
       aiPromptText.innerHTML = formatAIPrompt(prompt);
-      // Make the AI prompt section visible
-      aiPromptSection.style.display = 'block';
     } else {
-      aiPromptSection.style.display = 'none';
+      aiPromptText.innerHTML = '<p class="ai-prompt__empty-state">Write some journal entries to get personalized reflection prompts.</p>';
     }
   } catch (error) {
     console.error('Failed to generate AI prompt:', error);
-    aiPromptText.innerHTML = '<p>Unable to generate AI prompt at this time.</p>';
-    aiPromptSection.style.display = 'block';
+    aiPromptText.innerHTML = '<p class="ai-prompt__error-state">Unable to generate AI prompt at this time. Please check your settings and try again.</p>';
   }
 };
 

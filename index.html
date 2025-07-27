@@ -51,7 +51,7 @@
     <main>
         <div class="container-narrow">
             <!-- AI Introspection Prompt Section -->
-            <section class="ai-prompt" id="ai-prompt-section" style="display: none;">
+            <section class="ai-prompt" id="ai-prompt-section">
                 <div class="ai-prompt__header">
                     <h2 class="ai-prompt__title">Session Reflection</h2>
                     <button id="regenerate-prompt-btn" class="ai-prompt__regenerate-btn">
@@ -66,24 +66,16 @@
             </section>
 
             <!-- Character Summary Section -->
-            <section id="character-summary" class="character-summary">
-                <div class="character-summary__header">
-                    <h2 class="character-summary__title">Character Summary</h2>
-                    <a href="character.html" class="btn btn-secondary btn-small">Edit Details</a>
-                </div>
-                
+            <section id="character-summary" class="character-summary character-summary--minimal">
                 <div class="character-summary__content">
                     <div class="character-summary__grid">
                         <div class="character-summary__field">
-                            <label class="character-summary__label">Name</label>
                             <span id="display-name" class="character-summary__value">Unnamed Character</span>
                         </div>
                         <div class="character-summary__field">
-                            <label class="character-summary__label">Race</label>
                             <span id="display-race" class="character-summary__value">Unknown</span>
                         </div>
                         <div class="character-summary__field">
-                            <label class="character-summary__label">Class</label>
                             <span id="display-class" class="character-summary__value">Unknown</span>
                         </div>
                     </div>

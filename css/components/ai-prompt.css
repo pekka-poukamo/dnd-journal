@@ -62,3 +62,19 @@
   color: var(--color-text-muted);
   font-style: italic;
 }
+
+/* Empty state */
+.ai-prompt__empty-state {
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+  margin: 0;
+}
+
+/* Error state */
+.ai-prompt__error-state {
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+  margin: 0;
+}
