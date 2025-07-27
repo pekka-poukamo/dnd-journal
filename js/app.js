@@ -461,7 +461,7 @@ export const createCharacterSummary = (character) => {
 
 // Create simplified character data for main page display
 export const createSimpleCharacterData = (character) => {
-  if (!character || !character.name) {
+  if (!character) {
     return {
       name: 'Unnamed Character',
       race: 'Unknown',
@@ -469,8 +469,13 @@ export const createSimpleCharacterData = (character) => {
     };
   }
   
+  // Determine the display name - use 'Unnamed Character' if name is missing or just whitespace
+  const displayName = (!character.name || character.name.trim() === '') 
+    ? 'Unnamed Character' 
+    : character.name.trim();
+  
   return {
-    name: character.name,
+    name: displayName,
     race: character.race || 'Unknown',
     class: character.class || 'Unknown'
   };

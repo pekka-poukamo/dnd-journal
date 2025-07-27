@@ -348,6 +348,35 @@ describe('D&D Journal App', function() {
       expect(result.race).to.equal('Unknown');
       expect(result.class).to.equal('Unknown');
     });
+
+    it('should handle character with whitespace-only name', function() {
+      const character = {
+        name: '   ', // Only whitespace
+        race: 'Elf',
+        class: 'Ranger',
+        backstory: 'A character with whitespace name'
+      };
+      
+      const result = App.createSimpleCharacterData(character);
+      
+      expect(result.name).to.equal('Unnamed Character');
+      expect(result.race).to.equal('Elf');
+      expect(result.class).to.equal('Ranger');
+    });
+
+    it('should trim character name with leading/trailing whitespace', function() {
+      const character = {
+        name: '  Legolas  ', // Name with whitespace
+        race: 'Elf',
+        class: 'Ranger'
+      };
+      
+      const result = App.createSimpleCharacterData(character);
+      
+      expect(result.name).to.equal('Legolas');
+      expect(result.race).to.equal('Elf');
+      expect(result.class).to.equal('Ranger');
+    });
   });
 
   describe('Display Character Summary', function() {
