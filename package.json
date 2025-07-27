@@ -11,8 +11,8 @@
     "test:watch": "mocha test/**/*.test.js --watch --timeout 5000",
     "coverage": "c8 npm test",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
-    "deploy": "surge . dnd-journal.surge.sh",
-    "sync-server": "y-websocket-server --port 1234"
+    "deploy": "surge . http://dnd-journal.surge.sh --force",
+    "sync-server": "HOST=0.0.0.0 PORT=1234 y-websocket-server"
   },
   "repository": {
     "type": "git",
@@ -33,7 +33,7 @@
   "bugs": {
     "url": "https://github.com/pekka-poukamo/dnd-journal/issues"
   },
-  "homepage": "https://dnd-journal.surge.sh",
+  "homepage": "http://dnd-journal.surge.sh",
   "devDependencies": {
     "c8": "^8.0.1",
     "chai": "^4.3.10",

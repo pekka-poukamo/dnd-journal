@@ -77,16 +77,22 @@ const setupPersistence = (state) => {
 
 // Simple sync configuration with validation
 const getSyncConfig = () => {
+  console.log('Loading sync configuration...');
+  
   // Use config file setting if available
   try {
     if (SYNC_CONFIG && SYNC_CONFIG.server) {
       const server = SYNC_CONFIG.server.trim();
+      console.log('Found sync server config:', server);
       if (server && isValidWebSocketUrl(server)) {
+        console.log('Using configured sync server:', server);
         return [server];
       } else if (server) {
         console.warn('Invalid sync server URL configured:', server);
         // Fall through to default servers
       }
+    } else {
+      console.log('No custom sync server configured');
     }
   } catch (e) {
     console.warn('Error loading sync config:', e);
@@ -94,10 +100,12 @@ const getSyncConfig = () => {
   
   // Default to more reliable public relays
   // Note: These are demo servers - for production use, consider PartyKit, Liveblocks, or your own server
-  return [
+  const defaultServers = [
     'wss://demos.yjs.dev',
     'wss://y-websocket.herokuapp.com'
   ];
+  console.log('Using default sync servers:', defaultServers);
+  return defaultServers;
 };
 
 // Validate WebSocket URL format
