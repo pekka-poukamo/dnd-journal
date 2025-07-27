@@ -276,4 +276,178 @@ describe('D&D Journal Integration Tests', function() {
       expect(App.state.entries[0].content).to.equal('Updated content');
     }
   });
+
+  // Note: Test for character name display functionality is covered by unit tests
+  // in app.test.js "Display Character Summary" section and "Simple Character Data" section
+
+  // Note: Character display functionality is comprehensively tested in app.test.js
+  // including the specific "Puoskari" character and localStorage fallback mechanism
+
+  it('should handle character data persistence across page navigation simulation', function() {
+    // This test simulates navigating from character page to journal page
+    
+    // Set up DOM elements for journal page
+    const nameEl = document.createElement('span');
+    nameEl.id = 'display-name';
+    const raceEl = document.createElement('span');
+    raceEl.id = 'display-race';
+    const classEl = document.createElement('span');
+    classEl.id = 'display-class';
+    
+    document.body.appendChild(nameEl);
+    document.body.appendChild(raceEl);
+    document.body.appendChild(classEl);
+
+    // Simulate character page workflow
+    // 1. Load existing data (empty initially)
+    App.loadData();
+    
+    // 2. User enters character information
+    const characterData = {
+      name: 'Gimli',
+      race: 'Dwarf',
+      class: 'Fighter',
+      backstory: 'Son of Glóin',
+      notes: 'Wields an ancestral axe'
+    };
+    
+    // 3. Character page saves the data
+    App.state.character = characterData;
+    App.saveData();
+
+    // Simulate page navigation - reset app state and reload from localStorage
+    App.resetState();
+    App.loadData();
+
+    // Verify character data is properly loaded
+    expect(App.state.character.name).to.equal('Gimli');
+    expect(App.state.character.race).to.equal('Dwarf');
+    expect(App.state.character.class).to.equal('Fighter');
+
+    // Display character summary on journal page
+    App.displayCharacterSummary();
+
+    // Verify the display shows the correct character name (not "Unnamed Character")
+    expect(document.getElementById('display-name').textContent).to.equal('Gimli');
+    expect(document.getElementById('display-race').textContent).to.equal('Dwarf');
+    expect(document.getElementById('display-class').textContent).to.equal('Fighter');
+
+    // Clean up DOM elements
+    nameEl.remove();
+    raceEl.remove();
+    classEl.remove();
+  });
+
+  it('should show "Unnamed Character" when character name is empty string', function() {
+    // Set up DOM elements for journal page
+    const nameEl = document.createElement('span');
+    nameEl.id = 'display-name';
+    const raceEl = document.createElement('span');
+    raceEl.id = 'display-race';
+    const classEl = document.createElement('span');
+    classEl.id = 'display-class';
+    
+    document.body.appendChild(nameEl);
+    document.body.appendChild(raceEl);
+    document.body.appendChild(classEl);
+
+    // Set character data with empty name (simulating partially filled character form)
+    App.state.character = {
+      name: '', // Empty string name
+      race: 'Elf',
+      class: 'Ranger',
+      backstory: 'A mysterious character',
+      notes: 'Has filled out other fields but not name'
+    };
+
+    // Display character summary
+    App.displayCharacterSummary();
+
+    // Should show "Unnamed Character" because name is empty
+    expect(document.getElementById('display-name').textContent).to.equal('Unnamed Character');
+    expect(document.getElementById('display-race').textContent).to.equal('Elf');
+    expect(document.getElementById('display-class').textContent).to.equal('Ranger');
+
+    // Clean up DOM elements
+    nameEl.remove();
+    raceEl.remove();
+    classEl.remove();
+  });
+
+  it('should properly handle character data when name is whitespace only', function() {
+    // Set up DOM elements for journal page
+    const nameEl = document.createElement('span');
+    nameEl.id = 'display-name';
+    const raceEl = document.createElement('span');
+    raceEl.id = 'display-race';
+    const classEl = document.createElement('span');
+    classEl.id = 'display-class';
+    
+    document.body.appendChild(nameEl);
+    document.body.appendChild(raceEl);
+    document.body.appendChild(classEl);
+
+    // Test character with name that is only whitespace (common user input error)
+    App.state.character = {
+      name: '   ', // Only whitespace
+      race: 'Elf',
+      class: 'Ranger',
+      backstory: 'A character with whitespace name',
+      notes: 'User may have entered spaces accidentally'
+    };
+
+    // Display character summary
+    App.displayCharacterSummary();
+
+    // Should show "Unnamed Character" because whitespace-only name should be treated as empty
+    expect(document.getElementById('display-name').textContent).to.equal('Unnamed Character');
+    expect(document.getElementById('display-race').textContent).to.equal('Elf');
+    expect(document.getElementById('display-class').textContent).to.equal('Ranger');
+
+    // Clean up DOM elements
+    nameEl.remove();
+    raceEl.remove();
+    classEl.remove();
+  });
+
+  it('should handle potential sync override issue with character data', function() {
+    // This test checks if there's an issue with how character data is merged/loaded
+    
+    // Set up DOM elements for journal page
+    const nameEl = document.createElement('span');
+    nameEl.id = 'display-name';
+    const raceEl = document.createElement('span');
+    raceEl.id = 'display-race';
+    const classEl = document.createElement('span');
+    classEl.id = 'display-class';
+    
+    document.body.appendChild(nameEl);
+    document.body.appendChild(raceEl);
+    document.body.appendChild(classEl);
+
+    // Simulate the exact scenario: character data exists but might be getting overridden
+    App.resetState();
+    
+    // Set character data in app state directly
+    App.state.character = {
+      name: 'Puoskari',
+      race: 'Human', 
+      class: 'Thief Artificer',
+      backstory: 'A skilled artificer and thief',
+      notes: 'Expert in both mechanics and stealth'
+    };
+
+    // Now test displayCharacterSummary directly
+    App.displayCharacterSummary();
+
+    // This should work correctly if the issue isn't in displayCharacterSummary
+    expect(document.getElementById('display-name').textContent).to.equal('Puoskari');
+    expect(document.getElementById('display-race').textContent).to.equal('Human');
+    expect(document.getElementById('display-class').textContent).to.equal('Thief Artificer');
+
+    // Clean up DOM elements
+    nameEl.remove();
+    raceEl.remove();
+    classEl.remove();
+  });
 });
