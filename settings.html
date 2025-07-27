@@ -54,56 +54,57 @@
         <div class="container">
             <a href="index.html" class="nav-back">← Back to Journal</a>
             
-            <div class="grid">
-                <section>
-                    <h2>Sync Configuration</h2>
+            <div class="settings-container">
+                <!-- Sync Configuration Section -->
+                <section class="settings-section">
+                    <div class="settings-section-header">
+                        <h2>Cross-Device Sync</h2>
+                        <p class="settings-section-description">Sync your journal entries across multiple devices in real-time</p>
+                    </div>
+                    
                     <div class="form-group">
                         <label for="sync-server" class="form-label">
-                            Custom Sync Server (Optional)
+                            Sync Server (Optional)
                         </label>
                         <input 
                             type="text" 
                             id="sync-server" 
                             class="form-input" 
-                            placeholder="wss://your-server.com:1234 or ws://192.168.1.100:1234"
+                            placeholder="ws://192.168.1.100:1234 or wss://your-server.com:1234"
                             autocomplete="off"
                             data-lpignore="true"
                             data-1p-ignore="true"
                         >
                         <p class="form-help">
-                            Leave empty to use default public servers. Enter a WebSocket URL to use your own server.
-                            <a href="https://github.com/yjs/y-websocket" target="_blank">Learn how to set up your own sync server</a>
+                            Leave empty to use public servers. Enter a WebSocket URL to use your own private server.
+                            <a href="https://github.com/yjs/y-websocket" target="_blank">Setup guide</a>
                         </p>
                     </div>
                     
                     <div class="form-group">
                         <button id="test-sync-server" class="btn btn-secondary">
-                            Test Sync Connection
+                            Test Connection
                         </button>
                         <div id="sync-test-result" class="api-test-result"></div>
-                        <p class="form-help">
-                            Tests connection to your custom server (if specified) or default public servers.
-                        </p>
                     </div>
                     
-                    <div class="form-group" id="sync-status-simple">
-                        <label class="form-label">Sync Status</label>
+                    <div class="form-group" id="sync-status-container" style="display: none;">
+                        <label class="form-label">Current Status</label>
                         <div class="sync-indicator">
                             <span class="sync-dot" id="sync-dot"></span>
                             <span id="sync-text">Checking...</span>
                         </div>
-                        <p class="form-help" id="sync-help">Device syncing status will appear here.</p>
-                    </div>
-                    
-                    <div class="form-group settings-section-actions">
-                        <button id="save-sync-settings" class="btn btn-primary">
-                            Save Sync Settings
-                        </button>
+                        <p class="form-help" id="sync-help">Sync status information</p>
                     </div>
                 </section>
 
-                <section>
-                    <h2>AI Features</h2>
+                <!-- AI Features Section -->
+                <section class="settings-section">
+                    <div class="settings-section-header">
+                        <h2>AI Features</h2>
+                        <p class="settings-section-description">Enable AI-powered summarization and insights for your journal</p>
+                    </div>
+                    
                     <div class="form-group">
                         <label for="api-key" class="form-label">
                             OpenAI API Key
@@ -155,13 +156,15 @@
                             Remove all generated summaries from storage. This action cannot be undone.
                         </p>
                     </div>
-                    
-                    <div class="form-group settings-section-actions">
-                        <button id="save-ai-settings" class="btn btn-primary">
-                            Save AI Settings
-                        </button>
-                    </div>
                 </section>
+                
+                <!-- Unified Save Actions -->
+                <div class="settings-actions">
+                    <button id="save-all-settings" class="btn btn-primary btn-large">
+                        Save All Settings
+                    </button>
+                    <p class="form-help">Saves both sync and AI configuration settings</p>
+                </div>
             </div>
         </div>
     </main>

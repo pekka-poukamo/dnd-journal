@@ -1,5 +1,74 @@
 /* Settings Component - Nordic Minimalism */
 
+/* Settings Container Layout */
+.settings-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .settings-container {
+    padding: 0 var(--space-sm);
+  }
+  
+  .settings-section {
+    padding: var(--space-lg);
+  }
+  
+  .btn-large {
+    width: 100%;
+    min-width: auto;
+  }
+}
+
+/* Settings Section Grouping */
+.settings-section {
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+}
+
+.settings-section-header {
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: var(--border-width) solid var(--color-border-light);
+}
+
+.settings-section-header h2 {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-light);
+  color: var(--color-text);
+  margin-bottom: var(--space-xs);
+}
+
+.settings-section-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-normal);
+  margin: 0;
+}
+
+/* Unified Save Actions */
+.settings-actions {
+  background: var(--color-gray-50);
+  border: var(--border-width) solid var(--color-border-light);
+  border-radius: var(--border-radius);
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.btn-large {
+  padding: var(--space-md) var(--space-xl);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  min-width: 200px;
+}
+
 .form-help {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
@@ -220,7 +289,7 @@
   color: white;
 }
 
-/* Settings section separation */
+/* Settings section separation - deprecated, replaced with new structure */
 .settings-section-actions {
   margin-top: var(--space-lg);
   padding-top: var(--space-md);

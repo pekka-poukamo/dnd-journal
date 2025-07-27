@@ -139,26 +139,41 @@ const handleSettingsChange = () => {
   }
 };
 
-// Handle AI settings save
-const handleSaveAISettings = () => {
+// Unified save handler for all settings
+const handleSaveAllSettings = () => {
   const apiKeyInput = document.getElementById('api-key');
   const enableAIInput = document.getElementById('enable-ai-features');
-  const saveButton = document.getElementById('save-ai-settings');
+  const syncServerInput = document.getElementById('sync-server');
+  const saveButton = document.getElementById('save-all-settings');
 
-  if (!apiKeyInput || !enableAIInput || !saveButton) return;
-
-  const settings = {
-    apiKey: apiKeyInput.value.trim(),
-    enableAIFeatures: enableAIInput.checked
-  };
+  if (!saveButton) return;
 
   const originalText = saveButton.textContent;
   saveButton.textContent = 'Saving...';
   saveButton.disabled = true;
 
   try {
-    saveSettings(settings);
+    // Save AI settings
+    if (apiKeyInput && enableAIInput) {
+      const aiSettings = {
+        apiKey: apiKeyInput.value.trim(),
+        enableAIFeatures: enableAIInput.checked
+      };
+      saveSettings(aiSettings);
+    }
+
+    // Save sync settings
+    if (syncServerInput) {
+      const serverUrl = syncServerInput.value.trim();
+      if (serverUrl) {
+        localStorage.setItem('dnd-journal-sync-server', serverUrl);
+      } else {
+        localStorage.removeItem('dnd-journal-sync-server');
+      }
+    }
+    
     saveButton.textContent = 'Saved!';
+    saveButton.className = 'btn btn-success btn-large';
     
     // Update UI state after saving
     handleSettingsChange();
@@ -166,52 +181,18 @@ const handleSaveAISettings = () => {
     // Reset button after a delay
     setTimeout(() => {
       saveButton.textContent = originalText;
+      saveButton.className = 'btn btn-primary btn-large';
       saveButton.disabled = false;
-    }, 1500);
+    }, 2000);
   } catch (error) {
-    console.error('Failed to save AI settings:', error);
-    saveButton.textContent = 'Error';
+    console.error('Failed to save settings:', error);
+    saveButton.textContent = 'Error saving';
+    saveButton.className = 'btn btn-danger btn-large';
     setTimeout(() => {
       saveButton.textContent = originalText;
+      saveButton.className = 'btn btn-primary btn-large';
       saveButton.disabled = false;
-    }, 1500);
-  }
-};
-
-// Handle sync settings save
-const handleSaveSyncSettings = () => {
-  const syncServerInput = document.getElementById('sync-server');
-  const saveButton = document.getElementById('save-sync-settings');
-
-  if (!syncServerInput || !saveButton) return;
-
-  const serverUrl = syncServerInput.value.trim();
-  const originalText = saveButton.textContent;
-  
-  saveButton.textContent = 'Saving...';
-  saveButton.disabled = true;
-
-  try {
-    if (serverUrl) {
-      localStorage.setItem('dnd-journal-sync-server', serverUrl);
-    } else {
-      localStorage.removeItem('dnd-journal-sync-server');
-    }
-    
-    saveButton.textContent = 'Saved!';
-    
-    // Reset button after a delay
-    setTimeout(() => {
-      saveButton.textContent = originalText;
-      saveButton.disabled = false;
-    }, 1500);
-  } catch (error) {
-    console.error('Failed to save sync settings:', error);
-    saveButton.textContent = 'Error';
-    setTimeout(() => {
-      saveButton.textContent = originalText;
-      saveButton.disabled = false;
-    }, 1500);
+    }, 2000);
   }
 };
 
@@ -244,31 +225,19 @@ const setupEventHandlers = () => {
     showPromptButton.addEventListener('click', handleShowAIPrompt);
   }
   
-  // AI settings save button
-  const saveAIButton = document.getElementById('save-ai-settings');
-  if (saveAIButton) {
-    saveAIButton.addEventListener('click', handleSaveAISettings);
+  // Unified save button
+  const saveAllButton = document.getElementById('save-all-settings');
+  if (saveAllButton) {
+    saveAllButton.addEventListener('click', handleSaveAllSettings);
   }
   
   // Sync event handlers
-  const syncServerInput = document.getElementById('sync-server');
   const testSyncButton = document.getElementById('test-sync-server');
-  const saveSyncButton = document.getElementById('save-sync-settings');
-  
-  // No auto-saving on blur for sync server input
   
   if (testSyncButton) {
     testSyncButton.addEventListener('click', handleSyncServerTest);
   }
-  
-  if (saveSyncButton) {
-    saveSyncButton.addEventListener('click', handleSaveSyncSettings);
-  }
 };
-
-
-
-
 
 // Handle clear summaries button
 const handleClearSummaries = async () => {
@@ -374,14 +343,14 @@ const testSyncServer = async (serverUrl) => {
       if (result.success) {
         return { 
           success: true, 
-          message: `Default public sync server (${server}) is working!` 
+          message: `Public sync server (${server}) is working!` 
         };
       }
     }
     
     return { 
       success: false, 
-      error: 'Unable to connect to default public sync servers' 
+      error: 'Unable to connect to public sync servers' 
     };
   }
   
@@ -460,39 +429,35 @@ const testSingleServer = async (serverUrl) => {
   });
 };
 
-// Simple sync status update
-const updateSimpleSyncStatus = () => {
-  const syncSection = document.getElementById('sync-status-simple');
+// Show sync status only when checking or when results are available
+const showSyncStatus = (status, message, helpText) => {
+  const syncContainer = document.getElementById('sync-status-container');
   const syncDot = document.getElementById('sync-dot');
   const syncText = document.getElementById('sync-text');
   const syncHelp = document.getElementById('sync-help');
   
-  if (!syncSection) return;
+  if (!syncContainer) return;
   
-  // Always show sync status - requirement: "should display all the time, even using public servers"
-  syncSection.style.display = 'block';
+  // Show the container
+  syncContainer.style.display = 'block';
   
-  const sync = getYjsSync();
-  if (!sync) {
-    // Sync not available
-    if (syncDot) syncDot.className = 'sync-dot unavailable';
-    if (syncText) syncText.textContent = 'Sync unavailable';
-    if (syncHelp) syncHelp.textContent = 'Sync not available in this environment';
-    return;
+  if (syncDot) syncDot.className = `sync-dot ${status}`;
+  if (syncText) syncText.textContent = message;
+  if (syncHelp) syncHelp.textContent = helpText;
+  
+  // Auto-hide after successful connection test (but keep visible during ongoing checks)
+  if (status === 'connected') {
+    setTimeout(() => {
+      syncContainer.style.display = 'none';
+    }, 3000);
   }
-  
-  const status = sync.getStatus();
-  
-  if (syncDot && syncText && syncHelp) {
-    if (status.connected) {
-      syncDot.className = 'sync-dot connected';
-      syncText.textContent = 'Connected';
-      syncHelp.textContent = 'Your journal is syncing across devices.';
-    } else {
-      syncDot.className = 'sync-dot disconnected';
-      syncText.textContent = 'Working offline';
-      syncHelp.textContent = 'Your journal will sync when connection is restored.';
-    }
+};
+
+// Hide sync status
+const hideSyncStatus = () => {
+  const syncContainer = document.getElementById('sync-status-container');
+  if (syncContainer) {
+    syncContainer.style.display = 'none';
   }
 };
 
@@ -533,7 +498,8 @@ const populateForm = () => {
     } catch (e) {}
   }
   
-  updateSimpleSyncStatus();
+  // Hide sync status initially
+  hideSyncStatus();
 };
 
 // Handle sync server test
@@ -550,40 +516,42 @@ const handleSyncServerTest = async () => {
   testButton.textContent = 'Testing...';
   resultDiv.innerHTML = '';
   
+  // Show sync status as "checking"
+  showSyncStatus('connecting', 'Testing connection...', 'Checking server connectivity');
+  
   try {
     const result = await testSyncServer(serverUrl);
     
     if (result.success) {
       resultDiv.innerHTML = `<div class="test-success">✓ ${result.message}</div>`;
-      
-      // Save the server configuration
-      if (serverUrl) {
-        localStorage.setItem('dnd-journal-sync-server', serverUrl);
-      } else {
-        localStorage.removeItem('dnd-journal-sync-server');
-      }
+      showSyncStatus('connected', 'Connected', result.message);
     } else {
       resultDiv.innerHTML = `<div class="test-error">✗ ${result.error}</div>`;
+      showSyncStatus('disconnected', 'Connection failed', result.error);
+      
+      // Hide status after showing error briefly
+      setTimeout(() => {
+        hideSyncStatus();
+      }, 5000);
     }
   } catch (error) {
     resultDiv.innerHTML = `<div class="test-error">✗ Test failed: ${error.message}</div>`;
+    showSyncStatus('disconnected', 'Test failed', error.message);
+    
+    // Hide status after showing error briefly
+    setTimeout(() => {
+      hideSyncStatus();
+    }, 5000);
   } finally {
     testButton.disabled = false;
-    testButton.textContent = 'Test Sync Connection';
+    testButton.textContent = 'Test Connection';
   }
 };
-
-
 
 // Initialize settings page
 const init = () => {
   populateForm();
   setupEventHandlers();
-  
-  // Update sync status periodically (only in browser, not in tests)
-  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-    setInterval(updateSimpleSyncStatus, 5000);
-  }
 };
 
 // Start when DOM is ready (only in browser environment)
