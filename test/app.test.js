@@ -401,8 +401,8 @@ describe('D&D Journal App', function() {
       App.displayCharacterSummary();
       
       expect(document.getElementById('display-name').textContent).to.equal('Unnamed Character');
-      expect(document.getElementById('display-race').textContent).to.equal('Unknown');
-      expect(document.getElementById('display-class').textContent).to.equal('Unknown');
+      expect(document.getElementById('display-race').textContent).to.equal('—');
+      expect(document.getElementById('display-class').textContent).to.equal('—');
     });
   });
 

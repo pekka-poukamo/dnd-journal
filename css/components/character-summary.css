@@ -70,3 +70,30 @@
   color: var(--color-text-muted);
   font-style: italic;
 }
+
+/* Minimal variant */
+.character-summary--minimal {
+  margin-bottom: var(--space-lg);
+}
+
+.character-summary--minimal .character-summary__content {
+  padding: var(--space-md);
+}
+
+.character-summary--minimal .character-summary__grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+  text-align: center;
+}
+
+.character-summary--minimal .character-summary__value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 639px) {
+  .character-summary--minimal .character-summary__grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-xs);
+  }
+}
