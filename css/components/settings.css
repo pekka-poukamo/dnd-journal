@@ -32,6 +32,30 @@
   margin-bottom: var(--space-xl);
 }
 
+/* Settings Subsections */
+.settings-subsection {
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-lg);
+  border-bottom: var(--border-width) solid var(--color-border-light);
+}
+
+.settings-subsection:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.settings-subsection-title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-xs);
+  border-bottom: 2px solid var(--color-accent);
+  display: inline-block;
+}
+
 .settings-section-header {
   margin-bottom: var(--space-lg);
   padding-bottom: var(--space-md);

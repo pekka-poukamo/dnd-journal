@@ -62,39 +62,49 @@
                         <p class="settings-section-description">Sync your journal entries across multiple devices in real-time</p>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="sync-server" class="form-label">
-                            Sync Server (Optional)
-                        </label>
-                        <input 
-                            type="text" 
-                            id="sync-server" 
-                            class="form-input" 
-                            placeholder="ws://192.168.1.100:1234 or wss://your-server.com:1234"
-                            autocomplete="off"
-                            data-lpignore="true"
-                            data-1p-ignore="true"
-                        >
-                        <p class="form-help">
-                            Leave empty to use public servers. Enter a WebSocket URL to use your own private server.
-                            <a href="https://github.com/yjs/y-websocket" target="_blank">Setup guide</a>
-                        </p>
-                    </div>
-                    
-                    <div class="form-group">
-                        <button id="test-sync-server" class="btn btn-secondary">
-                            Test Connection
-                        </button>
-                        <div id="sync-test-result" class="api-test-result"></div>
-                    </div>
-                    
-                    <div class="form-group" id="sync-status-container" style="display: none;">
-                        <label class="form-label">Current Status</label>
-                        <div class="sync-indicator">
-                            <span class="sync-dot" id="sync-dot"></span>
-                            <span id="sync-text">Checking...</span>
+                    <!-- Sync Server Configuration Subsection -->
+                    <div class="settings-subsection">
+                        <h3 class="settings-subsection-title">Server Configuration</h3>
+                        
+                        <div class="form-group">
+                            <label for="sync-server" class="form-label">
+                                Sync Server (Optional)
+                            </label>
+                            <input 
+                                type="text" 
+                                id="sync-server" 
+                                class="form-input" 
+                                placeholder="ws://192.168.1.100:1234 or wss://your-server.com:1234"
+                                autocomplete="off"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                            >
+                            <p class="form-help">
+                                Leave empty to use public servers. Enter a WebSocket URL to use your own private server.
+                                <a href="https://github.com/yjs/y-websocket" target="_blank">Setup guide</a>
+                            </p>
                         </div>
-                        <p class="form-help" id="sync-help">Sync status information</p>
+                    </div>
+                    
+                    <!-- Sync Testing & Status Subsection -->
+                    <div class="settings-subsection">
+                        <h3 class="settings-subsection-title">Testing & Status</h3>
+                        
+                        <div class="form-group">
+                            <button id="test-sync-server" class="btn btn-secondary">
+                                Test Connection
+                            </button>
+                            <div id="sync-test-result" class="api-test-result"></div>
+                        </div>
+                        
+                        <div class="form-group" id="sync-status-container" style="display: none;">
+                            <label class="form-label">Current Status</label>
+                            <div class="sync-indicator">
+                                <span class="sync-dot" id="sync-dot"></span>
+                                <span id="sync-text">Checking...</span>
+                            </div>
+                            <p class="form-help" id="sync-help">Sync status information</p>
+                        </div>
                     </div>
                 </section>
 
@@ -105,56 +115,71 @@
                         <p class="settings-section-description">Enable AI-powered summarization and insights for your journal</p>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="api-key" class="form-label">
-                            OpenAI API Key
-                        </label>
-                        <input 
-                            type="password" 
-                            id="api-key" 
-                            class="form-input" 
-                            placeholder="sk-..."
-                            autocomplete="off"
-                            data-lpignore="true"
-                            data-1p-ignore="true"
-                        >
-                        <p class="form-help">
-                            Your API key is stored locally and never sent to our servers.
-                            <a href="https://platform.openai.com/api-keys" target="_blank">Get your API key from OpenAI</a>
-                        </p>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="enable-ai-features" class="checkbox-input">
-                            <span class="checkbox-text">Enable AI features (requires API key)</span>
-                        </label>
-                    </div>
-                    
-                    <div class="form-group">
-                        <button id="test-api-key" class="btn btn-secondary" disabled>
-                            Test API Key
-                        </button>
-                        <div id="api-test-result" class="api-test-result"></div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <button id="show-ai-prompt" class="btn btn-secondary" disabled>
-                            Show Current AI Prompt
-                        </button>
-                        <div id="ai-prompt-preview" class="api-test-result" style="display: none;">
-                            <h4>Current AI Prompt Preview:</h4>
-                            <div id="ai-prompt-content" class="prompt-content"></div>
+                    <!-- AI Configuration Subsection -->
+                    <div class="settings-subsection">
+                        <h3 class="settings-subsection-title">Configuration</h3>
+                        
+                        <div class="form-group">
+                            <label for="api-key" class="form-label">
+                                OpenAI API Key
+                            </label>
+                            <input 
+                                type="password" 
+                                id="api-key" 
+                                class="form-input" 
+                                placeholder="sk-..."
+                                autocomplete="off"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                            >
+                            <p class="form-help">
+                                Your API key is stored locally and never sent to our servers.
+                                <a href="https://platform.openai.com/api-keys" target="_blank">Get your API key from OpenAI</a>
+                            </p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enable-ai-features" class="checkbox-input">
+                                <span class="checkbox-text">Enable AI features (requires API key)</span>
+                            </label>
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <button id="clear-summaries" class="btn btn-danger">
-                            Clear All Summaries
-                        </button>
-                        <p class="form-help">
-                            Remove all generated summaries from storage. This action cannot be undone.
-                        </p>
+                    <!-- AI Testing & Validation Subsection -->
+                    <div class="settings-subsection">
+                        <h3 class="settings-subsection-title">Testing & Validation</h3>
+                        
+                        <div class="form-group">
+                            <button id="test-api-key" class="btn btn-secondary" disabled>
+                                Test API Key
+                            </button>
+                            <div id="api-test-result" class="api-test-result"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button id="show-ai-prompt" class="btn btn-secondary" disabled>
+                                Show Current AI Prompt
+                            </button>
+                            <div id="ai-prompt-preview" class="api-test-result" style="display: none;">
+                                <h4>Current AI Prompt Preview:</h4>
+                                <div id="ai-prompt-content" class="prompt-content"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- AI Data Management Subsection -->
+                    <div class="settings-subsection">
+                        <h3 class="settings-subsection-title">Data Management</h3>
+                        
+                        <div class="form-group">
+                            <button id="clear-summaries" class="btn btn-danger">
+                                Clear All Summaries
+                            </button>
+                            <p class="form-help">
+                                Remove all generated summaries from storage. This action cannot be undone.
+                            </p>
+                        </div>
                     </div>
                 </section>
                 
