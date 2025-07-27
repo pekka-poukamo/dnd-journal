@@ -100,6 +100,12 @@ Each PR receives a coverage table for modified JavaScript files:
 - **Simple**: Minimal configuration and overhead
 
 ### Configuration
-- `.c8rc.json`: Basic configuration (80% target, warnings only)
-- `.github/workflows/coverage.yml`: PR comment automation
+- `.c8rc.json`: Basic configuration (80% target, warnings only, JSON output)
+- `.github/workflows/coverage.yml`: PR comment automation using GitHub Script
 - Reports line coverage only for simplicity
+
+### Automation Features
+- **Auto-update**: Comments are updated when PR is modified
+- **Smart filtering**: Only shows JavaScript files from `js/` directory
+- **Error handling**: Gracefully handles missing coverage data
+- **Visual indicators**: ✅ for meeting target, ⚠️ for below target, ❓ for no data

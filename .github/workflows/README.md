@@ -2,25 +2,34 @@
 
 ## Test Suite (`tests.yml`)
 
-**Purpose**: Automated test suite running on PR creation and changes.
+**Purpose**: Automated test suite running on multiple Node.js versions.
 
 **Triggers**:
 - Pull requests to any branch
 - Pushes to any branch  
 
 **What it does**:
-1. ✅ Runs tests on Node.js 22
-2. 📊 Ensures code quality before merging
+1. ✅ Runs tests on Node.js 16.x, 18.x, 20.x, and 22.x
 
 **Commands used**:
 - `npm ci` - Install dependencies
 - `npm test` - Run test suite (Mocha + Chai)
-- `npm run coverage` - Generate coverage with c8
 
-**Compliance**:
-- **ADR-0005**: Mandatory testing for all code
-- **ADR-0006**: No build tools (uses npm scripts only)
-- **ADR-0013**: Radical simplicity (minimal, focused workflow)
+## Coverage Report (`coverage.yml`)
+
+**Purpose**: Generate and comment coverage reports on pull requests.
+
+**Triggers**:
+- Pull requests to `main` branch
+
+**What it does**:
+1. 📊 Generates coverage report with c8
+2. 💬 Comments coverage table on PRs (changed files only)
+3. 🔄 Updates comments when PR is modified
+
+**Commands used**:
+- `npm ci` - Install dependencies
+- `npm run coverage` - Generate coverage with c8 (JSON output)
 
 ## Deploy to Surge (`deploy.yml`)
 
@@ -48,6 +57,16 @@
 - **ADR-0006**: No build tools (direct static file deployment)
 - **ADR-0013**: Radical simplicity (minimal deployment workflow)
 
+## Legacy Workflows
+
+- `ci.yml` - Simple CI workflow (superseded by tests.yml)
+
+## Compliance
+
+**ADR-0005**: Mandatory testing with coverage feedback
+**ADR-0006**: No build tools (uses npm scripts only)  
+**ADR-0013**: Radical simplicity (minimal, focused workflows)
+
 ---
 
-*These workflows ensure all code changes are tested before merging and automatically deployed to production, maintaining code quality and deployment simplicity.*
+*These workflows ensure all code changes are tested with coverage feedback and automatically deployed to production, maintaining code quality and deployment simplicity.*
