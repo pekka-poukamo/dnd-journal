@@ -11,8 +11,7 @@
     "test:watch": "mocha test/**/*.test.js --watch --timeout 5000",
     "coverage": "c8 npm test",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
-    "deploy": "surge .",
-    "deploy:domain": "surge . dnd-journal.surge.sh",
+    "deploy": "surge . dnd-journal.surge.sh",
     "sync-server": "y-websocket-server --port 1234"
   },
   "repository": {
