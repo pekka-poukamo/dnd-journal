@@ -6,6 +6,7 @@
     <title>Character Details - D&D Journal</title>
     
     <!-- PWA -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="D&D Journal">
     <link rel="manifest" href="manifest.json">
@@ -28,7 +29,8 @@
       "imports": {
         "yjs": "./node_modules/yjs/dist/yjs.mjs",
         "y-websocket": "./node_modules/y-websocket/src/y-websocket.js",
-        "y-indexeddb": "./node_modules/y-indexeddb/src/y-indexeddb.js"
+        "y-indexeddb": "./node_modules/y-indexeddb/src/y-indexeddb.js",
+        "lib0/": "./node_modules/lib0/"
       }
     }
     </script>
@@ -102,7 +104,7 @@
     </main>
 
     <script type="module" src="js/utils.js"></script>
-    <script src="sync-config.js"></script>
+    <script type="module" src="sync-config.js"></script>
     <script type="module" src="js/sync.js"></script>
     <script type="module" src="js/character.js"></script>
 </body>
