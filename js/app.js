@@ -198,6 +198,9 @@ export const createEntryElement = (entry) => {
   const header = document.createElement('div');
   header.className = 'entry-header';
   
+  const headerContent = document.createElement('div');
+  headerContent.className = 'entry-header__content';
+  
   const title = document.createElement('h3');
   title.className = 'entry-title';
   title.textContent = entry.title;
@@ -206,14 +209,25 @@ export const createEntryElement = (entry) => {
   date.className = 'entry-date';
   date.textContent = formatDate(entry.timestamp);
   
+  const headerActions = document.createElement('div');
+  headerActions.className = 'entry-header__actions';
+  
   const editBtn = document.createElement('button');
   editBtn.className = 'edit-btn';
   editBtn.textContent = 'Edit';
   editBtn.onclick = () => enableEditMode(entryDiv, entry);
   
-  header.appendChild(title);
-  header.appendChild(date);
-  header.appendChild(editBtn);
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-btn';
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.onclick = () => deleteEntry(entry.id);
+  
+  headerContent.appendChild(title);
+  headerContent.appendChild(date);
+  headerActions.appendChild(editBtn);
+  headerActions.appendChild(deleteBtn);
+  header.appendChild(headerContent);
+  header.appendChild(headerActions);
   
   const content = document.createElement('div');
   content.className = 'entry-content';
@@ -271,7 +285,7 @@ export const createSummarySection = (summary) => {
 export const enableEditMode = (entryDiv, entry) => {
   const title = entryDiv.querySelector('.entry-title');
   const content = entryDiv.querySelector('.entry-content');
-  const editBtn = entryDiv.querySelector('.edit-btn');
+  const headerActions = entryDiv.querySelector('.entry-header__actions');
   
   // Create edit form
   const editForm = document.createElement('div');
@@ -302,7 +316,7 @@ export const enableEditMode = (entryDiv, entry) => {
   // Replace content with edit form
   title.style.display = 'none';
   content.style.display = 'none';
-  editBtn.style.display = 'none';
+  headerActions.style.display = 'none';
   
   entryDiv.appendChild(editForm);
   
@@ -325,13 +339,13 @@ export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
     
     const title = entryDiv.querySelector('.entry-title');
     const content = entryDiv.querySelector('.entry-content');
-    const editBtn = entryDiv.querySelector('.edit-btn');
+    const headerActions = entryDiv.querySelector('.entry-header__actions');
     
     title.textContent = entry.title;
     title.style.display = '';
-    content.textContent = entry.content;
+    content.innerHTML = parseMarkdown(entry.content);
     content.style.display = '';
-    editBtn.style.display = '';
+    headerActions.style.display = '';
     
     saveData();
   }
@@ -346,11 +360,11 @@ export const cancelEdit = (entryDiv, entry) => {
   
   const title = entryDiv.querySelector('.entry-title');
   const content = entryDiv.querySelector('.entry-content');
-  const editBtn = entryDiv.querySelector('.edit-btn');
+  const headerActions = entryDiv.querySelector('.entry-header__actions');
   
   title.style.display = '';
   content.style.display = '';
-  editBtn.style.display = '';
+  headerActions.style.display = '';
 };
 
 // Create empty state element
@@ -436,6 +450,23 @@ export const clearEntryForm = () => {
   
   if (titleInput) titleInput.value = '';
   if (contentTextarea) contentTextarea.value = '';
+};
+
+// Delete entry by ID
+export const deleteEntry = (entryId) => {
+  if (!entryId) return;
+  
+  const entryToDelete = state.entries.find(entry => entry.id === entryId);
+  if (!entryToDelete) return;
+  
+  const confirmMessage = `Are you sure you want to delete "${entryToDelete.title}"?`;
+  if (!confirm(confirmMessage)) return;
+  
+  // Create new array without the deleted entry (immutable operation)
+  state.entries = state.entries.filter(entry => entry.id !== entryId);
+  
+  saveData();
+  renderEntries();
 };
 
 // Focus on entry title input

@@ -493,6 +493,46 @@ section {
   margin-top: var(--space-md);
 }
 
+/* Entry header actions */
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+}
+
+.entry-header__content {
+  flex: 1;
+}
+
+.entry-header__actions {
+  display: flex;
+  gap: var(--space-xs);
+  margin-left: var(--space-sm);
+}
+
+.edit-btn,
+.delete-btn {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-xs);
+  border: var(--border-width) solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  border-radius: var(--border-radius);
+}
+
+.edit-btn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.delete-btn:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
 /* Navigation - Minimal */
 .nav-back {
   display: inline-flex;
