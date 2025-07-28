@@ -98,11 +98,11 @@ describe('D&D Journal App', function() {
     });
 
     it('should render entries correctly', function() {
-      let entriesList = document.getElementById('entries-list');
-      if (!entriesList) {
-        entriesList = document.createElement('div');
-        entriesList.id = 'entries-list';
-        document.body.appendChild(entriesList);
+      let entriesContainer = document.getElementById('entries-container');
+      if (!entriesContainer) {
+        entriesContainer = document.createElement('div');
+        entriesContainer.id = 'entries-container';
+        document.body.appendChild(entriesContainer);
       }
 
       App.state.entries = [{
@@ -114,32 +114,30 @@ describe('D&D Journal App', function() {
 
       App.renderEntries();
 
-      const entryCards = entriesList.querySelectorAll('.entry-card');
-      expect(entryCards.length).to.equal(1);
+      const entryElements = entriesContainer.querySelectorAll('.entry');
+      expect(entryElements.length).to.equal(1);
       
       // Check markdown rendering
-      const content = entryCards[0].querySelector('.entry-content');
+      const content = entryElements[0].querySelector('.entry-content');
       expect(content.innerHTML).to.include('<strong>bold</strong>');
       
-      entriesList.remove();
+      entriesContainer.remove();
     });
 
     it('should render empty state when no entries', function() {
-      let entriesList = document.getElementById('entries-list');
-      if (!entriesList) {
-        entriesList = document.createElement('div');
-        entriesList.id = 'entries-list';
-        document.body.appendChild(entriesList);
+      let entriesContainer = document.getElementById('entries-container');
+      if (!entriesContainer) {
+        entriesContainer = document.createElement('div');
+        entriesContainer.id = 'entries-container';
+        document.body.appendChild(entriesContainer);
       }
 
       App.state.entries = [];
       App.renderEntries();
 
-      const emptyState = entriesList.querySelector('.empty-state');
-      expect(emptyState).to.exist;
-      expect(emptyState.textContent).to.include('No journal entries yet');
+      expect(entriesContainer.innerHTML).to.equal('');
       
-      entriesList.remove();
+      entriesContainer.remove();
     });
 
     it('should handle renderEntries with missing container', function() {

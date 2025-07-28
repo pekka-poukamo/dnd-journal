@@ -1,14 +1,15 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as OpenAIWrapper from '../js/openai-wrapper.js';
+import { createSystem, clearSystem } from '../js/yjs.js';
+import * as Settings from '../js/settings.js';
 
 describe('OpenAI Wrapper', () => {
-  beforeEach(() => {
-    global.localStorage.clear();
-  });
-
-  afterEach(() => {
-    global.localStorage.clear();
+  beforeEach(async () => {
+    // Reset localStorage and reinitialize Yjs mock system
+    global.resetLocalStorage();
+    clearSystem();
+    await createSystem();
   });
 
   describe('isAPIAvailable', () => {
@@ -18,40 +19,40 @@ describe('OpenAI Wrapper', () => {
     });
 
     it('should return false when AI features are disabled', () => {
-      localStorage.setItem('simple-dnd-journal-settings', JSON.stringify({
+      Settings.saveSettings({
         enableAIFeatures: false,
         apiKey: 'sk-test123'
-      }));
+      });
       
       const result = OpenAIWrapper.isAPIAvailable();
       result.should.be.false;
     });
 
     it('should return false when API key is missing', () => {
-      localStorage.setItem('simple-dnd-journal-settings', JSON.stringify({
+      Settings.saveSettings({
         enableAIFeatures: true,
         apiKey: ''
-      }));
+      });
       
       const result = OpenAIWrapper.isAPIAvailable();
       result.should.be.false;
     });
 
     it('should return false when API key does not start with sk-', () => {
-      localStorage.setItem('simple-dnd-journal-settings', JSON.stringify({
+      Settings.saveSettings({
         enableAIFeatures: true,
         apiKey: 'invalid-key'
-      }));
+      });
       
       const result = OpenAIWrapper.isAPIAvailable();
       result.should.be.false;
     });
 
     it('should return true when properly configured', () => {
-      localStorage.setItem('simple-dnd-journal-settings', JSON.stringify({
+      Settings.saveSettings({
         enableAIFeatures: true,
         apiKey: 'sk-test123'
-      }));
+      });
       
       const result = OpenAIWrapper.isAPIAvailable();
       result.should.be.true;

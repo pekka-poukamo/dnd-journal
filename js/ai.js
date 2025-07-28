@@ -264,6 +264,11 @@ export const generateEntrySummary = async (entry) => {
     return null;
   }
 
+  // Return null for empty or very short content
+  if (!entry.content || entry.content.trim().length < 50) {
+    return null;
+  }
+
   try {
     const wordCount = getWordCount(entry.content);
     // Use proportional word count based on original length, with much higher targets
@@ -284,7 +289,7 @@ Content: ${entry.content}`;
       timestamp: Date.now()
     };
   } catch (error) {
-    console.error('Failed to generate entry summary:', error);
+    console.error('Error generating entry summary:', error);
     return null;
   }
 };

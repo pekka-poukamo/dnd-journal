@@ -35,6 +35,16 @@ export const parseMarkdown = (text) => {
     .replace(/^### (.*$)/gim, '<h3>$1</h3>') // H3
     .replace(/^## (.*$)/gim, '<h2>$1</h2>') // H2
     .replace(/^# (.*$)/gim, '<h1>$1</h1>') // H1
+    // Handle unordered lists
+    .replace(/^- (.+)(\n- .+)*/gm, (match) => {
+      const items = match.split('\n').map(line => line.replace(/^- /, '').trim()).join('</li><li>');
+      return `<ul><li>${items}</li></ul>`;
+    })
+    // Handle ordered lists
+    .replace(/^\d+\. (.+)(\n\d+\. .+)*/gm, (match) => {
+      const items = match.split('\n').map(line => line.replace(/^\d+\. /, '').trim()).join('</li><li>');
+      return `<ol><li>${items}</li></ol>`;
+    })
     .replace(/\n\n/g, '__PARAGRAPH__') // Paragraph breaks
     .replace(/\n/g, '__LINE_BREAK__') // Line breaks
     .replace(/__PARAGRAPH__/g, '</p><p>') // Convert paragraph breaks
@@ -507,10 +517,10 @@ export const formatAIPrompt = (prompt) => {
   if (!prompt || typeof prompt !== 'string') return '';
   
   return prompt
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br>')
-    .replace(/^/, '<p>')
-    .replace(/$/, '</p>');
+    .split('\n')
+    .filter(line => line.trim()) // Remove empty lines
+    .map(line => `<p>${line.trim()}</p>`)
+    .join('');
 };
 
 // Create character summary (test utility)

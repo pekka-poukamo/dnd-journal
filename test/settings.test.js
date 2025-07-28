@@ -25,7 +25,8 @@ describe('Settings Module', function() {
         enableAIFeatures: true
       };
 
-      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+      // Save settings using Yjs system
+      Settings.saveSettings(testSettings);
 
       const loaded = Settings.loadSettings();
       expect(loaded).to.deep.equal(testSettings);
@@ -37,10 +38,11 @@ describe('Settings Module', function() {
         enableAIFeatures: false
       };
 
-      Settings.saveSettings(testSettings);
+      const result = Settings.saveSettings(testSettings);
+      expect(result.success).to.be.true;
 
-      const stored = global.localStorage.getItem('simple-dnd-journal-settings');
-      const loaded = JSON.parse(stored);
+      // Verify settings were saved by loading them back
+      const loaded = Settings.loadSettings();
       expect(loaded).to.deep.equal(testSettings);
     });
 
