@@ -37,7 +37,20 @@ const callMetaSummarize = createTemplateFunction(createMetaSummaryPrompt, {
 // =============================================================================
 
 const loadSummaries = () => loadDataWithFallback(STORAGE_KEY, {});
-const saveSummaries = (summaries) => safeSetToStorage(STORAGE_KEY, summaries);
+const saveSummaries = (summaries) => {
+  const result = safeSetToStorage(STORAGE_KEY, summaries);
+  
+  // Trigger complete app state sync after summaries change
+  if (typeof window !== 'undefined' && window.triggerSyncUpdate) {
+    try {
+      window.triggerSyncUpdate();
+    } catch (e) {
+      console.warn('Could not trigger sync update after summaries change:', e);
+    }
+  }
+  
+  return result;
+};
 
 // =============================================================================
 // UTILITY FUNCTIONS

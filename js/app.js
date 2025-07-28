@@ -122,68 +122,112 @@ export const loadData = () => {
     global.state = state;
   }
   
-    // Initialize Yjs with current localStorage data (ADR-0003)
-  // Only use sync if localStorage data was loaded successfully
-  if (result.success && result.data) {
-    const sync = getYjsSync();
-    const syncData = sync ? sync.getData() : null;
-    if (syncData) {
-      // Merge remote data if available and newer
-      const localTime = state.lastModified || 0;
-      const remoteTime = syncData.lastModified || 0;
+  // Initialize Yjs with current localStorage data (ADR-0003)
+  // Enhanced to sync complete app state, not just journal data
+  const sync = getYjsSync();
+  if (sync) {
+    // Check for complete app state sync first
+    const syncCompleteAppState = sync.getCompleteAppState();
+    
+    if (syncCompleteAppState) {
+      // We have complete app state from sync - merge intelligently
+      const syncLastModified = sync._getState().lastModified || 0;
+      const localLastModified = state.lastModified || 0;
       
-      if (remoteTime > localTime) {
-        // Loading newer data from sync with character data protection
-        const originalCharacter = { ...state.character };
-        let mergedCharacter = originalCharacter;
+      if (syncLastModified > localLastModified) {
+        console.log('Loading newer complete app state from sync');
         
-        if (syncData.character) {
-          // Merge character data intelligently
-          mergedCharacter = {
-            name: (originalCharacter.name && originalCharacter.name.trim()) || syncData.character.name || '',
-            race: (originalCharacter.race && originalCharacter.race.trim()) || syncData.character.race || '',
-            class: (originalCharacter.class && originalCharacter.class.trim()) || syncData.character.class || '',
-            backstory: (originalCharacter.backstory && originalCharacter.backstory.trim()) || syncData.character.backstory || '',
-            notes: (originalCharacter.notes && originalCharacter.notes.trim()) || syncData.character.notes || ''
-          };
-          
-          // If sync data has more complete character info, use sync data
-          const localCompleteness = Object.values(originalCharacter).filter(v => v && v.trim()).length;
-          const syncCompleteness = Object.values(syncData.character).filter(v => v && v.trim()).length;
-          
-          if (syncCompleteness > localCompleteness) {
-            mergedCharacter = { ...syncData.character };
+        // Apply complete app state to localStorage
+        // This will update all storage keys (settings, summaries, etc.)
+        Object.entries(syncCompleteAppState).forEach(([key, value]) => {
+          try {
+            // Skip device-specific keys
+            if (key === 'dnd-journal-device-id') return;
+            
+            const currentValue = localStorage.getItem(key);
+            const newValue = JSON.stringify(value);
+            
+            if (currentValue !== newValue) {
+              localStorage.setItem(key, newValue);
+              console.log(`Updated ${key} from sync`);
+            }
+          } catch (e) {
+            console.warn(`Failed to update ${key} from sync:`, e);
           }
-        }
+        });
         
-        state = { ...state, ...syncData, character: mergedCharacter };
-        safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
+        // Reload state from updated localStorage
+        const reloadResult = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
+        if (reloadResult.success && reloadResult.data) {
+          state = { ...state, ...reloadResult.data };
+        }
       } else {
-        // Upload current data to sync
-        const syncForUpload = getYjsSync();
-        if (syncForUpload) syncForUpload.setData(state);
+        // Local data is newer or same - upload to sync
+        console.log('Uploading current complete app state to sync');
+        sync.syncCompleteState();
       }
     } else {
-      // First time - upload current localStorage data
-      const syncForUpload = getYjsSync();
-      if (syncForUpload) syncForUpload.setData(state);
+      // No complete app state in sync yet - check for legacy journal sync
+      const syncJournalData = sync.getData();
+      
+      if (syncJournalData && result.success && result.data) {
+        // Handle legacy journal sync with character data protection
+        const localTime = state.lastModified || 0;
+        const remoteTime = syncJournalData.lastModified || 0;
+        
+        if (remoteTime > localTime) {
+          console.log('Loading legacy journal data from sync');
+          // Apply the character merging logic for backward compatibility
+          const originalCharacter = { ...state.character };
+          let mergedCharacter = originalCharacter;
+          
+          if (syncJournalData.character) {
+            mergedCharacter = {
+              name: (originalCharacter.name && originalCharacter.name.trim()) || syncJournalData.character.name || '',
+              race: (originalCharacter.race && originalCharacter.race.trim()) || syncJournalData.character.race || '',
+              class: (originalCharacter.class && originalCharacter.class.trim()) || syncJournalData.character.class || '',
+              backstory: (originalCharacter.backstory && originalCharacter.backstory.trim()) || syncJournalData.character.backstory || '',
+              notes: (originalCharacter.notes && originalCharacter.notes.trim()) || syncJournalData.character.notes || ''
+            };
+            
+            const localCompleteness = Object.values(originalCharacter).filter(v => v && v.trim()).length;
+            const syncCompleteness = Object.values(syncJournalData.character).filter(v => v && v.trim()).length;
+            
+            if (syncCompleteness > localCompleteness) {
+              mergedCharacter = { ...syncJournalData.character };
+            }
+          }
+          
+          state = { ...state, ...syncJournalData, character: mergedCharacter };
+          safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
+        }
+        
+        // After handling legacy sync, upgrade to complete app state sync
+        console.log('Upgrading to complete app state sync');
+        sync.syncCompleteState();
+      } else {
+        // First time - upload complete app state
+        console.log('First time sync - uploading complete app state');
+        sync.syncCompleteState();
+      }
     }
   }
 };
 
-// Save state to localStorage and sync - enhanced for ADR-0003
+// Save state to localStorage and sync - enhanced for complete app state sync (ADR-0003)
 export const saveData = () => {
   state.lastModified = Date.now();
   const result = safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
   
-  // Update sync
+  // Update sync with complete app state
   const sync = getYjsSync();
   if (sync) {
-    console.log('Saving data to sync:', { 
+    console.log('Saving complete app state to sync:', { 
       entryCount: state.entries ? state.entries.length : 0,
       isConnected: sync.isConnected 
     });
-    sync.setData(state);
+    // Sync complete app state instead of just journal data
+    sync.syncCompleteState();
   } else {
     console.log('No sync available - data saved to localStorage only');
   }
@@ -682,10 +726,59 @@ export const setupSyncListener = () => {
   setInterval(checkSyncStatus, 5000);
   checkSyncStatus(); // Initial check
   
-  sync.onChange((syncData) => {
-    console.log('Received sync data:', syncData);
-    // Reload data from sync with character data protection
-    if (syncData) {
+  sync.onChange((syncData, syncType) => {
+    console.log('Received sync data:', { syncType, hasData: !!syncData });
+    
+    if (!syncData) return;
+    
+    if (syncType === 'complete') {
+      // Handle complete app state sync
+      console.log('Processing complete app state sync');
+      
+      const previousEntryCount = state.entries ? state.entries.length : 0;
+      let hasChanges = false;
+      
+      // Apply complete app state to localStorage
+      Object.entries(syncData).forEach(([key, value]) => {
+        try {
+          // Skip device-specific keys
+          if (key === 'dnd-journal-device-id') return;
+          
+          const currentValue = localStorage.getItem(key);
+          const newValue = JSON.stringify(value);
+          
+          if (currentValue !== newValue) {
+            localStorage.setItem(key, newValue);
+            hasChanges = true;
+            console.log(`Updated ${key} from complete app state sync`);
+          }
+        } catch (e) {
+          console.warn(`Failed to update ${key} from sync:`, e);
+        }
+      });
+      
+      if (hasChanges) {
+        // Reload journal state from updated localStorage
+        const reloadResult = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
+        if (reloadResult.success && reloadResult.data) {
+          state = { ...state, ...reloadResult.data };
+        }
+        
+        renderEntries();
+        displayCharacterSummary();
+        
+        // Show sync activity
+        const newEntryCount = state.entries ? state.entries.length : 0;
+        if (newEntryCount !== previousEntryCount) {
+          updateSyncStatus('connected', 'Sync updated', 'Complete app state synchronized from another device');
+          setTimeout(() => checkSyncStatus(), 2000);
+        }
+      }
+      
+    } else if (syncType === 'journal') {
+      // Handle legacy journal data sync with character data protection
+      console.log('Processing legacy journal data sync');
+      
       const previousEntryCount = state.entries ? state.entries.length : 0;
       
       // Preserve character data if it exists locally and is newer or more complete
@@ -722,25 +815,33 @@ export const setupSyncListener = () => {
       // Show sync activity
       const newEntryCount = state.entries ? state.entries.length : 0;
       if (newEntryCount !== previousEntryCount) {
-        updateSyncStatus('connected', 'Sync updated', 'Data synchronized from another device');
-        setTimeout(() => checkSyncStatus(), 2000); // Reset to normal status
+        updateSyncStatus('connected', 'Sync updated', 'Journal data synchronized from another device');
+        setTimeout(() => checkSyncStatus(), 2000);
       }
+      
+      // Upgrade to complete app state sync after processing legacy sync
+      setTimeout(() => {
+        console.log('Upgrading to complete app state sync after legacy sync');
+        sync.syncCompleteState();
+      }, 1000);
     }
   });
 };
 
 
 
-// Function to trigger sync update (called from character module)
+// Function to trigger sync update (called from character module and other modules)
 export const triggerSyncUpdate = () => {
-  // Reload current state from localStorage and sync it
+  // Reload current state from localStorage and sync complete app state
   const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
   if (result.success && result.data) {
     state = { ...state, ...result.data };
-    const sync = getYjsSync();
-    if (sync) {
-      sync.setData(state);
-    }
+  }
+  
+  const sync = getYjsSync();
+  if (sync) {
+    console.log('Triggering complete app state sync update');
+    sync.syncCompleteState();
   }
 };
 

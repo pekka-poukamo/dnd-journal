@@ -42,7 +42,18 @@ export const loadSettings = () => {
 
 // Save settings to localStorage
 export const saveSettings = (settings) => {
-  return safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
+  const result = safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
+  
+  // Trigger complete app state sync after settings change
+  if (typeof window !== 'undefined' && window.triggerSyncUpdate) {
+    try {
+      window.triggerSyncUpdate();
+    } catch (e) {
+      console.warn('Could not trigger sync update after settings change:', e);
+    }
+  }
+  
+  return result;
 };
 
 // Test API key with OpenAI

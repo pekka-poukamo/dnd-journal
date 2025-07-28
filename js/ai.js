@@ -298,6 +298,15 @@ const loadStoredSummaries = () => {
 // Save summaries to localStorage
 const saveStoredSummaries = (summaries) => {
   safeSetToStorage(STORAGE_KEYS.SUMMARIES, summaries);
+  
+  // Trigger complete app state sync after summaries change
+  if (typeof window !== 'undefined' && window.triggerSyncUpdate) {
+    try {
+      window.triggerSyncUpdate();
+    } catch (e) {
+      console.warn('Could not trigger sync update after AI summaries change:', e);
+    }
+  }
 };
 
 // Get or generate summary for an entry

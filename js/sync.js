@@ -6,6 +6,7 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { SYNC_CONFIG } from '../sync-config.js';
+import { STORAGE_KEYS } from './utils.js';
 
 // Sync state management
 let syncState = {
@@ -206,7 +207,7 @@ const setupObservers = (state) => {
   return state;
 };
 
-// Get current data from Yjs
+// Get current data from Yjs (legacy function - returns journal data)
 const getSyncData = () => {
   try {
     return syncState.ymap.get('data') || null;
@@ -216,18 +217,130 @@ const getSyncData = () => {
   }
 };
 
-// Save data to Yjs
+// Get complete app state from Yjs
+const getSyncCompleteAppState = () => {
+  try {
+    return syncState.ymap.get('appState') || null;
+  } catch (e) {
+    console.error('Failed to get Yjs complete app state:', e);
+    return null;
+  }
+};
+
+// Get complete app state from localStorage for syncing
+const getCompleteAppState = () => {
+  try {
+    const appState = {};
+    
+    // Get all storage keys and their data
+    Object.values(STORAGE_KEYS).forEach(key => {
+      try {
+        const item = localStorage.getItem(key);
+        if (item !== null) {
+          appState[key] = JSON.parse(item);
+        }
+      } catch (e) {
+        console.warn(`Failed to parse localStorage item ${key}:`, e);
+      }
+    });
+    
+    // Add any additional localStorage items that might be relevant
+    // Device ID and sync server settings
+    const deviceId = localStorage.getItem('dnd-journal-device-id');
+    const syncServer = localStorage.getItem('dnd-journal-sync-server');
+    
+    if (deviceId) appState['dnd-journal-device-id'] = deviceId;
+    if (syncServer) appState['dnd-journal-sync-server'] = syncServer;
+    
+    return appState;
+  } catch (e) {
+    console.error('Failed to get complete app state:', e);
+    return {};
+  }
+};
+
+// Set complete app state to localStorage from sync
+const setCompleteAppState = (appState) => {
+  try {
+    if (!appState || typeof appState !== 'object') {
+      console.warn('Invalid app state received from sync');
+      return false;
+    }
+    
+    let updateCount = 0;
+    
+    // Update each storage key with data from sync
+    Object.entries(appState).forEach(([key, value]) => {
+      try {
+        // Skip device-specific settings when syncing from remote
+        if (key === 'dnd-journal-device-id') {
+          return; // Don't sync device IDs
+        }
+        
+        const serialized = JSON.stringify(value);
+        const current = localStorage.getItem(key);
+        
+        // Only update if data has changed
+        if (current !== serialized) {
+          localStorage.setItem(key, serialized);
+          updateCount++;
+        }
+      } catch (e) {
+        console.warn(`Failed to set localStorage item ${key}:`, e);
+      }
+    });
+    
+    console.log(`Updated ${updateCount} localStorage items from sync`);
+    return updateCount > 0;
+  } catch (e) {
+    console.error('Failed to set complete app state:', e);
+    return false;
+  }
+};
+
+// Save data to Yjs (legacy function for backward compatibility)
 const setSyncData = (data) => {
+  // For backward compatibility, if data is provided, just sync journal data
+  // Otherwise, sync complete app state
+  if (data) {
+    setSyncJournalData(data);
+  } else {
+    setSyncCompleteAppState();
+  }
+};
+
+// Save journal data to Yjs (legacy support)
+const setSyncJournalData = (journalData) => {
   try {
     const timestamp = Date.now();
-    syncState.ymap.set('data', data);
+    syncState.ymap.set('data', journalData);
     syncState.ymap.set('lastModified', timestamp);
     syncState.ymap.set('deviceId', getDeviceId());
     syncState.lastModified = timestamp;
-    console.log('Data uploaded to sync');
+    console.log('Journal data uploaded to sync');
   } catch (e) {
-    console.error('Failed to set Yjs data:', e);
-    syncState.errors.push(`Failed to upload data: ${e.message}`);
+    console.error('Failed to set Yjs journal data:', e);
+    syncState.errors.push(`Failed to upload journal data: ${e.message}`);
+  }
+};
+
+// Save complete app state to Yjs
+const setSyncCompleteAppState = () => {
+  try {
+    const timestamp = Date.now();
+    const completeAppState = getCompleteAppState();
+    
+    syncState.ymap.set('appState', completeAppState);
+    syncState.ymap.set('lastModified', timestamp);
+    syncState.ymap.set('deviceId', getDeviceId());
+    syncState.lastModified = timestamp;
+    console.log('Complete app state uploaded to sync:', {
+      storageKeys: Object.keys(completeAppState),
+      timestamp
+    });
+  } catch (e) {
+    console.error('Failed to set Yjs complete app state:', e);
+    syncState.errors.push(`Failed to upload complete app state: ${e.message}`);
   }
 };
 
@@ -241,13 +354,26 @@ const onSyncChange = (callback) => {
 
 // Notify all callbacks of changes
 const notifyCallbacks = (state) => {
-  const data = getSyncData();
-  if (data) {
+  // Check for complete app state first (preferred), then fallback to legacy journal data
+  const completeAppState = getSyncCompleteAppState();
+  const journalData = getSyncData();
+  
+  if (completeAppState) {
+    // New complete app state sync
     state.callbacks.forEach(callback => {
       try {
-        callback(data);
+        callback(completeAppState, 'complete');
       } catch (e) {
-        console.error('Failed to execute callback:', e);
+        console.error('Failed to execute complete app state callback:', e);
+      }
+    });
+  } else if (journalData) {
+    // Legacy journal data sync
+    state.callbacks.forEach(callback => {
+      try {
+        callback(journalData, 'journal');
+      } catch (e) {
+        console.error('Failed to execute journal callback:', e);
       }
     });
   }
@@ -346,8 +472,11 @@ export const createYjsSync = () => {
     get isConnected() { return syncState.isConnected; },
     
     // Methods
-    getData: getSyncData,
-    setData: setSyncData,
+    getData: getSyncData, // Legacy - gets journal data
+    setData: setSyncData, // Legacy - sets journal data or triggers complete sync
+    getCompleteAppState: getSyncCompleteAppState, // New - gets complete app state
+    setCompleteAppState: setSyncCompleteAppState, // New - sets complete app state
+    syncCompleteState: setSyncCompleteAppState, // Alias for convenience
     onChange: onSyncChange,
     getStatus: getSyncStatus,
     getDeviceId,
