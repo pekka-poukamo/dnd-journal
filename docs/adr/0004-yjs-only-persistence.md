@@ -1,7 +1,7 @@
 # ADR-0004: Yjs-Only Persistence (localStorage Deprecated)
 
 ## Status
-Accepted (Updated 2024-12-19)
+Accepted (Updated 2025-07-28)
 
 ## Context
 Applications need data persistence that supports both local-first principles and real-time collaboration. Options include databases, APIs, cloud storage, IndexedDB, localStorage, and CRDT-based solutions like Yjs.
@@ -108,5 +108,5 @@ The original version of this ADR specified localStorage-only persistence. The cu
 - **Collaboration**: Multiple users can edit simultaneously with automatic conflict resolution
 
 ## Revision History
-- **2024-12-19**: Updated from localStorage-only to Yjs-only persistence to match current implementation
+- **2025-07-28**: Updated from localStorage-only to Yjs-only persistence to match current implementation
 - **Original**: localStorage-only persistence (superseded)

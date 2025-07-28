@@ -1,7 +1,7 @@
 # ADR-0003: Yjs Sync Enhancement for Cross-Device Persistence
 
 ## Status
-Superseded (2024-12-19) - Integrated into ADR-0004 as primary persistence
+Superseded (2025-07-28) - Integrated into ADR-0004 as primary persistence
 
 ## Context
 While ADR-0004 originally established localStorage as the primary persistence mechanism, users needed a way to synchronize data across multiple devices. The constraint was to maintain local-first principles while enabling automatic cross-device sync.
@@ -137,5 +137,5 @@ yjsSync.onChange((remoteData) => {
 All persistence patterns are now defined in ADR-0004 as Yjs is the primary persistence mechanism.
 
 ## Revision History
-- **2024-12-19**: Marked as superseded - integrated into updated ADR-0004 as primary persistence
+- **2025-07-28**: Marked as superseded - integrated into updated ADR-0004 as primary persistence
 - **Original**: Yjs as enhancement to localStorage (superseded)
