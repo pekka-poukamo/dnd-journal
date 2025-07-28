@@ -9,7 +9,6 @@ import {
 
 import { generateIntrospectionPrompt, isAIEnabled } from './ai.js';
 import { runAutoSummarization, summarize, getSummary } from './summarization.js';
-import { setupCharacterForm } from './character.js';
 import { 
   createSystem, 
   getSyncStatus,
@@ -395,9 +394,6 @@ export const init = async () => {
     loadStateFromYjs();
     
     // Setup UI
-    if (yjsSystem?.journalMap) {
-      setupCharacterForm();
-    }
     renderEntries();
     displayCharacterSummary();
     setupEventHandlers();

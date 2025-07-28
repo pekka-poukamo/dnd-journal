@@ -80,6 +80,8 @@ export const setupCharacterForm = () => {
   });
 };
 
+
+
 // Pure function to get character data from form
 export const getCharacterFromForm = () => 
   getCharacterFormFieldIds().reduce((character, fieldId) => {
