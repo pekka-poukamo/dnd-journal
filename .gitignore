@@ -72,3 +72,6 @@ CNAME
 # Test artifacts
 test-results/
 .nyc_output/
+
+# Server data
+data/

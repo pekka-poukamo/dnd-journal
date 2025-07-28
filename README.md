@@ -11,26 +11,14 @@ Open `index.html` in a browser.
 
 ## Cross-Device Sync
 
-The journal supports real-time sync across multiple devices using Yjs.
+Real-time sync across devices using Yjs. Data persists locally and optionally syncs through a server.
 
-### Sync Status
-
-Check the sync status in Settings page. Journal automatically syncs across devices when online.
-
-### Setting Up Your Own Sync Server
-
-#### Built-in Server with File Persistence
+### Local Server
 ```bash
-npm run server            # Saves data to ./data/ directory
+npm run server
 ```
 
-#### Configuration
-1. Run `npm run server`
-2. Open Settings in your journal
-3. Set sync server to: `ws://localhost:1234`
-4. Save settings
-
-Documents are automatically saved to `./data/` directory on the server.
+Then in Settings, set sync server to `ws://localhost:1234`. Documents save to `./data/` directory.
 
 ## Development
 
