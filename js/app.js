@@ -9,6 +9,7 @@ import {
 
 import { generateIntrospectionPrompt, isAIEnabled } from './ai.js';
 import { runAutoSummarization, summarize, getSummary } from './summarization.js';
+import { setupCharacterForm } from './character.js';
 import { 
   createSystem, 
   getSyncStatus,
@@ -76,34 +77,7 @@ const loadStateFromYjs = () => {
   }
 };
 
-// Setup character form with direct Yjs binding
-export const setupCharacterForm = () => {
-  if (!yjsSystem?.journalMap) return;
-  
-  const fields = ['name', 'race', 'class', 'backstory', 'notes'];
-  
-  fields.forEach(field => {
-    const input = document.getElementById(`character-${field}`);
-    if (input) {
-      // Load initial value from Yjs
-      const characterMap = yjsSystem.journalMap.get('character');
-      if (characterMap) {
-        input.value = characterMap.get(field) || '';
-      }
-      
-      // Update Yjs on input change
-      input.addEventListener('input', () => {
-        let characterMap = yjsSystem.journalMap.get('character');
-        if (!characterMap) {
-          characterMap = new Y.Map();
-          yjsSystem.journalMap.set('character', characterMap);
-        }
-        characterMap.set(field, input.value);
-        yjsSystem.journalMap.set('lastModified', Date.now());
-      });
-    }
-  });
-};
+
 
 // Get form data for new entries
 const getFormData = () => {

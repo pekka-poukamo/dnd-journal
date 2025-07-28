@@ -13,7 +13,7 @@ import {
 } from './utils.js';
 import { summarize } from './summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
-import { updateCharacter } from './yjs.js';
+import { updateCharacter, getSystem, Y } from './yjs.js';
 
 // Pure function to load character data from localStorage
 export const loadCharacterData = () => {
@@ -48,6 +48,36 @@ export const saveCharacterDataWithSync = (characterData) => {
   updateCharacter(characterData);
   
   return saveResult;
+};
+
+// Setup character form with direct Yjs binding
+export const setupCharacterForm = () => {
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.journalMap) return;
+  
+  const fields = ['name', 'race', 'class', 'backstory', 'notes'];
+  
+  fields.forEach(field => {
+    const input = document.getElementById(`character-${field}`);
+    if (input) {
+      // Load initial value from Yjs
+      const characterMap = yjsSystem.journalMap.get('character');
+      if (characterMap) {
+        input.value = characterMap.get(field) || '';
+      }
+      
+      // Update Yjs on input change
+      input.addEventListener('input', () => {
+        let characterMap = yjsSystem.journalMap.get('character');
+        if (!characterMap) {
+          characterMap = new Y.Map();
+          yjsSystem.journalMap.set('character', characterMap);
+        }
+        characterMap.set(field, input.value);
+        yjsSystem.journalMap.set('lastModified', Date.now());
+      });
+    }
+  });
 };
 
 // Pure function to get character data from form
