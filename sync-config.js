@@ -1,15 +1,24 @@
 // D&D Journal Sync Configuration
 // Edit this file to set your sync server, or configure via Settings page
 
-// Get server configuration from localStorage or fallback to this file
+// Get server configuration from Yjs system or fallback to this file
 const getServerConfig = () => {
   try {
+    // Try to get Yjs system if available
+    if (typeof window !== 'undefined' && window.yjsSystemGlobal?.settingsMap) {
+      const savedServer = window.yjsSystemGlobal.settingsMap.get('syncServer');
+      if (savedServer) {
+        return savedServer;
+      }
+    }
+    
+    // Fallback to localStorage for backward compatibility during migration
     const savedServer = localStorage.getItem('dnd-journal-sync-server');
     if (savedServer) {
       return savedServer;
     }
   } catch (e) {
-    // localStorage not available, fallback to static config
+    // Neither Yjs nor localStorage available, fallback to static config
   }
   
   // Static configuration fallback

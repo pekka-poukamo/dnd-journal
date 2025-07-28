@@ -12,6 +12,9 @@
     "coverage": "c8 npm test",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
     "deploy": "surge . http://dnd-journal.surge.sh --force",
+    "server": "node server.js",
+    "server:dev": "node server.js 1234 localhost",
+    "server:public": "HOST=0.0.0.0 PORT=1234 node server.js",
     "sync-server": "HOST=0.0.0.0 PORT=1234 y-websocket-server"
   },
   "repository": {
@@ -42,14 +45,13 @@
     "mocha": "^10.2.0",
     "surge": "^0.23.1"
   },
-  "optionalDependencies": {
-    "y-websocket": "^1.5.4"
-  },
   "engines": {
     "node": ">=16.0.0"
   },
   "dependencies": {
+    "ws": "^8.18.3",
     "y-indexeddb": "^9.0.12",
+    "y-websocket": "^1.5.4",
     "yjs": "^13.6.27"
   }
 }
