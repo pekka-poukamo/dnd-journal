@@ -88,45 +88,26 @@
                         <p class="settings-section-description">Sync your journal entries across multiple devices in real-time</p>
                     </div>
                     
-                    <!-- Quick Sync Setup Subsection -->
-                    <div class="settings-subsection">
-                        <h3 class="settings-subsection-title">Quick Setup</h3>
-                        
-                        <div class="form-group">
-                            <button id="set-local-server-btn" class="btn btn-primary">
-                                Set Local Server (ws://localhost:1234)
-                            </button>
-                            <button id="clear-server-btn" class="btn btn-secondary" style="margin-left: 0.5rem;">
-                                Use Public Servers
-                            </button>
-                            <p class="form-help">
-                                <strong>Quick setup:</strong> Click "Set Local Server", then run <code>npm run sync-server</code> in terminal.
-                                <br>
-                                <span id="current-server-status">Current: Default public servers</span>
-                            </p>
-                        </div>
-                    </div>
-
                     <!-- Sync Server Configuration Subsection -->
                     <div class="settings-subsection">
-                        <h3 class="settings-subsection-title">Advanced Configuration</h3>
+                        <h3 class="settings-subsection-title">Server Configuration</h3>
                         
                         <div class="form-group">
                             <label for="sync-server" class="form-label">
-                                Custom Sync Server (Optional)
+                                Sync Server (Optional)
                             </label>
                             <input 
                                 type="text" 
                                 id="sync-server" 
                                 class="form-input" 
-                                placeholder="ws://192.168.1.100:1234 or wss://your-server.com:1234"
+                                placeholder="ws://localhost:1234 or wss://your-server.com:1234"
                                 autocomplete="off"
                                 data-lpignore="true"
                                 data-1p-ignore="true"
                             >
                             <p class="form-help">
-                                Leave empty to use public servers. Enter a WebSocket URL to use your own private server.
-                                <a href="https://github.com/yjs/y-websocket" target="_blank">Setup guide</a>
+                                Leave empty to use public servers. For local server: <code>npm run sync-server</code> then use <code>ws://localhost:1234</code>
+                                <br><a href="https://github.com/yjs/y-websocket" target="_blank">Setup guide</a>
                             </p>
                         </div>
                     </div>

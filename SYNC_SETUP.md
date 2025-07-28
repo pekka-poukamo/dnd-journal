@@ -33,8 +33,8 @@ ws://192.168.1.100:1234
 
 1. **Starts y-websocket server** on `localhost:1234`
 2. **Enables LevelDB persistence** in `./y-leveldb-data/`
-3. **Maintains localStorage primacy** - follows ADR-0003
-4. **Provides async sync** - devices can sync at different times
+3. **Provides CRDT sync layer** - Yjs syncs data between devices
+4. **Maintains localStorage as primary** - follows ADR-0003
 
 ## Advanced Configuration
 
@@ -57,7 +57,7 @@ YPERSISTENCE=/path/to/storage npm run sync-server
 2. **Open Settings** in the D&D Journal app
 3. **Set Sync Server**: `ws://localhost:1234`
 4. **Test Connection** - should show "Connected"
-5. **Open app on another device** - changes sync automatically
+5. **Open app on another device** - Yjs will sync changes through server
 
 ## Troubleshooting
 
@@ -74,15 +74,15 @@ YPERSISTENCE=/path/to/storage npm run sync-server
 ## Architecture
 
 ```
-Device A ←→ localStorage (primary) ←→ Yjs ←→ WebSocket ←→ Sync Server ←→ LevelDB
-Device B ←→ localStorage (primary) ←→ Yjs ←→ WebSocket ←→ Sync Server ←→ LevelDB
+Device A ←→ localStorage ←→ Yjs CRDT ←→ WebSocket ←→ Sync Server ←→ LevelDB
+Device B ←→ localStorage ←→ Yjs CRDT ←→ WebSocket ←→ Sync Server ←→ LevelDB
 ```
 
 **Key Points:**
-- **localStorage remains primary** - app works without sync
-- **Sync is transparent enhancement** - no breaking changes
+- **localStorage remains data store** - app works without sync
+- **Yjs provides sync layer** - CRDT handles conflict resolution
 - **Server provides persistence** - data survives restarts
-- **CRDT handles conflicts** - automatic merge resolution
+- **Zero breaking changes** - existing localStorage code unchanged
 
 ## Production Setup
 

@@ -19,15 +19,15 @@ Following **ADR-0003 (Yjs Sync Enhancement)**, **ADR-0013 (Radical Simplicity)**
    - Real-time updates when online
 
 3. **📱 Local-First Architecture (Maintained)**
-   - localStorage remains primary data store
+   - localStorage remains data store
    - App works 100% offline
-   - Sync is transparent enhancement
+   - Yjs provides sync layer
    - No breaking changes to existing functionality
 
-4. **⚡ One-Command Setup**
+4. **⚡ Simple Setup**
    - `npm run sync-server` - starts persistent server
    - `ws://localhost:1234` - simple configuration
-   - Quick setup buttons in Settings UI
+   - Standard Settings UI configuration
    - Zero external dependencies
 
 ### Files Created/Modified
@@ -35,14 +35,13 @@ Following **ADR-0003 (Yjs Sync Enhancement)**, **ADR-0013 (Radical Simplicity)**
 #### New Files
 - `sync-server.js` - Simple sync server wrapper
 - `SYNC_SETUP.md` - Comprehensive setup guide
-- `js/sync-helper.js` - Helper functions (unused, kept for future)
 - `SYNC_PERSISTENCE_SUMMARY.md` - This summary
 
 #### Modified Files
 - `package.json` - Added `sync-server` script
-- `settings.html` - Added quick setup buttons
-- `js/settings.js` - Added quick setup functionality
+- `settings.html` - Updated placeholder text for clarity
 - `README.md` - Updated sync instructions
+- `.gitignore` - Added y-leveldb-data/
 
 ### Architecture Compliance
 
@@ -60,7 +59,7 @@ Following **ADR-0003 (Yjs Sync Enhancement)**, **ADR-0013 (Radical Simplicity)**
 - Direct, understandable implementation ✓
 
 ✅ ADR-0004: localStorage Primacy
-- localStorage is source of truth ✓
+- localStorage remains data store ✓
 - App works without sync ✓
 - No external data dependencies ✓
 ```
