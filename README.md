@@ -15,10 +15,17 @@ Real-time sync across devices using Yjs. Data persists locally and optionally sy
 
 ### Local Server
 ```bash
-npm run server
+npm run server  # Installs server deps and starts server
 ```
 
-Then in Settings, set sync server to `ws://localhost:1234`. Documents persist in LevelDB at `./data/`.
+Then in Settings, set sync server to `ws://localhost:1234`. Documents persist in LevelDB at `./server/data/`.
+
+### Manual Server Setup
+```bash
+cd server
+npm install
+npm start
+```
 
 ## Development
 
@@ -54,6 +61,12 @@ Automated testing and deployment via GitHub Actions:
 ├── settings.html       # Settings page
 ├── js/                 # JavaScript modules
 ├── css/                # Styles
+├── lib/                # Client-only Yjs dependencies
+├── server/             # Server with separate dependencies
 ├── test/               # Tests
 └── docs/adr/           # Architecture decisions
 ```
+
+**Dependencies separated:**
+- **Client** (`./lib/`): Only Yjs files needed for browser
+- **Server** (`./server/`): LevelDB and server dependencies

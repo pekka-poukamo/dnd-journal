@@ -1,0 +1,19 @@
+{
+  "name": "dnd-journal-server",
+  "version": "1.0.0",
+  "description": "D&D Journal sync server",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3",
+    "y-leveldb": "^0.1.2",
+    "y-websocket": "^1.5.4",
+    "yjs": "^13.6.27"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
