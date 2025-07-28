@@ -3,7 +3,7 @@
 
 import { loadDataWithFallback, safeSetToStorage, generateId, createInitialJournalState, STORAGE_KEYS } from './utils.js';
 import { createUserPromptFunction, createTemplateFunction, isAPIAvailable } from './openai-wrapper.js';
-import { updateSummaries } from './yjs.js';
+import { updateSummaries, getSummaries } from './yjs.js';
 
 // =============================================================================
 // CONFIGURATION
@@ -37,13 +37,27 @@ const callMetaSummarize = createTemplateFunction(createMetaSummaryPrompt, {
 // STORAGE FUNCTIONS
 // =============================================================================
 
-const loadSummaries = () => loadDataWithFallback(STORAGE_KEY, {});
+const loadSummaries = () => {
+  try {
+    // Try Yjs first (primary store)
+    const yjsSummaries = getSummaries();
+    if (Object.keys(yjsSummaries).length > 0) {
+      return yjsSummaries;
+    }
+    
+    // Fallback to localStorage
+    return loadDataWithFallback(STORAGE_KEY, {});
+  } catch (error) {
+    console.error('Error loading summaries:', error);
+    return {};
+  }
+};
 const saveSummaries = (summaries) => {
-  // Save to localStorage for backward compatibility
-  const result = safeSetToStorage(STORAGE_KEY, summaries);
-  
-  // Update Yjs for real-time sync
+  // Update Yjs as primary store
   updateSummaries(summaries);
+  
+  // Keep localStorage copy for backward compatibility only
+  const result = safeSetToStorage(STORAGE_KEY, summaries);
   
   return result;
 };

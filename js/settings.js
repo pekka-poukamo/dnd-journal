@@ -1,6 +1,6 @@
 // Settings Page - AI Configuration & Data Management
 
-import { updateSettings } from './yjs.js';
+import { updateSettings, getSettings } from './yjs.js';
 import { 
   loadDataWithFallback, 
   createInitialSettings, 
@@ -31,21 +31,33 @@ const getYjsSync = () => {
   return yjsSync;
 };
 
-// Load settings from localStorage
+// Load settings from Yjs (primary) or localStorage (fallback)
 export const loadSettings = () => {
-  return loadDataWithFallback(
-    STORAGE_KEYS.SETTINGS, 
-    createInitialSettings()
-  );
+  try {
+    // Try Yjs first (primary store)
+    const yjsSettings = getSettings();
+    if (yjsSettings.apiKey || yjsSettings.enableAIFeatures) {
+      return yjsSettings;
+    }
+    
+    // Fallback to localStorage
+    return loadDataWithFallback(
+      STORAGE_KEYS.SETTINGS, 
+      createInitialSettings()
+    );
+  } catch (error) {
+    console.error('Error loading settings:', error);
+    return createInitialSettings();
+  }
 };
 
-// Save settings with sync
+// Save settings directly to Yjs (primary store)
 export const saveSettings = (settings) => {
-  // Save to localStorage for backward compatibility
-  const result = safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
-  
-  // Update Yjs for real-time sync
+  // Update Yjs as primary store
   updateSettings(settings);
+  
+  // Keep localStorage copy for backward compatibility only
+  const result = safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
   
   return result;
 };

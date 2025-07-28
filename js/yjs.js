@@ -136,6 +136,24 @@ export const createSystem = async () => {
   return system;
 };
 
+// Get character data from Yjs
+export const getCharacter = () => {
+  if (!yjsSystem?.journalMap) return { name: '', race: '', class: '', backstory: '', notes: '' };
+  
+  const characterMap = yjsSystem.journalMap.get('character');
+  if (!characterMap) {
+    return { name: '', race: '', class: '', backstory: '', notes: '' };
+  }
+  
+  return {
+    name: characterMap.get('name') || '',
+    race: characterMap.get('race') || '',
+    class: characterMap.get('class') || '',
+    backstory: characterMap.get('backstory') || '',
+    notes: characterMap.get('notes') || ''
+  };
+};
+
 // Update character data
 export const updateCharacter = (characterData) => {
   if (!yjsSystem?.journalMap) return;
@@ -156,12 +174,38 @@ export const updateCharacter = (characterData) => {
   yjsSystem.journalMap.set('lastModified', Date.now());
 };
 
+// Get settings from Yjs
+export const getSettings = () => {
+  if (!yjsSystem?.settingsMap) return { apiKey: '', enableAIFeatures: false };
+  
+  return {
+    apiKey: yjsSystem.settingsMap.get('apiKey') || '',
+    enableAIFeatures: yjsSystem.settingsMap.get('enableAIFeatures') || false
+  };
+};
+
 // Update settings
 export const updateSettings = (settings) => {
   if (!yjsSystem?.settingsMap) return;
   
   yjsSystem.settingsMap.set('apiKey', settings.apiKey || '');
   yjsSystem.settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
+};
+
+// Get summaries from Yjs
+export const getSummaries = () => {
+  if (!yjsSystem?.summariesMap) return {};
+  
+  const summaries = {};
+  yjsSystem.summariesMap.forEach((summaryMap, key) => {
+    summaries[key] = {
+      content: summaryMap.get('content') || '',
+      words: summaryMap.get('words') || 0,
+      timestamp: summaryMap.get('timestamp') || Date.now()
+    };
+  });
+  
+  return summaries;
 };
 
 // Update summaries

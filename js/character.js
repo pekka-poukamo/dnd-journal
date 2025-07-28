@@ -13,16 +13,28 @@ import {
 } from './utils.js';
 import { summarize } from './summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
-import { updateCharacter, getSystem, Y } from './yjs.js';
+import { updateCharacter, getCharacter, getSystem, Y } from './yjs.js';
 
-// Pure function to load character data from localStorage
+// Load character data from Yjs (primary) or localStorage (fallback)
 export const loadCharacterData = () => {
-  const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
-  if (!result.success || !result.data) {
+  try {
+    // Try Yjs first (primary store)
+    const yjsCharacter = getCharacter();
+    if (yjsCharacter.name || yjsCharacter.race || yjsCharacter.class) {
+      return yjsCharacter;
+    }
+    
+    // Fallback to localStorage
+    const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
+    if (!result.success || !result.data) {
+      return createInitialJournalState().character;
+    }
+    
+    return result.data.character || createInitialJournalState().character;
+  } catch (error) {
+    console.error('Error loading character data:', error);
     return createInitialJournalState().character;
   }
-  
-  return result.data.character || createInitialJournalState().character;
 };
 
 // Pure function to save character data to localStorage
@@ -39,13 +51,13 @@ export const saveCharacterData = (characterData) => {
   return safeSetToStorage(STORAGE_KEYS.JOURNAL, updatedData);
 };
 
-// Save character data with sync
+// Save character data directly to Yjs (primary store)
 export const saveCharacterDataWithSync = (characterData) => {
-  // Save to localStorage for backward compatibility
-  const saveResult = saveCharacterData(characterData);
-  
-  // Update Yjs for real-time sync
+  // Update Yjs as primary store
   updateCharacter(characterData);
+  
+  // Keep localStorage copy for backward compatibility only
+  const saveResult = saveCharacterData(characterData);
   
   return saveResult;
 };

@@ -29,7 +29,7 @@ import {
   STORAGE_KEYS, 
   safeSetToStorage 
 } from './utils.js';
-import { updateSummaries } from './yjs.js';
+import { updateSummaries, getSummaries } from './yjs.js';
 
 // Unified narrative-focused system prompt with unobvious question element
 export const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
@@ -291,18 +291,30 @@ Content: ${entry.content}`;
   }
 };
 
-// Load stored summaries
+// Load stored summaries from Yjs (primary) or localStorage (fallback)
 const loadStoredSummaries = () => {
-  return loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
+  try {
+    // Try Yjs first (primary store)
+    const yjsSummaries = getSummaries();
+    if (Object.keys(yjsSummaries).length > 0) {
+      return yjsSummaries;
+    }
+    
+    // Fallback to localStorage
+    return loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
+  } catch (error) {
+    console.error('Error loading summaries:', error);
+    return {};
+  }
 };
 
-// Save summaries with sync
+// Save summaries directly to Yjs (primary store)
 const saveStoredSummaries = (summaries) => {
-  // Save to localStorage for backward compatibility
-  safeSetToStorage(STORAGE_KEYS.SUMMARIES, summaries);
-  
-  // Update Yjs for real-time sync
+  // Update Yjs as primary store
   updateSummaries(summaries);
+  
+  // Keep localStorage copy for backward compatibility only
+  safeSetToStorage(STORAGE_KEYS.SUMMARIES, summaries);
 };
 
 // Get or generate summary for an entry
