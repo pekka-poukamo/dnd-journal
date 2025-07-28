@@ -14,8 +14,8 @@ This directory contains Architecture Decision Records (ADRs) that document the k
 |-----|-------|--------|
 | [ADR-0001](0001-use-vanilla-javascript-only.md) | Use Vanilla JavaScript Only | Accepted |
 | [ADR-0002](0002-functional-programming-only.md) | Functional Programming Only | Accepted |
-| [ADR-0003](0003-yjs-sync-enhancement.md) | Yjs Sync Enhancement for Cross-Device Persistence | Accepted |
-| [ADR-0004](0004-localStorage-only-persistence.md) | localStorage Only for Persistence | Accepted |
+| [ADR-0003](0003-yjs-sync-enhancement.md) | Yjs Sync Enhancement for Cross-Device Persistence | Superseded |
+| [ADR-0004](0004-yjs-only-persistence.md) | Yjs-Only Persistence (localStorage Deprecated) | Accepted |
 | [ADR-0005](0005-mandatory-testing.md) | Mandatory Testing for All Code | Accepted |
 | [ADR-0006](0006-no-build-tools.md) | No Build Tools or Bundlers | Accepted |
 | [ADR-0007](0007-feature-freeze-boundaries.md) | Feature Freeze Boundaries | Accepted |

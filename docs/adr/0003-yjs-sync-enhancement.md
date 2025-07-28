@@ -1,31 +1,40 @@
 # ADR-0003: Yjs Sync Enhancement for Cross-Device Persistence
 
 ## Status
-Accepted
+Superseded (2025-07-28) - Integrated into ADR-0004 as primary persistence
 
 ## Context
-While ADR-0004 establishes localStorage as the primary persistence mechanism, users need a way to synchronize data across multiple devices. The constraint is to maintain local-first principles while enabling automatic cross-device sync without sacrificing the core benefits of localStorage-only persistence.
+While ADR-0004 originally established localStorage as the primary persistence mechanism, users needed a way to synchronize data across multiple devices. The constraint was to maintain local-first principles while enabling automatic cross-device sync.
 
 ## Decision
-We will enhance our localStorage-only persistence with **Yjs CRDT sync** as an optional, transparent layer that maintains localStorage as the source of truth while enabling automatic cross-device synchronization.
+~~We will enhance our localStorage-only persistence with **Yjs CRDT sync** as an optional, transparent layer that maintains localStorage as the source of truth while enabling automatic cross-device synchronization.~~
+
+**SUPERSEDED**: This ADR has been integrated into the updated ADR-0004. Yjs is now the primary persistence mechanism (not an enhancement), providing both local IndexedDB persistence and cross-device synchronization in a unified solution. **localStorage is completely deprecated** and must not be used.
 
 ## Rationale
-- **Local-First Maintained**: localStorage remains the primary data store
-- **Zero Breaking Changes**: Existing app continues to work without any modifications
+- ~~**Local-First Maintained**: localStorage remains the primary data store~~
+- **Local-First Achieved**: IndexedDB provides robust local persistence
+- ~~**Zero Breaking Changes**: Existing app continues to work without any modifications~~
 - **Automatic Sync**: Real-time synchronization across devices when online
-- **Offline Resilience**: Works completely offline, syncs when connectivity returns
+- **Offline Resilience**: Works completely offline via IndexedDB, syncs when connectivity returns
 - **No Server Dependencies**: Can use free public relay servers
 - **CRDT Conflict Resolution**: Automatic merging without user intervention
-- **Optional Enhancement**: Users can ignore sync entirely and use localStorage-only
+- ~~**Optional Enhancement**: Users can ignore sync entirely and use localStorage-only~~
+- **Unified Solution**: Single system handles both local persistence and sync
 
 ## Architecture
 
-### Data Flow
+### Updated Data Flow (Current Implementation)
+```
+Yjs Maps (primary) ←→ IndexedDB (local persistence) ←→ WebSocket Providers (sync)
+```
+
+### ~~Original Data Flow (Superseded)~~
 ```
 localStorage (primary) ←→ Yjs Document ←→ Network Providers
 ```
 
-### Network Resilience
+### Network Resilience (Still Valid)
 ```
 Device A ↔ Personal Pi Server (primary)
     ↓           ↓
@@ -34,13 +43,33 @@ Device A ↔ Personal Pi Server (primary)
 
 ## Implementation Requirements
 
-### Core Principles
-- **localStorage First**: All data operations go through localStorage
-- **Sync as Enhancement**: Yjs syncs FROM localStorage, not TO it
-- **Graceful Degradation**: App works identically with or without sync
-- **No External Dependencies**: Must work with free/self-hosted options
+### ~~Core Principles (Original - Superseded)~~
+- ~~**localStorage First**: All data operations go through localStorage~~
+- ~~**Sync as Enhancement**: Yjs syncs FROM localStorage, not TO it~~
+- ~~**Graceful Degradation**: App works identically with or without sync~~
+- ~~**No External Dependencies**: Must work with free/self-hosted options~~
 
-### Allowed Components
+### Current Core Principles (Integrated into ADR-0004)
+- **Yjs Primary**: All data operations go through Yjs Maps
+- **IndexedDB Persistence**: Local persistence via y-indexeddb
+- **Sync Built-in**: WebSocket providers enable cross-device sync
+- **Graceful Degradation**: App works offline via IndexedDB
+- **No External Dependencies**: Uses free/self-hosted sync servers
+
+### Current Implementation (See ADR-0004)
+```javascript
+// ✅ Current Yjs-Primary Implementation
+import { createSystem, getSystem, Y } from './yjs.js';
+
+// Initialize Yjs system with IndexedDB persistence and sync
+const yjsSystem = await createSystem();
+
+// Direct Yjs operations (primary)
+yjsSystem.characterMap.set('name', 'Aragorn');
+const name = yjsSystem.characterMap.get('name');
+```
+
+### ~~Allowed Components (Original - Superseded)~~
 ```javascript
 // ✅ Allowed Yjs Integration
 import * as Y from 'yjs'
@@ -56,47 +85,40 @@ utils.safeSetToStorage(utils.STORAGE_KEYS.JOURNAL, state)
 ymap.set('data', state) // Sync copy
 ```
 
-### Forbidden Approaches
-- **Yjs as Primary Store**: localStorage must remain the source of truth
-- **Required Sync**: App must work without any network connectivity
-- **Commercial Sync Services**: Only free/self-hosted solutions allowed
-- **Breaking Changes**: Existing localStorage API cannot change
+## Migration History
 
-## Network Providers (In Priority Order)
+### Phase 1: localStorage Primary + Yjs Sync (Original ADR-0003)
+- localStorage as source of truth
+- Yjs as optional sync enhancement
+- Dual persistence (localStorage + Yjs)
 
-1. **Self-Hosted Pi Server** (Primary)
-   - WebSocket server on user's Raspberry Pi
-   - Fast local network sync
-   - Full user control
+### Phase 2: Yjs Primary (Current - ADR-0004)
+- Yjs Maps as source of truth
+- IndexedDB via y-indexeddb for local persistence
+- WebSocket providers for sync
+- Unified persistence and sync solution
 
-2. **Public Relay Servers** (Fallback)
-   - Free Yjs demo servers
-   - Automatic fallback when Pi offline
-   - No registration required
-
-3. **Offline Mode** (Always Available)
-   - IndexedDB persistence for Yjs document
-   - Works without any network
-   - Syncs when connectivity returns
-
-## Benefits
+## Benefits Achieved
 
 ### Technical
-- Maintains all ADR-0004 benefits
-- Adds seamless cross-device sync
+- ~~Maintains all ADR-0004 benefits~~ → **Exceeds original ADR-0004 benefits**
+- Seamless cross-device sync
 - Zero-configuration fallback servers
 - Automatic conflict resolution via CRDT
 - Real-time updates when online
+- **Structured data model** (vs JSON strings)
+- **Better performance** (vs localStorage serialization)
 
 ### User Experience
 - Works identically offline and online
 - Changes appear instantly on other devices
 - No manual export/import required
 - No account creation or sign-up needed
+- **Better collaboration** via CRDT conflict resolution
 
 ## Compliance
 
-### Required Implementation
+### ~~Required Implementation (Original - Superseded)~~
 ```javascript
 // Primary data flow (unchanged from ADR-0004)
 const saveData = () => {
@@ -111,41 +133,9 @@ yjsSync.onChange((remoteData) => {
 })
 ```
 
-### Forbidden Patterns
-```javascript
-// ❌ Yjs as primary store
-const state = ydoc.getMap('journal').get('data') // Bypasses localStorage
-
-// ❌ Required sync
-if (!yjsSync.isConnected()) {
-  throw new Error('Cannot save without sync') // Must work offline
-}
-
-// ❌ Paid services
-new WebsocketProvider('wss://paid-sync-service.com', doc) // Must be free
-```
-
-## Migration Strategy
-
-### Phase 1: Non-Breaking Addition
-- Add Yjs as optional sync layer
-- Existing localStorage code unchanged
-- Sync enhances but doesn't replace
-
-### Phase 2: Automatic Migration
-- On first Yjs load, populate from localStorage
-- Thereafter, localStorage and Yjs stay in sync
-- No user action required
-
-### Phase 3: Graceful Fallback
-- If Yjs fails, app continues with localStorage
-- No functionality loss
-- Transparent to user
+### Current Implementation (See ADR-0004)
+All persistence patterns are now defined in ADR-0004 as Yjs is the primary persistence mechanism.
 
 ## Revision History
-
-### 2024-12-19: Initial Decision
-- Yjs chosen over Automerge for simplicity
-- Public relay servers for zero-cost fallback
-- Pi server for optimal local performance
-- Maintains all existing localStorage benefits while adding cross-device sync
+- **2025-07-28**: Marked as superseded - integrated into updated ADR-0004 as primary persistence
+- **Original**: Yjs as enhancement to localStorage (superseded)
