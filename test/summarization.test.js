@@ -1,10 +1,14 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as Summarization from '../js/summarization.js';
+import { createSystem, clearSystem } from '../js/yjs.js';
 
-describe('Summarization Module', () => {
-  beforeEach(() => {
-    global.localStorage.clear();
+describe('Summarization Module', function() {
+  beforeEach(async function() {
+    // Reset localStorage and reinitialize Yjs mock system
+    global.resetLocalStorage();
+    clearSystem();
+    await createSystem();
   });
 
   afterEach(() => {

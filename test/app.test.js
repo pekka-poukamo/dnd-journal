@@ -2,11 +2,16 @@ import { expect } from 'chai';
 import './setup.js';
 import * as App from '../js/app.js';
 import * as Utils from '../js/utils.js';
+import { createSystem, clearSystem } from '../js/yjs.js';
 
 describe('D&D Journal App', function() {
-  beforeEach(function() {
+  beforeEach(async function() {
     // Reset localStorage before each test
     global.resetLocalStorage();
+    
+    // Clear and reinitialize Yjs mock system
+    clearSystem();
+    await createSystem();
     
     // Clear DOM and add necessary elements
     document.body.innerHTML = `
@@ -14,8 +19,13 @@ describe('D&D Journal App', function() {
       <textarea id="entry-content"></textarea>
       <button id="add-entry-btn">Add Entry</button>
       <div id="entries-list"></div>
+      <div id="entries-container"></div>
       <div id="character-summary"></div>
+      <div id="display-name">Unknown</div>
+      <div id="display-race">Unknown</div>
+      <div id="display-class">Unknown</div>
       <div id="ai-prompt-text"></div>
+      <div id="ai-prompt-container"></div>
       <button id="regenerate-prompt-btn">Regenerate</button>
     `;
     

@@ -1,11 +1,14 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as Settings from '../js/settings.js';
+import { createSystem, clearSystem } from '../js/yjs.js';
 
-describe('Settings Module', () => {
-  beforeEach(() => {
-    // Clear localStorage before each test
-    global.localStorage.clear();
+describe('Settings Module', function() {
+  beforeEach(async function() {
+    // Reset localStorage and reinitialize Yjs mock system
+    global.resetLocalStorage();
+    clearSystem();
+    await createSystem();
   });
 
   describe('Settings Data Management', () => {

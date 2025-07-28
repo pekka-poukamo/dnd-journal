@@ -1,10 +1,16 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as AI from '../js/ai.js';
+import * as OpenAIWrapper from '../js/openai-wrapper.js';
+import * as Utils from '../js/utils.js';
+import { createSystem, clearSystem } from '../js/yjs.js';
 
 describe('AI Module', function() {
-  beforeEach(function() {
+  beforeEach(async function() {
+    // Reset localStorage and reinitialize Yjs mock system
     global.resetLocalStorage();
+    clearSystem();
+    await createSystem();
   });
 
   afterEach(function() {

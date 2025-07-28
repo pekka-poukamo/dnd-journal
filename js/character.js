@@ -29,6 +29,22 @@ export const loadCharacterData = () => {
   };
 };
 
+// Save character data to Yjs (for test compatibility)
+export const saveCharacterData = (characterData) => {
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.characterMap) return { success: false };
+  
+  // Set each field individually for CRDT conflict resolution
+  yjsSystem.characterMap.set('name', characterData.name || '');
+  yjsSystem.characterMap.set('race', characterData.race || '');
+  yjsSystem.characterMap.set('class', characterData.class || '');
+  yjsSystem.characterMap.set('backstory', characterData.backstory || '');
+  yjsSystem.characterMap.set('notes', characterData.notes || '');
+  yjsSystem.characterMap.set('lastModified', Date.now());
+  
+  return { success: true };
+};
+
 // Setup character form with direct Yjs binding for individual fields
 export const setupCharacterForm = () => {
   const yjsSystem = getSystem();

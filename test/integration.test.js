@@ -1,21 +1,31 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as App from '../js/app.js';
+import * as Character from '../js/character.js';
+import * as Settings from '../js/settings.js';
 import * as Utils from '../js/utils.js';
+import { createSystem, clearSystem } from '../js/yjs.js';
 
 describe('D&D Journal Integration Tests', function() {
-  beforeEach(function() {
-    // Reset localStorage before each test
+  beforeEach(async function() {
+    // Reset localStorage and reinitialize Yjs mock system
     global.resetLocalStorage();
+    clearSystem();
+    await createSystem();
     
     // Clear DOM
-    document.body.innerHTML = '';
+    document.body.innerHTML = `
+      <input type="text" id="entry-title" />
+      <textarea id="entry-content"></textarea>
+      <button id="add-entry-btn">Add Entry</button>
+      <div id="entries-container"></div>
+      <div id="display-name">Unnamed Character</div>
+      <div id="display-race">Unknown</div>
+      <div id="display-class">Unknown</div>
+    `;
     
-    // Reset app state to initial values
+    // Reset app state
     App.resetState();
-    
-    // Reset sync cache to prevent data leakage between tests
-    App.resetSyncCache();
   });
 
   afterEach(function() {

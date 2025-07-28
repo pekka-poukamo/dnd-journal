@@ -2,11 +2,16 @@ import { expect } from 'chai';
 import './setup.js';
 import * as Character from '../js/character.js';
 import * as OpenAIWrapper from '../js/openai-wrapper.js';
+import { createSystem, clearSystem } from '../js/yjs.js';
 
 describe('Character Page', function() {
-  beforeEach(function() {
+  beforeEach(async function() {
     // Clear localStorage before each test
     global.localStorage.clear();
+    
+    // Clear and reinitialize Yjs mock system
+    clearSystem();
+    await createSystem();
     
     // Reset DOM with simplified character form elements
     document.body.innerHTML = `
@@ -93,10 +98,12 @@ describe('Character Page', function() {
         notes: 'Ring-bearer'
       };
 
-      Character.saveCharacterData(testCharacter);
-
-      const savedData = JSON.parse(global.localStorage.getItem('simple-dnd-journal'));
-      expect(savedData.character).to.deep.equal(testCharacter);
+      const result = Character.saveCharacterData(testCharacter);
+      expect(result.success).to.be.true;
+      
+      // Verify data is saved to Yjs mock system
+      const loadedCharacter = Character.loadCharacterData();
+      expect(loadedCharacter).to.deep.equal(testCharacter);
     });
 
     it('should load character data from localStorage', function() {
@@ -108,11 +115,10 @@ describe('Character Page', function() {
         notes: 'Carries cooking gear'
       };
 
-      global.localStorage.setItem('simple-dnd-journal', JSON.stringify({
-        character: testCharacter,
-        entries: []
-      }));
-
+      // Save character data using Yjs mock system
+      Character.saveCharacterData(testCharacter);
+      
+      // Load and verify it matches
       const loadedCharacter = Character.loadCharacterData();
       expect(loadedCharacter).to.deep.equal(testCharacter);
     });
