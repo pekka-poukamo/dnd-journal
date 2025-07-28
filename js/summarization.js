@@ -235,6 +235,64 @@ export const clearAll = () => {
 };
 
 // =============================================================================
+// API FUNCTIONS FOR OTHER MODULES
+// =============================================================================
+
+// Get a summary by key (returns summary object or null)
+export const getSummaryByKey = (key) => {
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.summariesMap) return null;
+  
+  const summaryMap = yjsSystem.summariesMap.get(key);
+  if (!summaryMap) return null;
+  
+  return {
+    content: summaryMap.get('content') || '',
+    words: summaryMap.get('words') || 0,
+    timestamp: summaryMap.get('timestamp') || Date.now()
+  };
+};
+
+// Store a summary by key
+export const storeSummary = (key, summary) => {
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.summariesMap) return false;
+  
+  const summaryMap = new Y.Map();
+  summaryMap.set('content', summary.content || summary.summary || '');
+  summaryMap.set('words', summary.words || 0);
+  summaryMap.set('timestamp', summary.timestamp || Date.now());
+  yjsSystem.summariesMap.set(key, summaryMap);
+  
+  return true;
+};
+
+// Check if a summary exists
+export const hasSummary = (key) => {
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.summariesMap) return false;
+  
+  return yjsSystem.summariesMap.has(key);
+};
+
+// Get all summaries as a plain object (for compatibility)
+export const getAllSummariesAsObject = () => {
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.summariesMap) return {};
+  
+  const summaries = {};
+  yjsSystem.summariesMap.forEach((summaryMap, key) => {
+    summaries[key] = {
+      content: summaryMap.get('content') || '',
+      words: summaryMap.get('words') || 0,
+      timestamp: summaryMap.get('timestamp') || Date.now()
+    };
+  });
+  
+  return summaries;
+};
+
+// =============================================================================
 // LEGACY COMPATIBILITY FUNCTIONS
 // =============================================================================
 

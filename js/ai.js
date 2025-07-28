@@ -29,7 +29,8 @@ import {
   STORAGE_KEYS, 
   safeSetToStorage 
 } from './utils.js';
-import { getSystem, Y } from './yjs.js';
+import { getSummaryByKey, storeSummary } from './summarization.js';
+import { loadSettings } from './settings.js';
 
 // Unified narrative-focused system prompt with unobvious question element
 export const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
@@ -114,16 +115,13 @@ export const calculateTotalTokens = async (messages) => {
 
 // Pure function to load settings
 export const loadAISettings = () => {
-  return loadDataWithFallback(
-    STORAGE_KEYS.SETTINGS, 
-    createInitialSettings()
-  );
+  return loadSettings();
 };
 
 // Pure function to check if AI features are available
 export const isAIEnabled = () => {
   const settings = loadAISettings();
-  return Boolean(settings.enableAIFeatures && settings.apiKey && settings.apiKey.startsWith('sk-'));
+  return Boolean(settings.enableAIFeatures && settings.apiKey);
 };
 
 // Pure function to create introspection prompt
@@ -291,32 +289,21 @@ Content: ${entry.content}`;
   }
 };
 
-// Summaries are now accessed directly from Yjs maps - no load/save abstraction needed
+// Summaries are now accessed through the summarization module API
 
 // Get or generate summary for an entry
 export const getEntrySummary = async (entry) => {
-  const yjsSystem = getSystem();
-  if (!yjsSystem?.summariesMap) return null;
-  
-  // Return existing summary if available
-  const existingSummary = yjsSystem.summariesMap.get(entry.id);
+  // Check for existing summary using summarization module API
+  const existingSummary = getSummaryByKey(entry.id);
   if (existingSummary) {
-    return {
-      content: existingSummary.get('content') || '',
-      words: existingSummary.get('words') || 0,
-      timestamp: existingSummary.get('timestamp') || Date.now()
-    };
+    return existingSummary;
   }
   
   // Generate new summary
   const summary = await generateEntrySummary(entry);
   if (summary) {
-    // Store directly in Yjs - automatically persisted
-    const summaryMap = new Y.Map();
-    summaryMap.set('content', summary.content || summary.summary || '');
-    summaryMap.set('words', summary.words || 0);
-    summaryMap.set('timestamp', summary.timestamp || Date.now());
-    yjsSystem.summariesMap.set(entry.id, summaryMap);
+    // Store using summarization module API - automatically persisted via Yjs
+    storeSummary(entry.id, summary);
   }
   
   return summary;

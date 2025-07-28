@@ -2,6 +2,7 @@
 // Following functional programming principles and style guide
 
 import { loadDataWithFallback, createInitialSettings, STORAGE_KEYS } from './utils.js';
+import { loadSettings } from './settings.js';
 
 // =============================================================================
 // CORE OPENAI INTERFACE
@@ -9,7 +10,7 @@ import { loadDataWithFallback, createInitialSettings, STORAGE_KEYS } from './uti
 
 // Check if API is available
 export const isAPIAvailable = () => {
-  const settings = loadDataWithFallback(STORAGE_KEYS.SETTINGS, createInitialSettings());
+  const settings = loadSettings();
   return Boolean(settings.enableAIFeatures && settings.apiKey && settings.apiKey.startsWith('sk-'));
 };
 
@@ -19,7 +20,7 @@ const callOpenAI = async (systemPrompt, userPrompt, options = {}) => {
     throw new Error('OpenAI API not available - check settings');
   }
 
-  const settings = loadDataWithFallback(STORAGE_KEYS.SETTINGS, createInitialSettings());
+  const settings = loadSettings();
   const defaultOptions = {
     model: 'gpt-4.1-mini',
     maxTokens: 1200, // Increased from 400

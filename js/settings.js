@@ -5,7 +5,7 @@ import {
   loadDataWithFallback, createInitialSettings, createInitialJournalState,
   safeSetToStorage, STORAGE_KEYS
 } from './utils.js';
-import { testApiKey as testOpenAIApiKey } from './openai-wrapper.js';
+// testApiKey is defined in this module
 
 // Load settings from Yjs
 export const loadSettings = () => {
