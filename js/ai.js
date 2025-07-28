@@ -291,55 +291,32 @@ Content: ${entry.content}`;
   }
 };
 
-// Load stored summaries from Yjs
-const loadStoredSummaries = () => {
-  const yjsSystem = getSystem();
-  if (!yjsSystem?.summariesMap) return {};
-  
-  const summaries = {};
-  yjsSystem.summariesMap.forEach((summaryMap, key) => {
-    summaries[key] = {
-      content: summaryMap.get('content') || '',
-      words: summaryMap.get('words') || 0,
-      timestamp: summaryMap.get('timestamp') || Date.now()
-    };
-  });
-  
-  return summaries;
-};
-
-// Save stored summaries to Yjs
-const saveStoredSummaries = (summaries) => {
-  const yjsSystem = getSystem();
-  if (!yjsSystem?.summariesMap) return;
-  
-  // Clear existing summaries
-  yjsSystem.summariesMap.clear();
-  
-  // Add each summary
-  Object.entries(summaries).forEach(([key, summary]) => {
-    const summaryMap = new Y.Map();
-    summaryMap.set('content', summary.content || summary.summary || '');
-    summaryMap.set('words', summary.words || 0);
-    summaryMap.set('timestamp', summary.timestamp || Date.now());
-    yjsSystem.summariesMap.set(key, summaryMap);
-  });
-};
+// Summaries are now accessed directly from Yjs maps - no load/save abstraction needed
 
 // Get or generate summary for an entry
 export const getEntrySummary = async (entry) => {
-  const storedSummaries = loadStoredSummaries();
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.summariesMap) return null;
   
   // Return existing summary if available
-  if (storedSummaries[entry.id]) {
-    return storedSummaries[entry.id];
+  const existingSummary = yjsSystem.summariesMap.get(entry.id);
+  if (existingSummary) {
+    return {
+      content: existingSummary.get('content') || '',
+      words: existingSummary.get('words') || 0,
+      timestamp: existingSummary.get('timestamp') || Date.now()
+    };
   }
   
   // Generate new summary
   const summary = await generateEntrySummary(entry);
   if (summary) {
-    storedSummaries[entry.id] = summary;
-    saveStoredSummaries(storedSummaries);
+    // Store directly in Yjs - automatically persisted
+    const summaryMap = new Y.Map();
+    summaryMap.set('content', summary.content || summary.summary || '');
+    summaryMap.set('words', summary.words || 0);
+    summaryMap.set('timestamp', summary.timestamp || Date.now());
+    yjsSystem.summariesMap.set(entry.id, summaryMap);
   }
   
   return summary;
