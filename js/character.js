@@ -80,7 +80,13 @@ export const setupCharacterForm = () => {
   });
 };
 
-
+// Initialize character form when this module loads (character.html only)
+if (typeof document !== 'undefined' && document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupCharacterForm);
+} else if (typeof document !== 'undefined') {
+  // DOM already loaded
+  setupCharacterForm();
+}
 
 // Pure function to get character data from form
 export const getCharacterFromForm = () => 
