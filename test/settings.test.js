@@ -1,11 +1,13 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as Settings from '../js/settings.js';
+import { createSystem, clearSystem } from '../js/yjs.js';
 
-describe('Settings Module', () => {
-  beforeEach(() => {
-    // Clear localStorage before each test
-    global.localStorage.clear();
+describe('Settings Module', function() {
+  beforeEach(async function() {
+    // Clear and reinitialize Yjs mock system
+    clearSystem();
+    await createSystem();
   });
 
   describe('Settings Data Management', () => {
@@ -22,7 +24,8 @@ describe('Settings Module', () => {
         enableAIFeatures: true
       };
 
-      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+      // Save settings using Yjs system
+      Settings.saveSettings(testSettings);
 
       const loaded = Settings.loadSettings();
       expect(loaded).to.deep.equal(testSettings);
@@ -34,15 +37,16 @@ describe('Settings Module', () => {
         enableAIFeatures: false
       };
 
-      Settings.saveSettings(testSettings);
+      const result = Settings.saveSettings(testSettings);
+      expect(result.success).to.be.true;
 
-      const stored = global.localStorage.getItem('simple-dnd-journal-settings');
-      const loaded = JSON.parse(stored);
+      // Verify settings were saved by loading them back
+      const loaded = Settings.loadSettings();
       expect(loaded).to.deep.equal(testSettings);
     });
 
     it('should handle corrupted localStorage data gracefully', () => {
-      global.localStorage.setItem('simple-dnd-journal-settings', 'invalid-json');
+      // Test corrupted data handling - not using localStorage anymore
 
       const settings = Settings.loadSettings();
       

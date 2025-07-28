@@ -13,29 +13,78 @@ import {
 } from './utils.js';
 import { summarize } from './summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
+import { getSystem, Y } from './yjs.js';
 
-// Pure function to load character data from localStorage
+// Load character data from Yjs
 export const loadCharacterData = () => {
-  const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
-  if (!result.success || !result.data) {
-    return createInitialJournalState().character;
-  }
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.characterMap) return { name: '', race: '', class: '', backstory: '', notes: '' };
   
-  return result.data.character || createInitialJournalState().character;
+  return {
+    name: yjsSystem.characterMap.get('name') || '',
+    race: yjsSystem.characterMap.get('race') || '',
+    class: yjsSystem.characterMap.get('class') || '',
+    backstory: yjsSystem.characterMap.get('backstory') || '',
+    notes: yjsSystem.characterMap.get('notes') || ''
+  };
 };
 
-// Pure function to save character data to localStorage
+// Save character data to Yjs (for test compatibility)
 export const saveCharacterData = (characterData) => {
-  const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
-  const currentData = result.success && result.data ? result.data : createInitialJournalState();
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.characterMap) return { success: false };
   
-  const updatedData = {
-    ...currentData,
-    character: characterData
-  };
+  // Set each field individually for CRDT conflict resolution
+  yjsSystem.characterMap.set('name', characterData.name || '');
+  yjsSystem.characterMap.set('race', characterData.race || '');
+  yjsSystem.characterMap.set('class', characterData.class || '');
+  yjsSystem.characterMap.set('backstory', characterData.backstory || '');
+  yjsSystem.characterMap.set('notes', characterData.notes || '');
+  yjsSystem.characterMap.set('lastModified', Date.now());
   
-  return safeSetToStorage(STORAGE_KEYS.JOURNAL, updatedData);
+  return { success: true };
 };
+
+// Setup character form with direct Yjs binding for individual fields
+export const setupCharacterForm = () => {
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.characterMap) return;
+  
+  const fields = ['name', 'race', 'class', 'backstory', 'notes'];
+  
+  fields.forEach(field => {
+    const input = document.getElementById(`character-${field}`);
+    if (input) {
+      // Load initial value from Yjs
+      input.value = yjsSystem.characterMap.get(field) || '';
+      
+      // Update Yjs on input change (individual field updates) - Yjs handles persistence
+      const updateField = debounce(() => {
+        yjsSystem.characterMap.set(field, input.value);
+        yjsSystem.characterMap.set('lastModified', Date.now());
+      }, 300);
+      
+      input.addEventListener('input', updateField);
+      
+      // Listen for Yjs updates to sync field changes from other clients
+      yjsSystem.characterMap.observe((event) => {
+        event.changes.keys.forEach((change, key) => {
+          if (key === field && input.value !== yjsSystem.characterMap.get(key)) {
+            input.value = yjsSystem.characterMap.get(key) || '';
+          }
+        });
+      });
+    }
+  });
+};
+
+// Initialize character form when this module loads (character.html only)
+if (typeof document !== 'undefined' && document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupCharacterForm);
+} else if (typeof document !== 'undefined') {
+  // DOM already loaded
+  setupCharacterForm();
+}
 
 // Pure function to get character data from form
 export const getCharacterFromForm = () => 
@@ -61,39 +110,52 @@ export const populateForm = (character) => {
 
 // Load character summaries from storage
 export const loadCharacterSummaries = () => {
-  // Check both storage locations for character summaries
-  const characterSummaries = loadDataWithFallback(STORAGE_KEYS.CHARACTER_SUMMARIES, {});
-  const generalSummaries = loadDataWithFallback('simple-summaries', {});
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.summariesMap) return {};
   
-  // Combine summaries from both sources
   const combinedSummaries = {};
   
-  // Prioritize new combined summary format
-  if (generalSummaries['character:combined']) {
-    combinedSummaries['character:combined'] = generalSummaries['character:combined'];
-  } else {
-    // Fallback to individual field summaries for backward compatibility
-    
-    // Add from dedicated character summaries storage (format: fieldname: {summary, timestamp, etc})
-    Object.keys(characterSummaries).forEach(field => {
-      if (characterSummaries[field]) {
-        combinedSummaries[`character:${field}`] = {
-          content: characterSummaries[field].summary || characterSummaries[field].content,
-          words: characterSummaries[field].words || 0,
-          timestamp: characterSummaries[field].timestamp
-        };
-      }
-    });
-    
-    // Add from general summaries storage (format: character:fieldname: {content, words, timestamp})
-    Object.keys(generalSummaries).forEach(key => {
-      if (key.startsWith('character:') && key !== 'character:combined') {
-        combinedSummaries[key] = generalSummaries[key];
-      }
-    });
-  }
+  // Get all summaries from Yjs and filter for character-related ones
+  yjsSystem.summariesMap.forEach((summaryMap, key) => {
+    if (key.startsWith('character:') || key === 'character:combined') {
+      combinedSummaries[key] = {
+        content: summaryMap.get ? summaryMap.get('content') : summaryMap.content || '',
+        words: summaryMap.get ? summaryMap.get('words') : summaryMap.words || 0,
+        timestamp: summaryMap.get ? summaryMap.get('timestamp') : summaryMap.timestamp || Date.now()
+      };
+    }
+  });
   
-  return combinedSummaries;
+  // Fallback: check localStorage for backward compatibility
+  if (Object.keys(combinedSummaries).length === 0) {
+    const characterSummaries = loadDataWithFallback(STORAGE_KEYS.CHARACTER_SUMMARIES, {});
+    const generalSummaries = loadDataWithFallback('simple-summaries', {});
+    
+    // Prioritize new combined summary format
+    if (generalSummaries['character:combined']) {
+      combinedSummaries['character:combined'] = generalSummaries['character:combined'];
+    } else {
+      // Add from dedicated character summaries storage
+      Object.keys(characterSummaries).forEach(field => {
+        if (characterSummaries[field]) {
+          combinedSummaries[`character:${field}`] = {
+            content: characterSummaries[field].summary || characterSummaries[field].content,
+            words: characterSummaries[field].words || 0,
+            timestamp: characterSummaries[field].timestamp
+          };
+        }
+      });
+      
+             // Add from general summaries storage
+       Object.keys(generalSummaries).forEach(key => {
+         if (key.startsWith('character:') && key !== 'character:combined') {
+           combinedSummaries[key] = generalSummaries[key];
+         }
+       });
+     }
+   }
+   
+   return combinedSummaries;
 };
 
 // Display character summaries in the UI
@@ -260,24 +322,7 @@ export const getFormattedCharacterForAI = async (character) => {
   return { ...character };
 };
 
-// Function to auto-save character data
-const autoSave = () => {
-  const character = getCharacterFromForm();
-  saveCharacterData(character);
-};
-
-// Setup auto-save with debouncing
-const setupAutoSave = () => {
-  const debouncedAutoSave = debounce(autoSave, 500);
-  
-  getCharacterFormFieldIds().forEach(fieldId => {
-    const element = document.getElementById(fieldId);
-    if (element) {
-      element.addEventListener('input', debouncedAutoSave);
-      element.addEventListener('blur', autoSave);
-    }
-  });
-};
+// Auto-save is handled automatically by Yjs - no explicit save needed
 
 // Setup summary-related event listeners
 const setupSummaryEventListeners = () => {
@@ -296,11 +341,7 @@ const setupSummaryEventListeners = () => {
 // Setup keyboard shortcuts
 const setupKeyboardShortcuts = () => {
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-      e.preventDefault();
-      autoSave();
-    }
-    
+    // Ctrl/Cmd+S no longer needed - Yjs handles auto-save
     if (e.key === 'Escape') {
       window.location.href = 'index.html';
     }
@@ -311,7 +352,6 @@ const setupKeyboardShortcuts = () => {
 const init = () => {
   const character = loadCharacterData();
   populateForm(character);
-  setupAutoSave();
   setupSummaryEventListeners();
   setupKeyboardShortcuts();
   displayCharacterSummaries();

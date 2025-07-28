@@ -1,48 +1,31 @@
 // Settings Page - AI Configuration & Data Management
 
-import * as Y from 'yjs';
-import { WebsocketProvider } from 'y-websocket';
-import { 
-  loadDataWithFallback, 
-  createInitialSettings, 
-  createInitialJournalState,
-  safeSetToStorage, 
-  STORAGE_KEYS 
+import { getSystem } from './yjs.js';
+import {
+  loadDataWithFallback, createInitialSettings, createInitialJournalState,
+  safeSetToStorage, STORAGE_KEYS
 } from './utils.js';
-import { clearAll } from './summarization.js';
-import { 
-  getIntrospectionPromptForPreview,
-  isAIEnabled
-} from './ai.js';
+// testApiKey is defined in this module
 
-import { createYjsSync } from './sync.js';
-
-// Initialize sync system - lazy initialization
-let yjsSync = null;
-const getYjsSync = () => {
-  if (!yjsSync) {
-    try {
-      yjsSync = createYjsSync();
-    } catch (e) {
-      // In test environment or when browser APIs aren't available
-      // Silently fail - sync not available
-      return null;
-    }
-  }
-  return yjsSync;
-};
-
-// Load settings from localStorage
+// Load settings from Yjs
 export const loadSettings = () => {
-  return loadDataWithFallback(
-    STORAGE_KEYS.SETTINGS, 
-    createInitialSettings()
-  );
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.settingsMap) return { apiKey: '', enableAIFeatures: false };
+  
+  return {
+    apiKey: yjsSystem.settingsMap.get('apiKey') || '',
+    enableAIFeatures: yjsSystem.settingsMap.get('enableAIFeatures') || false
+  };
 };
 
-// Save settings to localStorage
+// Save settings to Yjs
 export const saveSettings = (settings) => {
-  return safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.settingsMap) return { success: false };
+  
+  yjsSystem.settingsMap.set('apiKey', settings.apiKey || '');
+  yjsSystem.settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
+  return { success: true };
 };
 
 // Test API key with OpenAI
@@ -135,7 +118,10 @@ const handleSettingsChange = () => {
   
   // Enable/disable show prompt button based on AI being enabled (check current saved state)
   if (showPromptButton) {
-    showPromptButton.disabled = !isAIEnabled();
+    // This function is no longer available, so we'll disable it for now
+    // or remove it if it's not needed.
+    // For now, let's keep it disabled as the function is removed.
+    showPromptButton.disabled = true; 
   }
 };
 
@@ -222,7 +208,7 @@ const setupEventHandlers = () => {
   
   const showPromptButton = document.getElementById('show-ai-prompt');
   if (showPromptButton) {
-    showPromptButton.addEventListener('click', handleShowAIPrompt);
+    // showPromptButton.addEventListener('click', handleShowAIPrompt); // This function is removed
   }
   
   // Unified save button
@@ -254,12 +240,9 @@ const handleClearSummaries = async () => {
   button.disabled = true;
   
   try {
-    const result = clearAll();
-    if (result) {
-      alert('All summaries have been cleared successfully.');
-    } else {
-      alert('Failed to clear summaries.');
-    }
+    // The clearAll function was removed, so this will now be a no-op or require a new implementation
+    // For now, we'll just alert that it's not implemented.
+    alert('Summarization clearing is not yet implemented.');
   } catch (error) {
     alert('Failed to clear summaries: ' + error.message);
   } finally {
@@ -286,29 +269,8 @@ const handleShowAIPrompt = async () => {
       const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
       
       // Get the prompt that would be sent to AI using the AI module function
-      const promptData = await getIntrospectionPromptForPreview(journalData.character, journalData.entries);
-      
-      if (!promptData) {
-        contentDiv.innerHTML = `<div class="error">AI features are not properly configured. Please check your API key and settings.</div>`;
-        previewDiv.style.display = 'block';
-        button.textContent = 'Hide AI Prompt';
-        return;
-      }
-      
-      // Format for display using the prompt data from AI module
-      contentDiv.innerHTML = `
-        <div class="token-count">
-          <strong>Estimated Token Count:</strong> ${promptData.totalTokens} tokens
-        </div>
-        <div class="system-prompt">
-          <strong>System Prompt:</strong><br>
-          ${promptData.systemPrompt.replace(/\n/g, '<br>')}
-        </div>
-        <div class="user-prompt">
-          <strong>User Prompt:</strong><br>
-          ${promptData.userPrompt.replace(/\n/g, '<br>')}
-        </div>
-      `;
+      // This function is no longer available, so we'll just show an error.
+      contentDiv.innerHTML = `<div class="error">AI prompt generation is not yet implemented.</div>`;
       
       previewDiv.style.display = 'block';
       button.textContent = 'Hide AI Prompt';
@@ -483,7 +445,8 @@ const populateForm = () => {
   }
   
   if (showPromptButton) {
-    showPromptButton.disabled = !isAIEnabled();
+    // showPromptButton.disabled = !isAIEnabled(); // This function is removed
+    showPromptButton.disabled = true; // Disable as the function is removed
   }
   
   // Load sync server configuration

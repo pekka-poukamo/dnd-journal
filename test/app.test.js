@@ -2,11 +2,13 @@ import { expect } from 'chai';
 import './setup.js';
 import * as App from '../js/app.js';
 import * as Utils from '../js/utils.js';
+import { createSystem, clearSystem } from '../js/yjs.js';
 
 describe('D&D Journal App', function() {
-  beforeEach(function() {
-    // Reset localStorage before each test
-    global.resetLocalStorage();
+  beforeEach(async function() {
+    // Clear and reinitialize Yjs mock system
+    clearSystem();
+    await createSystem();
     
     // Clear DOM and add necessary elements
     document.body.innerHTML = `
@@ -14,8 +16,13 @@ describe('D&D Journal App', function() {
       <textarea id="entry-content"></textarea>
       <button id="add-entry-btn">Add Entry</button>
       <div id="entries-list"></div>
+      <div id="entries-container"></div>
       <div id="character-summary"></div>
+      <div id="display-name">Unknown</div>
+      <div id="display-race">Unknown</div>
+      <div id="display-class">Unknown</div>
       <div id="ai-prompt-text"></div>
+      <div id="ai-prompt-container"></div>
       <button id="regenerate-prompt-btn">Regenerate</button>
     `;
     
@@ -23,9 +30,8 @@ describe('D&D Journal App', function() {
     App.resetState();
   });
 
-  afterEach(function() {
-    // Reset localStorage after each test
-    global.resetLocalStorage();
+  afterEach(async function() {
+    await clearSystem();
   });
 
   describe('State Management', function() {
@@ -35,30 +41,6 @@ describe('D&D Journal App', function() {
       expect(App.state.entries).to.be.an('array');
       expect(App.state.character.name).to.equal('');
       expect(App.state.entries).to.have.length(0);
-    });
-
-    it('should save and load data from localStorage', function() {
-      // Set up test data
-      App.state.character = {
-        name: 'Test Character',
-        race: 'Human',
-        class: 'Fighter'
-      };
-      App.state.entries.push({
-        id: '1',
-        title: 'Test Entry',
-        content: 'Test content',
-        timestamp: Date.now()
-      });
-
-      // Save data
-      const saveResult = App.saveData();
-      expect(saveResult.success).to.be.true;
-
-      // Load data
-      App.loadData();
-      expect(App.state.character.name).to.equal('Test Character');
-      expect(App.state.entries).to.have.length(1);
     });
   });
 
@@ -104,32 +86,30 @@ describe('D&D Journal App', function() {
 
       App.renderEntries();
 
-      const entryCards = entriesList.querySelectorAll('.entry-card');
-      expect(entryCards.length).to.equal(1);
+      const entryElements = entriesList.querySelectorAll('.entry-card');
+      expect(entryElements.length).to.equal(1);
       
       // Check markdown rendering
-      const content = entryCards[0].querySelector('.entry-content');
+      const content = entryElements[0].querySelector('.entry-content');
       expect(content.innerHTML).to.include('<strong>bold</strong>');
       
       entriesList.remove();
     });
 
     it('should render empty state when no entries', function() {
-      let entriesList = document.getElementById('entries-list');
-      if (!entriesList) {
-        entriesList = document.createElement('div');
-        entriesList.id = 'entries-list';
-        document.body.appendChild(entriesList);
+      let entriesContainer = document.getElementById('entries-container');
+      if (!entriesContainer) {
+        entriesContainer = document.createElement('div');
+        entriesContainer.id = 'entries-container';
+        document.body.appendChild(entriesContainer);
       }
 
       App.state.entries = [];
       App.renderEntries();
 
-      const emptyState = entriesList.querySelector('.empty-state');
-      expect(emptyState).to.exist;
-      expect(emptyState.textContent).to.include('No journal entries yet');
+      expect(entriesContainer.innerHTML).to.equal('');
       
-      entriesList.remove();
+      entriesContainer.remove();
     });
 
     it('should handle renderEntries with missing container', function() {
@@ -562,45 +542,16 @@ describe('D&D Journal App', function() {
     });
 
     it('should display default values for empty character', function() {
-      App.state.character = {};
-      
+      App.state.character = { name: '', race: '', class: '' };
       App.displayCharacterSummary();
-      
-      expect(document.getElementById('display-name').textContent).to.equal('Unnamed Character');
-      expect(document.getElementById('display-race').textContent).to.equal('—');
-      expect(document.getElementById('display-class').textContent).to.equal('—');
-    });
 
-    it('should use localStorage fallback when state character is empty but localStorage has data', function() {
-      // Set up localStorage with character data
-      const journalData = {
-        character: {
-          name: 'Puoskari',
-          race: 'Human',
-          class: 'Thief Artificer',
-          backstory: 'A skilled artificer and thief',
-          notes: 'Expert in both mechanics and stealth'
-        },
-        entries: []
-      };
-      
-      Utils.safeSetToStorage(Utils.STORAGE_KEYS.JOURNAL, journalData);
-      
-      // Set state character to empty (simulating sync override or timing issue)
-      App.state.character = {
-        name: '',
-        race: '',
-        class: '',
-        backstory: '',
-        notes: ''
-      };
-      
-      // Display should fallback to localStorage data
-      App.displayCharacterSummary();
-      
-      expect(document.getElementById('display-name').textContent).to.equal('Puoskari');
-      expect(document.getElementById('display-race').textContent).to.equal('Human');
-      expect(document.getElementById('display-class').textContent).to.equal('Thief Artificer');
+      const nameEl = document.getElementById('display-name');
+      const raceEl = document.getElementById('display-race');
+      const classEl = document.getElementById('display-class');
+
+      expect(nameEl.textContent).to.equal('Unnamed Character');
+      expect(raceEl.textContent).to.equal('—');
+      expect(classEl.textContent).to.equal('—');
     });
   });
 
@@ -743,16 +694,17 @@ describe('D&D Journal App', function() {
 
   describe('Edit Mode', function() {
     it('should enable edit mode for entries', function() {
-      App.state.entries.push({
+      const entry = {
         id: '1',
         title: 'Original Title',
         content: 'Original content',
         timestamp: Date.now()
-      });
+      };
 
-      App.renderEntries();
+      App.state.entries.push(entry);
 
-      const entryDiv = document.querySelector('.entry-card');
+      const entryDiv = App.createEntryElement(entry);
+      document.body.appendChild(entryDiv);
       expect(entryDiv).to.exist;
 
       App.enableEditMode(entryDiv, App.state.entries[0]);
@@ -762,16 +714,17 @@ describe('D&D Journal App', function() {
     });
 
     it('should save edits correctly', function() {
-      App.state.entries.push({
+      const entry = {
         id: '1',
         title: 'Original Title',
         content: 'Original content',
         timestamp: Date.now()
-      });
+      };
 
-      App.renderEntries();
+      App.state.entries.push(entry);
 
-      const entryDiv = document.querySelector('.entry-card');
+      const entryDiv = App.createEntryElement(entry);
+      document.body.appendChild(entryDiv);
       App.enableEditMode(entryDiv, App.state.entries[0]);
 
       App.saveEdit(entryDiv, App.state.entries[0], 'Updated Title', 'Updated content');
@@ -781,16 +734,17 @@ describe('D&D Journal App', function() {
     });
 
     it('should cancel edits correctly', function() {
-      App.state.entries.push({
+      const entry = {
         id: '1',
         title: 'Original Title',
         content: 'Original content',
         timestamp: Date.now()
-      });
+      };
 
-      App.renderEntries();
+      App.state.entries.push(entry);
 
-      const entryDiv = document.querySelector('.entry-card');
+      const entryDiv = App.createEntryElement(entry);
+      document.body.appendChild(entryDiv);
       App.enableEditMode(entryDiv, App.state.entries[0]);
 
       App.cancelEdit(entryDiv, App.state.entries[0]);

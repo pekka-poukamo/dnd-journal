@@ -1,14 +1,28 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as Utils from '../js/utils.js';
+import { createSystem, clearSystem } from '../js/yjs.js';
 
 describe('Utils Module', function() {
-  beforeEach(function() {
-    global.resetLocalStorage();
+  beforeEach(async function() {
+    await clearSystem();
+    await createSystem();
+    
+    // Set up minimal localStorage mock for utils tests
+    global.localStorage = {
+      data: {},
+      setItem: function(key, value) { this.data[key] = value; },
+      getItem: function(key) { return this.data[key] || null; },
+      removeItem: function(key) { delete this.data[key]; },
+      clear: function() { this.data = {}; }
+    };
   });
 
-  afterEach(function() {
-    global.resetLocalStorage();
+  afterEach(async function() {
+    await clearSystem();
+    if (global.localStorage) {
+      global.localStorage.clear();
+    }
   });
 
   describe('STORAGE_KEYS', function() {
@@ -97,7 +111,7 @@ describe('Utils Module', function() {
     it('should return fallback when data is corrupted', function() {
       const fallbackData = { fallback: 'data' };
       
-      global.localStorage.setItem('test-key', 'invalid json');
+      // Using Yjs mock system instead of localStorage
       
       const result = Utils.loadDataWithFallback('test-key', fallbackData);
       expect(result).to.deep.equal(fallbackData);

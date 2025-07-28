@@ -29,6 +29,9 @@ import {
   STORAGE_KEYS, 
   safeSetToStorage 
 } from './utils.js';
+import { getSummaryByKey, storeSummary } from './summarization.js';
+import { loadSettings } from './settings.js';
+import { getSystem } from './yjs.js';
 
 // Unified narrative-focused system prompt with unobvious question element
 export const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
@@ -113,16 +116,13 @@ export const calculateTotalTokens = async (messages) => {
 
 // Pure function to load settings
 export const loadAISettings = () => {
-  return loadDataWithFallback(
-    STORAGE_KEYS.SETTINGS, 
-    createInitialSettings()
-  );
+  return loadSettings();
 };
 
 // Pure function to check if AI features are available
 export const isAIEnabled = () => {
   const settings = loadAISettings();
-  return Boolean(settings.enableAIFeatures && settings.apiKey && settings.apiKey.startsWith('sk-'));
+  return Boolean(settings.enableAIFeatures && settings.apiKey);
 };
 
 // Pure function to create introspection prompt
@@ -265,6 +265,11 @@ export const generateEntrySummary = async (entry) => {
     return null;
   }
 
+  // Return null for empty or very short content
+  if (!entry.content || entry.content.trim().length < 50) {
+    return null;
+  }
+
   try {
     const wordCount = getWordCount(entry.content);
     // Use proportional word count based on original length, with much higher targets
@@ -285,35 +290,26 @@ Content: ${entry.content}`;
       timestamp: Date.now()
     };
   } catch (error) {
-    console.error('Failed to generate entry summary:', error);
+    console.error('Error generating entry summary:', error);
     return null;
   }
 };
 
-// Load stored summaries
-const loadStoredSummaries = () => {
-  return loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
-};
-
-// Save summaries to localStorage
-const saveStoredSummaries = (summaries) => {
-  safeSetToStorage(STORAGE_KEYS.SUMMARIES, summaries);
-};
+// Summaries are now accessed through the summarization module API
 
 // Get or generate summary for an entry
 export const getEntrySummary = async (entry) => {
-  const storedSummaries = loadStoredSummaries();
-  
-  // Return existing summary if available
-  if (storedSummaries[entry.id]) {
-    return storedSummaries[entry.id];
+  // Check for existing summary using summarization module API
+  const existingSummary = getSummaryByKey(entry.id);
+  if (existingSummary) {
+    return existingSummary;
   }
   
   // Generate new summary
   const summary = await generateEntrySummary(entry);
   if (summary) {
-    storedSummaries[entry.id] = summary;
-    saveStoredSummaries(storedSummaries);
+    // Store using summarization module API - automatically persisted via Yjs
+    storeSummary(entry.id, summary);
   }
   
   return summary;
@@ -380,10 +376,70 @@ export const getFormattedCharacterForAI = (character) => {
 
 // Format entries for AI processing (with summaries for older entries, full content for recent)
 export const getFormattedEntriesForAI = () => {
-  // Use consistent storage utilities
-  const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, { character: {}, entries: [] });
-  const entrySummaries = loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
-  const metaSummaries = loadDataWithFallback('simple-dnd-journal-meta-summaries', {});
+  // Use Yjs system first, then fallback to localStorage
+  const yjsSystem = getSystem();
+  let processedJournalData, entrySummaries, metaSummaries;
+  
+  if (yjsSystem) {
+    // Get data from Yjs
+    const entriesArray = yjsSystem.journalMap.get('entries');
+    let entries = [];
+    
+    if (entriesArray) {
+      if (Array.isArray(entriesArray)) {
+        // Plain JavaScript array (test environment)
+        entries = entriesArray;
+      } else if (entriesArray.toArray && typeof entriesArray.toArray === 'function') {
+        // Y.Array with Y.Map objects (real app) or mock toArray function
+        try {
+          const rawEntries = entriesArray.toArray();
+          if (rawEntries && Array.isArray(rawEntries)) {
+            entries = rawEntries.map(entryMap => {
+              // Handle both Y.Map objects and plain objects
+              if (entryMap && typeof entryMap.get === 'function') {
+                return {
+                  id: entryMap.get('id'),
+                  title: entryMap.get('title'),
+                  content: entryMap.get('content'),
+                  timestamp: entryMap.get('timestamp')
+                };
+              } else {
+                // Plain object (test environment)
+                return entryMap;
+              }
+            });
+          }
+        } catch (e) {
+          // Fallback if toArray fails
+          entries = [];
+        }
+      }
+    }
+    
+    processedJournalData = { 
+      character: {}, 
+      entries: entries
+    };
+    
+    entrySummaries = {};
+    metaSummaries = {};
+    
+    // Convert Yjs summaries to the expected format
+    if (yjsSystem.summariesMap) {
+      yjsSystem.summariesMap.forEach((value, key) => {
+        if (key === 'summaries') {
+          entrySummaries = value && typeof value === 'object' && value.get ? value.toJSON() : value || {};
+        } else if (key === 'meta-summaries') {
+          metaSummaries = value && typeof value === 'object' && value.get ? value.toJSON() : value || {};
+        }
+      });
+    }
+  } else {
+    // Fallback to localStorage
+    processedJournalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, { character: {}, entries: [] });
+    entrySummaries = loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
+    metaSummaries = loadDataWithFallback('simple-dnd-journal-meta-summaries', {});
+  }
   
   // Get all entry IDs that are already included in meta-summaries to avoid duplication
   const entriesInMetaSummaries = new Set();
@@ -396,9 +452,11 @@ export const getFormattedEntriesForAI = () => {
     }
   });
   
-  const sortedEntries = [...(journalData.entries || [])].sort((a, b) => b.timestamp - a.timestamp);
+  const sortedEntries = [...(processedJournalData.entries || [])].sort((a, b) => b.timestamp - a.timestamp);
   const recentEntries = sortedEntries.slice(0, 5); // Keep 5 most recent entries in full
   const olderEntries = sortedEntries.slice(5);
+  
+
   
   const formattedEntries = [];
   
@@ -447,6 +505,8 @@ export const getFormattedEntriesForAI = () => {
       timestamp: metaSummary.timestamp
     });
   });
+  
+  
   
   return formattedEntries;
 };
