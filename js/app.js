@@ -87,30 +87,9 @@ const loadStateFromYjs = () => {
 
 
 
-// Get form data for new entries
-const getFormData = () => {
-  const titleInput = document.getElementById('entry-title');
-  const contentTextarea = document.getElementById('entry-content');
-  
-  return {
-    title: titleInput?.value?.trim() || '',
-    content: contentTextarea?.value?.trim() || ''
-  };
-};
 
-// Export getFormData for tests
-export { getFormData };
 
-// Create entry object from form data
-const createEntryFromForm = (formData) => ({
-  id: generateId(),
-  title: formData.title,
-  content: formData.content,
-  timestamp: Date.now()
-});
 
-// Export createEntryFromForm for tests
-export { createEntryFromForm };
 
 // Add new entry directly to Yjs
 export const addEntry = async () => {
@@ -174,26 +153,7 @@ export const focusEntryTitle = () => {
   }
 };
 
-// Render entries from state
-export const renderEntries = () => {
-  const entriesContainer = document.getElementById('entries-container');
-  if (!entriesContainer) return;
-  
-  const sortedEntries = sortEntriesByDate([...state.entries]);
-  
-  entriesContainer.innerHTML = sortedEntries.map(entry => `
-    <div class="entry" data-entry-id="${entry.id}">
-      <div class="entry-header">
-        <h3 class="entry-title">${entry.title}</h3>
-        <div class="entry-meta">
-          <span class="entry-date">${formatDate(entry.timestamp)}</span>
-          <button class="edit-btn" onclick="enableEditMode(this.closest('.entry'), ${JSON.stringify(entry).replace(/"/g, '&quot;')})">✏️</button>
-        </div>
-      </div>
-      <div class="entry-content">${parseMarkdown(entry.content)}</div>
-    </div>
-  `).join('');
-};
+
 
 // Enable edit mode for an entry
 export const enableEditMode = (entryDiv, entry) => {
@@ -381,14 +341,6 @@ export const deleteEntry = (entryId) => {
   state.entries = state.entries.filter(entry => entry.id !== entryId);
   
   renderEntries();
-};
-
-// Focus on entry title input
-export const focusEntryTitle = () => {
-  const titleInput = document.getElementById('entry-title');
-  if (titleInput) {
-    titleInput.focus();
-  }
 };
 
 // Create character summary
@@ -615,22 +567,7 @@ export { state };
 // UTILITY FUNCTIONS FOR TESTS
 // =============================================================================
 
-// Create simple character data for display (test utility)
-export const createSimpleCharacterData = (character) => {
-  if (!character || typeof character !== 'object') {
-    return {
-      name: 'Unnamed Character',
-      race: 'Unknown',
-      class: 'Unknown'
-    };
-  }
-  
-  return {
-    name: character.name?.trim() || 'Unnamed Character',
-    race: character.race?.trim() || 'Unknown',
-    class: character.class?.trim() || 'Unknown'
-  };
-};
+
 
 // Create entry element for testing
 export const createEntryElement = (entry) => {
@@ -703,34 +640,7 @@ export const formatAIPrompt = (prompt) => {
     .join('');
 };
 
-// Create character summary (test utility)
-export const createCharacterSummary = (character) => {
-  if (!character || typeof character !== 'object') {
-    return {
-      name: 'No Character',
-      details: 'Create a character to see their details here.'
-    };
-  }
-  
-  // If character has a name, return it, otherwise return 'No Character'
-  if (character.name && character.name.trim()) {
-    const details = [];
-    if (character.race) details.push(character.race);
-    if (character.class) details.push(character.class);
-    if (character.backstory) details.push(character.backstory);
-    if (character.notes) details.push(character.notes);
-    
-    return {
-      name: character.name.trim(),
-      details: details.join(', ')
-    };
-  }
-  
-  return {
-    name: 'No Character',
-    details: 'Create a character to see their details here.'
-  };
-};
+
 
 // Get entry summary (test utility)
 export const getEntrySummary = async (entryId) => {
