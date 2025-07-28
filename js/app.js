@@ -1,10 +1,6 @@
-// D&D Journal - Simple & Functional with In-Place Editing
+// D&D Journal - Radically Simple with Yjs Data Store
 
 import { 
-  safeGetFromStorage, 
-  safeSetToStorage, 
-  createInitialJournalState, 
-  STORAGE_KEYS, 
   generateId, 
   formatDate, 
   sortEntriesByDate, 
@@ -12,26 +8,26 @@ import {
 } from './utils.js';
 
 import { generateIntrospectionPrompt, isAIEnabled } from './ai.js';
-import { createYjsSync, resetSyncState } from './sync.js';
 import { runAutoSummarization, summarize, getSummary } from './summarization.js';
+import { 
+  initializeDataStore, 
+  waitForReady, 
+  onChange as onDataChange,
+  getJournal, 
+  getCharacter, 
+  setCharacter, 
+  getEntries, 
+  addEntry as addEntryToStore, 
+  updateEntry as updateEntryInStore,
+  getSyncStatus 
+} from './data-store.js';
+import { needsMigration, migrateToYjs } from './migration.js';
 
-// Simple state management
-let state = createInitialJournalState();
+// Simple state management - now backed by Yjs
+let state = { character: {}, entries: [] };
 
-// Initialize Yjs sync enhancement (ADR-0003) - lazy initialization
-let yjsSync = null;
-const getYjsSync = () => {
-  if (!yjsSync) {
-    try {
-      yjsSync = createYjsSync();
-    } catch (e) {
-      // In test environment or when browser APIs aren't available
-      // Silently fail - sync not available
-      return null;
-    }
-  }
-  return yjsSync;
-};
+// Data store ready flag
+let dataStoreReady = false;
 
 // Simple markdown parser for basic formatting
 export const parseMarkdown = (text) => {
@@ -107,154 +103,65 @@ export const parseMarkdown = (text) => {
     .replace(/__LINE_BREAK__/g, '<br>'); // Single line breaks
 };
 
-// Load state from localStorage - using utils
-export const loadData = () => {
-  const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
-  if (result.success && result.data) {
-    state = { ...state, ...result.data };
-  } else {
-    // Reset to initial state if data loading fails (corrupted data, etc.)
-    state = createInitialJournalState();
-  }
-  
-  // Update global state reference for tests
-  if (typeof global !== 'undefined') {
-    global.state = state;
-  }
-  
-  // Initialize Yjs with current localStorage data using CRDT (ADR-0003)
-  // Skip sync in test environment to avoid interference
-  const sync = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') ? null : getYjsSync();
-  if (sync) {
-    // Check if we have any CRDT data in sync
-    const syncCompleteAppState = sync.getCompleteAppState();
-    
-    if (syncCompleteAppState) {
-      // We have CRDT app state from sync - apply field-by-field conflict resolution
-      console.log('Loading CRDT app state from sync');
-      
-      // The CRDT will automatically handle conflict resolution at the field level
-      // We just need to apply any changes to localStorage
-      const changeCount = sync._getState().ymap ? (() => {
-        try {
-          // Import the applyYjsChangesToLocalStorage function context
-          const tempApplyChanges = () => {
-            let changeCount = 0;
-            Object.values(STORAGE_KEYS).forEach(storageKey => {
-              if (sync._getState().ymap.has(storageKey)) {
-                const yjsStorageMap = sync._getState().ymap.get(storageKey);
-                if (yjsStorageMap && typeof yjsStorageMap.forEach === 'function') {
-                  const syncedData = {};
-                  yjsStorageMap.forEach((value, key) => {
-                    if (value && typeof value.forEach === 'function') {
-                      // Handle nested maps
-                      const nested = {};
-                      value.forEach((v, k) => nested[k] = v);
-                      syncedData[key] = nested;
-                    } else if (value && typeof value.toArray === 'function') {
-                      // Handle arrays
-                      syncedData[key] = value.toArray();
-                    } else {
-                      syncedData[key] = value;
-                    }
-                  });
-                  
-                  const currentData = localStorage.getItem(storageKey);
-                  const newData = JSON.stringify(syncedData);
-                  
-                  if (currentData !== newData) {
-                    localStorage.setItem(storageKey, newData);
-                    changeCount++;
-                    console.log(`Applied CRDT changes to ${storageKey}`);
-                  }
-                }
-              }
-            });
-            return changeCount;
-          };
-          return tempApplyChanges();
-        } catch (e) {
-          console.warn('Error applying initial CRDT state:', e);
-          return 0;
-        }
-      })() : 0;
-      
-      if (changeCount > 0) {
-        // Reload state from updated localStorage
-        const reloadResult = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
-        if (reloadResult.success && reloadResult.data) {
-          state = { ...state, ...reloadResult.data };
-        }
-        console.log(`Applied ${changeCount} CRDT changes during initialization`);
+// Load data from Yjs data store
+export const loadData = async () => {
+  try {
+    // Handle migration from localStorage if needed
+    if (needsMigration()) {
+      console.log('Migration needed - converting localStorage to Yjs...');
+      const migrationResult = await migrateToYjs();
+      if (migrationResult.success) {
+        console.log('Migration completed successfully');
+      } else {
+        console.error('Migration failed:', migrationResult.error);
       }
-      
-      // Upload any local changes to CRDT
-      sync.syncCompleteState();
-    } else {
-      // Check for legacy journal sync
-      const syncJournalData = sync.getData();
-      
-      if (syncJournalData && result.success && result.data) {
-        // Handle legacy sync but immediately upgrade to CRDT
-        console.log('Found legacy journal data, upgrading to CRDT');
-        
-        const localTime = state.lastModified || 0;
-        const remoteTime = syncJournalData.lastModified || 0;
-        
-        if (remoteTime > localTime) {
-          // Apply legacy data first
-          const originalCharacter = { ...state.character };
-          let mergedCharacter = originalCharacter;
-          
-          if (syncJournalData.character) {
-            mergedCharacter = {
-              name: (originalCharacter.name && originalCharacter.name.trim()) || syncJournalData.character.name || '',
-              race: (originalCharacter.race && originalCharacter.race.trim()) || syncJournalData.character.race || '',
-              class: (originalCharacter.class && originalCharacter.class.trim()) || syncJournalData.character.class || '',
-              backstory: (originalCharacter.backstory && originalCharacter.backstory.trim()) || syncJournalData.character.backstory || '',
-              notes: (originalCharacter.notes && originalCharacter.notes.trim()) || syncJournalData.character.notes || ''
-            };
-            
-            const localCompleteness = Object.values(originalCharacter).filter(v => v && v.trim()).length;
-            const syncCompleteness = Object.values(syncJournalData.character).filter(v => v && v.trim()).length;
-            
-            if (syncCompleteness > localCompleteness) {
-              mergedCharacter = { ...syncJournalData.character };
-            }
-          }
-          
-          state = { ...state, ...syncJournalData, character: mergedCharacter };
-          safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
-        }
-      }
-      
-      // Initialize CRDT with current localStorage state
-      console.log('Initializing CRDT with current localStorage state');
-      sync.syncCompleteState();
     }
+    
+    // Initialize data store
+    await initializeDataStore();
+    await waitForReady();
+    
+    // Load current data from Yjs
+    const journalData = getJournal();
+    state = journalData;
+    dataStoreReady = true;
+    
+    // Update global state reference for tests
+    if (typeof global !== 'undefined') {
+      global.state = state;
+    }
+    
+    console.log('Data loaded from Yjs store');
+    
+  } catch (e) {
+    console.error('Failed to load data:', e);
+    // Fall back to empty state
+    state = { 
+      character: { name: '', race: '', class: '', backstory: '', notes: '' }, 
+      entries: [] 
+    };
+    dataStoreReady = true;
   }
 };
 
-// Save state to localStorage and sync - enhanced for complete app state sync (ADR-0003)
+// Save data to Yjs data store (automatic sync)
 export const saveData = () => {
-  state.lastModified = Date.now();
-  const result = safeSetToStorage(STORAGE_KEYS.JOURNAL, state);
-  
-  // Update sync with complete app state
-  // Skip sync in test environment to avoid interference
-  const sync = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') ? null : getYjsSync();
-  if (sync) {
-    console.log('Saving complete app state to sync:', { 
-      entryCount: state.entries ? state.entries.length : 0,
-      isConnected: sync.isConnected 
-    });
-    // Sync complete app state instead of just journal data
-    sync.syncCompleteState();
-  } else {
-    console.log('No sync available - data saved to localStorage only');
+  if (!dataStoreReady) {
+    console.warn('Data store not ready, skipping save');
+    return { success: false, error: 'Data store not ready' };
   }
   
-  return result;
+  try {
+    // Data is automatically saved to Yjs and synced
+    // Just update our local state reference
+    state.lastModified = Date.now();
+    
+    console.log('Data automatically saved to Yjs store');
+    return { success: true };
+  } catch (e) {
+    console.error('Failed to save data:', e);
+    return { success: false, error: e.message };
+  }
 };
 
 // Get entry summary from new summarization module
@@ -401,9 +308,14 @@ export const enableEditMode = (entryDiv, entry) => {
 // Save edit changes
 export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
   if (newTitle.trim() && newContent.trim()) {
-    entry.title = newTitle.trim();
-    entry.content = newContent.trim();
-    entry.timestamp = Date.now();
+    // Update entry in Yjs store (automatically syncs)
+    updateEntryInStore(entry.id, {
+      title: newTitle.trim(),
+      content: newContent.trim()
+    });
+    
+    // Update local state
+    state.entries = getEntries();
     
     // Remove edit form and restore display
     const editForm = entryDiv.querySelector('.edit-form');
@@ -415,13 +327,11 @@ export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
     const content = entryDiv.querySelector('.entry-content');
     const editBtn = entryDiv.querySelector('.edit-btn');
     
-    title.textContent = entry.title;
+    title.textContent = newTitle.trim();
     title.style.display = '';
-    content.textContent = entry.content;
+    content.innerHTML = parseMarkdown(newContent.trim());
     content.style.display = '';
     editBtn.style.display = '';
-    
-    saveData();
   }
 };
 
@@ -490,6 +400,11 @@ export const getFormData = () => {
 
 // Add new entry
 export const addEntry = async () => {
+  if (!dataStoreReady) {
+    alert('Data store not ready, please wait...');
+    return;
+  }
+  
   const formData = getFormData();
   
   if (!formData.title.trim() || !formData.content.trim()) {
@@ -500,8 +415,12 @@ export const addEntry = async () => {
   const entry = createEntryFromForm(formData);
   
   if (isValidEntry(entry)) {
-    state.entries.push(entry);
-    saveData();
+    // Add to Yjs store (automatically syncs)
+    addEntryToStore(entry);
+    
+    // Update local state
+    state.entries = getEntries();
+    
     renderEntries();
     clearEntryForm();
     focusEntryTitle();
@@ -585,16 +504,8 @@ export const displayCharacterSummary = () => {
   
   if (!nameEl || !raceEl || !classEl) return;
   
-  let characterToDisplay = state.character;
-  
-  // Defensive fallback: If state character has no name, check localStorage directly
-  // This prevents character data loss due to sync issues or timing problems
-  if (!characterToDisplay.name || characterToDisplay.name.trim() === '') {
-    const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
-    if (result.success && result.data && result.data.character && result.data.character.name) {
-      characterToDisplay = result.data.character;
-    }
-  }
+  // Get current character data from Yjs store
+  const characterToDisplay = dataStoreReady ? getCharacter() : state.character;
   
   const summary = createSimpleCharacterData(characterToDisplay);
   
@@ -726,9 +637,7 @@ const updateSyncStatus = (status, text, title = '') => {
 
 // Setup sync listener for real-time updates
 export const setupSyncListener = () => {
-  // Skip sync in test environment to avoid interference
-  const sync = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') ? null : getYjsSync();
-  if (!sync) {
+  if (!dataStoreReady) {
     updateSyncStatus('local-only', 'Local only', 'Data is only stored locally');
     return;
   }
@@ -738,10 +647,11 @@ export const setupSyncListener = () => {
   
   // Monitor sync status
   const checkSyncStatus = () => {
-    if (sync.isConnected) {
-      updateSyncStatus('connected', 'Synced', 'Connected to sync server - data is being synchronized');
+    const status = getSyncStatus();
+    if (status.connected) {
+      updateSyncStatus('connected', 'Synced', `Connected to ${status.connectedCount}/${status.totalProviders} sync servers`);
     } else {
-      updateSyncStatus('disconnected', 'Offline', 'Not connected to sync server - data is only stored locally');
+      updateSyncStatus('disconnected', 'Offline', 'Not connected to sync servers - data stored locally');
     }
   };
   
@@ -749,80 +659,24 @@ export const setupSyncListener = () => {
   setInterval(checkSyncStatus, 5000);
   checkSyncStatus(); // Initial check
   
-  sync.onChange((syncData, syncType, metadata) => {
-    console.log('Received sync update:', { syncType, hasData: !!syncData, metadata });
+  // Listen for data changes
+  onDataChange((event, data) => {
+    console.log('Data store event:', event, data);
     
-    if (syncType === 'crdt-update') {
-      // Handle CRDT field-by-field updates
-      console.log('Processing CRDT updates:', metadata);
-      
-      const previousEntryCount = state.entries ? state.entries.length : 0;
-      
-      // Reload journal state from updated localStorage (CRDT changes already applied)
-      const reloadResult = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
-      if (reloadResult.success && reloadResult.data) {
-        state = { ...state, ...reloadResult.data };
-      }
+    if (event === 'journal-changed') {
+      // Refresh local state from Yjs store
+      const journalData = getJournal();
+      state = journalData;
       
       renderEntries();
       displayCharacterSummary();
       
-      // Show sync activity
-      const newEntryCount = state.entries ? state.entries.length : 0;
-      updateSyncStatus('connected', 'Sync updated', `CRDT field updates applied (${metadata.changeCount} changes)`);
+      updateSyncStatus('connected', 'Sync updated', 'Data synchronized from another device');
       setTimeout(() => checkSyncStatus(), 2000);
-      
-    } else if (syncType === 'journal') {
-      // Handle legacy journal data sync with character data protection
-      console.log('Processing legacy journal data sync');
-      
-      if (!syncData) return;
-      
-      const previousEntryCount = state.entries ? state.entries.length : 0;
-      
-      // Preserve character data if it exists locally and is newer or more complete
-      let mergedCharacter = state.character;
-      if (syncData.character) {
-        // Merge character data field by field, preserving non-empty local values
-        mergedCharacter = {
-          name: (state.character.name && state.character.name.trim()) || syncData.character.name || '',
-          race: (state.character.race && state.character.race.trim()) || syncData.character.race || '',
-          class: (state.character.class && state.character.class.trim()) || syncData.character.class || '',
-          backstory: (state.character.backstory && state.character.backstory.trim()) || syncData.character.backstory || '',
-          notes: (state.character.notes && state.character.notes.trim()) || syncData.character.notes || ''
-        };
-        
-        // If sync has more complete character data, prefer sync data
-        const localCharacterCompleteness = Object.values(state.character).filter(v => v && v.trim()).length;
-        const syncCharacterCompleteness = Object.values(syncData.character).filter(v => v && v.trim()).length;
-        
-        if (syncCharacterCompleteness > localCharacterCompleteness) {
-          mergedCharacter = { ...syncData.character };
-        }
-      }
-      
-      // Update state with merged data
-      state = { 
-        ...state, 
-        ...syncData,
-        character: mergedCharacter
-      };
-      
-      renderEntries();
-      displayCharacterSummary();
-      
-      // Show sync activity
-      const newEntryCount = state.entries ? state.entries.length : 0;
-      if (newEntryCount !== previousEntryCount) {
-        updateSyncStatus('connected', 'Sync updated', 'Journal data synchronized from another device');
-        setTimeout(() => checkSyncStatus(), 2000);
-      }
-      
-      // Upgrade to complete app state sync after processing legacy sync
-      setTimeout(() => {
-        console.log('Upgrading to CRDT sync after legacy sync');
-        sync.syncCompleteState();
-      }, 1000);
+    }
+    
+    if (event === 'sync-status') {
+      checkSyncStatus();
     }
   });
 };
@@ -831,42 +685,54 @@ export const setupSyncListener = () => {
 
 // Function to trigger sync update (called from character module and other modules)
 export const triggerSyncUpdate = () => {
-  // Reload current state from localStorage and sync complete app state
-  const result = safeGetFromStorage(STORAGE_KEYS.JOURNAL);
-  if (result.success && result.data) {
-    state = { ...state, ...result.data };
+  if (!dataStoreReady) {
+    console.warn('Data store not ready for sync update');
+    return;
   }
   
-  // Skip sync in test environment to avoid interference
-  const sync = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') ? null : getYjsSync();
-  if (sync) {
-    console.log('Triggering complete app state sync update');
-    sync.syncCompleteState();
-  }
+  // Refresh local state from Yjs store
+  const journalData = getJournal();
+  state = journalData;
+  
+  console.log('Sync update triggered - state refreshed from Yjs store');
 };
 
 // Initialize app
 export const init = async () => {
-  loadData();
-  renderEntries();
-  displayCharacterSummary();
-  setupEventHandlers();
-  setupSyncListener();
-  
-  // Make sync trigger available globally for character module
-  if (typeof window !== 'undefined') {
-    window.triggerSyncUpdate = triggerSyncUpdate;
-  }
-  
-  // Initialize summarization
   try {
-    await runAutoSummarization();
+    // Load data from Yjs store (with migration if needed)
+    await loadData();
+    
+    renderEntries();
+    displayCharacterSummary();
+    setupEventHandlers();
+    setupSyncListener();
+    
+    // Make sync trigger available globally for character module
+    if (typeof window !== 'undefined') {
+      window.triggerSyncUpdate = triggerSyncUpdate;
+    }
+    
+    // Initialize summarization
+    try {
+      await runAutoSummarization();
+    } catch (error) {
+      console.error('Failed to initialize summarization:', error);
+    }
+    
+    // Display AI prompt
+    await displayAIPrompt();
+    
+    console.log('App initialized successfully');
+    
   } catch (error) {
-    console.error('Failed to initialize summarization:', error);
+    console.error('Failed to initialize app:', error);
+    // Show error to user
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #ff4444; color: white; padding: 10px; border-radius: 5px; z-index: 1000;';
+    errorDiv.textContent = 'Failed to initialize app. Please refresh the page.';
+    document.body.appendChild(errorDiv);
   }
-  
-  // Display AI prompt
-  await displayAIPrompt();
 };
 
 // Reset state to initial values (for testing)
