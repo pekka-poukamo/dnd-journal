@@ -37,6 +37,17 @@ const createMockSystem = () => {
       data: {},
       get: function(key) {
         if (key === 'entries') {
+          // Check if entries were set, otherwise return default empty array structure
+          const entries = this.data[key];
+          if (entries) {
+            // If entries were set directly as an array, return them as-is
+            if (Array.isArray(entries)) {
+              return entries;
+            }
+            // If entries were set as an object with toArray, return that
+            return entries;
+          }
+          // Default empty structure
           return {
             toArray: () => []
           };
@@ -135,6 +146,11 @@ export const createPersistence = (ydoc) => {
 
 // Create complete Yjs system
 export const createSystem = async () => {
+  // Return existing system if already created
+  if (yjsSystem) {
+    return yjsSystem;
+  }
+  
   // Return mock system in test environment - multiple checks to ensure reliability
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
     yjsSystem = createMockSystem();
