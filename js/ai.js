@@ -301,13 +301,8 @@ const saveStoredSummaries = (summaries) => {
   safeSetToStorage(STORAGE_KEYS.SUMMARIES, summaries);
   
   // Update Yjs directly if available (for real-time sync)
-  import('./yjs-registry.js').then(({ getYjsSystem }) => {
-    const yjsSystem = getYjsSystem();
-    if (yjsSystem) {
-      import('./yjs.js').then(({ updateSummariesInYjs }) => {
-        updateSummariesInYjs(yjsSystem, summaries);
-      });
-    }
+  import('./yjs.js').then(({ updateSummariesInYjs }) => {
+    updateSummariesInYjs(summaries);
   }).catch(() => {
     // Yjs not available, that's OK
   });

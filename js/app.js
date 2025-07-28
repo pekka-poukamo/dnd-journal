@@ -13,9 +13,10 @@ import {
   createYjsSystem, 
   getSyncStatus,
   onYjsUpdate,
+  getYjsSystem,
+  clearYjsSystem,
   Y 
 } from './yjs.js';
-import { setYjsSystem, clearYjsSystem } from './yjs-registry.js';
 
 // Simple state for UI rendering (read-only mirror of Yjs)
 let state = { character: {}, entries: [] };
@@ -408,9 +409,6 @@ export const init = async () => {
   try {
     // Initialize Yjs system using pure function
     yjsSystem = await createYjsSystem();
-    
-    // Register Yjs system for other modules
-    setYjsSystem(yjsSystem);
     
     // Register callback for Yjs updates
     onYjsUpdate((updatedYjsSystem) => {

@@ -44,13 +44,8 @@ export const saveCharacterDataWithSync = (characterData) => {
   const saveResult = saveCharacterData(characterData);
   
   // Update Yjs directly if available (for real-time sync)
-  import('./yjs-registry.js').then(({ getYjsSystem }) => {
-    const yjsSystem = getYjsSystem();
-    if (yjsSystem) {
-      import('./yjs.js').then(({ updateCharacterInYjs }) => {
-        updateCharacterInYjs(yjsSystem, characterData);
-      });
-    }
+  import('./yjs.js').then(({ updateCharacterInYjs }) => {
+    updateCharacterInYjs(characterData);
   }).catch(() => {
     // Yjs not available, that's OK
   });

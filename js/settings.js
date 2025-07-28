@@ -46,13 +46,8 @@ export const saveSettings = (settings) => {
   const result = safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
   
   // Update Yjs directly if available (for real-time sync)
-  import('./yjs-registry.js').then(({ getYjsSystem }) => {
-    const yjsSystem = getYjsSystem();
-    if (yjsSystem) {
-      import('./yjs.js').then(({ updateSettingsInYjs }) => {
-        updateSettingsInYjs(yjsSystem, settings);
-      });
-    }
+  import('./yjs.js').then(({ updateSettingsInYjs }) => {
+    updateSettingsInYjs(settings);
   }).catch(() => {
     // Yjs not available, that's OK
   });

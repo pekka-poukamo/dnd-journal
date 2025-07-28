@@ -1,4 +1,4 @@
-// Functional Yjs Module - Pure functions, no mutable state
+// Functional Yjs Module - Pure functions with integrated system management
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
@@ -6,6 +6,9 @@ import { SYNC_CONFIG } from '../sync-config.js';
 
 // Export Y constructor for other modules
 export { Y };
+
+// Yjs system instance (managed by this module)
+let yjsSystemInstance = null;
 
 // Simple registry for Yjs update callbacks (no coupling)
 const updateCallbacks = [];
@@ -24,6 +27,15 @@ const triggerUpdateCallbacks = (yjsSystem) => {
       console.warn('Error in Yjs update callback:', e);
     }
   });
+};
+
+// Get the current Yjs system instance
+export const getYjsSystem = () => yjsSystemInstance;
+
+// Clear the Yjs system instance (for testing)
+export const clearYjsSystem = () => {
+  yjsSystemInstance = null;
+  updateCallbacks.length = 0; // Clear callbacks too
 };
 
 // Pure function to validate WebSocket URL
@@ -113,6 +125,9 @@ export const createYjsSystem = async () => {
       providers
     };
     
+    // Store the system instance in this module
+    yjsSystemInstance = yjsSystem;
+    
     // Setup update listener to trigger callbacks
     ydoc.on('update', () => {
       triggerUpdateCallbacks(yjsSystem);
@@ -128,7 +143,8 @@ export const createYjsSystem = async () => {
 };
 
 // Pure function to update character data in Yjs
-export const updateCharacterInYjs = (yjsSystem, characterData) => {
+export const updateCharacterInYjs = (characterData) => {
+  const yjsSystem = yjsSystemInstance;
   if (!yjsSystem?.journalMap) return;
   
   try {
@@ -152,7 +168,8 @@ export const updateCharacterInYjs = (yjsSystem, characterData) => {
 };
 
 // Pure function to update settings in Yjs
-export const updateSettingsInYjs = (yjsSystem, settings) => {
+export const updateSettingsInYjs = (settings) => {
+  const yjsSystem = yjsSystemInstance;
   if (!yjsSystem?.settingsMap) return;
   
   try {
@@ -164,7 +181,8 @@ export const updateSettingsInYjs = (yjsSystem, settings) => {
 };
 
 // Pure function to update summaries in Yjs
-export const updateSummariesInYjs = (yjsSystem, summaries) => {
+export const updateSummariesInYjs = (summaries) => {
+  const yjsSystem = yjsSystemInstance;
   if (!yjsSystem?.summariesMap) return;
   
   try {
