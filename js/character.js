@@ -38,9 +38,22 @@ export const saveCharacterData = (characterData) => {
   return safeSetToStorage(STORAGE_KEYS.JOURNAL, updatedData);
 };
 
-// Enhanced save function that also triggers sync updates
+// Pure functional save that works directly with Yjs
 export const saveCharacterDataWithSync = (characterData) => {
+  // First save to localStorage for backward compatibility
   const saveResult = saveCharacterData(characterData);
+  
+  // Update Yjs directly if available
+  if (typeof window !== 'undefined' && window.yjsContext) {
+    try {
+      const { setCharacter } = window.yjsStore || {};
+      if (setCharacter) {
+        setCharacter(window.yjsContext.ydoc, characterData);
+      }
+    } catch (e) {
+      console.warn('Could not update Yjs:', e);
+    }
+  }
   
   // Trigger sync update if available (for integration with app.js sync)
   if (typeof window !== 'undefined' && window.triggerSyncUpdate) {
