@@ -101,6 +101,17 @@ global.console = {
   debug: function() {}
 };
 
+// Mock alert for character.js tests
+global.alert = function(message) {
+  // Mock alert - do nothing or store message for test verification
+  global.lastAlert = message;
+};
+
+// Also mock window.alert for tests that expect it
+global.window.alert = function(message) {
+  global.lastAlert = message;
+};
+
 global.fetch = async function(url, options) {
   // Mock OpenAI API responses
   if (url.includes('openai.com')) {

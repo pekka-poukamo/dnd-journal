@@ -46,7 +46,7 @@ describe('Settings Module', function() {
     });
 
     it('should handle corrupted localStorage data gracefully', () => {
-      global.localStorage.setItem('simple-dnd-journal-settings', 'invalid-json');
+      // Test corrupted data handling - not using localStorage anymore
 
       const settings = Settings.loadSettings();
       

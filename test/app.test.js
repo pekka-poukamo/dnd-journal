@@ -30,9 +30,8 @@ describe('D&D Journal App', function() {
     App.resetState();
   });
 
-  afterEach(function() {
-    // Reset localStorage after each test
-    global.resetLocalStorage();
+  afterEach(async function() {
+    await clearSystem();
   });
 
   describe('State Management', function() {

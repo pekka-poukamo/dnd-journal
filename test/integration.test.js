@@ -55,7 +55,7 @@ describe('D&D Journal Integration Tests', function() {
     
     const testDate = Utils.formatDate(Date.now());
     expect(testDate).to.be.a('string');
-    expect(testDate).to.include('/');
+    expect(testDate).to.match(/\w+ \d+, \d+/);
   });
 
   it('should handle character and entry integration', function() {

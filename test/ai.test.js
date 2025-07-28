@@ -3,7 +3,7 @@ import './setup.js';
 import * as AI from '../js/ai.js';
 import * as OpenAIWrapper from '../js/openai-wrapper.js';
 import * as Utils from '../js/utils.js';
-import { createSystem, clearSystem } from '../js/yjs.js';
+import { createSystem, clearSystem, getSystem } from '../js/yjs.js';
 import * as Settings from '../js/settings.js';
 
 describe('AI Module', function() {
@@ -94,8 +94,8 @@ describe('AI Module', function() {
       };
 
       const result = await AI.generateEntrySummary(entry);
-      // In test environment, this might return null due to missing API key
-      expect(result).to.satisfy(val => val === null || typeof val === 'string');
+      // In test environment, this might return null due to missing API key, or an object if AI is available
+      expect(result).to.satisfy(val => val === null || (typeof val === 'object' && val.id && val.summary));
     });
 
     it('should handle empty content gracefully', async function() {
@@ -160,15 +160,18 @@ describe('AI Module', function() {
   });
 
   describe('getIntrospectionPromptForPreview', function() {
-    beforeEach(function() {
-      global.resetLocalStorage();
+    beforeEach(async function() {
+      await clearSystem();
+      await createSystem();
       
       // Set up AI settings to enable AI features
       const testSettings = {
         apiKey: 'sk-test123',
         enableAIFeatures: true
       };
-      global.localStorage.setItem('simple-dnd-journal-settings', JSON.stringify(testSettings));
+      const system = getSystem();
+      system.settingsMap.set('apiKey', testSettings.apiKey);
+      system.settingsMap.set('enableAIFeatures', testSettings.enableAIFeatures);
     });
 
     it('should return complete prompt structure', async function() {
@@ -356,8 +359,9 @@ describe('AI Module', function() {
   });
 
   describe('getFormattedEntriesForAI', function() {
-    beforeEach(function() {
-      global.resetLocalStorage();
+    beforeEach(async function() {
+      await clearSystem();
+      await createSystem();
     });
 
     it('should exclude entries that are already included in meta-summaries', function() {
@@ -397,10 +401,11 @@ describe('AI Module', function() {
           }
         };
       
-      // Store test data
-      global.localStorage.setItem('simple-dnd-journal', JSON.stringify(journalData));
-      global.localStorage.setItem('simple-dnd-journal-summaries', JSON.stringify(entrySummaries));
-      global.localStorage.setItem('simple-dnd-journal-meta-summaries', JSON.stringify(metaSummaries));
+      // Store test data in Yjs system
+      const system = getSystem();
+      system.journalMap.set('entries', journalData.entries);
+      system.summariesMap.set('summaries', entrySummaries);
+      system.summariesMap.set('meta-summaries', metaSummaries);
       
       // Call the function
       const formattedEntries = AI.getFormattedEntriesForAI();

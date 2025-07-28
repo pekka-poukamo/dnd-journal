@@ -2,7 +2,8 @@ import { expect } from 'chai';
 import './setup.js';
 import * as Character from '../js/character.js';
 import * as OpenAIWrapper from '../js/openai-wrapper.js';
-import { createSystem, clearSystem } from '../js/yjs.js';
+import * as Settings from '../js/settings.js';
+import { createSystem, clearSystem, getSystem, Y } from '../js/yjs.js';
 
 describe('Character Page', function() {
   beforeEach(async function() {
@@ -195,6 +196,13 @@ describe('Character Page', function() {
 
     describe('generateCharacterSummaries', function() {
       it('should show alert when AI is not available', async function() {
+        // Ensure AI is disabled
+        const disabledSettings = {
+          apiKey: '',
+          enableAIFeatures: false
+        };
+        Settings.saveSettings(disabledSettings);
+        
         // Mock window.alert to capture the call
         let alertMessage = '';
         global.window.alert = (message) => { alertMessage = message; };
@@ -211,6 +219,13 @@ describe('Character Page', function() {
       });
 
       it('should handle character with long content', async function() {
+        // Ensure AI is disabled
+        const disabledSettings = {
+          apiKey: '',
+          enableAIFeatures: false
+        };
+        Settings.saveSettings(disabledSettings);
+        
         // Create character with substantial content
         const longCharacter = {
           name: 'Test Character',
@@ -255,7 +270,15 @@ describe('Character Page', function() {
           }
         };
         
-        global.localStorage.setItem('simple-summaries', JSON.stringify(testSummaries));
+        // Using Yjs summariesMap with proper Y.Map format
+        const system = getSystem();
+        Object.entries(testSummaries).forEach(([key, value]) => {
+          const summaryMap = new Y.Map();
+          summaryMap.set('content', value.content);
+          summaryMap.set('words', value.words || 0);
+          summaryMap.set('timestamp', value.timestamp || 0);
+          system.summariesMap.set(key, summaryMap);
+        });
         
         Character.displayCharacterSummaries();
         
@@ -273,7 +296,15 @@ describe('Character Page', function() {
           }
         };
         
-        global.localStorage.setItem('simple-dnd-journal-character-summaries', JSON.stringify(testSummaries));
+        // Using Yjs summariesMap with proper Y.Map format
+        const system = getSystem();
+        Object.entries(testSummaries).forEach(([key, value]) => {
+          const summaryMap = new Y.Map();
+          summaryMap.set('content', value.summary || value.content);
+          summaryMap.set('words', value.words || 0);
+          summaryMap.set('timestamp', value.timestamp || Date.now());
+          system.summariesMap.set(key, summaryMap);
+        });
         
         const summaries = Character.loadCharacterSummaries();
         expect(summaries['character:backstory'].content).to.equal('Content from summary property');
@@ -288,7 +319,15 @@ describe('Character Page', function() {
           }
         };
         
-        global.localStorage.setItem('simple-summaries', JSON.stringify(testSummaries));
+        // Using Yjs summariesMap with proper Y.Map format
+        const system = getSystem();
+        Object.entries(testSummaries).forEach(([key, value]) => {
+          const summaryMap = new Y.Map();
+          summaryMap.set('content', value.content);
+          summaryMap.set('words', value.words || 0);
+          summaryMap.set('timestamp', value.timestamp || Date.now());
+          system.summariesMap.set(key, summaryMap);
+        });
         
         Character.displayCharacterSummaries();
         
