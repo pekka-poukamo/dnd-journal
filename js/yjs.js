@@ -7,6 +7,25 @@ import { SYNC_CONFIG } from '../sync-config.js';
 // Export Y constructor for other modules
 export { Y };
 
+// Simple registry for Yjs update callbacks (no coupling)
+const updateCallbacks = [];
+
+// Pure function to register update callback
+export const onYjsUpdate = (callback) => {
+  updateCallbacks.push(callback);
+};
+
+// Pure function to trigger all update callbacks
+const triggerUpdateCallbacks = (yjsSystem) => {
+  updateCallbacks.forEach(callback => {
+    try {
+      callback(yjsSystem);
+    } catch (e) {
+      console.warn('Error in Yjs update callback:', e);
+    }
+  });
+};
+
 // Pure function to validate WebSocket URL
 const isValidWebSocketUrl = (url) => {
   if (!url || typeof url !== 'string') return false;
@@ -85,9 +104,7 @@ export const createYjsSystem = async () => {
       persistence.on('synced', resolve);
     });
     
-    console.log('Yjs system created');
-    
-    return {
+    const yjsSystem = {
       ydoc,
       journalMap,
       settingsMap,
@@ -96,9 +113,74 @@ export const createYjsSystem = async () => {
       providers
     };
     
+    // Setup update listener to trigger callbacks
+    ydoc.on('update', () => {
+      triggerUpdateCallbacks(yjsSystem);
+    });
+    
+    console.log('Yjs system created');
+    return yjsSystem;
+    
   } catch (e) {
     console.error('Failed to create Yjs system:', e);
     return null;
+  }
+};
+
+// Pure function to update character data in Yjs
+export const updateCharacterInYjs = (yjsSystem, characterData) => {
+  if (!yjsSystem?.journalMap) return;
+  
+  try {
+    let characterMap = yjsSystem.journalMap.get('character');
+    if (!characterMap) {
+      characterMap = new Y.Map();
+      yjsSystem.journalMap.set('character', characterMap);
+    }
+    
+    // Set each field individually for CRDT conflict resolution
+    characterMap.set('name', characterData.name || '');
+    characterMap.set('race', characterData.race || '');
+    characterMap.set('class', characterData.class || '');
+    characterMap.set('backstory', characterData.backstory || '');
+    characterMap.set('notes', characterData.notes || '');
+    
+    yjsSystem.journalMap.set('lastModified', Date.now());
+  } catch (e) {
+    console.warn('Could not update character in Yjs:', e);
+  }
+};
+
+// Pure function to update settings in Yjs
+export const updateSettingsInYjs = (yjsSystem, settings) => {
+  if (!yjsSystem?.settingsMap) return;
+  
+  try {
+    yjsSystem.settingsMap.set('apiKey', settings.apiKey || '');
+    yjsSystem.settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
+  } catch (e) {
+    console.warn('Could not update settings in Yjs:', e);
+  }
+};
+
+// Pure function to update summaries in Yjs
+export const updateSummariesInYjs = (yjsSystem, summaries) => {
+  if (!yjsSystem?.summariesMap) return;
+  
+  try {
+    // Clear existing summaries in Yjs
+    yjsSystem.summariesMap.clear();
+    
+    // Add each summary to Yjs
+    Object.entries(summaries).forEach(([key, summary]) => {
+      const summaryMap = new Y.Map();
+      summaryMap.set('content', summary.content || summary.summary || '');
+      summaryMap.set('words', summary.words || 0);
+      summaryMap.set('timestamp', summary.timestamp || Date.now());
+      yjsSystem.summariesMap.set(key, summaryMap);
+    });
+  } catch (e) {
+    console.warn('Could not update summaries in Yjs:', e);
   }
 };
 

@@ -301,26 +301,12 @@ const saveStoredSummaries = (summaries) => {
   safeSetToStorage(STORAGE_KEYS.SUMMARIES, summaries);
   
   // Update Yjs directly if available (for real-time sync)
-  import('./app.js').then(({ getYjsSystem }) => {
+  import('./yjs-registry.js').then(({ getYjsSystem }) => {
     const yjsSystem = getYjsSystem();
-    if (yjsSystem?.summariesMap) {
-      try {
-        import('./yjs.js').then(({ Y }) => {
-          // Clear existing summaries in Yjs
-          yjsSystem.summariesMap.clear();
-          
-          // Add each summary to Yjs
-          Object.entries(summaries).forEach(([key, summary]) => {
-            const summaryMap = new Y.Map();
-            summaryMap.set('content', summary.content || summary.summary || '');
-            summaryMap.set('words', summary.words || 0);
-            summaryMap.set('timestamp', summary.timestamp || Date.now());
-            yjsSystem.summariesMap.set(key, summaryMap);
-          });
-        });
-      } catch (e) {
-        console.warn('Could not update Yjs summaries:', e);
-      }
+    if (yjsSystem) {
+      import('./yjs.js').then(({ updateSummariesInYjs }) => {
+        updateSummariesInYjs(yjsSystem, summaries);
+      });
     }
   }).catch(() => {
     // Yjs not available, that's OK

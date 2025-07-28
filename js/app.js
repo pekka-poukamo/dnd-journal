@@ -12,8 +12,10 @@ import { runAutoSummarization, summarize, getSummary } from './summarization.js'
 import { 
   createYjsSystem, 
   getSyncStatus,
+  onYjsUpdate,
   Y 
 } from './yjs.js';
+import { setYjsSystem, clearYjsSystem } from './yjs-registry.js';
 
 // Simple state for UI rendering (read-only mirror of Yjs)
 let state = { character: {}, entries: [] };
@@ -407,6 +409,16 @@ export const init = async () => {
     // Initialize Yjs system using pure function
     yjsSystem = await createYjsSystem();
     
+    // Register Yjs system for other modules
+    setYjsSystem(yjsSystem);
+    
+    // Register callback for Yjs updates
+    onYjsUpdate((updatedYjsSystem) => {
+      loadStateFromYjs();
+      renderEntries();
+      displayCharacterSummary();
+    });
+    
     // Load initial state from Yjs
     loadStateFromYjs();
     
@@ -456,10 +468,8 @@ export const resetState = () => {
 // Reset Yjs system (for testing)
 export const resetSyncCache = () => {
   yjsSystem = null;
+  clearYjsSystem();
 };
-
-// Export Yjs system for other modules
-export const getYjsSystem = () => yjsSystem;
 
 // Export state for testing
 export { state };
