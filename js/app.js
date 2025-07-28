@@ -46,23 +46,18 @@ export const parseMarkdown = (text) => {
 
 // Load data from Yjs into local state (for UI rendering)
 const loadStateFromYjs = () => {
-  if (!yjsSystem?.journalMap) return;
+  if (!yjsSystem?.characterMap || !yjsSystem?.journalMap) return;
   
-  // Load character directly from Yjs
-  const characterMap = yjsSystem.journalMap.get('character');
-  if (characterMap) {
-    state.character = {
-      name: characterMap.get('name') || '',
-      race: characterMap.get('race') || '',
-      class: characterMap.get('class') || '',
-      backstory: characterMap.get('backstory') || '',
-      notes: characterMap.get('notes') || ''
-    };
-  } else {
-    state.character = { name: '', race: '', class: '', backstory: '', notes: '' };
-  }
+  // Load character directly from dedicated characterMap
+  state.character = {
+    name: yjsSystem.characterMap.get('name') || '',
+    race: yjsSystem.characterMap.get('race') || '',
+    class: yjsSystem.characterMap.get('class') || '',
+    backstory: yjsSystem.characterMap.get('backstory') || '',
+    notes: yjsSystem.characterMap.get('notes') || ''
+  };
   
-  // Load entries directly from Yjs
+  // Load entries directly from journalMap
   const entriesArray = yjsSystem.journalMap.get('entries');
   if (entriesArray) {
     state.entries = entriesArray.toArray().map(entryMap => ({

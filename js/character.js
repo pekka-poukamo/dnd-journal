@@ -18,33 +18,21 @@ import { getSystem, Y } from './yjs.js';
 // Load character data from Yjs
 export const loadCharacterData = () => {
   const yjsSystem = getSystem();
-  if (!yjsSystem?.journalMap) return { name: '', race: '', class: '', backstory: '', notes: '' };
-  
-  const characterMap = yjsSystem.journalMap.get('character');
-  if (!characterMap) {
-    return { name: '', race: '', class: '', backstory: '', notes: '' };
-  }
+  if (!yjsSystem?.characterMap) return { name: '', race: '', class: '', backstory: '', notes: '' };
   
   return {
-    name: characterMap.get('name') || '',
-    race: characterMap.get('race') || '',
-    class: characterMap.get('class') || '',
-    backstory: characterMap.get('backstory') || '',
-    notes: characterMap.get('notes') || ''
+    name: yjsSystem.characterMap.get('name') || '',
+    race: yjsSystem.characterMap.get('race') || '',
+    class: yjsSystem.characterMap.get('class') || '',
+    backstory: yjsSystem.characterMap.get('backstory') || '',
+    notes: yjsSystem.characterMap.get('notes') || ''
   };
 };
 
 // Setup character form with direct Yjs binding for individual fields
 export const setupCharacterForm = () => {
   const yjsSystem = getSystem();
-  if (!yjsSystem?.journalMap) return;
-  
-  // Get or create character map
-  let characterMap = yjsSystem.journalMap.get('character');
-  if (!characterMap) {
-    characterMap = new Y.Map();
-    yjsSystem.journalMap.set('character', characterMap);
-  }
+  if (!yjsSystem?.characterMap) return;
   
   const fields = ['name', 'race', 'class', 'backstory', 'notes'];
   
@@ -52,21 +40,21 @@ export const setupCharacterForm = () => {
     const input = document.getElementById(`character-${field}`);
     if (input) {
       // Load initial value from Yjs
-      input.value = characterMap.get(field) || '';
+      input.value = yjsSystem.characterMap.get(field) || '';
       
       // Update Yjs on input change (individual field updates) - Yjs handles persistence
       const updateField = debounce(() => {
-        characterMap.set(field, input.value);
-        yjsSystem.journalMap.set('lastModified', Date.now());
+        yjsSystem.characterMap.set(field, input.value);
+        yjsSystem.characterMap.set('lastModified', Date.now());
       }, 300);
       
       input.addEventListener('input', updateField);
       
       // Listen for Yjs updates to sync field changes from other clients
-      characterMap.observe((event) => {
+      yjsSystem.characterMap.observe((event) => {
         event.changes.keys.forEach((change, key) => {
-          if (key === field && input.value !== characterMap.get(key)) {
-            input.value = characterMap.get(key) || '';
+          if (key === field && input.value !== yjsSystem.characterMap.get(key)) {
+            input.value = yjsSystem.characterMap.get(key) || '';
           }
         });
       });

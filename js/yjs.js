@@ -83,6 +83,7 @@ export const createDocument = () => {
   
   return {
     ydoc,
+    characterMap: ydoc.getMap('character'),
     journalMap: ydoc.getMap('journal'),
     settingsMap: ydoc.getMap('settings'),
     summariesMap: ydoc.getMap('summaries')
@@ -102,7 +103,7 @@ export const createSystem = async () => {
   }
 
   // Create document and maps
-  const { ydoc, journalMap, settingsMap, summariesMap } = createDocument();
+  const { ydoc, characterMap, journalMap, settingsMap, summariesMap } = createDocument();
   
   // Create persistence
   const persistence = createPersistence(ydoc);
@@ -117,6 +118,7 @@ export const createSystem = async () => {
   
   const system = {
     ydoc,
+    characterMap,
     journalMap,
     settingsMap,
     summariesMap,
