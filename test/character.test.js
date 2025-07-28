@@ -196,15 +196,14 @@ describe('Character Page', function() {
 
     describe('generateCharacterSummaries', function() {
       it('should show alert when AI is not available', async function() {
-        // Ensure AI is disabled
-        const disabledSettings = {
-          apiKey: '',
-          enableAIFeatures: false
-        };
-        Settings.saveSettings(disabledSettings);
+        // Ensure AI is disabled by setting up the Yjs system directly
+        const system = getSystem();
+        system.settingsMap.set('apiKey', '');
+        system.settingsMap.set('enableAIFeatures', false);
         
-        // Mock window.alert to capture the call
+        // Mock alert to capture the call
         let alertMessage = '';
+        global.alert = (message) => { alertMessage = message; };
         global.window.alert = (message) => { alertMessage = message; };
         
         await Character.generateCharacterSummaries();
@@ -219,12 +218,10 @@ describe('Character Page', function() {
       });
 
       it('should handle character with long content', async function() {
-        // Ensure AI is disabled
-        const disabledSettings = {
-          apiKey: '',
-          enableAIFeatures: false
-        };
-        Settings.saveSettings(disabledSettings);
+        // Ensure AI is disabled by setting up the Yjs system directly
+        const system = getSystem();
+        system.settingsMap.set('apiKey', '');
+        system.settingsMap.set('enableAIFeatures', false);
         
         // Create character with substantial content
         const longCharacter = {
@@ -237,8 +234,9 @@ describe('Character Page', function() {
         
         Character.saveCharacterData(longCharacter);
         
-        // Mock window.alert
+        // Mock alert
         let alertMessage = '';
+        global.alert = (message) => { alertMessage = message; };
         global.window.alert = (message) => { alertMessage = message; };
         
         await Character.generateCharacterSummaries();
@@ -270,10 +268,22 @@ describe('Character Page', function() {
           }
         };
         
-        // Using Yjs summariesMap with proper Y.Map format
+        // Using Yjs summariesMap with proper mock Y.Map format
         const system = getSystem();
         Object.entries(testSummaries).forEach(([key, value]) => {
-          const summaryMap = new Y.Map();
+          const summaryMap = {
+            data: {},
+            set: function(key, value) { this.data[key] = value; },
+            get: function(key) { return this.data[key]; },
+            has: function(key) { return key in this.data; },
+            delete: function(key) { delete this.data[key]; },
+            clear: function() { this.data = {}; },
+            forEach: function(callback) {
+              Object.entries(this.data).forEach(([key, value]) => {
+                callback(value, key);
+              });
+            }
+          };
           summaryMap.set('content', value.content);
           summaryMap.set('words', value.words || 0);
           summaryMap.set('timestamp', value.timestamp || 0);
@@ -289,17 +299,29 @@ describe('Character Page', function() {
 
       it('should handle summary content from summary property', function() {
         const testSummaries = {
-          backstory: {
+          'character:backstory': {
             summary: 'Content from summary property', // Using 'summary' instead of 'content'
             words: 25,
             timestamp: Date.now()
           }
         };
         
-        // Using Yjs summariesMap with proper Y.Map format
+        // Using Yjs summariesMap with proper mock Y.Map format
         const system = getSystem();
         Object.entries(testSummaries).forEach(([key, value]) => {
-          const summaryMap = new Y.Map();
+          const summaryMap = {
+            data: {},
+            set: function(key, value) { this.data[key] = value; },
+            get: function(key) { return this.data[key]; },
+            has: function(key) { return key in this.data; },
+            delete: function(key) { delete this.data[key]; },
+            clear: function() { this.data = {}; },
+            forEach: function(callback) {
+              Object.entries(this.data).forEach(([key, value]) => {
+                callback(value, key);
+              });
+            }
+          };
           summaryMap.set('content', value.summary || value.content);
           summaryMap.set('words', value.words || 0);
           summaryMap.set('timestamp', value.timestamp || Date.now());
@@ -319,10 +341,22 @@ describe('Character Page', function() {
           }
         };
         
-        // Using Yjs summariesMap with proper Y.Map format
+        // Using Yjs summariesMap with proper mock Y.Map format
         const system = getSystem();
         Object.entries(testSummaries).forEach(([key, value]) => {
-          const summaryMap = new Y.Map();
+          const summaryMap = {
+            data: {},
+            set: function(key, value) { this.data[key] = value; },
+            get: function(key) { return this.data[key]; },
+            has: function(key) { return key in this.data; },
+            delete: function(key) { delete this.data[key]; },
+            clear: function() { this.data = {}; },
+            forEach: function(callback) {
+              Object.entries(this.data).forEach(([key, value]) => {
+                callback(value, key);
+              });
+            }
+          };
           summaryMap.set('content', value.content);
           summaryMap.set('words', value.words || 0);
           summaryMap.set('timestamp', value.timestamp || Date.now());

@@ -110,39 +110,52 @@ export const populateForm = (character) => {
 
 // Load character summaries from storage
 export const loadCharacterSummaries = () => {
-  // Check both storage locations for character summaries
-  const characterSummaries = loadDataWithFallback(STORAGE_KEYS.CHARACTER_SUMMARIES, {});
-  const generalSummaries = loadDataWithFallback('simple-summaries', {});
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.summariesMap) return {};
   
-  // Combine summaries from both sources
   const combinedSummaries = {};
   
-  // Prioritize new combined summary format
-  if (generalSummaries['character:combined']) {
-    combinedSummaries['character:combined'] = generalSummaries['character:combined'];
-  } else {
-    // Fallback to individual field summaries for backward compatibility
-    
-    // Add from dedicated character summaries storage (format: fieldname: {summary, timestamp, etc})
-    Object.keys(characterSummaries).forEach(field => {
-      if (characterSummaries[field]) {
-        combinedSummaries[`character:${field}`] = {
-          content: characterSummaries[field].summary || characterSummaries[field].content,
-          words: characterSummaries[field].words || 0,
-          timestamp: characterSummaries[field].timestamp
-        };
-      }
-    });
-    
-    // Add from general summaries storage (format: character:fieldname: {content, words, timestamp})
-    Object.keys(generalSummaries).forEach(key => {
-      if (key.startsWith('character:') && key !== 'character:combined') {
-        combinedSummaries[key] = generalSummaries[key];
-      }
-    });
-  }
+  // Get all summaries from Yjs and filter for character-related ones
+  yjsSystem.summariesMap.forEach((summaryMap, key) => {
+    if (key.startsWith('character:') || key === 'character:combined') {
+      combinedSummaries[key] = {
+        content: summaryMap.get ? summaryMap.get('content') : summaryMap.content || '',
+        words: summaryMap.get ? summaryMap.get('words') : summaryMap.words || 0,
+        timestamp: summaryMap.get ? summaryMap.get('timestamp') : summaryMap.timestamp || Date.now()
+      };
+    }
+  });
   
-  return combinedSummaries;
+  // Fallback: check localStorage for backward compatibility
+  if (Object.keys(combinedSummaries).length === 0) {
+    const characterSummaries = loadDataWithFallback(STORAGE_KEYS.CHARACTER_SUMMARIES, {});
+    const generalSummaries = loadDataWithFallback('simple-summaries', {});
+    
+    // Prioritize new combined summary format
+    if (generalSummaries['character:combined']) {
+      combinedSummaries['character:combined'] = generalSummaries['character:combined'];
+    } else {
+      // Add from dedicated character summaries storage
+      Object.keys(characterSummaries).forEach(field => {
+        if (characterSummaries[field]) {
+          combinedSummaries[`character:${field}`] = {
+            content: characterSummaries[field].summary || characterSummaries[field].content,
+            words: characterSummaries[field].words || 0,
+            timestamp: characterSummaries[field].timestamp
+          };
+        }
+      });
+      
+             // Add from general summaries storage
+       Object.keys(generalSummaries).forEach(key => {
+         if (key.startsWith('character:') && key !== 'character:combined') {
+           combinedSummaries[key] = generalSummaries[key];
+         }
+       });
+     }
+   }
+   
+   return combinedSummaries;
 };
 
 // Display character summaries in the UI

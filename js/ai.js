@@ -31,6 +31,7 @@ import {
 } from './utils.js';
 import { getSummaryByKey, storeSummary } from './summarization.js';
 import { loadSettings } from './settings.js';
+import { getSystem } from './yjs.js';
 
 // Unified narrative-focused system prompt with unobvious question element
 export const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
@@ -375,10 +376,63 @@ export const getFormattedCharacterForAI = (character) => {
 
 // Format entries for AI processing (with summaries for older entries, full content for recent)
 export const getFormattedEntriesForAI = () => {
-  // Use consistent storage utilities
-  const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, { character: {}, entries: [] });
-  const entrySummaries = loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
-  const metaSummaries = loadDataWithFallback('simple-dnd-journal-meta-summaries', {});
+  // Use Yjs system first, then fallback to localStorage
+  const yjsSystem = getSystem();
+  let journalData, entrySummaries, metaSummaries;
+  
+  if (yjsSystem) {
+    // Get data from Yjs
+    const entriesArray = yjsSystem.journalMap.get('entries');
+    let entries = [];
+    
+    if (entriesArray) {
+      if (Array.isArray(entriesArray)) {
+        // Plain JavaScript array (test environment)
+        entries = entriesArray;
+      } else if (entriesArray.toArray) {
+        // Y.Array with Y.Map objects (real app) or mock toArray function
+        const rawEntries = entriesArray.toArray();
+        entries = rawEntries.map(entryMap => {
+          // Handle both Y.Map objects and plain objects
+          if (entryMap && typeof entryMap.get === 'function') {
+            return {
+              id: entryMap.get('id'),
+              title: entryMap.get('title'),
+              content: entryMap.get('content'),
+              timestamp: entryMap.get('timestamp')
+            };
+          } else {
+            // Plain object (test environment)
+            return entryMap;
+          }
+        });
+      }
+    }
+    
+    journalData = { 
+      character: {}, 
+      entries: entries
+    };
+    
+    entrySummaries = {};
+    metaSummaries = {};
+    
+    // Convert Yjs summaries to the expected format
+    if (yjsSystem.summariesMap) {
+      yjsSystem.summariesMap.forEach((value, key) => {
+        if (key === 'summaries') {
+          entrySummaries = value && typeof value === 'object' && value.get ? value.toJSON() : value || {};
+        } else if (key === 'meta-summaries') {
+          metaSummaries = value && typeof value === 'object' && value.get ? value.toJSON() : value || {};
+        }
+      });
+    }
+  } else {
+    // Fallback to localStorage
+    journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, { character: {}, entries: [] });
+    entrySummaries = loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
+    metaSummaries = loadDataWithFallback('simple-dnd-journal-meta-summaries', {});
+  }
   
   // Get all entry IDs that are already included in meta-summaries to avoid duplication
   const entriesInMetaSummaries = new Set();

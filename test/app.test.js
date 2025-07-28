@@ -587,16 +587,17 @@ describe('D&D Journal App', function() {
 
   describe('Edit Mode', function() {
     it('should enable edit mode for entries', function() {
-      App.state.entries.push({
+      const entry = {
         id: '1',
         title: 'Original Title',
         content: 'Original content',
         timestamp: Date.now()
-      });
+      };
 
-      App.renderEntries();
+      App.state.entries.push(entry);
 
-      const entryDiv = document.querySelector('.entry-card');
+      const entryDiv = App.createEntryElement(entry);
+      document.body.appendChild(entryDiv);
       expect(entryDiv).to.exist;
 
       App.enableEditMode(entryDiv, App.state.entries[0]);
@@ -606,16 +607,17 @@ describe('D&D Journal App', function() {
     });
 
     it('should save edits correctly', function() {
-      App.state.entries.push({
+      const entry = {
         id: '1',
         title: 'Original Title',
         content: 'Original content',
         timestamp: Date.now()
-      });
+      };
 
-      App.renderEntries();
+      App.state.entries.push(entry);
 
-      const entryDiv = document.querySelector('.entry-card');
+      const entryDiv = App.createEntryElement(entry);
+      document.body.appendChild(entryDiv);
       App.enableEditMode(entryDiv, App.state.entries[0]);
 
       App.saveEdit(entryDiv, App.state.entries[0], 'Updated Title', 'Updated content');
@@ -625,16 +627,17 @@ describe('D&D Journal App', function() {
     });
 
     it('should cancel edits correctly', function() {
-      App.state.entries.push({
+      const entry = {
         id: '1',
         title: 'Original Title',
         content: 'Original content',
         timestamp: Date.now()
-      });
+      };
 
-      App.renderEntries();
+      App.state.entries.push(entry);
 
-      const entryDiv = document.querySelector('.entry-card');
+      const entryDiv = App.createEntryElement(entry);
+      document.body.appendChild(entryDiv);
       App.enableEditMode(entryDiv, App.state.entries[0]);
 
       App.cancelEdit(entryDiv, App.state.entries[0]);

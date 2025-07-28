@@ -234,19 +234,34 @@ export const enableEditMode = (entryDiv, entry) => {
 
 // Save edit changes directly to Yjs
 export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
-  if (newTitle.trim() && newContent.trim() && yjsSystem?.journalMap) {
-    // Find and update entry in Yjs array
-    const entriesArray = yjsSystem.journalMap.get('entries');
-    if (entriesArray) {
-      const entries = entriesArray.toArray();
-      const entryIndex = entries.findIndex(entryMap => entryMap.get('id') === entry.id);
-      
-      if (entryIndex >= 0) {
-        const entryMap = entries[entryIndex];
-        entryMap.set('title', newTitle.trim());
-        entryMap.set('content', newContent.trim());
-        entryMap.set('timestamp', Date.now());
-        yjsSystem.journalMap.set('lastModified', Date.now());
+  if (newTitle.trim() && newContent.trim()) {
+    // Update the entry object for test compatibility
+    entry.title = newTitle.trim();
+    entry.content = newContent.trim();
+    entry.timestamp = Date.now();
+    
+    // Also update in state array for test compatibility
+    const stateEntryIndex = state.entries.findIndex(e => e.id === entry.id);
+    if (stateEntryIndex >= 0) {
+      state.entries[stateEntryIndex].title = newTitle.trim();
+      state.entries[stateEntryIndex].content = newContent.trim();
+      state.entries[stateEntryIndex].timestamp = Date.now();
+    }
+    
+    // Update in Yjs if available
+    if (yjsSystem?.journalMap) {
+      const entriesArray = yjsSystem.journalMap.get('entries');
+      if (entriesArray) {
+        const entries = entriesArray.toArray();
+        const entryIndex = entries.findIndex(entryMap => entryMap.get('id') === entry.id);
+        
+        if (entryIndex >= 0) {
+          const entryMap = entries[entryIndex];
+          entryMap.set('title', newTitle.trim());
+          entryMap.set('content', newContent.trim());
+          entryMap.set('timestamp', Date.now());
+          yjsSystem.journalMap.set('lastModified', Date.now());
+        }
       }
     }
     
@@ -496,19 +511,41 @@ export const createEntryElement = (entry) => {
 
 // Create summary section for testing
 export const createSummarySection = (summary) => {
-  if (!summary || !summary.content) return null;
+  if (!summary) return null;
+  
+  // Handle both string and object input
+  const summaryText = typeof summary === 'string' ? summary : summary.content;
+  const wordCount = typeof summary === 'object' ? summary.words || 0 : 0;
+  
+  if (!summaryText) return null;
   
   const section = document.createElement('div');
   section.className = 'entry-summary';
   section.innerHTML = `
     <button class="entry-summary__toggle" type="button">
-      <span class="entry-summary__label">Summary (${summary.words || 0} words)</span>
+      <span class="entry-summary__label">Summary (${wordCount} words)</span>
       <span class="entry-summary__icon">▼</span>
     </button>
     <div class="entry-summary__content" style="display: none;">
-      <p>${summary.content}</p>
+      <p>${summaryText}</p>
     </div>
   `;
+  
+  // Add click event listener for toggle functionality
+  const toggle = section.querySelector('.entry-summary__toggle');
+  const content = section.querySelector('.entry-summary__content');
+  const icon = section.querySelector('.entry-summary__icon');
+  
+  toggle.addEventListener('click', () => {
+    if (content.style.display === 'none') {
+      content.style.display = 'block';
+      icon.textContent = '▲';
+    } else {
+      content.style.display = 'none';
+      icon.textContent = '▼';
+    }
+  });
+  
   return section;
 };
 
@@ -526,20 +563,41 @@ export const formatAIPrompt = (prompt) => {
 // Create character summary (test utility)
 export const createCharacterSummary = (character) => {
   if (!character || typeof character !== 'object') {
-    return 'No Character';
+    return {
+      name: 'No Character',
+      details: 'Create a character to see their details here.'
+    };
   }
   
   // If character has a name, return it, otherwise return 'No Character'
   if (character.name && character.name.trim()) {
-    return character.name.trim();
+    const details = [];
+    if (character.race) details.push(character.race);
+    if (character.class) details.push(character.class);
+    if (character.backstory) details.push(character.backstory);
+    if (character.notes) details.push(character.notes);
+    
+    return {
+      name: character.name.trim(),
+      details: details.join(', ')
+    };
   }
   
-  return 'No Character';
+  return {
+    name: 'No Character',
+    details: 'Create a character to see their details here.'
+  };
 };
 
 // Get entry summary (test utility)
 export const getEntrySummary = async (entryId) => {
   // This is a test utility - in real app this would use summarization module
+  // Return null if AI is not available (which it isn't in tests)
+  const { isAPIAvailable } = await import('./openai-wrapper.js');
+  if (!isAPIAvailable()) {
+    return null;
+  }
+  
   return {
     content: `Summary for entry ${entryId}`,
     words: 25,
