@@ -9,7 +9,7 @@ While ADR-0004 originally established localStorage as the primary persistence me
 ## Decision
 ~~We will enhance our localStorage-only persistence with **Yjs CRDT sync** as an optional, transparent layer that maintains localStorage as the source of truth while enabling automatic cross-device synchronization.~~
 
-**SUPERSEDED**: This ADR has been integrated into the updated ADR-0004. Yjs is now the primary persistence mechanism (not an enhancement), providing both local IndexedDB persistence and cross-device synchronization in a unified solution.
+**SUPERSEDED**: This ADR has been integrated into the updated ADR-0004. Yjs is now the primary persistence mechanism (not an enhancement), providing both local IndexedDB persistence and cross-device synchronization in a unified solution. **localStorage is completely deprecated** and must not be used.
 
 ## Rationale
 - ~~**Local-First Maintained**: localStorage remains the primary data store~~

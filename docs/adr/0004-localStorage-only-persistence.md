@@ -1,4 +1,4 @@
-# ADR-0004: Yjs-Only Persistence
+# ADR-0004: Yjs-Only Persistence (localStorage Deprecated)
 
 ## Status
 Accepted (Updated 2024-12-19)
@@ -9,15 +9,18 @@ Applications need data persistence that supports both local-first principles and
 ## Decision
 We will use **Yjs with IndexedDB persistence only** for all data persistence.
 
+**IMPORTANT**: localStorage is completely deprecated and forbidden in this project. Use Yjs Maps for ALL data storage needs.
+
 ## Rationale
 - **Zero Setup**: No database or server configuration required
-- **Offline First**: Works without internet connection via IndexedDB
+- **Local-First**: Works offline via IndexedDB (not localStorage which is deprecated)
 - **Real-time Collaboration**: Built-in CRDT conflict resolution
 - **Cross-device Sync**: Automatic synchronization when online
-- **AI Agent Prevention**: Stops agents from adding complex databases
+- **AI Agent Prevention**: Stops agents from adding complex databases or localStorage
 - **Privacy**: All data stays on user's device (with optional sync)
 - **Performance**: Fast local IndexedDB access with network sync
 - **Structured Data**: Yjs Maps provide better data organization than JSON strings
+- **No localStorage**: Completely eliminates deprecated localStorage usage
 
 ## Architecture
 
@@ -47,10 +50,10 @@ const summariesMap = ydoc.getMap('summaries');    // AI summaries
 - Structured data model
 
 ### Negative
-- Slightly larger bundle size than localStorage
-- More complex than simple JSON storage
-- IndexedDB has browser compatibility considerations
-- Data format tied to Yjs (but has export capabilities)
+- Slightly larger bundle size than deprecated localStorage approach
+- More complex than simple JSON storage (but better structured)
+- IndexedDB has browser compatibility considerations (but better than localStorage)
+- Data format tied to Yjs (but has export capabilities and eliminates localStorage)
 
 ## Compliance
 **Required approach:**
@@ -63,7 +66,7 @@ const summariesMap = ydoc.getMap('summaries');    // AI summaries
 - External database integrations (Firebase, Supabase, etc.)
 - API endpoints for data persistence
 - Cloud storage as primary store (Google Drive, Dropbox, etc.)
-- localStorage for structured data (only allowed for simple config)
+- **localStorage (completely deprecated - use Yjs Maps instead)**
 - sessionStorage (data should persist)
 - Cookies for data storage
 
@@ -86,7 +89,8 @@ const characterClass = yjsSystem.characterMap.get('class');
 // ❌ Forbidden
 fetch('/api/save', {method: 'POST', body: data}); // No APIs
 new Database(); // No external databases
-localStorage.setItem('character', JSON.stringify(data)); // No localStorage for data
+localStorage.setItem('character', JSON.stringify(data)); // localStorage completely deprecated
+localStorage.getItem('config'); // Use Yjs Maps for ALL data including config
 ```
 
 ## Migration from ADR-0004 v1 (localStorage-only)
