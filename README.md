@@ -18,7 +18,7 @@ Real-time sync across devices using Yjs. Data persists locally and optionally sy
 npm run server
 ```
 
-Then in Settings, set sync server to `ws://localhost:1234`. Documents save to `./data/` directory.
+Then in Settings, set sync server to `ws://localhost:1234`. Documents persist in LevelDB at `./data/`.
 
 ## Development
 

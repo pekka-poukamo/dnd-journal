@@ -47,9 +47,9 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "level": "^8.0.0",
     "ws": "^8.18.3",
     "y-indexeddb": "^9.0.12",
+    "y-leveldb": "^0.1.2",
     "y-websocket": "^1.5.4",
     "yjs": "^13.6.27"
   }
