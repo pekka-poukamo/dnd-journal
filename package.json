@@ -12,8 +12,7 @@
     "coverage": "c8 npm test",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
     "deploy": "surge . http://dnd-journal.surge.sh --force",
-    "server": "cd server && npm install && npm start",
-    "sync-server": "HOST=0.0.0.0 PORT=1234 y-websocket-server"
+    "server": "cd server && npm install && npm start"
   },
   "repository": {
     "type": "git",
