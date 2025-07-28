@@ -34,33 +34,6 @@ export const loadCharacterData = () => {
   };
 };
 
-// Save character data to Yjs
-export const saveCharacterData = (characterData) => {
-  const yjsSystem = getSystem();
-  if (!yjsSystem?.journalMap) return { success: false };
-  
-  let characterMap = yjsSystem.journalMap.get('character');
-  if (!characterMap) {
-    characterMap = new Y.Map();
-    yjsSystem.journalMap.set('character', characterMap);
-  }
-  
-  // Set each field individually for CRDT conflict resolution
-  characterMap.set('name', characterData.name || '');
-  characterMap.set('race', characterData.race || '');
-  characterMap.set('class', characterData.class || '');
-  characterMap.set('backstory', characterData.backstory || '');
-  characterMap.set('notes', characterData.notes || '');
-  
-  yjsSystem.journalMap.set('lastModified', Date.now());
-  return { success: true };
-};
-
-// Save character data with sync (alias for consistency)
-export const saveCharacterDataWithSync = (characterData) => {
-  return saveCharacterData(characterData);
-};
-
 // Setup character form with direct Yjs binding for individual fields
 export const setupCharacterForm = () => {
   const yjsSystem = getSystem();
@@ -81,7 +54,7 @@ export const setupCharacterForm = () => {
       // Load initial value from Yjs
       input.value = characterMap.get(field) || '';
       
-      // Update Yjs on input change (individual field updates)
+      // Update Yjs on input change (individual field updates) - Yjs handles persistence
       const updateField = debounce(() => {
         characterMap.set(field, input.value);
         yjsSystem.journalMap.set('lastModified', Date.now());
@@ -332,24 +305,7 @@ export const getFormattedCharacterForAI = async (character) => {
   return { ...character };
 };
 
-// Function to auto-save character data
-const autoSave = () => {
-  const character = getCharacterFromForm();
-  saveCharacterDataWithSync(character);
-};
-
-// Setup auto-save with debouncing
-const setupAutoSave = () => {
-  const debouncedAutoSave = debounce(autoSave, 500);
-  
-  getCharacterFormFieldIds().forEach(fieldId => {
-    const element = document.getElementById(fieldId);
-    if (element) {
-      element.addEventListener('input', debouncedAutoSave);
-      element.addEventListener('blur', autoSave);
-    }
-  });
-};
+// Auto-save is handled automatically by Yjs - no explicit save needed
 
 // Setup summary-related event listeners
 const setupSummaryEventListeners = () => {
@@ -368,11 +324,7 @@ const setupSummaryEventListeners = () => {
 // Setup keyboard shortcuts
 const setupKeyboardShortcuts = () => {
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-      e.preventDefault();
-      autoSave();
-    }
-    
+    // Ctrl/Cmd+S no longer needed - Yjs handles auto-save
     if (e.key === 'Escape') {
       window.location.href = 'index.html';
     }
@@ -383,7 +335,6 @@ const setupKeyboardShortcuts = () => {
 const init = () => {
   const character = loadCharacterData();
   populateForm(character);
-  setupAutoSave();
   setupSummaryEventListeners();
   setupKeyboardShortcuts();
   displayCharacterSummaries();
