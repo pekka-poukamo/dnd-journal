@@ -3,13 +3,13 @@
 
 import { loadDataWithFallback, safeSetToStorage, generateId, createInitialJournalState, STORAGE_KEYS } from './utils.js';
 import { createUserPromptFunction, createTemplateFunction, isAPIAvailable } from './openai-wrapper.js';
-import { updateSummaries, getSummaries } from './yjs.js';
+import { getSystem, Y } from './yjs.js';
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
 
-const STORAGE_KEY = 'simple-summaries';
+const STORAGE_KEY = 'simple-summaries'; // Still used for localStorage backup
 const TARGET_TOTAL_WORDS = 2000; // Increased from 400
 const WORDS_PER_SUMMARY = 150; // Increased from 30
 const META_TRIGGER = 10;
@@ -37,9 +37,40 @@ const callMetaSummarize = createTemplateFunction(createMetaSummaryPrompt, {
 // STORAGE FUNCTIONS
 // =============================================================================
 
-const loadSummaries = () => getSummaries();
+// Load summaries from Yjs
+const loadSummaries = () => {
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.summariesMap) return {};
+  
+  const summaries = {};
+  yjsSystem.summariesMap.forEach((summaryMap, key) => {
+    summaries[key] = {
+      content: summaryMap.get('content') || '',
+      words: summaryMap.get('words') || 0,
+      timestamp: summaryMap.get('timestamp') || Date.now()
+    };
+  });
+  
+  return summaries;
+};
+
+// Save summaries to Yjs
 const saveSummaries = (summaries) => {
-  updateSummaries(summaries);
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.summariesMap) return { success: false };
+  
+  // Clear existing summaries
+  yjsSystem.summariesMap.clear();
+  
+  // Add each summary
+  Object.entries(summaries).forEach(([key, summary]) => {
+    const summaryMap = new Y.Map();
+    summaryMap.set('content', summary.content || summary.summary || '');
+    summaryMap.set('words', summary.words || 0);
+    summaryMap.set('timestamp', summary.timestamp || Date.now());
+    yjsSystem.summariesMap.set(key, summaryMap);
+  });
+  
   return { success: true };
 };
 

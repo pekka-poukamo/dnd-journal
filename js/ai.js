@@ -29,7 +29,7 @@ import {
   STORAGE_KEYS, 
   safeSetToStorage 
 } from './utils.js';
-import { updateSummaries, getSummaries } from './yjs.js';
+import { getSystem, Y } from './yjs.js';
 
 // Unified narrative-focused system prompt with unobvious question element
 export const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
@@ -292,11 +292,38 @@ Content: ${entry.content}`;
 };
 
 // Load stored summaries from Yjs
-const loadStoredSummaries = () => getSummaries();
+const loadStoredSummaries = () => {
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.summariesMap) return {};
+  
+  const summaries = {};
+  yjsSystem.summariesMap.forEach((summaryMap, key) => {
+    summaries[key] = {
+      content: summaryMap.get('content') || '',
+      words: summaryMap.get('words') || 0,
+      timestamp: summaryMap.get('timestamp') || Date.now()
+    };
+  });
+  
+  return summaries;
+};
 
-// Save summaries to Yjs
+// Save stored summaries to Yjs
 const saveStoredSummaries = (summaries) => {
-  updateSummaries(summaries);
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.summariesMap) return;
+  
+  // Clear existing summaries
+  yjsSystem.summariesMap.clear();
+  
+  // Add each summary
+  Object.entries(summaries).forEach(([key, summary]) => {
+    const summaryMap = new Y.Map();
+    summaryMap.set('content', summary.content || summary.summary || '');
+    summaryMap.set('words', summary.words || 0);
+    summaryMap.set('timestamp', summary.timestamp || Date.now());
+    yjsSystem.summariesMap.set(key, summaryMap);
+  });
 };
 
 // Get or generate summary for an entry

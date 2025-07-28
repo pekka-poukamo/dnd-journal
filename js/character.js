@@ -13,16 +13,46 @@ import {
 } from './utils.js';
 import { summarize } from './summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
-import { updateCharacter, getCharacter, getSystem, Y } from './yjs.js';
+import { getSystem, Y } from './yjs.js';
 
 // Load character data from Yjs
 export const loadCharacterData = () => {
-  return getCharacter();
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.journalMap) return { name: '', race: '', class: '', backstory: '', notes: '' };
+  
+  const characterMap = yjsSystem.journalMap.get('character');
+  if (!characterMap) {
+    return { name: '', race: '', class: '', backstory: '', notes: '' };
+  }
+  
+  return {
+    name: characterMap.get('name') || '',
+    race: characterMap.get('race') || '',
+    class: characterMap.get('class') || '',
+    backstory: characterMap.get('backstory') || '',
+    notes: characterMap.get('notes') || ''
+  };
 };
 
 // Save character data to Yjs
 export const saveCharacterData = (characterData) => {
-  updateCharacter(characterData);
+  const yjsSystem = getSystem();
+  if (!yjsSystem?.journalMap) return { success: false };
+  
+  let characterMap = yjsSystem.journalMap.get('character');
+  if (!characterMap) {
+    characterMap = new Y.Map();
+    yjsSystem.journalMap.set('character', characterMap);
+  }
+  
+  // Set each field individually for CRDT conflict resolution
+  characterMap.set('name', characterData.name || '');
+  characterMap.set('race', characterData.race || '');
+  characterMap.set('class', characterData.class || '');
+  characterMap.set('backstory', characterData.backstory || '');
+  characterMap.set('notes', characterData.notes || '');
+  
+  yjsSystem.journalMap.set('lastModified', Date.now());
   return { success: true };
 };
 
@@ -31,10 +61,17 @@ export const saveCharacterDataWithSync = (characterData) => {
   return saveCharacterData(characterData);
 };
 
-// Setup character form with direct Yjs binding
+// Setup character form with direct Yjs binding for individual fields
 export const setupCharacterForm = () => {
   const yjsSystem = getSystem();
   if (!yjsSystem?.journalMap) return;
+  
+  // Get or create character map
+  let characterMap = yjsSystem.journalMap.get('character');
+  if (!characterMap) {
+    characterMap = new Y.Map();
+    yjsSystem.journalMap.set('character', characterMap);
+  }
   
   const fields = ['name', 'race', 'class', 'backstory', 'notes'];
   
@@ -42,20 +79,23 @@ export const setupCharacterForm = () => {
     const input = document.getElementById(`character-${field}`);
     if (input) {
       // Load initial value from Yjs
-      const characterMap = yjsSystem.journalMap.get('character');
-      if (characterMap) {
-        input.value = characterMap.get(field) || '';
-      }
+      input.value = characterMap.get(field) || '';
       
-      // Update Yjs on input change
-      input.addEventListener('input', () => {
-        let characterMap = yjsSystem.journalMap.get('character');
-        if (!characterMap) {
-          characterMap = new Y.Map();
-          yjsSystem.journalMap.set('character', characterMap);
-        }
+      // Update Yjs on input change (individual field updates)
+      const updateField = debounce(() => {
         characterMap.set(field, input.value);
         yjsSystem.journalMap.set('lastModified', Date.now());
+      }, 300);
+      
+      input.addEventListener('input', updateField);
+      
+      // Listen for Yjs updates to sync field changes from other clients
+      characterMap.observe((event) => {
+        event.changes.keys.forEach((change, key) => {
+          if (key === field && input.value !== characterMap.get(key)) {
+            input.value = characterMap.get(key) || '';
+          }
+        });
       });
     }
   });
