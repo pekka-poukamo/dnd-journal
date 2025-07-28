@@ -13,6 +13,7 @@ import {
 } from './utils.js';
 import { summarize } from './summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
+import { updateCharacter } from './yjs.js';
 
 // Pure function to load character data from localStorage
 export const loadCharacterData = () => {
@@ -38,17 +39,13 @@ export const saveCharacterData = (characterData) => {
   return safeSetToStorage(STORAGE_KEYS.JOURNAL, updatedData);
 };
 
-// Save character data - use Yjs directly if available, otherwise localStorage
+// Save character data with sync
 export const saveCharacterDataWithSync = (characterData) => {
-  // First save to localStorage for backward compatibility
+  // Save to localStorage for backward compatibility
   const saveResult = saveCharacterData(characterData);
   
-  // Update Yjs directly if available (for real-time sync)
-  import('./yjs.js').then(({ updateCharacterInYjs }) => {
-    updateCharacterInYjs(characterData);
-  }).catch(() => {
-    // Yjs not available, that's OK
-  });
+  // Update Yjs for real-time sync
+  updateCharacter(characterData);
   
   return saveResult;
 };

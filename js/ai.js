@@ -29,6 +29,7 @@ import {
   STORAGE_KEYS, 
   safeSetToStorage 
 } from './utils.js';
+import { updateSummaries } from './yjs.js';
 
 // Unified narrative-focused system prompt with unobvious question element
 export const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
@@ -295,17 +296,13 @@ const loadStoredSummaries = () => {
   return loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
 };
 
-// Save summaries - use Yjs directly if available, otherwise localStorage
+// Save summaries with sync
 const saveStoredSummaries = (summaries) => {
-  // First save to localStorage for backward compatibility
+  // Save to localStorage for backward compatibility
   safeSetToStorage(STORAGE_KEYS.SUMMARIES, summaries);
   
-  // Update Yjs directly if available (for real-time sync)
-  import('./yjs.js').then(({ updateSummariesInYjs }) => {
-    updateSummariesInYjs(summaries);
-  }).catch(() => {
-    // Yjs not available, that's OK
-  });
+  // Update Yjs for real-time sync
+  updateSummaries(summaries);
 };
 
 // Get or generate summary for an entry

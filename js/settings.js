@@ -1,7 +1,6 @@
 // Settings Page - AI Configuration & Data Management
 
-import * as Y from 'yjs';
-import { WebsocketProvider } from 'y-websocket';
+import { updateSettings } from './yjs.js';
 import { 
   loadDataWithFallback, 
   createInitialSettings, 
@@ -40,17 +39,13 @@ export const loadSettings = () => {
   );
 };
 
-// Save settings - use Yjs directly if available, otherwise localStorage
+// Save settings with sync
 export const saveSettings = (settings) => {
-  // First save to localStorage for backward compatibility
+  // Save to localStorage for backward compatibility
   const result = safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
   
-  // Update Yjs directly if available (for real-time sync)
-  import('./yjs.js').then(({ updateSettingsInYjs }) => {
-    updateSettingsInYjs(settings);
-  }).catch(() => {
-    // Yjs not available, that's OK
-  });
+  // Update Yjs for real-time sync
+  updateSettings(settings);
   
   return result;
 };

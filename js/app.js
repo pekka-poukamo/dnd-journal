@@ -10,11 +10,11 @@ import {
 import { generateIntrospectionPrompt, isAIEnabled } from './ai.js';
 import { runAutoSummarization, summarize, getSummary } from './summarization.js';
 import { 
-  createYjsSystem, 
+  createSystem, 
   getSyncStatus,
-  onYjsUpdate,
-  getYjsSystem,
-  clearYjsSystem,
+  onUpdate,
+  getSystem,
+  clearSystem,
   Y 
 } from './yjs.js';
 
@@ -407,11 +407,11 @@ const displayAIPrompt = async () => {
 // Initialize app
 export const init = async () => {
   try {
-    // Initialize Yjs system using pure function
-    yjsSystem = await createYjsSystem();
+    // Initialize Yjs system
+    yjsSystem = await createSystem();
     
-    // Register callback for Yjs updates
-    onYjsUpdate((updatedYjsSystem) => {
+    // Register callback for updates
+    onUpdate((updatedSystem) => {
       loadStateFromYjs();
       renderEntries();
       displayCharacterSummary();
@@ -466,7 +466,7 @@ export const resetState = () => {
 // Reset Yjs system (for testing)
 export const resetSyncCache = () => {
   yjsSystem = null;
-  clearYjsSystem();
+  clearSystem();
 };
 
 // Export state for testing

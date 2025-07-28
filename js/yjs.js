@@ -1,4 +1,4 @@
-// Functional Yjs Module - Pure functions with integrated system management
+// Yjs Module - Local-first collaborative editing
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
@@ -7,38 +7,38 @@ import { SYNC_CONFIG } from '../sync-config.js';
 // Export Y constructor for other modules
 export { Y };
 
-// Yjs system instance (managed by this module)
-let yjsSystemInstance = null;
+// Yjs system instance
+let yjsSystem = null;
 
-// Simple registry for Yjs update callbacks (no coupling)
+// Update callbacks
 const updateCallbacks = [];
 
-// Pure function to register update callback
-export const onYjsUpdate = (callback) => {
+// Register update callback
+export const onUpdate = (callback) => {
   updateCallbacks.push(callback);
 };
 
-// Pure function to trigger all update callbacks
-const triggerUpdateCallbacks = (yjsSystem) => {
+// Trigger all update callbacks
+const triggerUpdateCallbacks = (system) => {
   updateCallbacks.forEach(callback => {
     try {
-      callback(yjsSystem);
+      callback(system);
     } catch (e) {
-      console.warn('Error in Yjs update callback:', e);
+      console.warn('Error in update callback:', e);
     }
   });
 };
 
 // Get the current Yjs system instance
-export const getYjsSystem = () => yjsSystemInstance;
+export const getSystem = () => yjsSystem;
 
 // Clear the Yjs system instance (for testing)
-export const clearYjsSystem = () => {
-  yjsSystemInstance = null;
-  updateCallbacks.length = 0; // Clear callbacks too
+export const clearSystem = () => {
+  yjsSystem = null;
+  updateCallbacks.length = 0;
 };
 
-// Pure function to validate WebSocket URL
+// Validate WebSocket URL
 const isValidWebSocketUrl = (url) => {
   if (!url || typeof url !== 'string') return false;
   if (!url.startsWith('ws://') && !url.startsWith('wss://')) return false;
@@ -50,7 +50,7 @@ const isValidWebSocketUrl = (url) => {
   }
 };
 
-// Pure function to get sync server configuration
+// Get sync server configuration
 const getSyncServers = () => {
   try {
     if (SYNC_CONFIG?.server && isValidWebSocketUrl(SYNC_CONFIG.server)) {
@@ -63,7 +63,7 @@ const getSyncServers = () => {
   return ['wss://demos.yjs.dev', 'wss://y-websocket.herokuapp.com'];
 };
 
-// Pure function to create sync providers
+// Create sync providers
 const createSyncProviders = (ydoc) => {
   const servers = getSyncServers();
   
@@ -77,8 +77,8 @@ const createSyncProviders = (ydoc) => {
   }).filter(Boolean);
 };
 
-// Pure function to create Yjs document with all maps
-export const createYjsDocument = () => {
+// Create Yjs document with all maps
+export const createDocument = () => {
   const ydoc = new Y.Doc();
   
   return {
@@ -89,120 +89,99 @@ export const createYjsDocument = () => {
   };
 };
 
-// Pure function to create persistence layer
+// Create persistence layer
 export const createPersistence = (ydoc) => {
   return new IndexeddbPersistence('dnd-journal', ydoc);
 };
 
-// Pure function to setup complete Yjs system
-export const createYjsSystem = async () => {
+// Create complete Yjs system
+export const createSystem = async () => {
   // Skip in test environment
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
     return null;
   }
 
-  try {
-    // Create document and maps
-    const { ydoc, journalMap, settingsMap, summariesMap } = createYjsDocument();
-    
-    // Create persistence
-    const persistence = createPersistence(ydoc);
-    
-    // Create sync providers
-    const providers = createSyncProviders(ydoc);
-    
-    // Wait for IndexedDB to sync
-    await new Promise((resolve) => {
-      persistence.on('synced', resolve);
-    });
-    
-    const yjsSystem = {
-      ydoc,
-      journalMap,
-      settingsMap,
-      summariesMap,
-      persistence,
-      providers
-    };
-    
-    // Store the system instance in this module
-    yjsSystemInstance = yjsSystem;
-    
-    // Setup update listener to trigger callbacks
-    ydoc.on('update', () => {
-      triggerUpdateCallbacks(yjsSystem);
-    });
-    
-    console.log('Yjs system created');
-    return yjsSystem;
-    
-  } catch (e) {
-    console.error('Failed to create Yjs system:', e);
-    return null;
-  }
+  // Create document and maps
+  const { ydoc, journalMap, settingsMap, summariesMap } = createDocument();
+  
+  // Create persistence
+  const persistence = createPersistence(ydoc);
+  
+  // Create sync providers
+  const providers = createSyncProviders(ydoc);
+  
+  // Wait for IndexedDB to sync
+  await new Promise((resolve) => {
+    persistence.on('synced', resolve);
+  });
+  
+  const system = {
+    ydoc,
+    journalMap,
+    settingsMap,
+    summariesMap,
+    persistence,
+    providers
+  };
+  
+  // Store the system instance
+  yjsSystem = system;
+  
+  // Setup update listener
+  ydoc.on('update', () => {
+    triggerUpdateCallbacks(system);
+  });
+  
+  console.log('Yjs system initialized');
+  return system;
 };
 
-// Pure function to update character data in Yjs
-export const updateCharacterInYjs = (characterData) => {
-  const yjsSystem = yjsSystemInstance;
+// Update character data
+export const updateCharacter = (characterData) => {
   if (!yjsSystem?.journalMap) return;
   
-  try {
-    let characterMap = yjsSystem.journalMap.get('character');
-    if (!characterMap) {
-      characterMap = new Y.Map();
-      yjsSystem.journalMap.set('character', characterMap);
-    }
-    
-    // Set each field individually for CRDT conflict resolution
-    characterMap.set('name', characterData.name || '');
-    characterMap.set('race', characterData.race || '');
-    characterMap.set('class', characterData.class || '');
-    characterMap.set('backstory', characterData.backstory || '');
-    characterMap.set('notes', characterData.notes || '');
-    
-    yjsSystem.journalMap.set('lastModified', Date.now());
-  } catch (e) {
-    console.warn('Could not update character in Yjs:', e);
+  let characterMap = yjsSystem.journalMap.get('character');
+  if (!characterMap) {
+    characterMap = new Y.Map();
+    yjsSystem.journalMap.set('character', characterMap);
   }
+  
+  // Set each field individually for CRDT conflict resolution
+  characterMap.set('name', characterData.name || '');
+  characterMap.set('race', characterData.race || '');
+  characterMap.set('class', characterData.class || '');
+  characterMap.set('backstory', characterData.backstory || '');
+  characterMap.set('notes', characterData.notes || '');
+  
+  yjsSystem.journalMap.set('lastModified', Date.now());
 };
 
-// Pure function to update settings in Yjs
-export const updateSettingsInYjs = (settings) => {
-  const yjsSystem = yjsSystemInstance;
+// Update settings
+export const updateSettings = (settings) => {
   if (!yjsSystem?.settingsMap) return;
   
-  try {
-    yjsSystem.settingsMap.set('apiKey', settings.apiKey || '');
-    yjsSystem.settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
-  } catch (e) {
-    console.warn('Could not update settings in Yjs:', e);
-  }
+  yjsSystem.settingsMap.set('apiKey', settings.apiKey || '');
+  yjsSystem.settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
 };
 
-// Pure function to update summaries in Yjs
-export const updateSummariesInYjs = (summaries) => {
-  const yjsSystem = yjsSystemInstance;
+// Update summaries
+export const updateSummaries = (summaries) => {
   if (!yjsSystem?.summariesMap) return;
   
-  try {
-    // Clear existing summaries in Yjs
-    yjsSystem.summariesMap.clear();
-    
-    // Add each summary to Yjs
-    Object.entries(summaries).forEach(([key, summary]) => {
-      const summaryMap = new Y.Map();
-      summaryMap.set('content', summary.content || summary.summary || '');
-      summaryMap.set('words', summary.words || 0);
-      summaryMap.set('timestamp', summary.timestamp || Date.now());
-      yjsSystem.summariesMap.set(key, summaryMap);
-    });
-  } catch (e) {
-    console.warn('Could not update summaries in Yjs:', e);
-  }
+  // Clear existing summaries
+  yjsSystem.summariesMap.clear();
+  
+  // Add each summary
+  Object.entries(summaries).forEach(([key, summary]) => {
+    const summaryMap = new Y.Map();
+    summaryMap.set('content', summary.content || summary.summary || '');
+    summaryMap.set('words', summary.words || 0);
+    summaryMap.set('timestamp', summary.timestamp || Date.now());
+    yjsSystem.summariesMap.set(key, summaryMap);
+  });
 };
 
-// Pure function to get sync status
+// Get sync status
 export const getSyncStatus = (providers) => {
   if (!providers || providers.length === 0) {
     return {
