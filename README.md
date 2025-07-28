@@ -20,6 +20,8 @@ npm run server  # Installs server deps and starts server
 
 Then in Settings, set sync server to `ws://localhost:1234`. Documents persist in LevelDB at `./server/data/`.
 
+**Note**: For deployment, only server dependencies are separate. Client uses standard `node_modules/` with import maps.
+
 ### Manual Server Setup
 ```bash
 cd server
@@ -61,12 +63,12 @@ Automated testing and deployment via GitHub Actions:
 ├── settings.html       # Settings page
 ├── js/                 # JavaScript modules
 ├── css/                # Styles
-├── lib/                # Client-only Yjs dependencies
+├── node_modules/       # Client dependencies
 ├── server/             # Server with separate dependencies
 ├── test/               # Tests
 └── docs/adr/           # Architecture decisions
 ```
 
 **Dependencies separated:**
-- **Client** (`./lib/`): Only Yjs files needed for browser
-- **Server** (`./server/`): LevelDB and server dependencies
+- **Client**: Uses `node_modules/` with import maps (per ADR-0014)
+- **Server** (`./server/`): Separate package.json with LevelDB dependencies
