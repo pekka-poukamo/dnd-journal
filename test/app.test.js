@@ -70,11 +70,11 @@ describe('D&D Journal App', function() {
     });
 
     it('should render entries correctly', function() {
-      let entriesContainer = document.getElementById('entries-container');
-      if (!entriesContainer) {
-        entriesContainer = document.createElement('div');
-        entriesContainer.id = 'entries-container';
-        document.body.appendChild(entriesContainer);
+      let entriesList = document.getElementById('entries-list');
+      if (!entriesList) {
+        entriesList = document.createElement('div');
+        entriesList.id = 'entries-list';
+        document.body.appendChild(entriesList);
       }
 
       App.state.entries = [{
@@ -86,14 +86,14 @@ describe('D&D Journal App', function() {
 
       App.renderEntries();
 
-      const entryElements = entriesContainer.querySelectorAll('.entry');
+      const entryElements = entriesList.querySelectorAll('.entry-card');
       expect(entryElements.length).to.equal(1);
       
       // Check markdown rendering
       const content = entryElements[0].querySelector('.entry-content');
       expect(content.innerHTML).to.include('<strong>bold</strong>');
       
-      entriesContainer.remove();
+      entriesList.remove();
     });
 
     it('should render empty state when no entries', function() {

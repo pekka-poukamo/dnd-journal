@@ -159,7 +159,7 @@ export const focusEntryTitle = () => {
 export const enableEditMode = (entryDiv, entry) => {
   const title = entryDiv.querySelector('.entry-title');
   const content = entryDiv.querySelector('.entry-content');
-  const headerActions = entryDiv.querySelector('.entry-header__actions');
+  const headerActions = entryDiv.querySelector('.entry-meta');
   
   // Create edit form
   const editForm = document.createElement('div');
@@ -237,13 +237,12 @@ export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
     
     const title = entryDiv.querySelector('.entry-title');
     const content = entryDiv.querySelector('.entry-content');
-    const headerActions = entryDiv.querySelector('.entry-header__actions');
+    const headerActions = entryDiv.querySelector('.entry-meta');
     
     title.textContent = newTitle.trim();
     title.style.display = '';
     content.innerHTML = parseMarkdown(newContent.trim());
     content.style.display = '';
-    editBtn.style.display = '';
     headerActions.style.display = '';
   }
 };
@@ -257,7 +256,7 @@ export const cancelEdit = (entryDiv, entry) => {
   
   const title = entryDiv.querySelector('.entry-title');
   const content = entryDiv.querySelector('.entry-content');
-  const headerActions = entryDiv.querySelector('.entry-header__actions');
+  const headerActions = entryDiv.querySelector('.entry-meta');
   
   title.style.display = '';
   content.style.display = '';
@@ -582,6 +581,7 @@ export const createEntryElement = (entry) => {
       <div class="entry-meta">
         <span class="entry-date">${formatDate(entry.timestamp || Date.now())}</span>
         <button class="edit-btn">✏️</button>
+        <button class="delete-btn">Delete</button>
       </div>
     </div>
     <div class="entry-content">${parseMarkdown(entry.content || '')}</div>
