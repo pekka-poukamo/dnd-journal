@@ -196,11 +196,20 @@ const setupNetworking = (state) => {
   return { ...state, providers: monitoredProviders };
 };
 
-// Setup change observers
+// Setup change observers for CRDT
 const setupObservers = (state) => {
-  state.ymap.observe((event) => {
-    console.log('Remote changes detected');
+  // Observe changes to the root map and all nested maps
+  state.ymap.observeDeep((events) => {
+    console.log('Remote CRDT changes detected:', events.length, 'events');
     syncState.lastModified = Date.now();
+    
+    // Log the types of changes for debugging
+    events.forEach(event => {
+      if (event.path.length > 0) {
+        console.log(`CRDT change in ${event.path.join('.')}: ${event.action}`);
+      }
+    });
+    
     notifyCallbacks(syncState);
   });
   
@@ -217,84 +226,177 @@ const getSyncData = () => {
   }
 };
 
-// Get complete app state from Yjs
+// Get complete app state from Yjs CRDT structure
 const getSyncCompleteAppState = () => {
   try {
-    return syncState.ymap.get('appState') || null;
+    const appState = {};
+    let hasData = false;
+    
+    // Reconstruct app state from individual CRDT storage keys
+    Object.values(STORAGE_KEYS).forEach(storageKey => {
+      if (syncState.ymap.has(storageKey)) {
+        const yjsStorageMap = syncState.ymap.get(storageKey);
+        if (yjsStorageMap instanceof Y.Map) {
+          appState[storageKey] = yjsMapToObject(yjsStorageMap);
+          hasData = true;
+        }
+      }
+    });
+    
+    return hasData ? appState : null;
   } catch (e) {
     console.error('Failed to get Yjs complete app state:', e);
     return null;
   }
 };
 
-// Get complete app state from localStorage for syncing
-const getCompleteAppState = () => {
+// Sync individual storage key to Yjs using field-by-field CRDT updates
+const syncStorageKeyToYjs = (storageKey) => {
   try {
-    const appState = {};
-    
-    // Get all storage keys and their data
-    Object.values(STORAGE_KEYS).forEach(key => {
-      try {
-        const item = localStorage.getItem(key);
-        if (item !== null) {
-          appState[key] = JSON.parse(item);
-        }
-      } catch (e) {
-        console.warn(`Failed to parse localStorage item ${key}:`, e);
+    const item = localStorage.getItem(storageKey);
+    if (item === null) {
+      // Remove from Yjs if not in localStorage
+      if (syncState.ymap.has(storageKey)) {
+        syncState.ymap.delete(storageKey);
       }
-    });
+      return;
+    }
     
-    // Add any additional localStorage items that might be relevant
-    // Device ID and sync server settings
-    const deviceId = localStorage.getItem('dnd-journal-device-id');
-    const syncServer = localStorage.getItem('dnd-journal-sync-server');
+    const data = JSON.parse(item);
     
-    if (deviceId) appState['dnd-journal-device-id'] = deviceId;
-    if (syncServer) appState['dnd-journal-sync-server'] = syncServer;
+    // Create or get nested Yjs Map for this storage key
+    let storageMap = syncState.ymap.get(storageKey);
+    if (!storageMap || !(storageMap instanceof Y.Map)) {
+      storageMap = new Y.Map();
+      syncState.ymap.set(storageKey, storageMap);
+    }
     
-    return appState;
+    // Update fields individually to leverage CRDT conflict resolution
+    syncObjectToYjsMap(data, storageMap);
+    
   } catch (e) {
-    console.error('Failed to get complete app state:', e);
-    return {};
+    console.warn(`Failed to sync storage key ${storageKey} to Yjs:`, e);
   }
 };
 
-// Set complete app state to localStorage from sync
-const setCompleteAppState = (appState) => {
-  try {
-    if (!appState || typeof appState !== 'object') {
-      console.warn('Invalid app state received from sync');
-      return false;
+// Recursively sync object fields to Yjs Map (field-by-field CRDT updates)
+const syncObjectToYjsMap = (obj, yjsMap) => {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    // For primitives and arrays, we need to use Yjs native types
+    console.warn('Attempting to sync non-object to Yjs Map:', typeof obj);
+    return;
+  }
+  
+  // Remove fields that no longer exist in the object
+  const existingKeys = Array.from(yjsMap.keys());
+  const currentKeys = Object.keys(obj);
+  existingKeys.forEach(key => {
+    if (!currentKeys.includes(key)) {
+      yjsMap.delete(key);
+    }
+  });
+  
+  // Update/add fields
+  Object.entries(obj).forEach(([key, value]) => {
+    if (value === null || value === undefined) {
+      yjsMap.delete(key);
+      return;
     }
     
-    let updateCount = 0;
+    if (Array.isArray(value)) {
+      // Handle arrays using Yjs Array
+      let yjsArray = yjsMap.get(key);
+      if (!yjsArray || !(yjsArray instanceof Y.Array)) {
+        yjsArray = new Y.Array();
+        yjsMap.set(key, yjsArray);
+      }
+      
+      // Simple array sync - replace content
+      // For more sophisticated array sync, we'd need operational transforms
+      if (yjsArray.length !== value.length || !arraysEqual(yjsArray.toArray(), value)) {
+        yjsArray.delete(0, yjsArray.length);
+        yjsArray.insert(0, value);
+      }
+      
+    } else if (value && typeof value === 'object') {
+      // Handle nested objects using nested Yjs Map
+      let nestedMap = yjsMap.get(key);
+      if (!nestedMap || !(nestedMap instanceof Y.Map)) {
+        nestedMap = new Y.Map();
+        yjsMap.set(key, nestedMap);
+      }
+      syncObjectToYjsMap(value, nestedMap);
+      
+    } else {
+      // Handle primitives - only update if changed
+      const currentValue = yjsMap.get(key);
+      if (currentValue !== value) {
+        yjsMap.set(key, value);
+      }
+    }
+  });
+};
+
+// Helper function to compare arrays
+const arraysEqual = (a, b) => {
+  if (a.length !== b.length) return false;
+  return a.every((val, i) => {
+    if (Array.isArray(val) && Array.isArray(b[i])) {
+      return arraysEqual(val, b[i]);
+    }
+    if (val && typeof val === 'object' && b[i] && typeof b[i] === 'object') {
+      return JSON.stringify(val) === JSON.stringify(b[i]);
+    }
+    return val === b[i];
+  });
+};
+
+// Convert Yjs Map back to plain object for localStorage
+const yjsMapToObject = (yjsMap) => {
+  const obj = {};
+  
+  yjsMap.forEach((value, key) => {
+    if (value instanceof Y.Map) {
+      obj[key] = yjsMapToObject(value);
+    } else if (value instanceof Y.Array) {
+      obj[key] = value.toArray().map(item => 
+        item instanceof Y.Map ? yjsMapToObject(item) : item
+      );
+    } else {
+      obj[key] = value;
+    }
+  });
+  
+  return obj;
+};
+
+// Apply Yjs changes to localStorage with conflict resolution
+const applyYjsChangesToLocalStorage = () => {
+  try {
+    let changeCount = 0;
     
-    // Update each storage key with data from sync
-    Object.entries(appState).forEach(([key, value]) => {
-      try {
-        // Skip device-specific settings when syncing from remote
-        if (key === 'dnd-journal-device-id') {
-          return; // Don't sync device IDs
+    // Process each storage key
+    Object.values(STORAGE_KEYS).forEach(storageKey => {
+      if (syncState.ymap.has(storageKey)) {
+        const yjsStorageMap = syncState.ymap.get(storageKey);
+        if (yjsStorageMap instanceof Y.Map) {
+          const syncedData = yjsMapToObject(yjsStorageMap);
+          const currentData = localStorage.getItem(storageKey);
+          const newData = JSON.stringify(syncedData);
+          
+          if (currentData !== newData) {
+            localStorage.setItem(storageKey, newData);
+            changeCount++;
+            console.log(`Applied CRDT changes to ${storageKey}`);
+          }
         }
-        
-        const serialized = JSON.stringify(value);
-        const current = localStorage.getItem(key);
-        
-        // Only update if data has changed
-        if (current !== serialized) {
-          localStorage.setItem(key, serialized);
-          updateCount++;
-        }
-      } catch (e) {
-        console.warn(`Failed to set localStorage item ${key}:`, e);
       }
     });
     
-    console.log(`Updated ${updateCount} localStorage items from sync`);
-    return updateCount > 0;
+    return changeCount;
   } catch (e) {
-    console.error('Failed to set complete app state:', e);
-    return false;
+    console.error('Failed to apply Yjs changes to localStorage:', e);
+    return 0;
   }
 };
 
@@ -324,23 +426,28 @@ const setSyncJournalData = (journalData) => {
   }
 };
 
-// Save complete app state to Yjs
+// Sync complete app state to Yjs using field-by-field CRDT operations
 const setSyncCompleteAppState = () => {
   try {
     const timestamp = Date.now();
-    const completeAppState = getCompleteAppState();
     
-    syncState.ymap.set('appState', completeAppState);
+    // Sync each storage key individually using CRDT operations
+    Object.values(STORAGE_KEYS).forEach(storageKey => {
+      syncStorageKeyToYjs(storageKey);
+    });
+    
+    // Set metadata
     syncState.ymap.set('lastModified', timestamp);
     syncState.ymap.set('deviceId', getDeviceId());
     syncState.lastModified = timestamp;
-    console.log('Complete app state uploaded to sync:', {
-      storageKeys: Object.keys(completeAppState),
+    
+    console.log('Complete app state synced to Yjs using CRDT operations:', {
+      storageKeys: Object.values(STORAGE_KEYS),
       timestamp
     });
   } catch (e) {
-    console.error('Failed to set Yjs complete app state:', e);
-    syncState.errors.push(`Failed to upload complete app state: ${e.message}`);
+    console.error('Failed to sync complete app state to Yjs:', e);
+    syncState.errors.push(`Failed to sync complete app state: ${e.message}`);
   }
 };
 
@@ -352,30 +459,32 @@ const onSyncChange = (callback) => {
   };
 };
 
-// Notify all callbacks of changes
+// Notify all callbacks of changes (CRDT-aware)
 const notifyCallbacks = (state) => {
-  // Check for complete app state first (preferred), then fallback to legacy journal data
-  const completeAppState = getSyncCompleteAppState();
-  const journalData = getSyncData();
+  // Apply CRDT changes to localStorage first
+  const changeCount = applyYjsChangesToLocalStorage();
   
-  if (completeAppState) {
-    // New complete app state sync
+  if (changeCount > 0) {
+    // Notify callbacks that CRDT changes were applied
     state.callbacks.forEach(callback => {
       try {
-        callback(completeAppState, 'complete');
+        callback(null, 'crdt-update', { changeCount });
       } catch (e) {
-        console.error('Failed to execute complete app state callback:', e);
+        console.error('Failed to execute CRDT callback:', e);
       }
     });
-  } else if (journalData) {
-    // Legacy journal data sync
-    state.callbacks.forEach(callback => {
-      try {
-        callback(journalData, 'journal');
-      } catch (e) {
-        console.error('Failed to execute journal callback:', e);
-      }
-    });
+  } else {
+    // Check for legacy journal data sync for backward compatibility
+    const journalData = getSyncData();
+    if (journalData) {
+      state.callbacks.forEach(callback => {
+        try {
+          callback(journalData, 'journal');
+        } catch (e) {
+          console.error('Failed to execute journal callback:', e);
+        }
+      });
+    }
   }
 };
 
