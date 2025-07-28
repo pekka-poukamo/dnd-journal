@@ -46,14 +46,18 @@ export const saveSettings = (settings) => {
   const result = safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
   
   // Update Yjs directly if available (for real-time sync)
-  if (typeof window !== 'undefined' && window.settingsMap) {
-    try {
-      window.settingsMap.set('apiKey', settings.apiKey || '');
-      window.settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
-    } catch (e) {
-      console.warn('Could not update Yjs settings:', e);
+  import('./yjs.js').then(({ settingsMap }) => {
+    if (settingsMap) {
+      try {
+        settingsMap.set('apiKey', settings.apiKey || '');
+        settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
+      } catch (e) {
+        console.warn('Could not update Yjs settings:', e);
+      }
     }
-  }
+  }).catch(() => {
+    // Yjs not available, that's OK
+  });
   
   return result;
 };

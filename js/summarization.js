@@ -42,23 +42,27 @@ const saveSummaries = (summaries) => {
   const result = safeSetToStorage(STORAGE_KEY, summaries);
   
   // Update Yjs directly if available (for real-time sync)
-  if (typeof window !== 'undefined' && window.summariesMap) {
-    try {
-      // Clear existing summaries in Yjs
-      window.summariesMap.clear();
-      
-      // Add each summary to Yjs
-      Object.entries(summaries).forEach(([key, summary]) => {
-        const summaryMap = new window.Y.Map();
-        summaryMap.set('content', summary.content || summary.summary || '');
-        summaryMap.set('words', summary.words || 0);
-        summaryMap.set('timestamp', summary.timestamp || Date.now());
-        window.summariesMap.set(key, summaryMap);
-      });
-    } catch (e) {
-      console.warn('Could not update Yjs summaries:', e);
+  import('./yjs.js').then(({ summariesMap, Y }) => {
+    if (summariesMap) {
+      try {
+        // Clear existing summaries in Yjs
+        summariesMap.clear();
+        
+        // Add each summary to Yjs
+        Object.entries(summaries).forEach(([key, summary]) => {
+          const summaryMap = new Y.Map();
+          summaryMap.set('content', summary.content || summary.summary || '');
+          summaryMap.set('words', summary.words || 0);
+          summaryMap.set('timestamp', summary.timestamp || Date.now());
+          summariesMap.set(key, summaryMap);
+        });
+      } catch (e) {
+        console.warn('Could not update Yjs summaries:', e);
+      }
     }
-  }
+  }).catch(() => {
+    // Yjs not available, that's OK
+  });
   
   return result;
 };

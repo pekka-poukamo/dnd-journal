@@ -1,10 +1,5 @@
 // D&D Journal - Direct Yjs Integration
 
-import * as Y from 'yjs';
-import { IndexeddbPersistence } from 'y-indexeddb';
-import { WebsocketProvider } from 'y-websocket';
-import { SYNC_CONFIG } from '../sync-config.js';
-
 import { 
   generateId, 
   formatDate, 
@@ -14,14 +9,15 @@ import {
 
 import { generateIntrospectionPrompt, isAIEnabled } from './ai.js';
 import { runAutoSummarization, summarize, getSummary } from './summarization.js';
-
-// Global Yjs document and maps
-let ydoc = null;
-let journalMap = null;
-let settingsMap = null;
-let summariesMap = null;
-let persistence = null;
-let providers = [];
+import { 
+  initYjs, 
+  ydoc, 
+  journalMap, 
+  settingsMap, 
+  summariesMap, 
+  providers,
+  Y 
+} from './yjs.js';
 
 // Simple state for UI rendering (read-only mirror of Yjs)
 let state = { character: {}, entries: [] };
@@ -46,72 +42,7 @@ export const parseMarkdown = (text) => {
     .replace(/__LINE_BREAK__/g, '<br>'); // Single line breaks
 };
 
-// Initialize Yjs document
-export const initializeYjs = async () => {
-  // Skip in test environment
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
-    return;
-  }
-
-  try {
-    // Create Yjs document
-    ydoc = new Y.Doc();
-    
-    // Get shared data structures
-    journalMap = ydoc.getMap('journal');
-    settingsMap = ydoc.getMap('settings');
-    summariesMap = ydoc.getMap('summaries');
-    
-    // Setup IndexedDB persistence (local-first)
-    persistence = new IndexeddbPersistence('dnd-journal', ydoc);
-    
-    // Setup network sync
-    const syncServers = getSyncServers();
-    providers = syncServers.map(serverUrl => {
-      try {
-        return new WebsocketProvider(serverUrl, 'dnd-journal', ydoc, { connect: true });
-      } catch (e) {
-        console.error(`Failed to connect to ${serverUrl}:`, e);
-        return null;
-      }
-    }).filter(Boolean);
-    
-    // Wait for IndexedDB to sync
-    await new Promise((resolve) => {
-      persistence.on('synced', resolve);
-    });
-    
-    console.log('Yjs initialized');
-    
-  } catch (e) {
-    console.error('Failed to initialize Yjs:', e);
-  }
-};
-
-// Get sync server configuration
-const getSyncServers = () => {
-  try {
-    if (SYNC_CONFIG?.server && isValidWebSocketUrl(SYNC_CONFIG.server)) {
-      return [SYNC_CONFIG.server.trim()];
-    }
-  } catch (e) {
-    console.warn('Error loading sync config:', e);
-  }
-  
-  return ['wss://demos.yjs.dev', 'wss://y-websocket.herokuapp.com'];
-};
-
-// Validate WebSocket URL
-const isValidWebSocketUrl = (url) => {
-  if (!url || typeof url !== 'string') return false;
-  if (!url.startsWith('ws://') && !url.startsWith('wss://')) return false;
-  try {
-    const parsedUrl = new URL(url);
-    return parsedUrl.hostname?.length > 0;
-  } catch (e) {
-    return false;
-  }
-};
+// Load data from Yjs into local state (for UI rendering)
 
 // Load data from Yjs into local state (for UI rendering)
 const loadStateFromYjs = () => {
@@ -476,7 +407,7 @@ const displayAIPrompt = async () => {
 export const init = async () => {
   try {
     // Initialize Yjs
-    await initializeYjs();
+    await initYjs();
     
     // Load initial state from Yjs
     loadStateFromYjs();
@@ -489,14 +420,6 @@ export const init = async () => {
     displayCharacterSummary();
     setupEventHandlers();
     setupSyncListener();
-    
-    // Expose Yjs maps globally for other modules to use directly
-    if (typeof window !== 'undefined') {
-      window.Y = Y; // Expose Y constructor for creating maps
-      window.journalMap = journalMap;
-      window.settingsMap = settingsMap;
-      window.summariesMap = summariesMap;
-    }
     
     // Initialize summarization
     try {
