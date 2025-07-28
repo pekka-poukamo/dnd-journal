@@ -1,60 +1,25 @@
-// Minimal Yjs Setup - Direct exports, no abstractions
+// Functional Yjs Module - Pure functions, no mutable state
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
 import { SYNC_CONFIG } from '../sync-config.js';
 
-// Global Yjs document and maps
-export let ydoc = null;
-export let journalMap = null;
-export let settingsMap = null;
-export let summariesMap = null;
-export let persistence = null;
-export let providers = [];
+// Export Y constructor for other modules
+export { Y };
 
-// Initialize Yjs document and persistence
-export const initYjs = async () => {
-  // Skip in test environment
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
-    return;
-  }
-
+// Pure function to validate WebSocket URL
+const isValidWebSocketUrl = (url) => {
+  if (!url || typeof url !== 'string') return false;
+  if (!url.startsWith('ws://') && !url.startsWith('wss://')) return false;
   try {
-    // Create Yjs document
-    ydoc = new Y.Doc();
-    
-    // Get shared data structures
-    journalMap = ydoc.getMap('journal');
-    settingsMap = ydoc.getMap('settings');
-    summariesMap = ydoc.getMap('summaries');
-    
-    // Setup IndexedDB persistence (local-first)
-    persistence = new IndexeddbPersistence('dnd-journal', ydoc);
-    
-    // Setup network sync
-    const syncServers = getSyncServers();
-    providers = syncServers.map(serverUrl => {
-      try {
-        return new WebsocketProvider(serverUrl, 'dnd-journal', ydoc, { connect: true });
-      } catch (e) {
-        console.error(`Failed to connect to ${serverUrl}:`, e);
-        return null;
-      }
-    }).filter(Boolean);
-    
-    // Wait for IndexedDB to sync
-    await new Promise((resolve) => {
-      persistence.on('synced', resolve);
-    });
-    
-    console.log('Yjs initialized');
-    
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname?.length > 0;
   } catch (e) {
-    console.error('Failed to initialize Yjs:', e);
+    return false;
   }
 };
 
-// Get sync server configuration
+// Pure function to get sync server configuration
 const getSyncServers = () => {
   try {
     if (SYNC_CONFIG?.server && isValidWebSocketUrl(SYNC_CONFIG.server)) {
@@ -67,17 +32,98 @@ const getSyncServers = () => {
   return ['wss://demos.yjs.dev', 'wss://y-websocket.herokuapp.com'];
 };
 
-// Validate WebSocket URL
-const isValidWebSocketUrl = (url) => {
-  if (!url || typeof url !== 'string') return false;
-  if (!url.startsWith('ws://') && !url.startsWith('wss://')) return false;
+// Pure function to create sync providers
+const createSyncProviders = (ydoc) => {
+  const servers = getSyncServers();
+  
+  return servers.map(serverUrl => {
+    try {
+      return new WebsocketProvider(serverUrl, 'dnd-journal', ydoc, { connect: true });
+    } catch (e) {
+      console.error(`Failed to connect to ${serverUrl}:`, e);
+      return null;
+    }
+  }).filter(Boolean);
+};
+
+// Pure function to create Yjs document with all maps
+export const createYjsDocument = () => {
+  const ydoc = new Y.Doc();
+  
+  return {
+    ydoc,
+    journalMap: ydoc.getMap('journal'),
+    settingsMap: ydoc.getMap('settings'),
+    summariesMap: ydoc.getMap('summaries')
+  };
+};
+
+// Pure function to create persistence layer
+export const createPersistence = (ydoc) => {
+  return new IndexeddbPersistence('dnd-journal', ydoc);
+};
+
+// Pure function to setup complete Yjs system
+export const createYjsSystem = async () => {
+  // Skip in test environment
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+    return null;
+  }
+
   try {
-    const parsedUrl = new URL(url);
-    return parsedUrl.hostname?.length > 0;
+    // Create document and maps
+    const { ydoc, journalMap, settingsMap, summariesMap } = createYjsDocument();
+    
+    // Create persistence
+    const persistence = createPersistence(ydoc);
+    
+    // Create sync providers
+    const providers = createSyncProviders(ydoc);
+    
+    // Wait for IndexedDB to sync
+    await new Promise((resolve) => {
+      persistence.on('synced', resolve);
+    });
+    
+    console.log('Yjs system created');
+    
+    return {
+      ydoc,
+      journalMap,
+      settingsMap,
+      summariesMap,
+      persistence,
+      providers
+    };
+    
   } catch (e) {
-    return false;
+    console.error('Failed to create Yjs system:', e);
+    return null;
   }
 };
 
-// Export Y constructor for creating maps in other modules
-export { Y };
+// Pure function to get sync status
+export const getSyncStatus = (providers) => {
+  if (!providers || providers.length === 0) {
+    return {
+      available: false,
+      connected: false,
+      connectedCount: 0,
+      totalProviders: 0,
+      providers: []
+    };
+  }
+  
+  const connectedProviders = providers.filter(p => p.wsconnected);
+  
+  return {
+    available: true,
+    connected: connectedProviders.length > 0,
+    connectedCount: connectedProviders.length,
+    totalProviders: providers.length,
+    providers: providers.map(p => ({
+      url: p.url,
+      connected: p.wsconnected || false
+    }))
+  };
+};

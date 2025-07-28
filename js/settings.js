@@ -46,11 +46,12 @@ export const saveSettings = (settings) => {
   const result = safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
   
   // Update Yjs directly if available (for real-time sync)
-  import('./yjs.js').then(({ settingsMap }) => {
-    if (settingsMap) {
+  import('./app.js').then(({ getYjsSystem }) => {
+    const yjsSystem = getYjsSystem();
+    if (yjsSystem?.settingsMap) {
       try {
-        settingsMap.set('apiKey', settings.apiKey || '');
-        settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
+        yjsSystem.settingsMap.set('apiKey', settings.apiKey || '');
+        yjsSystem.settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
       } catch (e) {
         console.warn('Could not update Yjs settings:', e);
       }

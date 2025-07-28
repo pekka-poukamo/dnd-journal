@@ -44,23 +44,26 @@ export const saveCharacterDataWithSync = (characterData) => {
   const saveResult = saveCharacterData(characterData);
   
   // Update Yjs directly if available (for real-time sync)
-  import('./yjs.js').then(({ journalMap, Y }) => {
-    if (journalMap) {
+  import('./app.js').then(({ getYjsSystem }) => {
+    const yjsSystem = getYjsSystem();
+    if (yjsSystem?.journalMap) {
       try {
-        let characterMap = journalMap.get('character');
-        if (!characterMap) {
-          characterMap = new Y.Map();
-          journalMap.set('character', characterMap);
-        }
-        
-        // Set each field individually for CRDT conflict resolution
-        characterMap.set('name', characterData.name || '');
-        characterMap.set('race', characterData.race || '');
-        characterMap.set('class', characterData.class || '');
-        characterMap.set('backstory', characterData.backstory || '');
-        characterMap.set('notes', characterData.notes || '');
-        
-        journalMap.set('lastModified', Date.now());
+        import('./yjs.js').then(({ Y }) => {
+          let characterMap = yjsSystem.journalMap.get('character');
+          if (!characterMap) {
+            characterMap = new Y.Map();
+            yjsSystem.journalMap.set('character', characterMap);
+          }
+          
+          // Set each field individually for CRDT conflict resolution
+          characterMap.set('name', characterData.name || '');
+          characterMap.set('race', characterData.race || '');
+          characterMap.set('class', characterData.class || '');
+          characterMap.set('backstory', characterData.backstory || '');
+          characterMap.set('notes', characterData.notes || '');
+          
+          yjsSystem.journalMap.set('lastModified', Date.now());
+        });
       } catch (e) {
         console.warn('Could not update Yjs character:', e);
       }

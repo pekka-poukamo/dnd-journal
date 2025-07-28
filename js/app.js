@@ -10,17 +10,16 @@ import {
 import { generateIntrospectionPrompt, isAIEnabled } from './ai.js';
 import { runAutoSummarization, summarize, getSummary } from './summarization.js';
 import { 
-  initYjs, 
-  ydoc, 
-  journalMap, 
-  settingsMap, 
-  summariesMap, 
-  providers,
+  createYjsSystem, 
+  getSyncStatus,
   Y 
 } from './yjs.js';
 
 // Simple state for UI rendering (read-only mirror of Yjs)
 let state = { character: {}, entries: [] };
+
+// Yjs system instance (created by pure function)
+let yjsSystem = null;
 
 // Simple markdown parser for basic formatting
 export const parseMarkdown = (text) => {
@@ -43,13 +42,11 @@ export const parseMarkdown = (text) => {
 };
 
 // Load data from Yjs into local state (for UI rendering)
-
-// Load data from Yjs into local state (for UI rendering)
 const loadStateFromYjs = () => {
-  if (!journalMap) return;
+  if (!yjsSystem?.journalMap) return;
   
   // Load character
-  const characterMap = journalMap.get('character');
+  const characterMap = yjsSystem.journalMap.get('character');
   if (characterMap) {
     state.character = {
       name: characterMap.get('name') || '',
@@ -63,7 +60,7 @@ const loadStateFromYjs = () => {
   }
   
   // Load entries
-  const entriesArray = journalMap.get('entries');
+  const entriesArray = yjsSystem.journalMap.get('entries');
   if (entriesArray) {
     state.entries = entriesArray.toArray().map(entryMap => ({
       id: entryMap.get('id'),
@@ -78,26 +75,28 @@ const loadStateFromYjs = () => {
 
 // Setup character form with direct Yjs binding
 export const setupCharacterForm = () => {
+  if (!yjsSystem?.journalMap) return;
+  
   const fields = ['name', 'race', 'class', 'backstory', 'notes'];
   
   fields.forEach(field => {
     const input = document.getElementById(`character-${field}`);
     if (input) {
       // Load initial value from Yjs
-      const characterMap = journalMap.get('character');
+      const characterMap = yjsSystem.journalMap.get('character');
       if (characterMap) {
         input.value = characterMap.get(field) || '';
       }
       
       // Update Yjs on input change
       input.addEventListener('input', () => {
-        let characterMap = journalMap.get('character');
+        let characterMap = yjsSystem.journalMap.get('character');
         if (!characterMap) {
           characterMap = new Y.Map();
-          journalMap.set('character', characterMap);
+          yjsSystem.journalMap.set('character', characterMap);
         }
         characterMap.set(field, input.value);
-        journalMap.set('lastModified', Date.now());
+        yjsSystem.journalMap.set('lastModified', Date.now());
       });
     }
   });
@@ -133,12 +132,12 @@ export const addEntry = async () => {
   
   const entry = createEntryFromForm(formData);
   
-  if (isValidEntry(entry) && journalMap) {
+  if (isValidEntry(entry) && yjsSystem?.journalMap) {
     // Get or create entries array
-    let entriesArray = journalMap.get('entries');
+    let entriesArray = yjsSystem.journalMap.get('entries');
     if (!entriesArray) {
       entriesArray = new Y.Array();
-      journalMap.set('entries', entriesArray);
+      yjsSystem.journalMap.set('entries', entriesArray);
     }
     
     // Create entry map
@@ -150,7 +149,7 @@ export const addEntry = async () => {
     
     // Add to beginning of array
     entriesArray.unshift([entryMap]);
-    journalMap.set('lastModified', Date.now());
+    yjsSystem.journalMap.set('lastModified', Date.now());
     
     // Clear form
     clearEntryForm();
@@ -248,9 +247,9 @@ export const enableEditMode = (entryDiv, entry) => {
 
 // Save edit changes directly to Yjs
 export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
-  if (newTitle.trim() && newContent.trim() && journalMap) {
+  if (newTitle.trim() && newContent.trim() && yjsSystem?.journalMap) {
     // Find and update entry in Yjs array
-    const entriesArray = journalMap.get('entries');
+    const entriesArray = yjsSystem.journalMap.get('entries');
     if (entriesArray) {
       const entries = entriesArray.toArray();
       const entryIndex = entries.findIndex(entryMap => entryMap.get('id') === entry.id);
@@ -260,7 +259,7 @@ export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
         entryMap.set('title', newTitle.trim());
         entryMap.set('content', newContent.trim());
         entryMap.set('timestamp', Date.now());
-        journalMap.set('lastModified', Date.now());
+        yjsSystem.journalMap.set('lastModified', Date.now());
       }
     }
     
@@ -324,17 +323,16 @@ const updateSyncStatus = (status, text, details) => {
 
 // Setup sync listener for real-time updates
 export const setupSyncListener = () => {
-  if (!ydoc) {
+  if (!yjsSystem?.ydoc) {
     updateSyncStatus('local-only', 'Local only', 'Data is only stored locally');
     return;
   }
   
-  // Monitor sync status
+  // Monitor sync status using pure function
   const checkSyncStatus = () => {
-    const connectedProviders = providers.filter(p => p.wsconnected);
-    
-    if (connectedProviders.length > 0) {
-      updateSyncStatus('connected', 'Synced', `Connected to ${connectedProviders.length}/${providers.length} sync servers`);
+    const status = getSyncStatus(yjsSystem.providers);
+    if (status.connected) {
+      updateSyncStatus('connected', 'Synced', `Connected to ${status.connectedCount}/${status.totalProviders} sync servers`);
     } else {
       updateSyncStatus('disconnected', 'Offline', 'Not connected to sync servers - data stored locally');
     }
@@ -345,7 +343,7 @@ export const setupSyncListener = () => {
   checkSyncStatus(); // Initial check
   
   // Listen for Yjs document changes
-  ydoc.on('update', () => {
+  yjsSystem.ydoc.on('update', () => {
     console.log('Yjs document updated - refreshing UI');
     loadStateFromYjs();
     renderEntries();
@@ -353,7 +351,7 @@ export const setupSyncListener = () => {
   });
   
   // Listen for provider connection changes
-  providers.forEach(provider => {
+  yjsSystem.providers.forEach(provider => {
     provider.on('status', checkSyncStatus);
   });
 };
@@ -406,14 +404,14 @@ const displayAIPrompt = async () => {
 // Initialize app
 export const init = async () => {
   try {
-    // Initialize Yjs
-    await initYjs();
+    // Initialize Yjs system using pure function
+    yjsSystem = await createYjsSystem();
     
     // Load initial state from Yjs
     loadStateFromYjs();
     
     // Setup UI
-    if (journalMap) {
+    if (yjsSystem?.journalMap) {
       setupCharacterForm();
     }
     renderEntries();
@@ -454,6 +452,14 @@ export const resetState = () => {
     global.state = state;
   }
 };
+
+// Reset Yjs system (for testing)
+export const resetSyncCache = () => {
+  yjsSystem = null;
+};
+
+// Export Yjs system for other modules
+export const getYjsSystem = () => yjsSystem;
 
 // Export state for testing
 export { state };
