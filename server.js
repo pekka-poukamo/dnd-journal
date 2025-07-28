@@ -1,51 +1,56 @@
 #!/usr/bin/env node
 
-// D&D Journal - Simple Yjs Server with File Persistence
+// D&D Journal - Simple Yjs Server with LevelDB Persistence
 // Usage: node server.js [port] [host]
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { Level } from 'level';
 import { WebSocketServer } from 'ws';
 import { setupWSConnection } from 'y-websocket/bin/utils';
 import * as Y from 'yjs';
 
 const PORT = process.env.PORT || process.argv[2] || 1234;
 const HOST = process.env.HOST || process.argv[3] || 'localhost';
-const PERSIST_DIR = './data';
 
-// Ensure data directory exists
-if (!existsSync(PERSIST_DIR)) {
-  mkdirSync(PERSIST_DIR, { recursive: true });
-}
+// LevelDB instance
+const db = new Level('./data', { valueEncoding: 'buffer' });
 
 // Document storage
 const docs = new Map();
 
-// Load document from disk
-const loadDoc = (docName) => {
-  const filePath = `${PERSIST_DIR}/${docName}.yjs`;
-  if (existsSync(filePath)) {
-    const data = readFileSync(filePath);
-    return Y.applyUpdate(new Y.Doc(), data);
+// Load document from LevelDB
+const loadDoc = async (docName) => {
+  try {
+    const data = await db.get(docName);
+    const doc = new Y.Doc();
+    Y.applyUpdate(doc, data);
+    return doc;
+  } catch (err) {
+    if (err.notFound) {
+      return new Y.Doc();
+    }
+    throw err;
   }
-  return new Y.Doc();
 };
 
-// Save document to disk
-const saveDoc = (docName, doc) => {
-  const filePath = `${PERSIST_DIR}/${docName}.yjs`;
+// Save document to LevelDB
+const saveDoc = async (docName, doc) => {
   const update = Y.encodeStateAsUpdate(doc);
-  writeFileSync(filePath, update);
+  await db.put(docName, update);
 };
 
 // Get or create document
-const getDoc = (docName) => {
+const getDoc = async (docName) => {
   if (!docs.has(docName)) {
-    const doc = loadDoc(docName);
+    const doc = await loadDoc(docName);
     docs.set(docName, doc);
     
-    // Auto-save on updates
+    // Auto-save on updates (debounced)
+    let saveTimeout;
     doc.on('update', () => {
-      saveDoc(docName, doc);
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        saveDoc(docName, doc).catch(console.error);
+      }, 1000); // Save after 1 second of inactivity
     });
     
     console.log(`📄 Loaded document: ${docName}`);
@@ -56,16 +61,19 @@ const getDoc = (docName) => {
 const wss = new WebSocketServer({ port: PORT, host: HOST });
 
 console.log(`🚀 D&D Journal Server: ws://${HOST}:${PORT}`);
-console.log(`💾 Data directory: ${PERSIST_DIR}`);
+console.log(`💾 LevelDB: ./data`);
 
 wss.on('connection', (ws, req) => {
   setupWSConnection(ws, req, { getYDoc: getDoc });
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('\n💾 Saving all documents...');
-  docs.forEach((doc, name) => saveDoc(name, doc));
+  await Promise.all(
+    Array.from(docs.entries()).map(([name, doc]) => saveDoc(name, doc))
+  );
+  await db.close();
   console.log('👋 Server stopped');
   process.exit(0);
 });
