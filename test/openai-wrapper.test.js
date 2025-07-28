@@ -6,8 +6,7 @@ import * as Settings from '../js/settings.js';
 
 describe('OpenAI Wrapper', () => {
   beforeEach(async () => {
-    // Reset localStorage and reinitialize Yjs mock system
-    global.resetLocalStorage();
+    // Clear and reinitialize Yjs mock system
     clearSystem();
     await createSystem();
   });

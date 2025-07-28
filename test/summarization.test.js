@@ -5,14 +5,14 @@ import { createSystem, clearSystem } from '../js/yjs.js';
 
 describe('Summarization Module', function() {
   beforeEach(async function() {
-    // Reset localStorage and reinitialize Yjs mock system
-    global.resetLocalStorage();
+    // Clear and reinitialize Yjs mock system
     clearSystem();
     await createSystem();
   });
 
   afterEach(() => {
-    global.localStorage.clear();
+    // Clean up after each test
+    clearSystem();
   });
 
   describe('summarize', () => {

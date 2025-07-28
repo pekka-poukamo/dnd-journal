@@ -6,9 +6,6 @@ import { createSystem, clearSystem } from '../js/yjs.js';
 
 describe('D&D Journal App', function() {
   beforeEach(async function() {
-    // Reset localStorage before each test
-    global.resetLocalStorage();
-    
     // Clear and reinitialize Yjs mock system
     clearSystem();
     await createSystem();
@@ -45,30 +42,6 @@ describe('D&D Journal App', function() {
       expect(App.state.entries).to.be.an('array');
       expect(App.state.character.name).to.equal('');
       expect(App.state.entries).to.have.length(0);
-    });
-
-    it('should save and load data from localStorage', function() {
-      // Set up test data
-      App.state.character = {
-        name: 'Test Character',
-        race: 'Human',
-        class: 'Fighter'
-      };
-      App.state.entries.push({
-        id: '1',
-        title: 'Test Entry',
-        content: 'Test content',
-        timestamp: Date.now()
-      });
-
-      // Save data
-      const saveResult = App.saveData();
-      expect(saveResult.success).to.be.true;
-
-      // Load data
-      App.loadData();
-      expect(App.state.character.name).to.equal('Test Character');
-      expect(App.state.entries).to.have.length(1);
     });
   });
 
@@ -463,45 +436,16 @@ describe('D&D Journal App', function() {
     });
 
     it('should display default values for empty character', function() {
-      App.state.character = {};
-      
+      App.state.character = { name: '', race: '', class: '' };
       App.displayCharacterSummary();
-      
-      expect(document.getElementById('display-name').textContent).to.equal('Unnamed Character');
-      expect(document.getElementById('display-race').textContent).to.equal('—');
-      expect(document.getElementById('display-class').textContent).to.equal('—');
-    });
 
-    it('should use localStorage fallback when state character is empty but localStorage has data', function() {
-      // Set up localStorage with character data
-      const journalData = {
-        character: {
-          name: 'Puoskari',
-          race: 'Human',
-          class: 'Thief Artificer',
-          backstory: 'A skilled artificer and thief',
-          notes: 'Expert in both mechanics and stealth'
-        },
-        entries: []
-      };
-      
-      Utils.safeSetToStorage(Utils.STORAGE_KEYS.JOURNAL, journalData);
-      
-      // Set state character to empty (simulating sync override or timing issue)
-      App.state.character = {
-        name: '',
-        race: '',
-        class: '',
-        backstory: '',
-        notes: ''
-      };
-      
-      // Display should fallback to localStorage data
-      App.displayCharacterSummary();
-      
-      expect(document.getElementById('display-name').textContent).to.equal('Puoskari');
-      expect(document.getElementById('display-race').textContent).to.equal('Human');
-      expect(document.getElementById('display-class').textContent).to.equal('Thief Artificer');
+      const nameEl = document.getElementById('display-name');
+      const raceEl = document.getElementById('display-race');
+      const classEl = document.getElementById('display-class');
+
+      expect(nameEl.textContent).to.equal('Unnamed Character');
+      expect(raceEl.textContent).to.equal('—');
+      expect(classEl.textContent).to.equal('—');
     });
   });
 

@@ -20,26 +20,6 @@ global.window = dom.window;
 global.document = dom.window.document;
 // JSDOM already sets global.navigator and global.HTMLElement
 
-// Create a robust localStorage mock
-const createLocalStorageMock = () => ({
-  data: {},
-  getItem: function(key) { 
-    return this.data[key] || null; 
-  },
-  setItem: function(key, value) { 
-    this.data[key] = value; 
-  },
-  removeItem: function(key) { 
-    delete this.data[key]; 
-  },
-  clear: function() { 
-    this.data = {}; 
-  }
-});
-
-// Initialize localStorage
-global.localStorage = createLocalStorageMock();
-
 // Add or override missing globals
 if (!global.btoa) {
   global.btoa = function(str) { return Buffer.from(str, 'binary').toString('base64'); };
@@ -112,6 +92,7 @@ global.WebSocket = class MockWebSocket {
   }
 };
 
+// Mock console to reduce noise during tests
 global.console = {
   error: function() {},
   warn: function() {},
@@ -143,25 +124,6 @@ global.fetch = async function(url, options) {
     ok: false,
     status: 404,
     json: async function() { return {}; }
-  };
-};
-
-// Add cleanup function to reset localStorage between tests
-global.resetLocalStorage = () => {
-  global.localStorage = createLocalStorageMock();
-};
-
-// Add cleanup function to reset all globals between tests
-global.resetTestGlobals = () => {
-  global.localStorage = createLocalStorageMock();
-  global.testStorage = {};
-  // Reset console to prevent noise during tests
-  global.console = {
-    error: function() {},
-    warn: function() {},
-    log: function() {},
-    info: function() {},
-    debug: function() {}
   };
 };
 
