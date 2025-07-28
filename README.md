@@ -17,12 +17,20 @@ The journal supports real-time sync across multiple devices using Yjs.
 
 Check the sync status in Settings page. Journal automatically syncs across devices when online.
 
-### Setting Up Your Own Sync Server
+### Setting Up Sync Server with Persistence
 
-For private or local sync:
+**Quick Setup** (recommended):
+```bash
+npm run sync-server
+```
+Then configure in Settings: `ws://localhost:1234`
+
+**Manual Setup**:
 1. Install y-websocket server: `npm install -g y-websocket`
 2. Run server: `HOST=0.0.0.0 PORT=1234 npx y-websocket`
 3. Configure in Settings: `ws://your-server-ip:1234`
+
+See [SYNC_SETUP.md](SYNC_SETUP.md) for detailed configuration options.
 
 ## Development
 

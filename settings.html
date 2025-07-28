@@ -88,13 +88,32 @@
                         <p class="settings-section-description">Sync your journal entries across multiple devices in real-time</p>
                     </div>
                     
+                    <!-- Quick Sync Setup Subsection -->
+                    <div class="settings-subsection">
+                        <h3 class="settings-subsection-title">Quick Setup</h3>
+                        
+                        <div class="form-group">
+                            <button id="set-local-server-btn" class="btn btn-primary">
+                                Set Local Server (ws://localhost:1234)
+                            </button>
+                            <button id="clear-server-btn" class="btn btn-secondary" style="margin-left: 0.5rem;">
+                                Use Public Servers
+                            </button>
+                            <p class="form-help">
+                                <strong>Quick setup:</strong> Click "Set Local Server", then run <code>npm run sync-server</code> in terminal.
+                                <br>
+                                <span id="current-server-status">Current: Default public servers</span>
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Sync Server Configuration Subsection -->
                     <div class="settings-subsection">
-                        <h3 class="settings-subsection-title">Server Configuration</h3>
+                        <h3 class="settings-subsection-title">Advanced Configuration</h3>
                         
                         <div class="form-group">
                             <label for="sync-server" class="form-label">
-                                Sync Server (Optional)
+                                Custom Sync Server (Optional)
                             </label>
                             <input 
                                 type="text" 
