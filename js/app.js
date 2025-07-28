@@ -490,6 +490,14 @@ export const init = async () => {
     setupEventHandlers();
     setupSyncListener();
     
+    // Expose Yjs maps globally for other modules to use directly
+    if (typeof window !== 'undefined') {
+      window.Y = Y; // Expose Y constructor for creating maps
+      window.journalMap = journalMap;
+      window.settingsMap = settingsMap;
+      window.summariesMap = summariesMap;
+    }
+    
     // Initialize summarization
     try {
       await runAutoSummarization();

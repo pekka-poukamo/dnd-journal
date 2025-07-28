@@ -295,16 +295,27 @@ const loadStoredSummaries = () => {
   return loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
 };
 
-// Save summaries to localStorage
+// Save summaries - use Yjs directly if available, otherwise localStorage
 const saveStoredSummaries = (summaries) => {
+  // First save to localStorage for backward compatibility
   safeSetToStorage(STORAGE_KEYS.SUMMARIES, summaries);
   
-  // Trigger complete app state sync after summaries change
-  if (typeof window !== 'undefined' && window.triggerSyncUpdate) {
+  // Update Yjs directly if available (for real-time sync)
+  if (typeof window !== 'undefined' && window.summariesMap) {
     try {
-      window.triggerSyncUpdate();
+      // Clear existing summaries in Yjs
+      window.summariesMap.clear();
+      
+      // Add each summary to Yjs
+      Object.entries(summaries).forEach(([key, summary]) => {
+        const summaryMap = new window.Y.Map();
+        summaryMap.set('content', summary.content || summary.summary || '');
+        summaryMap.set('words', summary.words || 0);
+        summaryMap.set('timestamp', summary.timestamp || Date.now());
+        window.summariesMap.set(key, summaryMap);
+      });
     } catch (e) {
-      console.warn('Could not trigger sync update after AI summaries change:', e);
+      console.warn('Could not update Yjs summaries:', e);
     }
   }
 };

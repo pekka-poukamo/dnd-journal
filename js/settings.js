@@ -40,16 +40,18 @@ export const loadSettings = () => {
   );
 };
 
-// Save settings to localStorage
+// Save settings - use Yjs directly if available, otherwise localStorage
 export const saveSettings = (settings) => {
+  // First save to localStorage for backward compatibility
   const result = safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
   
-  // Trigger complete app state sync after settings change
-  if (typeof window !== 'undefined' && window.triggerSyncUpdate) {
+  // Update Yjs directly if available (for real-time sync)
+  if (typeof window !== 'undefined' && window.settingsMap) {
     try {
-      window.triggerSyncUpdate();
+      window.settingsMap.set('apiKey', settings.apiKey || '');
+      window.settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
     } catch (e) {
-      console.warn('Could not trigger sync update after settings change:', e);
+      console.warn('Could not update Yjs settings:', e);
     }
   }
   

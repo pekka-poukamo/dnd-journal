@@ -38,29 +38,30 @@ export const saveCharacterData = (characterData) => {
   return safeSetToStorage(STORAGE_KEYS.JOURNAL, updatedData);
 };
 
-// Pure functional save that works directly with Yjs
+// Save character data - use Yjs directly if available, otherwise localStorage
 export const saveCharacterDataWithSync = (characterData) => {
   // First save to localStorage for backward compatibility
   const saveResult = saveCharacterData(characterData);
   
-  // Update Yjs directly if available
-  if (typeof window !== 'undefined' && window.yjsContext) {
+  // Update Yjs directly if available (for real-time sync)
+  if (typeof window !== 'undefined' && window.journalMap) {
     try {
-      const { setCharacter } = window.yjsStore || {};
-      if (setCharacter) {
-        setCharacter(window.yjsContext.ydoc, characterData);
+      let characterMap = window.journalMap.get('character');
+      if (!characterMap) {
+        characterMap = new window.Y.Map();
+        window.journalMap.set('character', characterMap);
       }
+      
+      // Set each field individually for CRDT conflict resolution
+      characterMap.set('name', characterData.name || '');
+      characterMap.set('race', characterData.race || '');
+      characterMap.set('class', characterData.class || '');
+      characterMap.set('backstory', characterData.backstory || '');
+      characterMap.set('notes', characterData.notes || '');
+      
+      window.journalMap.set('lastModified', Date.now());
     } catch (e) {
-      console.warn('Could not update Yjs:', e);
-    }
-  }
-  
-  // Trigger sync update if available (for integration with app.js sync)
-  if (typeof window !== 'undefined' && window.triggerSyncUpdate) {
-    try {
-      window.triggerSyncUpdate();
-    } catch (e) {
-      console.warn('Could not trigger sync update:', e);
+      console.warn('Could not update Yjs character:', e);
     }
   }
   
