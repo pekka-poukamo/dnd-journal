@@ -403,11 +403,8 @@ describe('AI Module', function() {
       
       // Store test data in Yjs system
       const system = getSystem();
-      // Create a proper Y.Array structure for entries
-      const entriesData = {
-        toArray: () => journalData.entries
-      };
-      system.journalMap.set('entries', entriesData);
+      // Store entries directly as an array for the test
+      system.journalMap.set('entries', journalData.entries);
       system.summariesMap.set('summaries', entrySummaries);
       system.summariesMap.set('meta-summaries', metaSummaries);
       

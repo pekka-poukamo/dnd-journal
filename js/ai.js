@@ -378,7 +378,7 @@ export const getFormattedCharacterForAI = (character) => {
 export const getFormattedEntriesForAI = () => {
   // Use Yjs system first, then fallback to localStorage
   const yjsSystem = getSystem();
-  let journalData, entrySummaries, metaSummaries;
+  let processedJournalData, entrySummaries, metaSummaries;
   
   if (yjsSystem) {
     // Get data from Yjs
@@ -389,27 +389,34 @@ export const getFormattedEntriesForAI = () => {
       if (Array.isArray(entriesArray)) {
         // Plain JavaScript array (test environment)
         entries = entriesArray;
-      } else if (entriesArray.toArray) {
+      } else if (entriesArray.toArray && typeof entriesArray.toArray === 'function') {
         // Y.Array with Y.Map objects (real app) or mock toArray function
-        const rawEntries = entriesArray.toArray();
-        entries = rawEntries.map(entryMap => {
-          // Handle both Y.Map objects and plain objects
-          if (entryMap && typeof entryMap.get === 'function') {
-            return {
-              id: entryMap.get('id'),
-              title: entryMap.get('title'),
-              content: entryMap.get('content'),
-              timestamp: entryMap.get('timestamp')
-            };
-          } else {
-            // Plain object (test environment)
-            return entryMap;
+        try {
+          const rawEntries = entriesArray.toArray();
+          if (rawEntries && Array.isArray(rawEntries)) {
+            entries = rawEntries.map(entryMap => {
+              // Handle both Y.Map objects and plain objects
+              if (entryMap && typeof entryMap.get === 'function') {
+                return {
+                  id: entryMap.get('id'),
+                  title: entryMap.get('title'),
+                  content: entryMap.get('content'),
+                  timestamp: entryMap.get('timestamp')
+                };
+              } else {
+                // Plain object (test environment)
+                return entryMap;
+              }
+            });
           }
-        });
+        } catch (e) {
+          // Fallback if toArray fails
+          entries = [];
+        }
       }
     }
     
-    journalData = { 
+    processedJournalData = { 
       character: {}, 
       entries: entries
     };
@@ -429,7 +436,7 @@ export const getFormattedEntriesForAI = () => {
     }
   } else {
     // Fallback to localStorage
-    journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, { character: {}, entries: [] });
+    processedJournalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, { character: {}, entries: [] });
     entrySummaries = loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
     metaSummaries = loadDataWithFallback('simple-dnd-journal-meta-summaries', {});
   }
@@ -445,9 +452,11 @@ export const getFormattedEntriesForAI = () => {
     }
   });
   
-  const sortedEntries = [...(journalData.entries || [])].sort((a, b) => b.timestamp - a.timestamp);
+  const sortedEntries = [...(processedJournalData.entries || [])].sort((a, b) => b.timestamp - a.timestamp);
   const recentEntries = sortedEntries.slice(0, 5); // Keep 5 most recent entries in full
   const olderEntries = sortedEntries.slice(5);
+  
+
   
   const formattedEntries = [];
   
@@ -496,6 +505,8 @@ export const getFormattedEntriesForAI = () => {
       timestamp: metaSummary.timestamp
     });
   });
+  
+  
   
   return formattedEntries;
 };
