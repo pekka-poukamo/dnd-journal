@@ -1,7 +1,6 @@
 // Settings Page - AI Configuration & Data Management
 
-import { getSystem, reconnectProviders, getSyncStatus } from './yjs.js';
-import { startMonitoring, performHealthCheck, formatHealthStatus, onHealthChange } from './persistence-monitor.js';
+import { getSystem } from './yjs.js';
 import {
   loadDataWithFallback, createInitialSettings, createInitialJournalState,
   safeSetToStorage, STORAGE_KEYS
@@ -127,7 +126,7 @@ const handleSettingsChange = () => {
 };
 
 // Unified save handler for all settings
-const handleSaveAllSettings = async () => {
+const handleSaveAllSettings = () => {
   const apiKeyInput = document.getElementById('api-key');
   const enableAIInput = document.getElementById('enable-ai-features');
   const syncServerInput = document.getElementById('sync-server');
@@ -149,27 +148,13 @@ const handleSaveAllSettings = async () => {
       saveSettings(aiSettings);
     }
 
-    // Save sync settings to Yjs and reconnect providers
+    // Save sync settings
     if (syncServerInput) {
       const serverUrl = syncServerInput.value.trim();
-      if (yjsSystem?.settingsMap) {
-        const currentServer = yjsSystem.settingsMap.get('syncServer');
-        
-        if (serverUrl) {
-          yjsSystem.settingsMap.set('syncServer', serverUrl);
-        } else {
-          yjsSystem.settingsMap.delete('syncServer');
-        }
-        
-        // Reconnect providers if server changed
-        if (currentServer !== serverUrl) {
-          try {
-            await reconnectProviders();
-            console.log('Sync providers updated with new server configuration');
-          } catch (e) {
-            console.error('Failed to reconnect providers:', e);
-          }
-        }
+      if (serverUrl) {
+        localStorage.setItem('dnd-journal-sync-server', serverUrl);
+      } else {
+        localStorage.removeItem('dnd-journal-sync-server');
       }
     }
     
@@ -467,25 +452,9 @@ const populateForm = () => {
   // Load sync server configuration
   const syncServerInput = document.getElementById('sync-server');
   if (syncServerInput) {
-    // Try to load from Yjs system first, then localStorage fallback
+    // Try to load from sync config or localStorage
     try {
-      let savedServer = null;
-      
-      // First try Yjs system
-      if (yjsSystem?.settingsMap) {
-        savedServer = yjsSystem.settingsMap.get('syncServer');
-      }
-      
-      // Fallback to localStorage for migration
-      if (!savedServer) {
-        savedServer = localStorage.getItem('dnd-journal-sync-server');
-        // If found in localStorage, migrate to Yjs
-        if (savedServer && yjsSystem?.settingsMap) {
-          yjsSystem.settingsMap.set('syncServer', savedServer);
-          localStorage.removeItem('dnd-journal-sync-server'); // Clean up old storage
-        }
-      }
-      
+      const savedServer = localStorage.getItem('dnd-journal-sync-server');
       if (savedServer) {
         syncServerInput.value = savedServer;
       }
@@ -546,22 +515,6 @@ const handleSyncServerTest = async () => {
 const init = () => {
   populateForm();
   setupEventHandlers();
-  
-  // Start persistence monitoring
-  startMonitoring();
-  
-  // Register health change callback to update sync status
-  onHealthChange((health) => {
-    if (health.details.sync === 'connected') {
-      showSyncStatus('connected', 'Connected', `${health.details.connectedProviders}/${health.details.providers} servers`);
-    } else if (health.details.sync === 'available') {
-      showSyncStatus('connecting', 'Available', 'Servers available but not connected');
-    } else {
-      if (health.status !== 'offline') {
-        showSyncStatus('disconnected', 'Disconnected', 'No sync servers available');
-      }
-    }
-  });
 };
 
 // Start when DOM is ready (only in browser environment)

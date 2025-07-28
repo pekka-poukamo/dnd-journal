@@ -7,14 +7,6 @@ import { SYNC_CONFIG } from '../sync-config.js';
 // Export Y constructor for other modules
 export { Y };
 
-// Persistence monitoring
-let persistenceMetrics = {
-  lastSync: null,
-  syncCount: 0,
-  errors: 0,
-  providers: []
-};
-
 // Yjs system instance
 let yjsSystem = null;
 
@@ -110,15 +102,6 @@ const isValidWebSocketUrl = (url) => {
 // Get sync server configuration
 const getSyncServers = () => {
   try {
-    // First try to get from Yjs system if available
-    if (yjsSystem?.settingsMap) {
-      const savedServer = yjsSystem.settingsMap.get('syncServer');
-      if (savedServer && isValidWebSocketUrl(savedServer)) {
-        return [savedServer.trim()];
-      }
-    }
-    
-    // Then try sync config
     if (SYNC_CONFIG?.server && isValidWebSocketUrl(SYNC_CONFIG.server)) {
       return [SYNC_CONFIG.server.trim()];
     }
@@ -135,32 +118,7 @@ const createSyncProviders = (ydoc) => {
   
   return servers.map(serverUrl => {
     try {
-      const provider = new WebsocketProvider(serverUrl, 'dnd-journal', ydoc, { 
-        connect: true,
-        maxBackoffTime: 10000,
-        resyncInterval: 5000
-      });
-      
-      // Add connection event listeners for better debugging and monitoring
-      provider.on('status', (event) => {
-        console.log(`Sync provider ${serverUrl} status:`, event.status);
-        if (event.status === 'connected') {
-          persistenceMetrics.lastSync = Date.now();
-          persistenceMetrics.syncCount++;
-        }
-      });
-      
-      provider.on('connection-error', (event) => {
-        console.warn(`Connection error with ${serverUrl}:`, event.error);
-        persistenceMetrics.errors++;
-      });
-      
-      provider.on('sync', () => {
-        persistenceMetrics.lastSync = Date.now();
-        persistenceMetrics.syncCount++;
-      });
-      
-      return provider;
+      return new WebsocketProvider(serverUrl, 'dnd-journal', ydoc, { connect: true });
     } catch (e) {
       console.error(`Failed to connect to ${serverUrl}:`, e);
       return null;
@@ -239,11 +197,6 @@ export const createSystem = async () => {
   // Store the system instance
   yjsSystem = system;
   
-  // Expose system globally for sync configuration access
-  if (typeof window !== 'undefined') {
-    window.yjsSystemGlobal = system;
-  }
-  
   // Setup update listener
   ydoc.on('update', () => {
     triggerUpdateCallbacks(system);
@@ -276,43 +229,5 @@ export const getSyncStatus = (providers) => {
       url: p.url,
       connected: p.wsconnected || false
     }))
-  };
-};
-
-// Reconnect sync providers with new configuration
-export const reconnectProviders = async () => {
-  if (!yjsSystem?.ydoc) {
-    console.warn('Cannot reconnect: Yjs system not initialized');
-    return;
-  }
-  
-  // Disconnect existing providers
-  if (yjsSystem.providers) {
-    yjsSystem.providers.forEach(provider => {
-      try {
-        provider.destroy();
-      } catch (e) {
-        console.warn('Error destroying provider:', e);
-      }
-    });
-  }
-  
-  // Create new providers with updated configuration
-  yjsSystem.providers = createSyncProviders(yjsSystem.ydoc);
-  
-  console.log('Sync providers reconnected');
-  
-  // Trigger update callbacks to refresh UI
-  triggerUpdateCallbacks(yjsSystem);
-  
-  return yjsSystem.providers;
-};
-
-// Get persistence metrics
-export const getPersistenceMetrics = () => {
-  return {
-    ...persistenceMetrics,
-    uptime: yjsSystem ? Date.now() - (persistenceMetrics.lastSync || Date.now()) : 0,
-    isHealthy: persistenceMetrics.errors < 10 && (Date.now() - (persistenceMetrics.lastSync || 0)) < 30000
   };
 };

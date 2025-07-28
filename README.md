@@ -9,56 +9,28 @@ A simple D&D journal built with vanilla JavaScript.
 
 Open `index.html` in a browser.
 
-## Cross-Device Sync & Server Persistence
+## Cross-Device Sync
 
-The journal features robust server persistence using Yjs libraries with real-time sync across multiple devices.
-
-### Features
-
-✅ **Local-First Architecture**: Data persists locally in IndexedDB  
-✅ **Real-Time Sync**: Instant synchronization across devices  
-✅ **Conflict Resolution**: Automatic CRDT-based merging  
-✅ **Offline Resilience**: Works completely offline  
-✅ **Health Monitoring**: Real-time persistence status tracking  
-✅ **Provider Reconnection**: Automatic reconnection on server changes  
+The journal supports real-time sync across multiple devices using Yjs.
 
 ### Sync Status
 
-Check the sync status in Settings page. Journal automatically syncs across devices when online and persists data to IndexedDB locally.
-
-### Local Development Server
-
-For development or local hosting:
-```bash
-npm run server:dev        # Local server (localhost:1234)
-npm run server:public     # Public server (0.0.0.0:1234)
-npm run server 8080       # Custom port
-```
+Check the sync status in Settings page. Journal automatically syncs across devices when online.
 
 ### Setting Up Your Own Sync Server
 
-#### Option 1: Built-in Server (Recommended)
+#### Built-in Server with File Persistence
 ```bash
-# Development (localhost only)
-npm run server:dev
-
-# Production (accessible from network)
-npm run server:public
-
-# Custom configuration
-HOST=0.0.0.0 PORT=8080 npm run server
-```
-
-#### Option 2: y-websocket Server
-```bash
-npm install -g y-websocket
-HOST=0.0.0.0 PORT=1234 npx y-websocket
+npm run server            # Saves data to ./data/ directory
 ```
 
 #### Configuration
-1. Open Settings in your journal
-2. Set sync server to: `ws://your-server-ip:port`
-3. Save settings - providers will automatically reconnect
+1. Run `npm run server`
+2. Open Settings in your journal
+3. Set sync server to: `ws://localhost:1234`
+4. Save settings
+
+Documents are automatically saved to `./data/` directory on the server.
 
 ## Development
 
