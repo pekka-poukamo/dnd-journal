@@ -154,6 +154,113 @@ describe('D&D Journal App', function() {
       expect(entryElement.querySelector('.entry-title').textContent).to.equal('Test Entry');
       expect(entryElement.querySelector('.entry-content').innerHTML).to.include('<strong>markdown</strong>');
       expect(entryElement.querySelector('.edit-btn')).to.exist;
+      expect(entryElement.querySelector('.delete-btn')).to.exist;
+    });
+  });
+
+  describe('Entry Deletion', function() {
+    beforeEach(function() {
+      // Add test entries
+      App.state.entries = [
+        {
+          id: '1',
+          title: 'First Entry',
+          content: 'First content',
+          timestamp: Date.now() - 1000
+        },
+        {
+          id: '2', 
+          title: 'Second Entry',
+          content: 'Second content',
+          timestamp: Date.now()
+        }
+      ];
+    });
+
+    it('should delete entry when confirmed', function() {
+      const originalConfirm = global.confirm;
+      global.confirm = () => true; // Mock confirm to return true
+      
+      const initialCount = App.state.entries.length;
+      App.deleteEntry('1');
+      
+      expect(App.state.entries.length).to.equal(initialCount - 1);
+      expect(App.state.entries.find(e => e.id === '1')).to.be.undefined;
+      expect(App.state.entries.find(e => e.id === '2')).to.exist;
+      
+      global.confirm = originalConfirm;
+    });
+
+    it('should not delete entry when cancelled', function() {
+      const originalConfirm = global.confirm;
+      global.confirm = () => false; // Mock confirm to return false
+      
+      const initialCount = App.state.entries.length;
+      App.deleteEntry('1');
+      
+      expect(App.state.entries.length).to.equal(initialCount);
+      expect(App.state.entries.find(e => e.id === '1')).to.exist;
+      
+      global.confirm = originalConfirm;
+    });
+
+    it('should handle delete with invalid entry ID', function() {
+      const originalConfirm = global.confirm;
+      let confirmCalled = false;
+      global.confirm = () => { confirmCalled = true; return true; };
+      
+      const initialCount = App.state.entries.length;
+      App.deleteEntry('nonexistent');
+      
+      expect(App.state.entries.length).to.equal(initialCount);
+      expect(confirmCalled).to.be.false;
+      
+      global.confirm = originalConfirm;
+    });
+
+    it('should handle delete with empty entry ID', function() {
+      const originalConfirm = global.confirm;
+      let confirmCalled = false;
+      global.confirm = () => { confirmCalled = true; return true; };
+      
+      const initialCount = App.state.entries.length;
+      App.deleteEntry('');
+      App.deleteEntry(null);
+      App.deleteEntry(undefined);
+      
+      expect(App.state.entries.length).to.equal(initialCount);
+      expect(confirmCalled).to.be.false;
+      
+      global.confirm = originalConfirm;
+    });
+
+    it('should show correct confirmation message', function() {
+      const originalConfirm = global.confirm;
+      let confirmMessage = '';
+      global.confirm = (message) => { confirmMessage = message; return true; };
+      
+      App.deleteEntry('1');
+      
+      expect(confirmMessage).to.include('First Entry');
+      expect(confirmMessage).to.include('Are you sure');
+      
+      global.confirm = originalConfirm;
+    });
+
+    it('should create delete button with correct attributes', function() {
+      const entry = {
+        id: 'test-id',
+        title: 'Test Entry',
+        content: 'Test content',
+        timestamp: Date.now()
+      };
+      
+      const entryElement = App.createEntryElement(entry);
+      const deleteBtn = entryElement.querySelector('.delete-btn');
+      
+      expect(deleteBtn).to.exist;
+      expect(deleteBtn.textContent).to.equal('Delete');
+      expect(deleteBtn.className).to.equal('delete-btn');
     });
   });
 
