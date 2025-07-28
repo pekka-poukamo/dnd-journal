@@ -48,7 +48,7 @@ export const parseMarkdown = (text) => {
 const loadStateFromYjs = () => {
   if (!yjsSystem?.journalMap) return;
   
-  // Load character
+  // Load character directly from Yjs
   const characterMap = yjsSystem.journalMap.get('character');
   if (characterMap) {
     state.character = {
@@ -62,7 +62,7 @@ const loadStateFromYjs = () => {
     state.character = { name: '', race: '', class: '', backstory: '', notes: '' };
   }
   
-  // Load entries
+  // Load entries directly from Yjs
   const entriesArray = yjsSystem.journalMap.get('entries');
   if (entriesArray) {
     state.entries = entriesArray.toArray().map(entryMap => ({

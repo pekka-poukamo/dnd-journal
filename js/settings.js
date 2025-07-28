@@ -31,35 +31,15 @@ const getYjsSync = () => {
   return yjsSync;
 };
 
-// Load settings from Yjs (primary) or localStorage (fallback)
+// Load settings from Yjs
 export const loadSettings = () => {
-  try {
-    // Try Yjs first (primary store)
-    const yjsSettings = getSettings();
-    if (yjsSettings.apiKey || yjsSettings.enableAIFeatures) {
-      return yjsSettings;
-    }
-    
-    // Fallback to localStorage
-    return loadDataWithFallback(
-      STORAGE_KEYS.SETTINGS, 
-      createInitialSettings()
-    );
-  } catch (error) {
-    console.error('Error loading settings:', error);
-    return createInitialSettings();
-  }
+  return getSettings();
 };
 
-// Save settings directly to Yjs (primary store)
+// Save settings to Yjs
 export const saveSettings = (settings) => {
-  // Update Yjs as primary store
   updateSettings(settings);
-  
-  // Keep localStorage copy for backward compatibility only
-  const result = safeSetToStorage(STORAGE_KEYS.SETTINGS, settings);
-  
-  return result;
+  return { success: true };
 };
 
 // Test API key with OpenAI

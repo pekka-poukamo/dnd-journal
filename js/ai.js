@@ -291,30 +291,12 @@ Content: ${entry.content}`;
   }
 };
 
-// Load stored summaries from Yjs (primary) or localStorage (fallback)
-const loadStoredSummaries = () => {
-  try {
-    // Try Yjs first (primary store)
-    const yjsSummaries = getSummaries();
-    if (Object.keys(yjsSummaries).length > 0) {
-      return yjsSummaries;
-    }
-    
-    // Fallback to localStorage
-    return loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
-  } catch (error) {
-    console.error('Error loading summaries:', error);
-    return {};
-  }
-};
+// Load stored summaries from Yjs
+const loadStoredSummaries = () => getSummaries();
 
-// Save summaries directly to Yjs (primary store)
+// Save summaries to Yjs
 const saveStoredSummaries = (summaries) => {
-  // Update Yjs as primary store
   updateSummaries(summaries);
-  
-  // Keep localStorage copy for backward compatibility only
-  safeSetToStorage(STORAGE_KEYS.SUMMARIES, summaries);
 };
 
 // Get or generate summary for an entry

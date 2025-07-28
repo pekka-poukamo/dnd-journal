@@ -37,29 +37,10 @@ const callMetaSummarize = createTemplateFunction(createMetaSummaryPrompt, {
 // STORAGE FUNCTIONS
 // =============================================================================
 
-const loadSummaries = () => {
-  try {
-    // Try Yjs first (primary store)
-    const yjsSummaries = getSummaries();
-    if (Object.keys(yjsSummaries).length > 0) {
-      return yjsSummaries;
-    }
-    
-    // Fallback to localStorage
-    return loadDataWithFallback(STORAGE_KEY, {});
-  } catch (error) {
-    console.error('Error loading summaries:', error);
-    return {};
-  }
-};
+const loadSummaries = () => getSummaries();
 const saveSummaries = (summaries) => {
-  // Update Yjs as primary store
   updateSummaries(summaries);
-  
-  // Keep localStorage copy for backward compatibility only
-  const result = safeSetToStorage(STORAGE_KEY, summaries);
-  
-  return result;
+  return { success: true };
 };
 
 // =============================================================================
