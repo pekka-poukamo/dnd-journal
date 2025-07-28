@@ -57,6 +57,10 @@ export const parseMarkdown = (text) => {
 // Load data from Yjs into local state (for UI rendering)
 const loadStateFromYjs = () => {
   if (!yjsSystem?.characterMap || !yjsSystem?.journalMap) return;
+  // Update global state reference for tests
+  if (typeof global !== 'undefined') {
+    global.state = state;
+  }
   
   // Load character directly from dedicated characterMap
   state.character = {
@@ -195,7 +199,7 @@ export const renderEntries = () => {
 export const enableEditMode = (entryDiv, entry) => {
   const title = entryDiv.querySelector('.entry-title');
   const content = entryDiv.querySelector('.entry-content');
-  const editBtn = entryDiv.querySelector('.edit-btn');
+  const headerActions = entryDiv.querySelector('.entry-header__actions');
   
   // Create edit form
   const editForm = document.createElement('div');
@@ -226,7 +230,7 @@ export const enableEditMode = (entryDiv, entry) => {
   // Replace content with edit form
   title.style.display = 'none';
   content.style.display = 'none';
-  editBtn.style.display = 'none';
+  headerActions.style.display = 'none';
   
   entryDiv.appendChild(editForm);
   titleInput.focus();
@@ -273,13 +277,14 @@ export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
     
     const title = entryDiv.querySelector('.entry-title');
     const content = entryDiv.querySelector('.entry-content');
-    const editBtn = entryDiv.querySelector('.edit-btn');
+    const headerActions = entryDiv.querySelector('.entry-header__actions');
     
     title.textContent = newTitle.trim();
     title.style.display = '';
     content.innerHTML = parseMarkdown(newContent.trim());
     content.style.display = '';
     editBtn.style.display = '';
+    headerActions.style.display = '';
   }
 };
 
@@ -292,11 +297,149 @@ export const cancelEdit = (entryDiv, entry) => {
   
   const title = entryDiv.querySelector('.entry-title');
   const content = entryDiv.querySelector('.entry-content');
-  const editBtn = entryDiv.querySelector('.edit-btn');
+  const headerActions = entryDiv.querySelector('.entry-header__actions');
   
   title.style.display = '';
   content.style.display = '';
-  editBtn.style.display = '';
+  headerActions.style.display = '';
+};
+
+// Create empty state element
+export const createEmptyStateElement = () => {
+  const emptyDiv = document.createElement('div');
+  emptyDiv.className = 'empty-state';
+  emptyDiv.innerHTML = '<p>No journal entries yet. Start writing your adventure!</p>';
+  return emptyDiv;
+};
+
+// Render all entries
+export const renderEntries = () => {
+  const entriesList = document.getElementById('entries-list');
+  if (!entriesList) return;
+  
+  entriesList.innerHTML = '';
+  
+  if (state.entries.length === 0) {
+    entriesList.appendChild(createEmptyStateElement());
+    return;
+  }
+  
+  const sortedEntries = sortEntriesByDate(state.entries);
+  
+  sortedEntries.forEach(entry => {
+    const entryElement = createEntryElement(entry);
+    entriesList.appendChild(entryElement);
+  });
+};
+
+// Create entry from form data
+export const createEntryFromForm = (formData) => ({
+  id: generateId(),
+  title: formData.title.trim(),
+  content: formData.content.trim(),
+  timestamp: Date.now()
+});
+
+// Get form data
+export const getFormData = () => {
+  const titleInput = document.getElementById('entry-title');
+  const contentTextarea = document.getElementById('entry-content');
+  
+  return {
+    title: titleInput ? titleInput.value : '',
+    content: contentTextarea ? contentTextarea.value : ''
+  };
+};
+
+// Delete entry by ID
+export const deleteEntry = (entryId) => {
+  if (!entryId) return;
+  
+  const entryToDelete = state.entries.find(entry => entry.id === entryId);
+  if (!entryToDelete) return;
+  
+  const confirmMessage = `Are you sure you want to delete "${entryToDelete.title}"?`;
+  if (!confirm(confirmMessage)) return;
+  
+  // Remove from Yjs first
+  if (yjsSystem?.journalMap) {
+    const entriesArray = yjsSystem.journalMap.get('entries');
+    if (entriesArray && entriesArray.toArray) {
+      const entries = entriesArray.toArray();
+      const entryIndex = entries.findIndex(entryMap => 
+        (entryMap.get ? entryMap.get('id') : entryMap.id) === entryId
+      );
+      
+      if (entryIndex >= 0) {
+        entriesArray.delete(entryIndex);
+        yjsSystem.journalMap.set('lastModified', Date.now());
+      }
+    }
+  }
+  
+  // Update local state
+  state.entries = state.entries.filter(entry => entry.id !== entryId);
+  
+  renderEntries();
+};
+
+// Focus on entry title input
+export const focusEntryTitle = () => {
+  const titleInput = document.getElementById('entry-title');
+  if (titleInput) {
+    titleInput.focus();
+  }
+};
+
+// Create character summary
+export const createCharacterSummary = (character) => {
+  if (!character || typeof character !== 'object') {
+    return {
+      name: 'No Character',
+      details: 'Create a character to see their details here.'
+    };
+  }
+
+  // If character has a name, return it, otherwise return 'No Character'
+  if (character.name && character.name.trim()) {
+    const details = [];
+    if (character.race) details.push(character.race);
+    if (character.class) details.push(character.class);
+    if (character.backstory) details.push(character.backstory);
+    if (character.notes) details.push(character.notes);
+
+    return {
+      name: character.name.trim(),
+      details: details.join(', ')
+    };
+  }
+
+  return {
+    name: 'No Character',
+    details: 'Create a character to see their details here.'
+  };
+};
+
+// Create simplified character data for main page display
+export const createSimpleCharacterData = (character) => {
+  if (!character) {
+    return {
+      name: 'Unnamed Character',
+      race: 'Unknown',
+      class: 'Unknown'
+    };
+  }
+  
+  // Determine the display name - use 'Unnamed Character' if name is missing or just whitespace
+  const displayName = (!character.name || character.name.trim() === '') 
+    ? 'Unnamed Character' 
+    : character.name.trim();
+  
+  return {
+    name: displayName,
+    race: character.race || 'Unknown',
+    class: character.class || 'Unknown'
+  };
 };
 
 // Display character summary
