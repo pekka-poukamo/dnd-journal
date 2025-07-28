@@ -1,4 +1,9 @@
-// D&D Journal - Purely Functional with Yjs
+// D&D Journal - Direct Yjs Integration
+
+import * as Y from 'yjs';
+import { IndexeddbPersistence } from 'y-indexeddb';
+import { WebsocketProvider } from 'y-websocket';
+import { SYNC_CONFIG } from '../sync-config.js';
 
 import { 
   generateId, 
@@ -9,244 +14,264 @@ import {
 
 import { generateIntrospectionPrompt, isAIEnabled } from './ai.js';
 import { runAutoSummarization, summarize, getSummary } from './summarization.js';
-import { 
-  createYjsDocument,
-  getJournal,
-  getCharacter, 
-  setCharacter,
-  updateCharacterField,
-  getEntries, 
-  addEntry as addEntryToYjs,
-  updateEntry as updateEntryInYjs,
-  getSyncStatus 
-} from './yjs-store.js';
 
-// Pure functional state - just data, no methods
+// Global Yjs document and maps
+let ydoc = null;
+let journalMap = null;
+let settingsMap = null;
+let summariesMap = null;
+let persistence = null;
+let providers = [];
+
+// Simple state for UI rendering (read-only mirror of Yjs)
 let state = { character: {}, entries: [] };
-
-// Yjs document instance
-let yjsContext = null;
 
 // Simple markdown parser for basic formatting
 export const parseMarkdown = (text) => {
   if (!text) return '';
   
-  let result = text
-    // Bold text **text** or __text__
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/__(.*?)__/g, '<strong>$1</strong>')
-    // Italic text *text* or _text_ (but not part of ** or __)
-    .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
-    .replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>')
-    // Code `text`
-    .replace(/`(.*?)`/g, '<code>$1</code>');
-  
-  // Process lists and line breaks more carefully
-  const lines = result.split('\n');
-  const processedLines = [];
-  let inList = false;
-  let listType = null;
-  
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    
-    // Check for unordered list items
-    if (trimmedLine.match(/^[-*]\s+(.+)$/)) {
-      if (!inList || listType !== 'ul') {
-        if (inList) processedLines.push(`</${listType}>`);
-        processedLines.push('<ul>');
-        inList = true;
-        listType = 'ul';
-      }
-      processedLines.push(`<li>${trimmedLine.replace(/^[-*]\s+/, '')}</li>`);
-    }
-    // Check for ordered list items
-    else if (trimmedLine.match(/^\d+\.\s+(.+)$/)) {
-      if (!inList || listType !== 'ol') {
-        if (inList) processedLines.push(`</${listType}>`);
-        processedLines.push('<ol>');
-        inList = true;
-        listType = 'ol';
-      }
-      processedLines.push(`<li>${trimmedLine.replace(/^\d+\.\s+/, '')}</li>`);
-    }
-    // Regular line
-    else {
-      if (inList) {
-        processedLines.push(`</${listType}>`);
-        inList = false;
-        listType = null;
-      }
-      // Handle empty lines as paragraph breaks, regular lines normally
-      if (trimmedLine === '') {
-        processedLines.push('__EMPTY_LINE__'); // Placeholder for empty lines
-      } else {
-        processedLines.push(trimmedLine);
-      }
-    }
-  }
-  
-  // Close any open list
-  if (inList) {
-    processedLines.push(`</${listType}>`);
-  }
-  
-  // Join and handle line breaks properly
-  return processedLines
-    .join('__LINE_BREAK__')
-    .replace(/__EMPTY_LINE____LINE_BREAK__/g, '<br><br>') // Double line breaks
-    .replace(/__EMPTY_LINE__/g, '<br><br>') // Remaining empty lines
-    .replace(/__LINE_BREAK__(?=<\/?(ul|ol|li))/g, '') // No breaks before/after list tags
-    .replace(/(<\/?(ul|ol)>)__LINE_BREAK__/g, '$1') // No breaks after list tags
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+    .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
+    .replace(/`(.*?)`/g, '<code>$1</code>') // Code
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>') // H3
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>') // H2
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>') // H1
+    .replace(/\n\n/g, '__PARAGRAPH__') // Paragraph breaks
+    .replace(/\n/g, '__LINE_BREAK__') // Line breaks
+    .replace(/__PARAGRAPH__/g, '</p><p>') // Convert paragraph breaks
+    .replace(/^/, '<p>') // Start with paragraph
+    .replace(/$/, '</p>') // End with paragraph
+    .replace(/<p><\/p>/g, '') // Remove empty paragraphs
     .replace(/__LINE_BREAK__/g, '<br>'); // Single line breaks
 };
 
-// Initialize Yjs document and load data
-export const loadData = async () => {
+// Initialize Yjs document
+export const initializeYjs = async () => {
   // Skip in test environment
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
-    state = { 
-      character: { name: '', race: '', class: '', backstory: '', notes: '' }, 
-      entries: [] 
-    };
-    if (typeof global !== 'undefined') {
-      global.state = state;
-    }
     return;
   }
-  
+
   try {
-    // Create Yjs document with persistence and sync
-    yjsContext = createYjsDocument();
+    // Create Yjs document
+    ydoc = new Y.Doc();
+    
+    // Get shared data structures
+    journalMap = ydoc.getMap('journal');
+    settingsMap = ydoc.getMap('settings');
+    summariesMap = ydoc.getMap('summaries');
+    
+    // Setup IndexedDB persistence (local-first)
+    persistence = new IndexeddbPersistence('dnd-journal', ydoc);
+    
+    // Setup network sync
+    const syncServers = getSyncServers();
+    providers = syncServers.map(serverUrl => {
+      try {
+        return new WebsocketProvider(serverUrl, 'dnd-journal', ydoc, { connect: true });
+      } catch (e) {
+        console.error(`Failed to connect to ${serverUrl}:`, e);
+        return null;
+      }
+    }).filter(Boolean);
     
     // Wait for IndexedDB to sync
     await new Promise((resolve) => {
-      yjsContext.persistence.on('synced', resolve);
+      persistence.on('synced', resolve);
     });
     
-    // Load current data from Yjs
-    state = getJournal(yjsContext.ydoc);
-    
-    // Update global state reference for tests
-    if (typeof global !== 'undefined') {
-      global.state = state;
-    }
-    
-    console.log('Data loaded from Yjs');
+    console.log('Yjs initialized');
     
   } catch (e) {
     console.error('Failed to initialize Yjs:', e);
-    // Fall back to empty state
-    state = { 
-      character: { name: '', race: '', class: '', backstory: '', notes: '' }, 
-      entries: [] 
-    };
   }
 };
 
-// Pure function - data is automatically saved via Yjs operations
-export const saveData = () => {
-  // In functional approach, data is saved through pure functions
-  // This function exists for backward compatibility
-  return { success: true };
-};
-
-// Get entry summary from new summarization module
-export const getEntrySummary = (entryId) => {
-  // First check if we have a cached summary
-  const cachedSummary = getSummary(entryId);
-  if (cachedSummary) {
-    return Promise.resolve({ summary: cachedSummary });
+// Get sync server configuration
+const getSyncServers = () => {
+  try {
+    if (SYNC_CONFIG?.server && isValidWebSocketUrl(SYNC_CONFIG.server)) {
+      return [SYNC_CONFIG.server.trim()];
+    }
+  } catch (e) {
+    console.warn('Error loading sync config:', e);
   }
   
-  // If no cached summary and AI is enabled, try to generate one
-  if (isAIEnabled()) {
-    const entry = state.entries.find(e => e.id === entryId);
-    if (entry && entry.content) {
-      return summarize(entryId, entry.content).then(summary => {
-        return summary ? { summary } : null;
+  return ['wss://demos.yjs.dev', 'wss://y-websocket.herokuapp.com'];
+};
+
+// Validate WebSocket URL
+const isValidWebSocketUrl = (url) => {
+  if (!url || typeof url !== 'string') return false;
+  if (!url.startsWith('ws://') && !url.startsWith('wss://')) return false;
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname?.length > 0;
+  } catch (e) {
+    return false;
+  }
+};
+
+// Load data from Yjs into local state (for UI rendering)
+const loadStateFromYjs = () => {
+  if (!journalMap) return;
+  
+  // Load character
+  const characterMap = journalMap.get('character');
+  if (characterMap) {
+    state.character = {
+      name: characterMap.get('name') || '',
+      race: characterMap.get('race') || '',
+      class: characterMap.get('class') || '',
+      backstory: characterMap.get('backstory') || '',
+      notes: characterMap.get('notes') || ''
+    };
+  } else {
+    state.character = { name: '', race: '', class: '', backstory: '', notes: '' };
+  }
+  
+  // Load entries
+  const entriesArray = journalMap.get('entries');
+  if (entriesArray) {
+    state.entries = entriesArray.toArray().map(entryMap => ({
+      id: entryMap.get('id'),
+      title: entryMap.get('title'),
+      content: entryMap.get('content'),
+      timestamp: entryMap.get('timestamp')
+    }));
+  } else {
+    state.entries = [];
+  }
+};
+
+// Setup character form with direct Yjs binding
+export const setupCharacterForm = () => {
+  const fields = ['name', 'race', 'class', 'backstory', 'notes'];
+  
+  fields.forEach(field => {
+    const input = document.getElementById(`character-${field}`);
+    if (input) {
+      // Load initial value from Yjs
+      const characterMap = journalMap.get('character');
+      if (characterMap) {
+        input.value = characterMap.get(field) || '';
+      }
+      
+      // Update Yjs on input change
+      input.addEventListener('input', () => {
+        let characterMap = journalMap.get('character');
+        if (!characterMap) {
+          characterMap = new Y.Map();
+          journalMap.set('character', characterMap);
+        }
+        characterMap.set(field, input.value);
+        journalMap.set('lastModified', Date.now());
       });
     }
-  }
-  return Promise.resolve(null);
+  });
 };
 
-// Create DOM element for an entry
-export const createEntryElement = (entry) => {
-  const entryDiv = document.createElement('div');
-  entryDiv.className = 'entry-card';
-  entryDiv.dataset.entryId = entry.id;
+// Get form data for new entries
+const getFormData = () => {
+  const titleInput = document.getElementById('entry-title');
+  const contentTextarea = document.getElementById('entry-content');
   
-  const header = document.createElement('div');
-  header.className = 'entry-header';
-  
-  const title = document.createElement('h3');
-  title.className = 'entry-title';
-  title.textContent = entry.title;
-  
-  const date = document.createElement('span');
-  date.className = 'entry-date';
-  date.textContent = formatDate(entry.timestamp);
-  
-  const editBtn = document.createElement('button');
-  editBtn.className = 'edit-btn';
-  editBtn.textContent = 'Edit';
-  editBtn.onclick = () => enableEditMode(entryDiv, entry);
-  
-  header.appendChild(title);
-  header.appendChild(date);
-  header.appendChild(editBtn);
-  
-  const content = document.createElement('div');
-  content.className = 'entry-content';
-  content.innerHTML = parseMarkdown(entry.content);
-  
-  entryDiv.appendChild(header);
-  entryDiv.appendChild(content);
-  
-  // Add collapsible summary section if available (async)
-  if (isAIEnabled()) {
-    getEntrySummary(entry.id).then(summary => {
-      if (summary && summary.summary) {
-        const summarySection = createSummarySection(summary.summary);
-        entryDiv.appendChild(summarySection);
-      }
-    }).catch(error => {
-      console.error('Failed to get entry summary:', error);
-    });
-  }
-  
-  return entryDiv;
-};
-
-// Create collapsible summary section
-export const createSummarySection = (summary) => {
-  const summaryDiv = document.createElement('div');
-  summaryDiv.className = 'entry-summary';
-  
-  const summaryToggle = document.createElement('button');
-  summaryToggle.className = 'entry-summary__toggle';
-  summaryToggle.innerHTML = `
-    <span class="entry-summary__label">Summary</span>
-    <span class="entry-summary__icon">▼</span>
-  `;
-  
-  const summaryContent = document.createElement('div');
-  summaryContent.className = 'entry-summary__content';
-  summaryContent.style.display = 'none';
-  summaryContent.innerHTML = `<p>${summary}</p>`;
-  
-  summaryToggle.onclick = () => {
-    const isExpanded = summaryContent.style.display !== 'none';
-    summaryContent.style.display = isExpanded ? 'none' : 'block';
-    summaryToggle.querySelector('.entry-summary__icon').textContent = isExpanded ? '▼' : '▲';
-    summaryToggle.classList.toggle('entry-summary__toggle--expanded', !isExpanded);
+  return {
+    title: titleInput?.value?.trim() || '',
+    content: contentTextarea?.value?.trim() || ''
   };
+};
+
+// Create entry object from form data
+const createEntryFromForm = (formData) => ({
+  id: generateId(),
+  title: formData.title,
+  content: formData.content,
+  timestamp: Date.now()
+});
+
+// Add new entry directly to Yjs
+export const addEntry = async () => {
+  const formData = getFormData();
   
-  summaryDiv.appendChild(summaryToggle);
-  summaryDiv.appendChild(summaryContent);
+  if (!formData.title || !formData.content) {
+    alert('Please fill in both title and content.');
+    return;
+  }
   
-  return summaryDiv;
+  const entry = createEntryFromForm(formData);
+  
+  if (isValidEntry(entry) && journalMap) {
+    // Get or create entries array
+    let entriesArray = journalMap.get('entries');
+    if (!entriesArray) {
+      entriesArray = new Y.Array();
+      journalMap.set('entries', entriesArray);
+    }
+    
+    // Create entry map
+    const entryMap = new Y.Map();
+    entryMap.set('id', entry.id);
+    entryMap.set('title', entry.title);
+    entryMap.set('content', entry.content);
+    entryMap.set('timestamp', entry.timestamp);
+    
+    // Add to beginning of array
+    entriesArray.unshift([entryMap]);
+    journalMap.set('lastModified', Date.now());
+    
+    // Clear form
+    clearEntryForm();
+    focusEntryTitle();
+    
+    // Generate AI summary if available
+    if (isAIEnabled() && entry.content) {
+      try {
+        await summarize(entry.id, entry.content);
+      } catch (error) {
+        console.error('Failed to generate entry summary:', error);
+      }
+    }
+  }
+};
+
+// Clear entry form
+export const clearEntryForm = () => {
+  const titleInput = document.getElementById('entry-title');
+  const contentTextarea = document.getElementById('entry-content');
+  
+  if (titleInput) titleInput.value = '';
+  if (contentTextarea) contentTextarea.value = '';
+};
+
+// Focus on entry title input
+export const focusEntryTitle = () => {
+  const titleInput = document.getElementById('entry-title');
+  if (titleInput) {
+    titleInput.focus();
+  }
+};
+
+// Render entries from state
+export const renderEntries = () => {
+  const entriesContainer = document.getElementById('entries-container');
+  if (!entriesContainer) return;
+  
+  const sortedEntries = sortEntriesByDate([...state.entries]);
+  
+  entriesContainer.innerHTML = sortedEntries.map(entry => `
+    <div class="entry" data-entry-id="${entry.id}">
+      <div class="entry-header">
+        <h3 class="entry-title">${entry.title}</h3>
+        <div class="entry-meta">
+          <span class="entry-date">${formatDate(entry.timestamp)}</span>
+          <button class="edit-btn" onclick="enableEditMode(this.closest('.entry'), ${JSON.stringify(entry).replace(/"/g, '&quot;')})">✏️</button>
+        </div>
+      </div>
+      <div class="entry-content">${parseMarkdown(entry.content)}</div>
+    </div>
+  `).join('');
 };
 
 // Enable edit mode for an entry
@@ -287,22 +312,26 @@ export const enableEditMode = (entryDiv, entry) => {
   editBtn.style.display = 'none';
   
   entryDiv.appendChild(editForm);
-  
-  // Focus on title input
   titleInput.focus();
 };
 
-// Save edit changes using pure functions
+// Save edit changes directly to Yjs
 export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
-  if (newTitle.trim() && newContent.trim() && yjsContext) {
-    // Pure function call - updates entry in Yjs and returns new entries
-    const newEntries = updateEntryInYjs(yjsContext.ydoc, entry.id, {
-      title: newTitle.trim(),
-      content: newContent.trim()
-    });
-    
-    // Update local state
-    state.entries = newEntries;
+  if (newTitle.trim() && newContent.trim() && journalMap) {
+    // Find and update entry in Yjs array
+    const entriesArray = journalMap.get('entries');
+    if (entriesArray) {
+      const entries = entriesArray.toArray();
+      const entryIndex = entries.findIndex(entryMap => entryMap.get('id') === entry.id);
+      
+      if (entryIndex >= 0) {
+        const entryMap = entries[entryIndex];
+        entryMap.set('title', newTitle.trim());
+        entryMap.set('content', newContent.trim());
+        entryMap.set('timestamp', Date.now());
+        journalMap.set('lastModified', Date.now());
+      }
+    }
     
     // Remove edit form and restore display
     const editForm = entryDiv.querySelector('.edit-form');
@@ -338,150 +367,7 @@ export const cancelEdit = (entryDiv, entry) => {
   editBtn.style.display = '';
 };
 
-// Create empty state element
-export const createEmptyStateElement = () => {
-  const emptyDiv = document.createElement('div');
-  emptyDiv.className = 'empty-state';
-  emptyDiv.innerHTML = '<p>No journal entries yet. Start writing your adventure!</p>';
-  return emptyDiv;
-};
-
-// Render all entries
-export const renderEntries = () => {
-  const entriesList = document.getElementById('entries-list');
-  if (!entriesList) return;
-  
-  entriesList.innerHTML = '';
-  
-  if (state.entries.length === 0) {
-    entriesList.appendChild(createEmptyStateElement());
-    return;
-  }
-  
-  const sortedEntries = sortEntriesByDate(state.entries);
-  
-  sortedEntries.forEach(entry => {
-    const entryElement = createEntryElement(entry);
-    entriesList.appendChild(entryElement);
-  });
-};
-
-// Create entry from form data
-export const createEntryFromForm = (formData) => ({
-  id: generateId(),
-  title: formData.title.trim(),
-  content: formData.content.trim(),
-  timestamp: Date.now()
-});
-
-// Get form data
-export const getFormData = () => {
-  const titleInput = document.getElementById('entry-title');
-  const contentTextarea = document.getElementById('entry-content');
-  
-  return {
-    title: titleInput ? titleInput.value : '',
-    content: contentTextarea ? contentTextarea.value : ''
-  };
-};
-
-// Add new entry using pure functions
-export const addEntryToJournal = async () => {
-  const formData = getFormData();
-  
-  if (!formData.title.trim() || !formData.content.trim()) {
-    alert('Please fill in both title and content.');
-    return;
-  }
-  
-  const entry = createEntryFromForm(formData);
-  
-  if (isValidEntry(entry) && yjsContext) {
-    // Pure function call - adds to Yjs and returns new entries
-    const newEntries = addEntryToYjs(yjsContext.ydoc, entry);
-    
-    // Update local state
-    state.entries = newEntries;
-    
-    renderEntries();
-    clearEntryForm();
-    focusEntryTitle();
-    
-    // Generate AI summary if available
-    if (isAIEnabled() && entry.content) {
-      try {
-        await summarize(entry.id, entry.content);
-      } catch (error) {
-        console.error('Failed to generate entry summary:', error);
-      }
-    }
-  }
-};
-
-// Backward compatibility
-export const addEntry = addEntryToJournal;
-
-// Clear entry form
-export const clearEntryForm = () => {
-  const titleInput = document.getElementById('entry-title');
-  const contentTextarea = document.getElementById('entry-content');
-  
-  if (titleInput) titleInput.value = '';
-  if (contentTextarea) contentTextarea.value = '';
-};
-
-// Focus on entry title input
-export const focusEntryTitle = () => {
-  const titleInput = document.getElementById('entry-title');
-  if (titleInput) {
-    titleInput.focus();
-  }
-};
-
-// Create character summary
-export const createCharacterSummary = (character) => {
-  if (!character || !character.name) {
-    return {
-      name: 'No Character',
-      details: 'Create a character to see details here.'
-    };
-  }
-  
-  const details = [];
-  if (character.race) details.push(`Race: ${character.race}`);
-  if (character.class) details.push(`Class: ${character.class}`);
-  if (character.backstory) details.push(`Backstory: ${character.backstory}`);
-  if (character.notes) details.push(`Notes: ${character.notes}`);
-  
-  return {
-    name: character.name,
-    details: details.join(' | ')
-  };
-};
-
-// Create simplified character data for main page display
-export const createSimpleCharacterData = (character) => {
-  if (!character) {
-    return {
-      name: 'Unnamed Character',
-      race: 'Unknown',
-      class: 'Unknown'
-    };
-  }
-  
-  // Determine the display name - use 'Unnamed Character' if name is missing or just whitespace
-  const displayName = (!character.name || character.name.trim() === '') 
-    ? 'Unnamed Character' 
-    : character.name.trim();
-  
-  return {
-    name: displayName,
-    race: character.race || 'Unknown',
-    class: character.class || 'Unknown'
-  };
-};
-
-// Display character summary using pure functions
+// Display character summary
 export const displayCharacterSummary = () => {
   const nameEl = document.getElementById('display-name');
   const raceEl = document.getElementById('display-race');
@@ -489,157 +375,35 @@ export const displayCharacterSummary = () => {
   
   if (!nameEl || !raceEl || !classEl) return;
   
-  // Get current character data using pure function
-  const characterToDisplay = yjsContext ? getCharacter(yjsContext.ydoc) : state.character;
-  
-  const summary = createSimpleCharacterData(characterToDisplay);
-  
-  // Format for minimal display
-  nameEl.textContent = summary.name;
-  raceEl.textContent = summary.race === 'Unknown' ? '—' : summary.race;
-  classEl.textContent = summary.class === 'Unknown' ? '—' : summary.class;
+  nameEl.textContent = state.character.name || 'Unknown';
+  raceEl.textContent = state.character.race === 'Unknown' ? '—' : (state.character.race || '—');
+  classEl.textContent = state.character.class === 'Unknown' ? '—' : (state.character.class || '—');
 };
 
-// Display AI prompt
-export const displayAIPrompt = async () => {
-  const aiPromptText = document.getElementById('ai-prompt-text');
-  const aiPromptSection = document.getElementById('ai-prompt-section');
-  if (!aiPromptText || !aiPromptSection) return;
-  
-  // Always show the section, but adjust content based on AI status
-  aiPromptSection.style.display = 'block';
-  
-  if (!isAIEnabled()) {
-    aiPromptText.innerHTML = '<p class="ai-prompt__empty-state">Enable AI features in Settings to get personalized reflection prompts for your journal sessions.</p>';
-    return;
+// Setup sync status indicator
+const updateSyncStatus = (status, text, details) => {
+  const syncIndicator = document.getElementById('sync-status');
+  if (syncIndicator) {
+    syncIndicator.textContent = text;
+    syncIndicator.className = `sync-${status}`;
+    syncIndicator.title = details;
   }
-  
-  try {
-    const prompt = await generateIntrospectionPrompt(state.character, state.entries);
-    if (prompt) {
-      aiPromptText.innerHTML = formatAIPrompt(prompt);
-    } else {
-      aiPromptText.innerHTML = '<p class="ai-prompt__empty-state">Write some journal entries to get personalized reflection prompts.</p>';
-    }
-  } catch (error) {
-    console.error('Failed to generate AI prompt:', error);
-    aiPromptText.innerHTML = '<p class="ai-prompt__error-state">Unable to generate AI prompt at this time. Please check your settings and try again.</p>';
-  }
-};
-
-// Regenerate AI prompt
-export const regenerateAIPrompt = async () => {
-  const aiPromptText = document.getElementById('ai-prompt-text');
-  const regenerateBtn = document.getElementById('regenerate-prompt-btn');
-  
-  if (!aiPromptText || !regenerateBtn) return;
-  
-  try {
-    regenerateBtn.disabled = true;
-    regenerateBtn.textContent = 'Generating...';
-    
-    const prompt = await generateIntrospectionPrompt(state.character, state.entries);
-    
-    if (prompt) {
-      aiPromptText.innerHTML = formatAIPrompt(prompt);
-    }
-  } catch (error) {
-    console.error('Failed to regenerate AI prompt:', error);
-  } finally {
-    regenerateBtn.disabled = false;
-    regenerateBtn.textContent = 'Regenerate';
-  }
-};
-
-// Format AI prompt for display
-export const formatAIPrompt = (prompt) => {
-  return prompt
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0)
-    .map(line => `<p>${line}</p>`)
-    .join('');
-};
-
-// Setup event handlers
-export const setupEventHandlers = () => {
-  const addEntryBtn = document.getElementById('add-entry-btn');
-  if (addEntryBtn) {
-    addEntryBtn.addEventListener('click', () => {
-      addEntry().catch(error => {
-        console.error('Failed to add entry:', error);
-      });
-    });
-  }
-  
-  const regeneratePromptBtn = document.getElementById('regenerate-prompt-btn');
-  if (regeneratePromptBtn) {
-    regeneratePromptBtn.addEventListener('click', regenerateAIPrompt);
-  }
-  
-
-  
-  // Enter key to add entry
-  const titleInput = document.getElementById('entry-title');
-  const contentTextarea = document.getElementById('entry-content');
-  
-  const handleEnterKey = (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      addEntry().catch(error => {
-        console.error('Failed to add entry:', error);
-      });
-    }
-  };
-  
-  if (titleInput) titleInput.addEventListener('keydown', handleEnterKey);
-  if (contentTextarea) contentTextarea.addEventListener('keydown', handleEnterKey);
-};
-
-
-
-// Update sync status indicator
-const updateSyncStatus = (status, text, title = '') => {
-  const statusElement = document.getElementById('sync-status');
-  const dotElement = document.getElementById('sync-dot');
-  const textElement = document.getElementById('sync-text');
-  
-  if (!statusElement || !dotElement || !textElement) return;
-  
-  // Show status indicator
-  statusElement.style.display = 'flex';
-  statusElement.title = title;
-  
-  // Remove all status classes
-  dotElement.className = 'sync-dot';
-  
-  // Add current status class
-  dotElement.classList.add(status);
-  textElement.textContent = text;
-  
   console.log(`Sync status: ${status} - ${text}`);
 };
 
-// Setup sync listener for real-time updates using pure functions
+// Setup sync listener for real-time updates
 export const setupSyncListener = () => {
-  // Skip in test environment
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
-    return;
-  }
-  
-  if (!yjsContext) {
+  if (!ydoc) {
     updateSyncStatus('local-only', 'Local only', 'Data is only stored locally');
     return;
   }
   
-  // Initial status
-  updateSyncStatus('connecting', 'Connecting...', 'Attempting to connect to sync server');
-  
-  // Monitor sync status using pure function
+  // Monitor sync status
   const checkSyncStatus = () => {
-    const status = getSyncStatus(yjsContext.providers);
-    if (status.connected) {
-      updateSyncStatus('connected', 'Synced', `Connected to ${status.connectedCount}/${status.totalProviders} sync servers`);
+    const connectedProviders = providers.filter(p => p.wsconnected);
+    
+    if (connectedProviders.length > 0) {
+      updateSyncStatus('connected', 'Synced', `Connected to ${connectedProviders.length}/${providers.length} sync servers`);
     } else {
       updateSyncStatus('disconnected', 'Offline', 'Not connected to sync servers - data stored locally');
     }
@@ -650,57 +414,81 @@ export const setupSyncListener = () => {
   checkSyncStatus(); // Initial check
   
   // Listen for Yjs document changes
-  yjsContext.ydoc.on('update', () => {
+  ydoc.on('update', () => {
     console.log('Yjs document updated - refreshing UI');
-    
-    // Refresh local state using pure function
-    state = getJournal(yjsContext.ydoc);
-    
+    loadStateFromYjs();
     renderEntries();
     displayCharacterSummary();
-    
-    updateSyncStatus('connected', 'Sync updated', 'Data synchronized from another device');
-    setTimeout(() => checkSyncStatus(), 2000);
   });
   
   // Listen for provider connection changes
-  yjsContext.providers.forEach(provider => {
+  providers.forEach(provider => {
     provider.on('status', checkSyncStatus);
   });
 };
 
-
-
-// Function to trigger sync update using pure functions
-export const triggerSyncUpdate = () => {
-  if (!yjsContext) {
-    console.warn('Yjs not ready for sync update');
-    return;
+// Setup event handlers
+export const setupEventHandlers = () => {
+  // Add entry form submission
+  const addEntryBtn = document.getElementById('add-entry-btn');
+  if (addEntryBtn) {
+    addEntryBtn.addEventListener('click', addEntry);
   }
   
-  // Refresh local state using pure function
-  state = getJournal(yjsContext.ydoc);
+  // Form submission with Enter key
+  const entryForm = document.getElementById('entry-form');
+  if (entryForm) {
+    entryForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      addEntry();
+    });
+  }
   
-  console.log('Sync update triggered - state refreshed from Yjs');
+  // Make functions available globally for onclick handlers
+  if (typeof window !== 'undefined') {
+    window.enableEditMode = enableEditMode;
+    window.saveEdit = saveEdit;
+    window.cancelEdit = cancelEdit;
+  }
+};
+
+// AI prompt functionality
+const displayAIPrompt = async () => {
+  try {
+    const promptContainer = document.getElementById('ai-prompt-container');
+    const promptText = document.getElementById('ai-prompt-text');
+    
+    if (!promptContainer || !promptText) return;
+    
+    if (isAIEnabled()) {
+      const prompt = await generateIntrospectionPrompt();
+      promptText.textContent = prompt;
+      promptContainer.style.display = 'block';
+    } else {
+      promptContainer.style.display = 'none';
+    }
+  } catch (error) {
+    console.error('Failed to display AI prompt:', error);
+  }
 };
 
 // Initialize app
 export const init = async () => {
   try {
-    // Load data from Yjs store (with migration if needed)
-    await loadData();
+    // Initialize Yjs
+    await initializeYjs();
     
+    // Load initial state from Yjs
+    loadStateFromYjs();
+    
+    // Setup UI
+    if (journalMap) {
+      setupCharacterForm();
+    }
     renderEntries();
     displayCharacterSummary();
     setupEventHandlers();
     setupSyncListener();
-    
-    // Expose Yjs context and functions globally for other modules
-    if (typeof window !== 'undefined') {
-      window.yjsContext = yjsContext;
-      window.yjsStore = { setCharacter, updateCharacterField };
-      window.triggerSyncUpdate = triggerSyncUpdate;
-    }
     
     // Initialize summarization
     try {
@@ -712,7 +500,7 @@ export const init = async () => {
     // Display AI prompt
     await displayAIPrompt();
     
-    console.log('App initialized successfully');
+    console.log('App initialized with direct Yjs integration');
     
   } catch (error) {
     console.error('Failed to initialize app:', error);
@@ -726,20 +514,14 @@ export const init = async () => {
 
 // Reset state to initial values (for testing)
 export const resetState = () => {
-  const initialState = createInitialJournalState();
-  state = { ...initialState };
-  // Force update all properties
-  state.character = { ...initialState.character };
-  state.entries = [...initialState.entries];
+  state = {
+    character: { name: '', race: '', class: '', backstory: '', notes: '' },
+    entries: []
+  };
   // Update global state reference for tests
   if (typeof global !== 'undefined') {
     global.state = state;
   }
-};
-
-// Reset Yjs context (for testing)
-export const resetSyncCache = () => {
-  yjsContext = null;
 };
 
 // Export state for testing
@@ -749,12 +531,4 @@ export { state };
 if (typeof document !== 'undefined' && document.addEventListener && 
     !(typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test')) {
   document.addEventListener('DOMContentLoaded', init);
-}
-
-// Export for testing (backward compatibility)
-if (typeof global !== 'undefined') {
-  global.loadData = loadData;
-  global.saveData = saveData;
-  global.state = state;
-  global.resetState = resetState;
 }
