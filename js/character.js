@@ -13,7 +13,7 @@ import {
 } from './utils.js';
 import { summarize } from './summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
-import { getSystem, Y, getSyncStatus } from './yjs.js';
+import { getSystem, Y, createSystem, onUpdate } from './yjs.js';
 
 // Load character data from Yjs
 export const loadCharacterData = () => {
@@ -324,59 +324,6 @@ export const getFormattedCharacterForAI = async (character) => {
 
 // Auto-save is handled automatically by Yjs - no explicit save needed
 
-// Setup sync status indicator
-const updateSyncStatus = (status, text, details) => {
-  const syncIndicator = document.getElementById('sync-status');
-  const syncDot = document.getElementById('sync-dot');
-  const syncText = document.getElementById('sync-text');
-  
-  if (syncIndicator) {
-    syncIndicator.style.display = 'block';
-    syncIndicator.title = details;
-  }
-  
-  if (syncDot) {
-    syncDot.className = `sync-dot ${status}`;
-  }
-  
-  if (syncText) {
-    syncText.textContent = text;
-  }
-  
-  console.log(`Sync status: ${status} - ${text}`);
-};
-
-// Setup sync listener for real-time updates
-const setupSyncListener = () => {
-  const yjsSystem = getSystem();
-  
-  if (!yjsSystem?.ydoc) {
-    updateSyncStatus('unavailable', 'Local only', 'Data is only stored locally');
-    return;
-  }
-  
-  // Monitor sync status using pure function
-  const checkSyncStatus = () => {
-    const status = getSyncStatus(yjsSystem.providers);
-    if (status.connected) {
-      updateSyncStatus('connected', 'Synced', `Connected to ${status.connectedCount}/${status.totalProviders} sync servers`);
-    } else {
-      updateSyncStatus('disconnected', 'Offline', 'Not connected to sync servers - data stored locally');
-    }
-  };
-  
-  // Check status periodically
-  setInterval(checkSyncStatus, 5000);
-  checkSyncStatus(); // Initial check
-  
-  // Listen for provider connection changes
-  if (yjsSystem.providers) {
-    yjsSystem.providers.forEach(provider => {
-      provider.on('status', checkSyncStatus);
-    });
-  }
-};
-
 // Setup summary-related event listeners
 const setupSummaryEventListeners = () => {
   const refreshBtn = document.getElementById('refresh-summaries');
@@ -402,17 +349,31 @@ const setupKeyboardShortcuts = () => {
 };
 
 // Initialize character page
-const init = () => {
-  const character = loadCharacterData();
-  populateForm(character);
-  setupSummaryEventListeners();
-  setupKeyboardShortcuts();
-  displayCharacterSummaries();
-  setupSyncListener(); // Add this line to setup sync listener
-  
-  const nameInput = document.getElementById('character-name');
-  if (nameInput && !character.name) {
-    nameInput.focus();
+const init = async () => {
+  try {
+    // Initialize Yjs system
+    await createSystem();
+    
+    // Register callback for updates
+    onUpdate(() => {
+      const character = loadCharacterData();
+      populateForm(character);
+      displayCharacterSummaries();
+    });
+    
+    // Load initial state
+    const character = loadCharacterData();
+    populateForm(character);
+    setupSummaryEventListeners();
+    setupKeyboardShortcuts();
+    displayCharacterSummaries();
+    
+    const nameInput = document.getElementById('character-name');
+    if (nameInput && !character.name) {
+      nameInput.focus();
+    }
+  } catch (error) {
+    console.error('Failed to initialize character page:', error);
   }
 };
 
