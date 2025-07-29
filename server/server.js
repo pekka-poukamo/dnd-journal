@@ -9,16 +9,17 @@ import { LeveldbPersistence } from 'y-leveldb';
 
 const PORT = process.env.PORT || process.argv[2] || 1234;
 const HOST = process.env.HOST || process.argv[3] || 'localhost';
+const DATA_DIR = process.env.DATA_DIR || './data';
 
 const wss = new WebSocketServer({ port: PORT, host: HOST });
 
 console.log(`🚀 D&D Journal Server: ws://${HOST}:${PORT}`);
-console.log(`💾 LevelDB: ./data`);
+console.log(`💾 LevelDB: ${DATA_DIR}`);
 
 wss.on('connection', (ws, req) => {
   setupWSConnection(ws, req, {
     getYDoc: (docName) => {
-      const persistence = new LeveldbPersistence('./data/' + docName);
+      const persistence = new LeveldbPersistence(DATA_DIR + '/' + docName);
       return persistence.doc;
     }
   });
