@@ -13,7 +13,7 @@ import {
 } from './utils.js';
 import { summarize } from './summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
-import { getSystem, Y } from './yjs.js';
+import { getSystem, Y, createSystem, onUpdate } from './yjs.js';
 
 // Load character data from Yjs
 export const loadCharacterData = () => {
@@ -349,16 +349,31 @@ const setupKeyboardShortcuts = () => {
 };
 
 // Initialize character page
-const init = () => {
-  const character = loadCharacterData();
-  populateForm(character);
-  setupSummaryEventListeners();
-  setupKeyboardShortcuts();
-  displayCharacterSummaries();
-  
-  const nameInput = document.getElementById('character-name');
-  if (nameInput && !character.name) {
-    nameInput.focus();
+const init = async () => {
+  try {
+    // Initialize Yjs system
+    await createSystem();
+    
+    // Register callback for updates
+    onUpdate(() => {
+      const character = loadCharacterData();
+      populateForm(character);
+      displayCharacterSummaries();
+    });
+    
+    // Load initial state
+    const character = loadCharacterData();
+    populateForm(character);
+    setupSummaryEventListeners();
+    setupKeyboardShortcuts();
+    displayCharacterSummaries();
+    
+    const nameInput = document.getElementById('character-name');
+    if (nameInput && !character.name) {
+      nameInput.focus();
+    }
+  } catch (error) {
+    console.error('Failed to initialize character page:', error);
   }
 };
 
