@@ -13,6 +13,65 @@ let yjsSystem = null;
 // Update callbacks
 const updateCallbacks = [];
 
+// Sync status update interval
+let syncStatusInterval = null;
+
+// Update sync status across all pages
+const updateSyncStatus = (status, text, details) => {
+  const syncIndicator = document.getElementById('sync-status');
+  if (syncIndicator) {
+    syncIndicator.textContent = text;
+    syncIndicator.className = `sync-${status}`;
+    syncIndicator.title = details;
+  }
+  console.log(`Sync status: ${status} - ${text}`);
+};
+
+// Setup sync listener for real-time updates (global for all pages)
+const setupGlobalSyncListener = (system) => {
+  if (!system?.ydoc) {
+    updateSyncStatus('local-only', 'Local only', 'Data is only stored locally');
+    return;
+  }
+  
+  // Monitor sync status using pure function
+  const checkSyncStatus = () => {
+    const status = getSyncStatus(system.providers);
+    if (status.connected) {
+      updateSyncStatus('connected', 'Synced', `Connected to ${status.connectedCount}/${status.totalProviders} sync servers`);
+    } else {
+      updateSyncStatus('disconnected', 'Offline', 'Not connected to sync servers - data stored locally');
+    }
+  };
+  
+  // Clear existing interval if any
+  if (syncStatusInterval) {
+    clearInterval(syncStatusInterval);
+  }
+  
+  // Check status periodically
+  syncStatusInterval = setInterval(checkSyncStatus, 5000);
+  checkSyncStatus(); // Initial check
+  
+  // Listen for provider connection changes
+  system.providers.forEach(provider => {
+    provider.on('status', ({ status }) => {
+      console.log(`Provider status changed: ${status}`);
+      checkSyncStatus();
+    });
+    
+    provider.on('connection-close', () => {
+      console.log('Provider connection closed');
+      checkSyncStatus();
+    });
+    
+    provider.on('connection-error', () => {
+      console.log('Provider connection error');
+      checkSyncStatus();
+    });
+  });
+};
+
 // Mock system for tests
 const createMockSystem = () => {
   const mockMap = {
@@ -201,6 +260,9 @@ export const createSystem = async () => {
   ydoc.on('update', () => {
     triggerUpdateCallbacks(system);
   });
+  
+  // Setup global sync status listener (works on all pages)
+  setupGlobalSyncListener(system);
   
   console.log('Yjs system initialized');
   return system;
