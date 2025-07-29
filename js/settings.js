@@ -1,6 +1,6 @@
 // Settings Page - AI Configuration & Data Management
 
-import { getSystem, Y, WebsocketProvider } from './yjs.js';
+import { getSystem, createSystem, reloadSyncProviders, Y, WebsocketProvider } from './yjs.js';
 import { createInitialSettings, createInitialJournalState } from './utils.js';
 // testApiKey is defined in this module
 
@@ -155,6 +155,9 @@ const handleSaveAllSettings = () => {
         } else {
           yjsSystem.settingsMap.delete('dnd-journal-sync-server');
         }
+        
+        // Reload sync providers with new settings
+        reloadSyncProviders();
       }
     }
     
@@ -508,7 +511,10 @@ const handleSyncServerTest = async () => {
 };
 
 // Initialize settings page
-const init = () => {
+const init = async () => {
+  // Initialize Yjs system first
+  await createSystem();
+  
   populateForm();
   setupEventHandlers();
 };

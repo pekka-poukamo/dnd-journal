@@ -11,7 +11,6 @@ import { generateIntrospectionPrompt, isAIEnabled } from './ai.js';
 import { runAutoSummarization, summarize, getSummary } from './summarization.js';
 import { 
   createSystem, 
-  getSyncStatus,
   onUpdate,
   getSystem,
   clearSystem,
@@ -406,37 +405,11 @@ export const displayCharacterSummary = () => {
   classEl.textContent = state.character.class === 'Unknown' ? '—' : (state.character.class || '—');
 };
 
-// Setup sync status indicator
-const updateSyncStatus = (status, text, details) => {
-  const syncIndicator = document.getElementById('sync-status');
-  if (syncIndicator) {
-    syncIndicator.textContent = text;
-    syncIndicator.className = `sync-${status}`;
-    syncIndicator.title = details;
-  }
-  console.log(`Sync status: ${status} - ${text}`);
-};
-
-// Setup sync listener for real-time updates
-export const setupSyncListener = () => {
+// Setup UI update listener for Yjs document changes
+const setupUIUpdateListener = () => {
   if (!yjsSystem?.ydoc) {
-    updateSyncStatus('local-only', 'Local only', 'Data is only stored locally');
     return;
   }
-  
-  // Monitor sync status using pure function
-  const checkSyncStatus = () => {
-    const status = getSyncStatus(yjsSystem.providers);
-    if (status.connected) {
-      updateSyncStatus('connected', 'Synced', `Connected to ${status.connectedCount}/${status.totalProviders} sync servers`);
-    } else {
-      updateSyncStatus('disconnected', 'Offline', 'Not connected to sync servers - data stored locally');
-    }
-  };
-  
-  // Check status periodically
-  setInterval(checkSyncStatus, 5000);
-  checkSyncStatus(); // Initial check
   
   // Listen for Yjs document changes
   yjsSystem.ydoc.on('update', () => {
@@ -444,11 +417,6 @@ export const setupSyncListener = () => {
     loadStateFromYjs();
     renderEntries();
     displayCharacterSummary();
-  });
-  
-  // Listen for provider connection changes
-  yjsSystem.providers.forEach(provider => {
-    provider.on('status', checkSyncStatus);
   });
 };
 
@@ -517,7 +485,7 @@ export const init = async () => {
     renderEntries();
     displayCharacterSummary();
     setupEventHandlers();
-    setupSyncListener();
+    setupUIUpdateListener();
     
     // Initialize summarization
     try {

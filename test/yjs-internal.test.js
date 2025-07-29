@@ -18,8 +18,8 @@ describe('Yjs Module - Internal Functions', function() {
       const system = await Yjs.createSystem();
       
       // In test environment, should always be mock system
-      expect(system).to.have.property('providers');
-      expect(Array.isArray(system.providers)).to.be.true;
+      expect(system).to.have.property('provider');
+      expect(system.provider).to.be.null;
     });
 
     it('should validate URL strings properly', function() {
@@ -38,27 +38,22 @@ describe('Yjs Module - Internal Functions', function() {
     });
 
     it('should handle malformed URL objects', function() {
-      const mockProviders = [
-        { url: 'wss://valid.com', wsconnected: true },
-        { url: 'not-a-url', wsconnected: false },
-        { url: null, wsconnected: false },
-        { url: undefined, wsconnected: false }
-      ];
+      const mockProvider = { url: 'not-a-url', wsconnected: false };
       
-      const status = Yjs.getSyncStatus(mockProviders);
+      const status = Yjs.getSyncStatus(mockProvider);
       expect(status.available).to.be.true;
-      expect(status.totalProviders).to.equal(4);
+      expect(status.connected).to.be.false;
     });
   });
 
   describe('Sync Server Configuration (getSyncServers)', function() {
     it('should handle SYNC_CONFIG errors gracefully', async function() {
-      // Test system creation which internally calls getSyncServers
+      // Test system creation which internally calls getSyncServer
       const system = await Yjs.createSystem();
       
       // Should succeed even if config has issues
       expect(system).to.be.an('object');
-      expect(system).to.have.property('providers');
+      expect(system).to.have.property('provider');
     });
 
     it('should fallback to default servers on config error', async function() {
@@ -68,18 +63,17 @@ describe('Yjs Module - Internal Functions', function() {
       const system2 = await Yjs.createSystem();
       
       expect(system1).to.not.equal(system2);
-      expect(system2).to.have.property('providers');
+      expect(system2).to.have.property('provider');
     });
   });
 
   describe('Provider Creation (createSyncProviders)', function() {
     it('should handle WebSocket provider creation errors', async function() {
-      // Test system creation which internally creates providers
+      // Test system creation which internally creates provider
       const system = await Yjs.createSystem();
       
-      // In test environment, providers array should be empty (mock)
-      expect(system.providers).to.be.an('array');
-      expect(system.providers).to.have.lengthOf(0);
+      // In test environment, provider should be null (mock)
+      expect(system.provider).to.be.null;
     });
 
     it('should filter out null providers from failed connections', function() {
@@ -273,13 +267,12 @@ describe('Yjs Module - Internal Functions', function() {
         undefined // Undefined provider
       ].filter(Boolean); // Remove null/undefined
       
-      const status = Yjs.getSyncStatus(edgeCaseProviders);
+      const status = Yjs.getSyncStatus(edgeCaseProviders[0] || null);
       
       expect(status).to.be.an('object');
       expect(status).to.have.property('available');
       expect(status).to.have.property('connected');
-      expect(status).to.have.property('providers');
-      expect(Array.isArray(status.providers)).to.be.true;
+      expect(status).to.have.property('url');
     });
   });
 
@@ -289,9 +282,8 @@ describe('Yjs Module - Internal Functions', function() {
       for (let i = 0; i < 5; i++) {
         const system = await Yjs.createSystem();
         
-        // All should be mock systems with empty providers
-        expect(system.providers).to.be.an('array');
-        expect(system.providers).to.have.lengthOf(0);
+        // All should be mock systems with null provider
+        expect(system.provider).to.be.null;
         
         Yjs.clearSystem();
       }
@@ -331,40 +323,28 @@ describe('Yjs Module - Internal Functions', function() {
     it('should handle mock system provider operations', async function() {
       const system = await Yjs.createSystem();
       
-      // Test that providers is always an empty array in mock
-      expect(system.providers).to.be.an('array');
-      expect(system.providers).to.have.lengthOf(0);
+      // Test that provider is always null in mock
+      expect(system.provider).to.be.null;
       
       // Test multiple access patterns
-      const providers1 = system.providers;
-      const providers2 = system.providers;
+      const provider1 = system.provider;
+      const provider2 = system.provider;
       
-      expect(providers1).to.equal(providers2);
+      expect(provider1).to.equal(provider2);
     });
 
     it('should test sync status with various provider configurations', function() {
       // Test with single connected provider
-      const singleConnected = [{ url: 'wss://test.com', wsconnected: true }];
+      const singleConnected = { url: 'wss://test.com', wsconnected: true };
       let status = Yjs.getSyncStatus(singleConnected);
       expect(status.connected).to.be.true;
-      expect(status.connectedCount).to.equal(1);
+      expect(status.url).to.equal('wss://test.com');
       
       // Test with single disconnected provider
-      const singleDisconnected = [{ url: 'wss://test.com', wsconnected: false }];
+      const singleDisconnected = { url: 'wss://test.com', wsconnected: false };
       status = Yjs.getSyncStatus(singleDisconnected);
       expect(status.connected).to.be.false;
-      expect(status.connectedCount).to.equal(0);
-      
-      // Test with mixed providers
-      const mixedProviders = [
-        { url: 'wss://test1.com', wsconnected: true },
-        { url: 'wss://test2.com', wsconnected: false },
-        { url: 'wss://test3.com', wsconnected: true }
-      ];
-      status = Yjs.getSyncStatus(mixedProviders);
-      expect(status.connected).to.be.true;
-      expect(status.connectedCount).to.equal(2);
-      expect(status.totalProviders).to.equal(3);
+      expect(status.url).to.equal('wss://test.com');
     });
 
     it('should handle createDocument function edge cases', function() {
