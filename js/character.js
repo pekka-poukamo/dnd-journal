@@ -1,19 +1,15 @@
 // Character Page - Simple & Functional
 
 import { 
-  safeGetFromStorage, 
-  safeSetToStorage, 
   createInitialJournalState, 
-  STORAGE_KEYS, 
   getCharacterFormFieldIds, 
   getPropertyNameFromFieldId, 
   debounce,
-  loadDataWithFallback,
   formatDate
 } from './utils.js';
+import { getSystem, Y, createSystem, onUpdate } from './yjs.js';
 import { summarize } from './summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
-import { getSystem, Y, createSystem, onUpdate } from './yjs.js';
 
 // Load character data from Yjs
 export const loadCharacterData = () => {
@@ -126,34 +122,7 @@ export const loadCharacterSummaries = () => {
     }
   });
   
-  // Fallback: check localStorage for backward compatibility
-  if (Object.keys(combinedSummaries).length === 0) {
-    const characterSummaries = loadDataWithFallback(STORAGE_KEYS.CHARACTER_SUMMARIES, {});
-    const generalSummaries = loadDataWithFallback('simple-summaries', {});
-    
-    // Prioritize new combined summary format
-    if (generalSummaries['character:combined']) {
-      combinedSummaries['character:combined'] = generalSummaries['character:combined'];
-    } else {
-      // Add from dedicated character summaries storage
-      Object.keys(characterSummaries).forEach(field => {
-        if (characterSummaries[field]) {
-          combinedSummaries[`character:${field}`] = {
-            content: characterSummaries[field].summary || characterSummaries[field].content,
-            words: characterSummaries[field].words || 0,
-            timestamp: characterSummaries[field].timestamp
-          };
-        }
-      });
-      
-             // Add from general summaries storage
-       Object.keys(generalSummaries).forEach(key => {
-         if (key.startsWith('character:') && key !== 'character:combined') {
-           combinedSummaries[key] = generalSummaries[key];
-         }
-       });
-     }
-   }
+  // Note: localStorage fallback removed per ADR-0004 - all data now in Yjs
    
    return combinedSummaries;
 };
@@ -283,9 +252,9 @@ export const generateCharacterSummaries = async () => {
 
 // Get formatted character with automatic summarization for storytelling context
 export const getFormattedCharacterForAI = async (character) => {
-  // Check if we have a combined character summary
-  const summaries = loadDataWithFallback('simple-summaries', {});
-  const combinedSummary = summaries['character:combined'];
+  // Check if we have a combined character summary from Yjs
+  const yjsSystem = getSystem();
+  const combinedSummary = yjsSystem?.summariesMap?.get('character:combined');
   
   if (combinedSummary) {
     // Use the combined summary for storytelling context

@@ -1,10 +1,7 @@
 // Settings Page - AI Configuration & Data Management
 
 import { getSystem } from './yjs.js';
-import {
-  loadDataWithFallback, createInitialSettings, createInitialJournalState,
-  safeSetToStorage, STORAGE_KEYS
-} from './utils.js';
+import { createInitialSettings, createInitialJournalState } from './utils.js';
 // testApiKey is defined in this module
 
 // Load settings from Yjs
@@ -150,11 +147,14 @@ const handleSaveAllSettings = () => {
 
     // Save sync settings
     if (syncServerInput) {
-      const serverUrl = syncServerInput.value.trim();
-      if (serverUrl) {
-        localStorage.setItem('dnd-journal-sync-server', serverUrl);
-      } else {
-        localStorage.removeItem('dnd-journal-sync-server');
+      const yjsSystem = getSystem();
+      if (yjsSystem?.settingsMap) {
+        const serverUrl = syncServerInput.value.trim();
+        if (serverUrl) {
+          yjsSystem.settingsMap.set('dnd-journal-sync-server', serverUrl);
+        } else {
+          yjsSystem.settingsMap.delete('dnd-journal-sync-server');
+        }
       }
     }
     
@@ -265,8 +265,18 @@ const handleShowAIPrompt = async () => {
     button.textContent = 'Loading...';
     
     try {
-      // Load current journal data
-      const journalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
+      // Load current journal data from Yjs
+      const yjsSystem = getSystem();
+      const journalData = yjsSystem?.journalMap ? {
+        character: {
+          name: yjsSystem.characterMap?.get('name') || '',
+          race: yjsSystem.characterMap?.get('race') || '',
+          class: yjsSystem.characterMap?.get('class') || '',
+          backstory: yjsSystem.characterMap?.get('backstory') || '',
+          notes: yjsSystem.characterMap?.get('notes') || ''
+        },
+        entries: yjsSystem.journalMap?.get('entries')?.toArray() || []
+      } : createInitialJournalState();
       
       // Get the prompt that would be sent to AI using the AI module function
       // This function is no longer available, so we'll just show an error.
@@ -452,11 +462,14 @@ const populateForm = () => {
   // Load sync server configuration
   const syncServerInput = document.getElementById('sync-server');
   if (syncServerInput) {
-    // Try to load from sync config or localStorage
+    // Try to load from Yjs settingsMap
     try {
-      const savedServer = localStorage.getItem('dnd-journal-sync-server');
-      if (savedServer) {
-        syncServerInput.value = savedServer;
+      const yjsSystem = getSystem();
+      if (yjsSystem?.settingsMap) {
+        const savedServer = yjsSystem.settingsMap.get('dnd-journal-sync-server');
+        if (savedServer) {
+          syncServerInput.value = savedServer;
+        }
       }
     } catch (e) {}
   }

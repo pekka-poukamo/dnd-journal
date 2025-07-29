@@ -71,7 +71,7 @@ Automated testing and deployment via GitHub Actions:
 - Vanilla JavaScript only
 - Functional programming
 - ES6 modules
-- localStorage only
+- Yjs with IndexedDB persistence
 - No build tools
 - All code tested
 

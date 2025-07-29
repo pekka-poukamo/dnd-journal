@@ -18,7 +18,7 @@ describe('Settings Module', function() {
       expect(settings).to.have.property('enableAIFeatures', false);
     });
 
-    it('should load existing settings from localStorage', () => {
+    it('should load existing settings from Yjs settingsMap', () => {
       const testSettings = {
         apiKey: 'sk-test123',
         enableAIFeatures: true
@@ -31,7 +31,7 @@ describe('Settings Module', function() {
       expect(loaded).to.deep.equal(testSettings);
     });
 
-    it('should save settings to localStorage', () => {
+    it('should save settings to Yjs settingsMap', () => {
       const testSettings = {
         apiKey: 'sk-test456',
         enableAIFeatures: false
@@ -45,8 +45,8 @@ describe('Settings Module', function() {
       expect(loaded).to.deep.equal(testSettings);
     });
 
-    it('should handle corrupted localStorage data gracefully', () => {
-      // Test corrupted data handling - not using localStorage anymore
+    it('should handle missing Yjs system gracefully', () => {
+      // Test missing system handling - Yjs provides robust error handling
 
       const settings = Settings.loadSettings();
       

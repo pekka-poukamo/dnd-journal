@@ -8,32 +8,14 @@ describe('Utils Module', function() {
     await clearSystem();
     await createSystem();
     
-    // Set up minimal localStorage mock for utils tests
-    global.localStorage = {
-      data: {},
-      setItem: function(key, value) { this.data[key] = value; },
-      getItem: function(key) { return this.data[key] || null; },
-      removeItem: function(key) { delete this.data[key]; },
-      clear: function() { this.data = {}; }
-    };
+    // Note: localStorage mock removed per ADR-0004 - all persistence uses Yjs
   });
 
   afterEach(async function() {
     await clearSystem();
-    if (global.localStorage) {
-      global.localStorage.clear();
-    }
   });
 
-  describe('STORAGE_KEYS', function() {
-    it('should contain all required storage keys', function() {
-      expect(Utils.STORAGE_KEYS).to.have.property('JOURNAL');
-      expect(Utils.STORAGE_KEYS).to.have.property('SETTINGS');
-      expect(Utils.STORAGE_KEYS).to.have.property('SUMMARIES');
-      expect(Utils.STORAGE_KEYS).to.have.property('META_SUMMARIES');
-      expect(Utils.STORAGE_KEYS).to.have.property('CHARACTER_SUMMARIES');
-    });
-  });
+  // Note: STORAGE_KEYS tests removed per ADR-0004 - keys no longer used with Yjs
 
   describe('safeParseJSON', function() {
     it('should parse valid JSON successfully', function() {
@@ -53,70 +35,8 @@ describe('Utils Module', function() {
     });
   });
 
-  describe('safeGetFromStorage', function() {
-    it('should return data when key exists', function() {
-      const testData = { test: 'value' };
-      global.localStorage.setItem('test-key', JSON.stringify(testData));
-      
-      const result = Utils.safeGetFromStorage('test-key');
-      expect(result.success).to.be.true;
-      expect(result.data).to.deep.equal(testData);
-    });
-
-    it('should return null when key does not exist', function() {
-      const result = Utils.safeGetFromStorage('non-existent-key');
-      expect(result.success).to.be.true;
-      expect(result.data).to.be.null;
-    });
-
-    it('should handle corrupted data gracefully', function() {
-      global.localStorage.setItem('test-key', 'invalid json');
-      
-      const result = Utils.safeGetFromStorage('test-key');
-      expect(result.success).to.be.false;
-      expect(result.error).to.be.a('string');
-    });
-  });
-
-  describe('safeSetToStorage', function() {
-    it('should save data successfully', function() {
-      const testData = { test: 'value' };
-      const result = Utils.safeSetToStorage('test-key', testData);
-      
-      expect(result.success).to.be.true;
-      
-      const retrieved = global.localStorage.getItem('test-key');
-      expect(retrieved).to.equal(JSON.stringify(testData));
-    });
-  });
-
-  describe('loadDataWithFallback', function() {
-    it('should return stored data when available', function() {
-      const storedData = { stored: 'data' };
-      const fallbackData = { fallback: 'data' };
-      
-      global.localStorage.setItem('test-key', JSON.stringify(storedData));
-      
-      const result = Utils.loadDataWithFallback('test-key', fallbackData);
-      expect(result).to.deep.equal(storedData);
-    });
-
-    it('should return fallback when no data exists', function() {
-      const fallbackData = { fallback: 'data' };
-      
-      const result = Utils.loadDataWithFallback('non-existent-key', fallbackData);
-      expect(result).to.deep.equal(fallbackData);
-    });
-
-    it('should return fallback when data is corrupted', function() {
-      const fallbackData = { fallback: 'data' };
-      
-      // Using Yjs mock system instead of localStorage
-      
-      const result = Utils.loadDataWithFallback('test-key', fallbackData);
-      expect(result).to.deep.equal(fallbackData);
-    });
-  });
+  // Note: localStorage utility tests removed per ADR-0004
+  // All data persistence now uses Yjs Maps - see js/yjs.js
 
   describe('generateId', function() {
     it('should generate a unique string ID', function() {
