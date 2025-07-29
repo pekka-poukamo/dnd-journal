@@ -357,15 +357,11 @@ describe('Yjs Module', function() {
     
     describe('WebSocket URL Validation (via getSyncStatus)', function() {
       it('should handle providers with invalid URLs', function() {
-        const mockProviders = [
-          { url: null, wsconnected: false },
-          { url: '', wsconnected: false },
-          { url: 'not-a-websocket-url', wsconnected: false }
-        ];
+        const mockProvider = { url: null, wsconnected: false };
         
-        const status = Yjs.getSyncStatus(mockProviders);
+        const status = Yjs.getSyncStatus(mockProvider);
         expect(status.available).to.be.true;
-        expect(status.providers).to.have.lengthOf(3);
+        expect(status.url).to.be.null;
       });
     });
 
@@ -397,9 +393,8 @@ describe('Yjs Module', function() {
         // Test that system creation handles configuration properly
         const system = await Yjs.createSystem();
         
-        // Mock system should have empty providers array
-        expect(system.providers).to.be.an('array');
-        expect(system.providers).to.have.lengthOf(0);
+        // Mock system should have null provider
+        expect(system.provider).to.be.null;
       });
     });
   });
