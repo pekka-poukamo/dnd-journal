@@ -48,7 +48,10 @@ export const saveCharacterData = (characterData) => {
 // Setup character form with direct Yjs binding for individual fields
 export const setupCharacterForm = () => {
   const yjsSystem = getSystem();
-  if (!yjsSystem?.characterMap) return;
+  if (!yjsSystem?.characterMap) {
+    console.warn('Yjs system not ready for character form setup');
+    return;
+  }
   
   const fields = ['name', 'race', 'class', 'backstory', 'notes'];
   
@@ -58,33 +61,42 @@ export const setupCharacterForm = () => {
       // Load initial value from Yjs
       input.value = yjsSystem.characterMap.get(field) || '';
       
+      // Remove existing event listeners to prevent duplicates
+      const oldUpdateField = input._updateField;
+      if (oldUpdateField) {
+        input.removeEventListener('input', oldUpdateField);
+      }
+      
       // Update Yjs on input change (individual field updates) - Yjs handles persistence
       const updateField = debounce(() => {
         yjsSystem.characterMap.set(field, input.value);
         yjsSystem.characterMap.set('lastModified', Date.now());
       }, 300);
       
+      // Store reference to prevent duplicates
+      input._updateField = updateField;
       input.addEventListener('input', updateField);
-      
-      // Listen for Yjs updates to sync field changes from other clients
-      yjsSystem.characterMap.observe((event) => {
-        event.changes.keys.forEach((change, key) => {
-          if (key === field && input.value !== yjsSystem.characterMap.get(key)) {
-            input.value = yjsSystem.characterMap.get(key) || '';
-          }
-        });
-      });
     }
   });
+  
+  // Set up single observer for all character map changes
+  if (!yjsSystem.characterMap._observerSetup) {
+    yjsSystem.characterMap.observe((event) => {
+      event.changes.keys.forEach((change, key) => {
+        // Only update fields that exist and have changed
+        if (fields.includes(key)) {
+          const input = document.getElementById(`character-${key}`);
+          if (input && input.value !== yjsSystem.characterMap.get(key)) {
+            input.value = yjsSystem.characterMap.get(key) || '';
+          }
+        }
+      });
+    });
+    yjsSystem.characterMap._observerSetup = true;
+  }
 };
 
-// Initialize character form when this module loads (character.html only)
-if (typeof document !== 'undefined' && document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setupCharacterForm);
-} else if (typeof document !== 'undefined') {
-  // DOM already loaded
-  setupCharacterForm();
-}
+// Remove immediate form setup - will be handled in proper init sequence
 
 // Pure function to get character data from form
 export const getCharacterFromForm = () => 
@@ -351,19 +363,20 @@ const setupKeyboardShortcuts = () => {
 // Initialize character page
 const init = async () => {
   try {
-    // Initialize Yjs system
+    // Initialize Yjs system first
     await createSystem();
+    
+    // Setup character form binding after Yjs is ready
+    setupCharacterForm();
     
     // Register callback for updates
     onUpdate(() => {
       const character = loadCharacterData();
-      populateForm(character);
       displayCharacterSummaries();
     });
     
     // Load initial state
     const character = loadCharacterData();
-    populateForm(character);
     setupSummaryEventListeners();
     setupKeyboardShortcuts();
     displayCharacterSummaries();
@@ -372,6 +385,8 @@ const init = async () => {
     if (nameInput && !character.name) {
       nameInput.focus();
     }
+    
+    console.log('Character page initialized with Yjs sync');
   } catch (error) {
     console.error('Failed to initialize character page:', error);
   }
