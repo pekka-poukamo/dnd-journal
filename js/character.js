@@ -1,14 +1,10 @@
 // Character Page - Simple & Functional
 
 import { 
-  safeGetFromStorage, 
-  safeSetToStorage, 
   createInitialJournalState, 
-  STORAGE_KEYS, 
   getCharacterFormFieldIds, 
   getPropertyNameFromFieldId, 
   debounce,
-  loadDataWithFallback,
   formatDate
 } from './utils.js';
 import { summarize } from './summarization.js';
@@ -123,7 +119,7 @@ export const populateForm = (character) => {
   });
 };
 
-// Load character summaries from storage
+// Load character summaries from Yjs only (no localStorage fallback per ADR-0004)
 export const loadCharacterSummaries = () => {
   const yjsSystem = getSystem();
   if (!yjsSystem?.summariesMap) return {};
@@ -140,35 +136,6 @@ export const loadCharacterSummaries = () => {
       };
     }
   });
-  
-  // Fallback: check localStorage for backward compatibility
-  if (Object.keys(combinedSummaries).length === 0) {
-    const characterSummaries = loadDataWithFallback(STORAGE_KEYS.CHARACTER_SUMMARIES, {});
-    const generalSummaries = loadDataWithFallback('simple-summaries', {});
-    
-    // Prioritize new combined summary format
-    if (generalSummaries['character:combined']) {
-      combinedSummaries['character:combined'] = generalSummaries['character:combined'];
-    } else {
-      // Add from dedicated character summaries storage
-      Object.keys(characterSummaries).forEach(field => {
-        if (characterSummaries[field]) {
-          combinedSummaries[`character:${field}`] = {
-            content: characterSummaries[field].summary || characterSummaries[field].content,
-            words: characterSummaries[field].words || 0,
-            timestamp: characterSummaries[field].timestamp
-          };
-        }
-      });
-      
-             // Add from general summaries storage
-       Object.keys(generalSummaries).forEach(key => {
-         if (key.startsWith('character:') && key !== 'character:combined') {
-           combinedSummaries[key] = generalSummaries[key];
-         }
-       });
-     }
-   }
    
    return combinedSummaries;
 };
@@ -303,8 +270,8 @@ export const getFormattedCharacterForAI = async (character) => {
     return { name: 'Unnamed Character' };
   }
   
-  // Check if we have a combined character summary
-  const summaries = loadDataWithFallback('simple-summaries', {});
+  // Check if we have a combined character summary from Yjs only (no localStorage per ADR-0004)
+  const summaries = loadCharacterSummaries();
   const combinedSummary = summaries['character:combined'];
   
   if (combinedSummary) {
