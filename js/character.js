@@ -33,6 +33,7 @@ export const loadCharacterData = () => {
 export const saveCharacterData = (characterData) => {
   const yjsSystem = getSystem();
   if (!yjsSystem?.characterMap) return { success: false };
+  if (!characterData) return { success: false };
   
   // Set each field individually for CRDT conflict resolution
   yjsSystem.characterMap.set('name', characterData.name || '');
@@ -111,6 +112,8 @@ export const getCharacterFromForm = () =>
 
 // Pure function to populate form with character data
 export const populateForm = (character) => {
+  if (!character) return;
+  
   getCharacterFormFieldIds().forEach(fieldId => {
     const element = document.getElementById(fieldId);
     if (element) {
@@ -295,6 +298,11 @@ export const generateCharacterSummaries = async () => {
 
 // Get formatted character with automatic summarization for storytelling context
 export const getFormattedCharacterForAI = async (character) => {
+  // Handle null/undefined character input
+  if (!character) {
+    return { name: 'Unnamed Character' };
+  }
+  
   // Check if we have a combined character summary
   const summaries = loadDataWithFallback('simple-summaries', {});
   const combinedSummary = summaries['character:combined'];
@@ -330,8 +338,12 @@ export const getFormattedCharacterForAI = async (character) => {
     }
   }
   
-  // Fallback to original character data
-  return { ...character };
+  // Fallback to original character data with proper name handling
+  const result = { ...character };
+  if (!result.name || result.name.trim() === '') {
+    result.name = 'Unnamed Character';
+  }
+  return result;
 };
 
 // Auto-save is handled automatically by Yjs - no explicit save needed
