@@ -14,8 +14,15 @@ Open `index.html` in a browser.
 Real-time sync across devices using Yjs. Data persists locally and optionally syncs through a server.
 
 ### Local Server
+
+**First time setup:**
 ```bash
-npm run server  # Installs server deps and starts server
+npm run setup:server  # Install server dependencies once
+```
+
+**Start the server:**
+```bash
+npm run server  # Auto-installs deps and starts server
 ```
 
 Then in Settings, set sync server to `ws://localhost:1234`. Documents persist in LevelDB at `./server/data/`.
