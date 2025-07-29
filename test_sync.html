@@ -9,32 +9,70 @@
     <button onclick="testSync()">Test Sync</button>
     <button onclick="setServer()">Set Server</button>
     
-    <script>
+    <script type="module">
+        let yjsSystem = null;
+        
         function log(msg) {
             document.getElementById('output').innerHTML += '<p>' + msg + '</p>';
             console.log(msg);
         }
         
-        function setServer() {
-            localStorage.setItem('dnd-journal-sync-server', 'ws://192.168.1.104:1234');
-            log('Set server to ws://192.168.1.104:1234');
+        async function initYjs() {
+            try {
+                const { createSystem } = await import('./js/yjs.js');
+                yjsSystem = await createSystem();
+                log('Yjs system initialized');
+                return yjsSystem;
+            } catch (e) {
+                log('Error initializing Yjs: ' + e.message);
+                return null;
+            }
         }
         
-        function testSync() {
+        async function setServer() {
+            if (!yjsSystem) {
+                await initYjs();
+            }
+            
+            if (yjsSystem?.settingsMap) {
+                yjsSystem.settingsMap.set('dnd-journal-sync-server', 'ws://192.168.1.104:1234');
+                log('Set server to ws://192.168.1.104:1234 in Yjs settingsMap');
+            } else {
+                log('Yjs system not available');
+            }
+        }
+        
+        async function testSync() {
             log('Testing sync configuration...');
             
-            // Check localStorage
-            const saved = localStorage.getItem('dnd-journal-sync-server');
-            log('Saved server: ' + saved);
+            if (!yjsSystem) {
+                await initYjs();
+            }
+            
+            // Check Yjs settingsMap
+            if (yjsSystem?.settingsMap) {
+                const saved = yjsSystem.settingsMap.get('dnd-journal-sync-server');
+                log('Saved server in Yjs: ' + saved);
+            } else {
+                log('Yjs system not available');
+            }
             
             // Test sync config module
-            import('./sync-config.js').then(module => {
+            try {
+                const module = await import('./sync-config.js');
                 log('Sync config loaded');
                 log('Config server: ' + module.SYNC_CONFIG.server);
-            }).catch(e => {
+            } catch (e) {
                 log('Error loading sync config: ' + e.message);
-            });
+            }
         }
+        
+        // Make functions global so buttons can call them
+        window.setServer = setServer;
+        window.testSync = testSync;
+        
+        // Initialize on load
+        log('Page loaded - ready to test');
     </script>
 </body>
 </html>

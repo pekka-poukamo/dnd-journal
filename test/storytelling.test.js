@@ -88,7 +88,7 @@ describe('Storytelling Module', function() {
     });
 
     it('should return object with false ready state with character but no entries', function() {
-      // hasGoodContext uses localStorage fallback, not Yjs system
+      // hasGoodContext now uses Yjs system only per ADR-0004
       const result = Storytelling.hasGoodContext();
       expect(result).to.be.an('object');
       expect(result).to.have.property('hasCharacter', false);
@@ -96,7 +96,7 @@ describe('Storytelling Module', function() {
     });
 
     it('should return object with false ready state with entries but no character', function() {
-      // hasGoodContext uses localStorage fallback, not Yjs system
+      // hasGoodContext now uses Yjs system only per ADR-0004
       const result = Storytelling.hasGoodContext();
       expect(result).to.be.an('object');
       expect(result).to.have.property('hasCharacter', false);
@@ -104,7 +104,7 @@ describe('Storytelling Module', function() {
     });
 
     it('should return object structure for context checking', async function() {
-      // hasGoodContext uses localStorage fallback since it's a legacy function
+      // hasGoodContext now uses Yjs system only per ADR-0004
       const result = Storytelling.hasGoodContext();
       expect(result).to.be.an('object');
       expect(result).to.have.property('hasCharacter');
@@ -182,10 +182,10 @@ describe('Storytelling Module', function() {
     });
 
     it('should work with journal entries from app module', async function() {
-      // getCharacterContext uses localStorage fallback for entries
+      // getCharacterContext now uses Yjs system only per ADR-0004
       const context = await Storytelling.getCharacterContext();
       expect(context.entries).to.be.an('array');
-      // In test environment with empty localStorage, entries will be empty
+      // In test environment with empty Yjs mock, entries will be empty
       expect(context.entries.length).to.be.at.least(0);
     });
   });

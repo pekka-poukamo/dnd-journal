@@ -1,7 +1,7 @@
 // Summarization - Pure content summarization with auto meta-summaries
 // Following functional programming principles and style guide
 
-import { loadDataWithFallback, safeSetToStorage, generateId, createInitialJournalState, STORAGE_KEYS } from './utils.js';
+import { generateId, createInitialJournalState } from './utils.js';
 import { createUserPromptFunction, createTemplateFunction, isAPIAvailable } from './openai-wrapper.js';
 import { getSystem, Y } from './yjs.js';
 
@@ -346,8 +346,9 @@ export const getAllSummariesAsObject = () => {
 // Legacy function for settings page compatibility
 export const getSummaryStats = () => {
   const stats = getStats();
-  const journal = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
-  const totalEntries = (journal.entries || []).length;
+  const yjsSystem = getSystem();
+  const entries = yjsSystem?.journalMap?.get('entries')?.toArray() || [];
+  const totalEntries = entries.length;
   const recentEntries = Math.min(totalEntries, 5); // Consider last 5 entries as recent
   
   return {
@@ -362,8 +363,8 @@ export const getSummaryStats = () => {
 
 // Legacy function for auto-summarization - simplified for new architecture
 export const autoSummarizeEntries = async () => {
-  const journal = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
-  const entries = journal.entries || [];
+  const yjsSystem = getSystem();
+  const entries = yjsSystem?.journalMap?.get('entries')?.toArray() || [];
   const results = [];
   
   // Only summarize recent entries that need it

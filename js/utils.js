@@ -1,14 +1,8 @@
 // Shared Utilities - Common functions used across modules
 // Following functional programming principles and style guide
 
-// Storage keys - centralized constants
-export const STORAGE_KEYS = {
-  JOURNAL: 'simple-dnd-journal',
-  SETTINGS: 'simple-dnd-journal-settings',
-  SUMMARIES: 'simple-dnd-journal-summaries',
-  META_SUMMARIES: 'simple-dnd-journal-meta-summaries',
-  CHARACTER_SUMMARIES: 'simple-dnd-journal-character-summaries'
-};
+// Note: STORAGE_KEYS removed per ADR-0004 - use Yjs Maps instead
+// All data is now stored in Yjs Maps: characterMap, journalMap, settingsMap, summariesMap
 
 // Pure function for safe JSON parsing
 export const safeParseJSON = (jsonString) => {
@@ -19,33 +13,8 @@ export const safeParseJSON = (jsonString) => {
   }
 };
 
-// Pure function for safe localStorage operations (DEPRECATED - use Yjs instead)
-// These functions are kept for backward compatibility and testing only
-export const safeGetFromStorage = (key) => {
-  try {
-    const stored = localStorage.getItem(key);
-    return stored ? safeParseJSON(stored) : { success: true, data: null };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-};
-
-// Pure function for safe localStorage saving (DEPRECATED - use Yjs instead)
-// This function is kept for backward compatibility and testing only
-export const safeSetToStorage = (key, data) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-};
-
-// Pure function to load data with fallback
-export const loadDataWithFallback = (key, fallbackData) => {
-  const result = safeGetFromStorage(key);
-  return result.success && result.data ? result.data : fallbackData;
-};
+// Note: localStorage functions have been removed per ADR-0004
+// All data persistence must use Yjs Maps - see js/yjs.js
 
 // Pure function to generate unique IDs
 export const generateId = () => Date.now().toString();

@@ -23,11 +23,8 @@
 // ================================
 
 import { 
-  loadDataWithFallback, 
   createInitialSettings, 
-  getWordCount, 
-  STORAGE_KEYS, 
-  safeSetToStorage 
+  getWordCount 
 } from './utils.js';
 import { getSummaryByKey, storeSummary } from './summarization.js';
 import { loadSettings } from './settings.js';
@@ -362,8 +359,19 @@ export const getIntrospectionPromptForPreview = async (character, entries) => {
 
 // Format character data for AI processing (with summaries if available)
 export const getFormattedCharacterForAI = (character) => {
-  // Use consistent storage utilities
-  const characterSummaries = loadDataWithFallback('simple-dnd-journal-character-summaries', {});
+  // Get character summaries from Yjs system
+  const yjsSystem = getSystem();
+  const characterSummaries = {};
+  
+  // Collect character-related summaries from Yjs summariesMap
+  if (yjsSystem?.summariesMap) {
+    yjsSystem.summariesMap.forEach((value, key) => {
+      if (key.startsWith('character:')) {
+        const field = key.replace('character:', '');
+        characterSummaries[field] = value;
+      }
+    });
+  }
   
   return {
     ...character,
@@ -435,10 +443,10 @@ export const getFormattedEntriesForAI = () => {
       });
     }
   } else {
-    // Fallback to localStorage
-    processedJournalData = loadDataWithFallback(STORAGE_KEYS.JOURNAL, { character: {}, entries: [] });
-    entrySummaries = loadDataWithFallback(STORAGE_KEYS.SUMMARIES, {});
-    metaSummaries = loadDataWithFallback('simple-dnd-journal-meta-summaries', {});
+    // No Yjs system available - use empty data
+    processedJournalData = { character: {}, entries: [] };
+    entrySummaries = {};
+    metaSummaries = {};
   }
   
   // Get all entry IDs that are already included in meta-summaries to avoid duplication

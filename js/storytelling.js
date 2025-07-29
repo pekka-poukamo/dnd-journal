@@ -1,7 +1,8 @@
 // Storytelling - D&D narrative questions using summaries when relevant
 // Following functional programming principles and style guide
 
-import { loadDataWithFallback, STORAGE_KEYS, createInitialJournalState } from './utils.js';
+import { createInitialJournalState } from './utils.js';
+import { getSystem } from './yjs.js';
 import { createSystemPromptFunction, isAPIAvailable } from './openai-wrapper.js';
 import { getAllSummaries, summarize } from './summarization.js';
 import { getFormattedCharacterForAI } from './character.js';
@@ -84,10 +85,16 @@ const getFormattedEntries = async (entries) => {
 export const generateQuestions = async (character = null, entries = null) => {
   if (!isAPIAvailable()) return null;
 
-  // Load from storage if not provided
-  const journal = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
-  const finalCharacter = character || journal.character || {};
-  const finalEntries = entries || journal.entries || [];
+  // Load from Yjs if not provided
+  const yjsSystem = getSystem();
+  const finalCharacter = character || (yjsSystem ? {
+    name: yjsSystem.characterMap?.get('name') || '',
+    race: yjsSystem.characterMap?.get('race') || '',
+    class: yjsSystem.characterMap?.get('class') || '',
+    backstory: yjsSystem.characterMap?.get('backstory') || '',
+    notes: yjsSystem.characterMap?.get('notes') || ''
+  } : {});
+  const finalEntries = entries || yjsSystem?.journalMap?.get('entries')?.toArray() || [];
 
   // Format character info with auto-summarization
   const formattedChar = await getFormattedCharacterForAI(finalCharacter);
@@ -131,9 +138,15 @@ export const getIntrospectionQuestions = async () => {
 
 // Get all available context for character (for debugging/preview)
 export const getCharacterContext = async () => {
-  const journal = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
-  const character = journal.character || {};
-  const entries = journal.entries || [];
+  const yjsSystem = getSystem();
+  const character = yjsSystem ? {
+    name: yjsSystem.characterMap?.get('name') || '',
+    race: yjsSystem.characterMap?.get('race') || '',
+    class: yjsSystem.characterMap?.get('class') || '',
+    backstory: yjsSystem.characterMap?.get('backstory') || '',
+    notes: yjsSystem.characterMap?.get('notes') || ''
+  } : {};
+  const entries = yjsSystem?.journalMap?.get('entries')?.toArray() || [];
   
   const formattedCharacter = await getFormattedCharacterForAI(character);
   const formattedEntries = await getFormattedEntries(entries);
@@ -161,11 +174,12 @@ export const getCharacterContext = async () => {
 
 // Check if storytelling has good context
 export const hasGoodContext = () => {
-  const journal = loadDataWithFallback(STORAGE_KEYS.JOURNAL, createInitialJournalState());
+  const yjsSystem = getSystem();
+  const entries = yjsSystem?.journalMap?.get('entries')?.toArray() || [];
   const summaries = getAllSummaries();
   
-  const hasCharacter = Boolean(journal.character?.name);
-  const hasContent = (journal.entries?.length || 0) > 0 || summaries.length > 0;
+  const hasCharacter = Boolean(yjsSystem?.characterMap?.get('name'));
+  const hasContent = entries.length > 0 || summaries.length > 0;
   
   return {
     hasCharacter,

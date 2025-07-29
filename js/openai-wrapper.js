@@ -1,7 +1,7 @@
 // OpenAI Wrapper - Pure OpenAI interface with currying
 // Following functional programming principles and style guide
 
-import { loadDataWithFallback, createInitialSettings, STORAGE_KEYS } from './utils.js';
+import { createInitialSettings } from './utils.js';
 import { loadSettings } from './settings.js';
 
 // =============================================================================

@@ -37,20 +37,19 @@ const createMockSystem = () => {
       data: {},
       get: function(key) {
         if (key === 'entries') {
-          // Check if entries were set, otherwise return default empty array structure
           const entries = this.data[key];
-          if (entries) {
-            // If entries were set directly as an array, return them as-is
-            if (Array.isArray(entries)) {
-              return entries;
-            }
-            // If entries were set as an object with toArray, return that
+          if (entries && Array.isArray(entries)) {
+            // Return array with toArray method attached for compatibility
+            const arrayWithMethod = [...entries];
+            arrayWithMethod.toArray = () => arrayWithMethod;
+            return arrayWithMethod;
+          } else if (entries && entries.toArray) {
             return entries;
           }
-          // Default empty structure
-          return {
-            toArray: () => []
-          };
+          // Default empty structure with toArray method
+          const emptyArray = [];
+          emptyArray.toArray = () => emptyArray;
+          return emptyArray;
         }
         return this.data[key] || null;
       }
