@@ -1,6 +1,6 @@
 // Settings Page - AI Configuration & Data Management
 
-import { getSystem, Y, WebsocketProvider } from './yjs.js';
+import { getSystem, createSystem, Y, WebsocketProvider } from './yjs.js';
 import { createInitialSettings, createInitialJournalState } from './utils.js';
 // testApiKey is defined in this module
 
