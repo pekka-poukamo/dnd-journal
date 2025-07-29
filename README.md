@@ -36,6 +36,19 @@ npm install
 npm start
 ```
 
+The server runs on `0.0.0.0:1234` by default, allowing local network connections.
+
+### Expected Startup Warning
+
+When starting the server, you may see this warning:
+```
+Yjs was already imported. This breaks constructor checks and will lead to issues! - https://github.com/yjs/yjs/issues/438
+```
+
+**This warning is normal and expected.** It occurs because both `y-leveldb` and `y-websocket` packages have their own internal Yjs imports. Despite the warning message, the server functions perfectly - all WebSocket connections, document synchronization, and LevelDB persistence work correctly.
+
+This is a known cosmetic issue in the Yjs ecosystem when combining server-side packages and can be safely ignored.
+
 ## Development
 
 ```bash

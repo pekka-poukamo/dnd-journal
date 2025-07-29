@@ -1,7 +1,7 @@
 {
   "name": "dnd-journal-server",
   "version": "1.0.0",
-  "description": "D&D Journal sync server",
+  "description": "D&D Journal sync server (Note: Yjs import warning on startup is normal)",
   "type": "module",
   "main": "server.js",
   "scripts": {

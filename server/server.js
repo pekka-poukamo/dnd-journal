@@ -2,6 +2,10 @@
 
 // D&D Journal - Simple Yjs Server with y-leveldb
 // Usage: node server.js [port] [host]
+//
+// NOTE: You may see a warning "Yjs was already imported" on startup.
+// This is expected and harmless - it occurs because y-leveldb and y-websocket
+// both have internal Yjs imports. Server functionality is not affected.
 
 import { WebSocketServer } from 'ws';
 import { setupWSConnection } from 'y-websocket/bin/utils';
