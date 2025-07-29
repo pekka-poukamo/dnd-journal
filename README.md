@@ -11,18 +11,30 @@ Open `index.html` in a browser.
 
 ## Cross-Device Sync
 
-The journal supports real-time sync across multiple devices using Yjs.
+Real-time sync across devices using Yjs. Data persists locally and optionally syncs through a server.
 
-### Sync Status
+### Local Server
 
-Check the sync status in Settings page. Journal automatically syncs across devices when online.
+**First time setup:**
+```bash
+npm run setup:server  # Fast install with npm ci
+```
 
-### Setting Up Your Own Sync Server
+**Start the server:**
+```bash
+npm run server
+```
 
-For private or local sync:
-1. Install y-websocket server: `npm install -g y-websocket`
-2. Run server: `HOST=0.0.0.0 PORT=1234 npx y-websocket`
-3. Configure in Settings: `ws://your-server-ip:1234`
+Then in Settings, set sync server to `ws://localhost:1234`. Documents persist in LevelDB at `./server/data/`.
+
+**Note**: For deployment, only server dependencies are separate. Client uses standard `node_modules/` with import maps.
+
+### Manual Server Setup
+```bash
+cd server
+npm install
+npm start
+```
 
 ## Development
 
@@ -58,6 +70,12 @@ Automated testing and deployment via GitHub Actions:
 ├── settings.html       # Settings page
 ├── js/                 # JavaScript modules
 ├── css/                # Styles
+├── node_modules/       # Client dependencies
+├── server/             # Server with separate dependencies
 ├── test/               # Tests
 └── docs/adr/           # Architecture decisions
 ```
+
+**Dependencies separated:**
+- **Client**: Uses `node_modules/` with import maps (per ADR-0014)
+- **Server** (`./server/`): Separate package.json with LevelDB dependencies

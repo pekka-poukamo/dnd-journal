@@ -19,7 +19,8 @@ export const safeParseJSON = (jsonString) => {
   }
 };
 
-// Pure function for safe localStorage operations
+// Pure function for safe localStorage operations (DEPRECATED - use Yjs instead)
+// These functions are kept for backward compatibility and testing only
 export const safeGetFromStorage = (key) => {
   try {
     const stored = localStorage.getItem(key);
@@ -29,7 +30,8 @@ export const safeGetFromStorage = (key) => {
   }
 };
 
-// Pure function for safe localStorage saving
+// Pure function for safe localStorage saving (DEPRECATED - use Yjs instead)
+// This function is kept for backward compatibility and testing only
 export const safeSetToStorage = (key, data) => {
   try {
     localStorage.setItem(key, JSON.stringify(data));

@@ -1,0 +1,26 @@
+{
+  "name": "dnd-journal-server",
+  "version": "1.0.0",
+  "description": "D&D Journal sync server",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "mocha test/**/*.test.js --timeout 10000",
+    "test:coverage": "c8 mocha test/**/*.test.js --timeout 10000"
+  },
+  "dependencies": {
+    "ws": "^8.18.3",
+    "y-leveldb": "^0.1.2",
+    "y-websocket": "^1.5.4",
+    "yjs": "^13.6.27"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "c8": "^8.0.1",
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0"
+  }
+}

@@ -9,11 +9,15 @@
 - Pushes to any branch  
 
 **What it does**:
-1. ✅ Runs tests on Node.js 16.x, 18.x, 20.x, and 22.x
+1. ✅ Runs tests on Node.js 22.x
+2. ✅ Installs client dependencies (`npm ci`)
+3. ✅ Installs server dependencies (`npm run setup:server`)
+4. ✅ Runs complete test suite including server tests (`npm test`)
 
 **Commands used**:
-- `npm ci` - Install dependencies
-- `npm test` - Run test suite (Mocha + Chai)
+- `npm ci` - Install client dependencies (fast, deterministic)
+- `cd server && npm ci` - Install server dependencies (fast, deterministic)  
+- `npm test` - Run both client and server tests
 
 ## Coverage Report (`coverage.yml`)
 
@@ -28,8 +32,9 @@
 3. 🔄 Updates comments when PR is modified
 
 **Commands used**:
-- `npm ci` - Install dependencies
-- `npm run coverage` - Generate coverage with c8 (JSON output)
+- `npm ci` - Install client dependencies (fast, deterministic)
+- `cd server && npm ci` - Install server dependencies (fast, deterministic)
+- `npm run coverage` - Generate coverage for both client and server (c8)
 
 ## Deploy to Surge (`deploy.yml`)
 
@@ -39,13 +44,13 @@
 - Pushes to `main` branch only
 
 **What it does**:
-1. ✅ Runs tests to ensure code quality
+1. ✅ Runs client tests to ensure code quality
 2. 🚀 Deploys static files to dnd-journal.surge.sh
 3. 📝 Uses existing npm deploy script
 
 **Commands used**:
-- `npm ci` - Install dependencies
-- `npm test` - Run test suite (ensures quality before deploy)
+- `npm ci` - Install client dependencies (fast, deterministic)
+- `npm run test:client` - Run client tests only (ensures quality before deploy)
 - `npm run deploy` - Deploy to Surge.sh
 
 **Required Secrets**:
