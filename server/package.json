@@ -12,8 +12,7 @@
   "dependencies": {
     "ws": "^8.18.3",
     "y-leveldb": "^0.1.2",
-    "y-websocket": "^1.5.4",
-    "yjs": "^13.6.27"
+    "y-websocket": "^1.5.4"
   },
   "engines": {
     "node": ">=22.0.0"

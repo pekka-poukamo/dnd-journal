@@ -8,7 +8,7 @@ import { setupWSConnection } from 'y-websocket/bin/utils';
 import { LeveldbPersistence } from 'y-leveldb';
 
 const PORT = process.env.PORT || process.argv[2] || 1234;
-const HOST = process.env.HOST || process.argv[3] || 'localhost';
+const HOST = process.env.HOST || process.argv[3] || '0.0.0.0';
 const DATA_DIR = process.env.DATA_DIR || './data';
 
 const wss = new WebSocketServer({ port: PORT, host: HOST });
