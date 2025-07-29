@@ -16,7 +16,7 @@
     "coverage:server": "cd server && npm run test:coverage",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
     "deploy": "surge . http://dnd-journal.surge.sh --force",
-    "server": "cd server && npm install && npm start",
+    "server": "cd server && npm start",
     "setup": "npm install && cd server && npm install",
     "setup:server": "cd server && npm install"
   },

@@ -22,7 +22,7 @@ npm run setup:server  # Install server dependencies once
 
 **Start the server:**
 ```bash
-npm run server  # Auto-installs deps and starts server
+npm run server
 ```
 
 Then in Settings, set sync server to `ws://localhost:1234`. Documents persist in LevelDB at `./server/data/`.
