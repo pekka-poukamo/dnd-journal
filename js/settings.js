@@ -301,28 +301,11 @@ const handleShowAIPrompt = async () => {
 // Test sync server connection
 const testSyncServer = async (serverUrl) => {
 
-  // If no custom server URL, test default public servers
+  // If no custom server URL, return error - no fallback servers available
   if (!serverUrl) {
-    const defaultServers = [
-      'wss://demos.yjs.dev',
-      'wss://y-websocket.herokuapp.com'
-    ];
-    // Note: These are demo servers that may have limited reliability
-    
-    // Test the first available public server
-    for (const server of defaultServers) {
-      const result = await testSingleServer(server);
-      if (result.success) {
-        return { 
-          success: true, 
-          message: `Public sync server (${server}) is working!` 
-        };
-      }
-    }
-    
-    return { 
-      success: false, 
-      error: 'Unable to connect to public sync servers' 
+    return {
+      success: false,
+      message: 'No sync server configured. Please set up your own sync server or use localhost for development.'
     };
   }
   

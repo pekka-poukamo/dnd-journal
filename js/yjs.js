@@ -108,7 +108,8 @@ const getSyncServers = () => {
     console.warn('Error loading sync config:', e);
   }
   
-  return ['wss://demos.yjs.dev', 'wss://y-websocket.herokuapp.com'];
+  // No fallback servers - user must configure their own sync server
+  return [];
 };
 
 // Create sync providers
