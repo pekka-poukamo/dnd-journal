@@ -53,12 +53,12 @@ describe('Yjs Module - Internal Functions', function() {
 
   describe('Sync Server Configuration (getSyncServers)', function() {
     it('should handle SYNC_CONFIG errors gracefully', async function() {
-      // Test system creation which internally calls getSyncServers
+      // Test system creation which internally calls getSyncServer
       const system = await Yjs.createSystem();
       
       // Should succeed even if config has issues
       expect(system).to.be.an('object');
-      expect(system).to.have.property('providers');
+      expect(system).to.have.property('provider');
     });
 
     it('should fallback to default servers on config error', async function() {
@@ -68,18 +68,17 @@ describe('Yjs Module - Internal Functions', function() {
       const system2 = await Yjs.createSystem();
       
       expect(system1).to.not.equal(system2);
-      expect(system2).to.have.property('providers');
+      expect(system2).to.have.property('provider');
     });
   });
 
   describe('Provider Creation (createSyncProviders)', function() {
     it('should handle WebSocket provider creation errors', async function() {
-      // Test system creation which internally creates providers
+      // Test system creation which internally creates provider
       const system = await Yjs.createSystem();
       
-      // In test environment, providers array should be empty (mock)
-      expect(system.providers).to.be.an('array');
-      expect(system.providers).to.have.lengthOf(0);
+      // In test environment, provider should be null (mock)
+      expect(system.provider).to.be.null;
     });
 
     it('should filter out null providers from failed connections', function() {
@@ -273,13 +272,12 @@ describe('Yjs Module - Internal Functions', function() {
         undefined // Undefined provider
       ].filter(Boolean); // Remove null/undefined
       
-      const status = Yjs.getSyncStatus(edgeCaseProviders);
+      const status = Yjs.getSyncStatus(edgeCaseProviders[0] || null);
       
       expect(status).to.be.an('object');
       expect(status).to.have.property('available');
       expect(status).to.have.property('connected');
-      expect(status).to.have.property('providers');
-      expect(Array.isArray(status.providers)).to.be.true;
+      expect(status).to.have.property('url');
     });
   });
 
