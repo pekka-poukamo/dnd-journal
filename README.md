@@ -17,7 +17,7 @@ Real-time sync across devices using Yjs. Data persists locally and optionally sy
 
 **First time setup:**
 ```bash
-npm run setup:server  # Install server dependencies once
+npm run setup:server  # Fast install with npm ci
 ```
 
 **Start the server:**

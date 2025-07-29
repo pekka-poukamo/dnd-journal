@@ -15,8 +15,8 @@
 4. ✅ Runs complete test suite including server tests (`npm test`)
 
 **Commands used**:
-- `npm ci` - Install client dependencies
-- `npm run setup:server` - Install server dependencies  
+- `npm ci` - Install client dependencies (fast, deterministic)
+- `cd server && npm ci` - Install server dependencies (fast, deterministic)  
 - `npm test` - Run both client and server tests
 
 ## Coverage Report (`coverage.yml`)
@@ -32,8 +32,8 @@
 3. 🔄 Updates comments when PR is modified
 
 **Commands used**:
-- `npm ci` - Install client dependencies
-- `npm run setup:server` - Install server dependencies
+- `npm ci` - Install client dependencies (fast, deterministic)
+- `cd server && npm ci` - Install server dependencies (fast, deterministic)
 - `npm run coverage` - Generate coverage for both client and server (c8)
 
 ## Deploy to Surge (`deploy.yml`)
@@ -49,8 +49,8 @@
 3. 📝 Uses existing npm deploy script
 
 **Commands used**:
-- `npm ci` - Install client dependencies
-- `npm run setup:server` - Install server dependencies
+- `npm ci` - Install client dependencies (fast, deterministic)
+- `cd server && npm ci` - Install server dependencies (fast, deterministic)
 - `npm test` - Run complete test suite (ensures quality before deploy)
 - `npm run deploy` - Deploy to Surge.sh
 
