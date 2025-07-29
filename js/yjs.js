@@ -159,8 +159,17 @@ const isValidWebSocketUrl = (url) => {
 };
 
 // Get sync server configuration
-const getSyncServers = () => {
+const getSyncServers = (yjsSystem = null) => {
   try {
+    // First try to get from Yjs settings if system is available
+    if (yjsSystem?.settingsMap) {
+      const savedServer = yjsSystem.settingsMap.get('dnd-journal-sync-server');
+      if (savedServer && isValidWebSocketUrl(savedServer)) {
+        return [savedServer.trim()];
+      }
+    }
+    
+    // Fallback to static config
     if (SYNC_CONFIG?.server && isValidWebSocketUrl(SYNC_CONFIG.server)) {
       return [SYNC_CONFIG.server.trim()];
     }
@@ -173,8 +182,8 @@ const getSyncServers = () => {
 };
 
 // Create sync providers
-const createSyncProviders = (ydoc) => {
-  const servers = getSyncServers();
+const createSyncProviders = (ydoc, yjsSystem = null) => {
+  const servers = getSyncServers(yjsSystem);
   
   return servers.map(serverUrl => {
     try {
@@ -236,13 +245,24 @@ export const createSystem = async () => {
   // Create persistence
   const persistence = createPersistence(ydoc);
   
-  // Create sync providers
-  const providers = createSyncProviders(ydoc);
-  
-  // Wait for IndexedDB to sync
+  // Wait for IndexedDB to sync so settings are loaded
   await new Promise((resolve) => {
     persistence.on('synced', resolve);
   });
+  
+  // Create temporary system to access settings
+  const tempSystem = {
+    ydoc,
+    characterMap,
+    journalMap,
+    settingsMap,
+    summariesMap,
+    persistence,
+    providers: []
+  };
+  
+  // Create sync providers with access to loaded settings
+  const providers = createSyncProviders(ydoc, tempSystem);
   
   const system = {
     ydoc,
@@ -267,6 +287,22 @@ export const createSystem = async () => {
   
   console.log('Yjs system initialized');
   return system;
+};
+
+// Reload sync providers when settings change (for dynamic reconfiguration)
+export const reloadSyncProviders = () => {
+  if (!yjsSystem) return;
+  
+  // Disconnect existing providers
+  yjsSystem.providers.forEach(provider => {
+    if (provider.disconnect) provider.disconnect();
+  });
+  
+  // Create new providers with updated settings
+  const newProviders = createSyncProviders(yjsSystem.ydoc, yjsSystem);
+  yjsSystem.providers = newProviders;
+  
+  console.log('Sync providers reloaded');
 };
 
 // Get sync status
