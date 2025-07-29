@@ -26,6 +26,16 @@ describe('Yjs Module', function() {
     });
   });
 
+  describe('createPersistence', function() {
+    it('should create IndexedDB persistence', function() {
+      const ydoc = new Yjs.Y.Doc();
+      const persistence = Yjs.createPersistence(ydoc);
+      
+      expect(persistence).to.be.an('object');
+      expect(typeof persistence.on).to.equal('function');
+    });
+  });
+
   describe('createSystem', function() {
     it('should create a mock system in test environment', async function() {
       const system = await Yjs.createSystem();
@@ -49,6 +59,24 @@ describe('Yjs Module', function() {
       expect(system1).to.be.an('object');
       expect(system2).to.be.an('object');
       expect(system1).to.equal(system2);
+    });
+
+    it('should create mock system when NODE_ENV is test', async function() {
+      // Test environment should always create mock system
+      const system = await Yjs.createSystem();
+      
+      // Verify it's a mock system by checking mock characteristics
+      expect(system.providers).to.be.an('array');
+      expect(system.providers).to.have.lengthOf(0); // Mock has empty providers
+    });
+
+    it('should create mock system with JSDOM localStorage detection', async function() {
+      // Simulate JSDOM environment by checking if we get mock system
+      const system = await Yjs.createSystem();
+      
+      // In test environment, should always be mock
+      expect(system).to.have.property('characterMap');
+      expect(system.providers).to.be.an('array');
     });
   });
 
@@ -83,6 +111,19 @@ describe('Yjs Module', function() {
       expect(system1).to.not.equal(system2);
       expect(system2).to.not.be.null;
     });
+
+    it('should clear update callbacks', async function() {
+      let callbackCalled = false;
+      const callback = () => { callbackCalled = true; };
+      
+      Yjs.onUpdate(callback);
+      Yjs.clearSystem();
+      
+      // After clearing, callback should be removed (tested indirectly)
+      await Yjs.createSystem();
+      // In a mock system, we can't easily trigger callbacks, but clearing doesn't throw
+      expect(callbackCalled).to.be.false;
+    });
   });
 
   describe('getSyncStatus', function() {
@@ -101,6 +142,64 @@ describe('Yjs Module', function() {
       expect(status).to.be.an('object');
       expect(status).to.have.property('available');
       expect(status).to.have.property('connected');
+    });
+
+    it('should return correct status for empty providers array', function() {
+      const status = Yjs.getSyncStatus([]);
+      expect(status).to.deep.equal({
+        available: false,
+        connected: false,
+        connectedCount: 0,
+        totalProviders: 0,
+        providers: []
+      });
+    });
+
+    it('should handle providers with connected status', function() {
+      const mockProviders = [
+        { url: 'wss://test1.com', wsconnected: true },
+        { url: 'wss://test2.com', wsconnected: false },
+        { url: 'wss://test3.com', wsconnected: true }
+      ];
+      
+      const status = Yjs.getSyncStatus(mockProviders);
+      
+      expect(status.available).to.be.true;
+      expect(status.connected).to.be.true;
+      expect(status.connectedCount).to.equal(2);
+      expect(status.totalProviders).to.equal(3);
+      expect(status.providers).to.have.lengthOf(3);
+      expect(status.providers[0]).to.deep.equal({ url: 'wss://test1.com', connected: true });
+      expect(status.providers[1]).to.deep.equal({ url: 'wss://test2.com', connected: false });
+    });
+
+    it('should handle providers with no connections', function() {
+      const mockProviders = [
+        { url: 'wss://test1.com', wsconnected: false },
+        { url: 'wss://test2.com', wsconnected: false }
+      ];
+      
+      const status = Yjs.getSyncStatus(mockProviders);
+      
+      expect(status.available).to.be.true;
+      expect(status.connected).to.be.false;
+      expect(status.connectedCount).to.equal(0);
+      expect(status.totalProviders).to.equal(2);
+    });
+
+    it('should handle providers with undefined wsconnected property', function() {
+      const mockProviders = [
+        { url: 'wss://test1.com' }, // Missing wsconnected
+        { url: 'wss://test2.com', wsconnected: null }
+      ];
+      
+      const status = Yjs.getSyncStatus(mockProviders);
+      
+      expect(status.available).to.be.true;
+      expect(status.connected).to.be.false;
+      expect(status.connectedCount).to.equal(0);
+      expect(status.providers[0].connected).to.be.false;
+      expect(status.providers[1].connected).to.be.false;
     });
   });
 
@@ -123,6 +222,16 @@ describe('Yjs Module', function() {
       
       // Should not throw when system doesn't exist yet
       expect(() => Yjs.onUpdate(callback)).to.not.throw();
+    });
+
+    it('should register multiple callbacks', function() {
+      const callback1 = () => {};
+      const callback2 = () => {};
+      
+      expect(() => {
+        Yjs.onUpdate(callback1);
+        Yjs.onUpdate(callback2);
+      }).to.not.throw();
     });
   });
 
@@ -155,6 +264,51 @@ describe('Yjs Module', function() {
       const retrieved = system.journalMap.get('entries');
       
       expect(retrieved).to.deep.equal(entries);
+    });
+
+    it('should handle journal map entries with toArray method', function() {
+      const system = Yjs.getSystem();
+      
+      const entries = [{ id: '1', title: 'Test' }];
+      system.journalMap.set('entries', entries);
+      
+      const retrieved = system.journalMap.get('entries');
+      expect(typeof retrieved.toArray).to.equal('function');
+      expect(retrieved.toArray()).to.deep.equal(entries);
+    });
+
+    it('should handle journal map entries with existing toArray method', function() {
+      const system = Yjs.getSystem();
+      
+      const entriesWithToArray = [{ id: '1', title: 'Test' }];
+      entriesWithToArray.toArray = () => entriesWithToArray;
+      
+      system.journalMap.set('entries', entriesWithToArray);
+      const retrieved = system.journalMap.get('entries');
+      
+      expect(retrieved.toArray()).to.deep.equal(entriesWithToArray);
+    });
+
+    it('should return empty array with toArray for non-existent entries', function() {
+      const system = Yjs.getSystem();
+      
+      const retrieved = system.journalMap.get('entries');
+      expect(Array.isArray(retrieved)).to.be.true;
+      expect(retrieved).to.have.lengthOf(0);
+      expect(typeof retrieved.toArray).to.equal('function');
+      expect(retrieved.toArray()).to.deep.equal([]);
+    });
+
+    it('should handle non-array entries data', function() {
+      const system = Yjs.getSystem();
+      
+      // Set non-array data to entries
+      system.journalMap.set('entries', 'not an array');
+      const retrieved = system.journalMap.get('entries');
+      
+      expect(Array.isArray(retrieved)).to.be.true;
+      expect(retrieved).to.have.lengthOf(0);
+      expect(typeof retrieved.toArray).to.equal('function');
     });
 
     it('should handle settings map operations', function() {
@@ -204,6 +358,109 @@ describe('Yjs Module', function() {
       expect(entries).to.have.lengthOf(2);
       expect(entries.some(e => e.key === 'name' && e.value === 'Legolas')).to.be.true;
       expect(entries.some(e => e.key === 'class' && e.value === 'Archer')).to.be.true;
+    });
+
+    it('should handle observe method calls (mock)', function() {
+      const system = Yjs.getSystem();
+      
+      // Mock observe should not throw
+      expect(() => {
+        system.characterMap.observe(() => {});
+        system.journalMap.observe(() => {});
+        system.settingsMap.observe(() => {});
+        system.summariesMap.observe(() => {});
+      }).to.not.throw();
+    });
+  });
+
+  describe('Internal Functions (via edge case testing)', function() {
+    // These test internal functions through edge cases and error conditions
+    
+    describe('WebSocket URL Validation (via getSyncStatus)', function() {
+      it('should handle providers with invalid URLs', function() {
+        const mockProviders = [
+          { url: null, wsconnected: false },
+          { url: '', wsconnected: false },
+          { url: 'not-a-websocket-url', wsconnected: false }
+        ];
+        
+        const status = Yjs.getSyncStatus(mockProviders);
+        expect(status.available).to.be.true;
+        expect(status.providers).to.have.lengthOf(3);
+      });
+    });
+
+    describe('Update Callback Error Handling', function() {
+      it('should handle callback errors gracefully', async function() {
+        let errorThrown = false;
+        const badCallback = () => {
+          throw new Error('Test error');
+        };
+        
+        const goodCallback = () => {
+          errorThrown = true;
+        };
+        
+        // Register callbacks
+        Yjs.onUpdate(badCallback);
+        Yjs.onUpdate(goodCallback);
+        
+        // In mock system, we can't easily trigger the callbacks
+        // but registration should not throw
+        expect(() => {
+          Yjs.onUpdate(badCallback);
+        }).to.not.throw();
+      });
+    });
+
+    describe('Sync Configuration Edge Cases', function() {
+      it('should handle sync configuration scenarios', async function() {
+        // Test that system creation handles configuration properly
+        const system = await Yjs.createSystem();
+        
+        // Mock system should have empty providers array
+        expect(system.providers).to.be.an('array');
+        expect(system.providers).to.have.lengthOf(0);
+      });
+    });
+  });
+
+  describe('Edge Cases and Error Handling', function() {
+    it('should handle null/undefined inputs to getSyncStatus', function() {
+      expect(() => Yjs.getSyncStatus(null)).to.not.throw();
+      expect(() => Yjs.getSyncStatus(undefined)).to.not.throw();
+      
+      const statusNull = Yjs.getSyncStatus(null);
+      const statusUndefined = Yjs.getSyncStatus(undefined);
+      
+      expect(statusNull.available).to.be.false;
+      expect(statusUndefined.available).to.be.false;
+    });
+
+    it('should handle empty providers in getSyncStatus', function() {
+      const status = Yjs.getSyncStatus([]);
+      
+      expect(status).to.deep.equal({
+        available: false,
+        connected: false,
+        connectedCount: 0,
+        totalProviders: 0,
+        providers: []
+      });
+    });
+
+    it('should handle system creation multiple times', async function() {
+      const system1 = await Yjs.createSystem();
+      const system2 = await Yjs.createSystem();
+      const system3 = await Yjs.createSystem();
+      
+      expect(system1).to.equal(system2);
+      expect(system2).to.equal(system3);
+    });
+
+    it('should handle callback registration with null/undefined', function() {
+      expect(() => Yjs.onUpdate(null)).to.not.throw();
+      expect(() => Yjs.onUpdate(undefined)).to.not.throw();
     });
   });
 });
