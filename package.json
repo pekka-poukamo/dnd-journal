@@ -7,9 +7,13 @@
   "scripts": {
     "start": "npx http-server . -p 3000 -o",
     "build": "echo 'No build step needed - static site' && exit 0",
-    "test": "node --experimental-modules node_modules/.bin/mocha test/**/*.test.js --timeout 5000 --reporter spec --exit",
+    "test": "npm run test:client && npm run test:server",
+    "test:client": "node --experimental-modules node_modules/.bin/mocha test/**/*.test.js --timeout 5000 --reporter spec --exit",
+    "test:server": "cd server && npm install && npm test",
     "test:watch": "mocha test/**/*.test.js --watch --timeout 5000",
-    "coverage": "c8 npm test",
+    "coverage": "npm run coverage:client && npm run coverage:server",
+    "coverage:client": "c8 npm run test:client",
+    "coverage:server": "cd server && npm install && npm run test:coverage",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
     "deploy": "surge . http://dnd-journal.surge.sh --force",
     "server": "cd server && npm install && npm start"
