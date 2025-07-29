@@ -4,8 +4,8 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
 import { SYNC_CONFIG } from '../sync-config.js';
 
-// Export Y constructor for other modules
-export { Y };
+// Export Y constructor and WebsocketProvider for other modules
+export { Y, WebsocketProvider };
 
 // Yjs system instance
 let yjsSystem = null;
