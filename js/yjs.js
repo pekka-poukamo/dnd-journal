@@ -21,8 +21,9 @@ const updateSyncStatus = (status, text, details) => {
   const syncIndicator = document.getElementById('sync-status');
   if (syncIndicator) {
     syncIndicator.textContent = text;
-    syncIndicator.className = `sync-${status}`;
+    syncIndicator.className = `sync-status sync-${status}`;
     syncIndicator.title = details;
+    syncIndicator.style.display = 'block'; // Make visible
   }
   console.log(`Sync status: ${status} - ${text}`);
 };

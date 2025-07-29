@@ -1,35 +1,39 @@
 /* Simple Sync Status - Minimal Implementation */
 
-.sync-indicator {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.sync-status {
+  display: block;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
   margin-bottom: 0.5rem;
+  text-align: center;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
-.sync-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-secondary);
-  transition: background-color 0.3s ease;
+.sync-connected {
+  background-color: #d1fae5; /* Light green */
+  color: #047857; /* Dark green */
+  border: 1px solid #34d399;
 }
 
-.sync-dot.connected {
-  background: #10b981; /* Green */
+.sync-disconnected {
+  background-color: #fee2e2; /* Light red */
+  color: #dc2626; /* Dark red */
+  border: 1px solid #f87171;
 }
 
-.sync-dot.connecting {
-  background: #f59e0b; /* Amber */
+.sync-local-only {
+  background-color: #f3f4f6; /* Light gray */
+  color: #374151; /* Dark gray */
+  border: 1px solid #d1d5db;
+}
+
+.sync-connecting {
+  background-color: #fef3c7; /* Light amber */
+  color: #d97706; /* Dark amber */
+  border: 1px solid #fbbf24;
   animation: pulse 2s infinite;
-}
-
-.sync-dot.disconnected {
-  background: #ef4444; /* Red */
-}
-
-.sync-dot.unavailable {
-  background: var(--text-secondary); /* Gray */
 }
 
 @keyframes pulse {
