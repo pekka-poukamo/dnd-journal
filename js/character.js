@@ -44,19 +44,26 @@ export const saveCharacterData = (characterData) => {
 // Setup character form with direct Yjs binding for individual fields
 export const setupCharacterForm = () => {
   const yjsSystem = getSystem();
-  if (!yjsSystem?.characterMap) return;
+  if (!yjsSystem?.characterMap) {
+    console.warn('Yjs system not available for character form setup');
+    return;
+  }
   
-  const fields = ['name', 'race', 'class', 'backstory', 'notes'];
+  // Use the field IDs from utils.js to ensure we match the HTML
+  const fieldIds = getCharacterFormFieldIds();
   
-  fields.forEach(field => {
-    const input = document.getElementById(`character-${field}`);
+  fieldIds.forEach(fieldId => {
+    const input = document.getElementById(fieldId);
     if (input) {
+      // Convert field ID to property name (removes 'character-' prefix)
+      const propertyName = getPropertyNameFromFieldId(fieldId);
+      
       // Load initial value from Yjs
-      input.value = yjsSystem.characterMap.get(field) || '';
+      input.value = yjsSystem.characterMap.get(propertyName) || '';
       
       // Update Yjs on input change (individual field updates) - Yjs handles persistence
       const updateField = debounce(() => {
-        yjsSystem.characterMap.set(field, input.value);
+        yjsSystem.characterMap.set(propertyName, input.value);
         yjsSystem.characterMap.set('lastModified', Date.now());
       }, 300);
       
@@ -65,22 +72,20 @@ export const setupCharacterForm = () => {
       // Listen for Yjs updates to sync field changes from other clients
       yjsSystem.characterMap.observe((event) => {
         event.changes.keys.forEach((change, key) => {
-          if (key === field && input.value !== yjsSystem.characterMap.get(key)) {
+          if (key === propertyName && input.value !== yjsSystem.characterMap.get(key)) {
             input.value = yjsSystem.characterMap.get(key) || '';
           }
         });
       });
+    } else {
+      console.warn(`Character form field not found: ${fieldId}`);
     }
   });
+  
+  console.log('Character form setup complete with Yjs sync');
 };
 
-// Initialize character form when this module loads (character.html only)
-if (typeof document !== 'undefined' && document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setupCharacterForm);
-} else if (typeof document !== 'undefined') {
-  // DOM already loaded
-  setupCharacterForm();
-}
+// Note: Character form setup is now handled in init() after Yjs system is ready
 
 // Pure function to get character data from form
 export const getCharacterFromForm = () => 
@@ -323,24 +328,30 @@ const init = async () => {
     // Initialize Yjs system
     await createSystem();
     
-    // Register callback for updates
+    // Setup character form with Yjs bindings (after Yjs system is ready)
+    setupCharacterForm();
+    
+    // Register callback for updates from other clients
     onUpdate(() => {
-      const character = loadCharacterData();
-      populateForm(character);
+      // Only update summaries on external updates since form fields auto-sync
       displayCharacterSummaries();
     });
     
-    // Load initial state
-    const character = loadCharacterData();
-    populateForm(character);
+    // Setup event listeners
     setupSummaryEventListeners();
     setupKeyboardShortcuts();
+    
+    // Display initial summaries
     displayCharacterSummaries();
     
+    // Focus on name field if empty
+    const character = loadCharacterData();
     const nameInput = document.getElementById('character-name');
     if (nameInput && !character.name) {
       nameInput.focus();
     }
+    
+    console.log('Character page initialized successfully');
   } catch (error) {
     console.error('Failed to initialize character page:', error);
   }
