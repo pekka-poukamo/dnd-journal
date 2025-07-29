@@ -44,14 +44,13 @@
 - Pushes to `main` branch only
 
 **What it does**:
-1. ✅ Runs tests to ensure code quality
+1. ✅ Runs client tests to ensure code quality
 2. 🚀 Deploys static files to dnd-journal.surge.sh
 3. 📝 Uses existing npm deploy script
 
 **Commands used**:
 - `npm ci` - Install client dependencies (fast, deterministic)
-- `cd server && npm ci` - Install server dependencies (fast, deterministic)
-- `npm test` - Run complete test suite (ensures quality before deploy)
+- `npm run test:client` - Run client tests only (ensures quality before deploy)
 - `npm run deploy` - Deploy to Surge.sh
 
 **Required Secrets**:

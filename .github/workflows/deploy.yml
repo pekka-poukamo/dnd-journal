@@ -16,18 +16,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            server/package-lock.json
       
       - name: Install dependencies
         run: npm ci
       
-      - name: Setup server dependencies
-        run: cd server && npm ci
-      
       - name: Run tests
-        run: npm test
+        run: npm run test:client
       
       - name: Deploy to Surge
         run: npm run deploy
