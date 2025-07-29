@@ -29,6 +29,7 @@ import {
 import { getSummaryByKey, storeSummary } from './summarization.js';
 import { loadSettings } from './settings.js';
 import { getSystem } from './yjs.js';
+import { getEncoding } from 'js-tiktoken';
 
 // Unified narrative-focused system prompt with unobvious question element
 export const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
@@ -49,26 +50,15 @@ Make questions specific to the character's situation and recent adventures. Focu
 // Global tiktoken encoder - will be loaded asynchronously
 let tiktokenEncoder = null;
 
-// Initialize tiktoken encoder (using the lite version with cl100k_base for gpt-3.5-turbo)
+// Initialize tiktoken encoder using the cl100k_base encoding for gpt-3.5-turbo and gpt-4
 const initializeTiktoken = async () => {
   if (tiktokenEncoder) {
     return tiktokenEncoder;
   }
   
   try {
-    // Check if js-tiktoken is available globally (loaded via CDN)
-    if (typeof window.JsTiktoken === 'undefined') {
-      console.warn('js-tiktoken not available, falling back to estimation');
-      return null;
-    }
-    
-    // Load the cl100k_base encoding for gpt-3.5-turbo
-    const res = await fetch('https://tiktoken.pages.dev/js/cl100k_base.json');
-    const cl100k_base = await res.json();
-    
-    const { Tiktoken } = window.JsTiktoken;
-    tiktokenEncoder = new Tiktoken(cl100k_base);
-    
+    // Use the npm-installed js-tiktoken with ES modules
+    tiktokenEncoder = getEncoding('cl100k_base');
     return tiktokenEncoder;
   } catch (error) {
     console.warn('Failed to initialize tiktoken:', error);
