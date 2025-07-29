@@ -9,9 +9,10 @@
 - Pushes to any branch  
 
 **What it does**:
-1. ✅ Installs client dependencies (`npm ci`)
-2. ✅ Installs server dependencies (`npm run setup:server`)
-3. ✅ Runs complete test suite including server tests (`npm test`)
+1. ✅ Runs tests on Node.js 22.x
+2. ✅ Installs client dependencies (`npm ci`)
+3. ✅ Installs server dependencies (`npm run setup:server`)
+4. ✅ Runs complete test suite including server tests (`npm test`)
 
 **Commands used**:
 - `npm ci` - Install client dependencies
