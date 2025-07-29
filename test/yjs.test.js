@@ -66,8 +66,7 @@ describe('Yjs Module', function() {
       const system = await Yjs.createSystem();
       
       // Verify it's a mock system by checking mock characteristics
-      expect(system.providers).to.be.an('array');
-      expect(system.providers).to.have.lengthOf(0); // Mock has empty providers
+      expect(system.provider).to.be.null; // Mock has no provider
     });
 
     it('should create mock system with JSDOM localStorage detection', async function() {
@@ -76,7 +75,7 @@ describe('Yjs Module', function() {
       
       // In test environment, should always be mock
       expect(system).to.have.property('characterMap');
-      expect(system.providers).to.be.an('array');
+      expect(system.provider).to.be.null;
     });
   });
 
@@ -127,79 +126,59 @@ describe('Yjs Module', function() {
   });
 
   describe('getSyncStatus', function() {
-    it('should return object with disconnected status when no providers', function() {
+    it('should return object with disconnected status when no provider', function() {
       const status = Yjs.getSyncStatus();
       expect(status).to.be.an('object');
       expect(status).to.have.property('available', false);
       expect(status).to.have.property('connected', false);
-      expect(status).to.have.property('connectedCount', 0);
-      expect(status).to.have.property('totalProviders', 0);
+      expect(status).to.have.property('url', null);
     });
 
-    it('should return object with status for providers', async function() {
+    it('should return object with status for provider', async function() {
       await Yjs.createSystem();
-      const status = Yjs.getSyncStatus([]);
+      const status = Yjs.getSyncStatus(null);
       expect(status).to.be.an('object');
       expect(status).to.have.property('available');
       expect(status).to.have.property('connected');
     });
 
-    it('should return correct status for empty providers array', function() {
-      const status = Yjs.getSyncStatus([]);
+    it('should return correct status for null provider', function() {
+      const status = Yjs.getSyncStatus(null);
       expect(status).to.deep.equal({
         available: false,
         connected: false,
-        connectedCount: 0,
-        totalProviders: 0,
-        providers: []
+        url: null
       });
     });
 
-    it('should handle providers with connected status', function() {
-      const mockProviders = [
-        { url: 'wss://test1.com', wsconnected: true },
-        { url: 'wss://test2.com', wsconnected: false },
-        { url: 'wss://test3.com', wsconnected: true }
-      ];
+    it('should handle provider with connected status', function() {
+      const mockProvider = { url: 'wss://test1.com', wsconnected: true };
       
-      const status = Yjs.getSyncStatus(mockProviders);
+      const status = Yjs.getSyncStatus(mockProvider);
       
       expect(status.available).to.be.true;
       expect(status.connected).to.be.true;
-      expect(status.connectedCount).to.equal(2);
-      expect(status.totalProviders).to.equal(3);
-      expect(status.providers).to.have.lengthOf(3);
-      expect(status.providers[0]).to.deep.equal({ url: 'wss://test1.com', connected: true });
-      expect(status.providers[1]).to.deep.equal({ url: 'wss://test2.com', connected: false });
+      expect(status.url).to.equal('wss://test1.com');
     });
 
-    it('should handle providers with no connections', function() {
-      const mockProviders = [
-        { url: 'wss://test1.com', wsconnected: false },
-        { url: 'wss://test2.com', wsconnected: false }
-      ];
+    it('should handle provider with no connection', function() {
+      const mockProvider = { url: 'wss://test1.com', wsconnected: false };
       
-      const status = Yjs.getSyncStatus(mockProviders);
+      const status = Yjs.getSyncStatus(mockProvider);
       
       expect(status.available).to.be.true;
       expect(status.connected).to.be.false;
-      expect(status.connectedCount).to.equal(0);
-      expect(status.totalProviders).to.equal(2);
+      expect(status.url).to.equal('wss://test1.com');
     });
 
-    it('should handle providers with undefined wsconnected property', function() {
-      const mockProviders = [
-        { url: 'wss://test1.com' }, // Missing wsconnected
-        { url: 'wss://test2.com', wsconnected: null }
-      ];
+    it('should handle provider with undefined wsconnected property', function() {
+      const mockProvider = { url: 'wss://test1.com' }; // Missing wsconnected
       
-      const status = Yjs.getSyncStatus(mockProviders);
+      const status = Yjs.getSyncStatus(mockProvider);
       
       expect(status.available).to.be.true;
       expect(status.connected).to.be.false;
-      expect(status.connectedCount).to.equal(0);
-      expect(status.providers[0].connected).to.be.false;
-      expect(status.providers[1].connected).to.be.false;
+      expect(status.url).to.equal('wss://test1.com');
     });
   });
 
@@ -437,15 +416,13 @@ describe('Yjs Module', function() {
       expect(statusUndefined.available).to.be.false;
     });
 
-    it('should handle empty providers in getSyncStatus', function() {
-      const status = Yjs.getSyncStatus([]);
+    it('should handle null provider in getSyncStatus', function() {
+      const status = Yjs.getSyncStatus(null);
       
       expect(status).to.deep.equal({
         available: false,
         connected: false,
-        connectedCount: 0,
-        totalProviders: 0,
-        providers: []
+        url: null
       });
     });
 

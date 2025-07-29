@@ -18,8 +18,8 @@ describe('Yjs Module - Internal Functions', function() {
       const system = await Yjs.createSystem();
       
       // In test environment, should always be mock system
-      expect(system).to.have.property('providers');
-      expect(Array.isArray(system.providers)).to.be.true;
+      expect(system).to.have.property('provider');
+      expect(system.provider).to.be.null;
     });
 
     it('should validate URL strings properly', function() {

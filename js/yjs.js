@@ -37,11 +37,13 @@ const setupGlobalSyncListener = (system) => {
   
   // Monitor sync status using pure function
   const checkSyncStatus = () => {
-    const status = getSyncStatus(system.providers);
+    const status = getSyncStatus(system.provider);
     if (status.connected) {
-      updateSyncStatus('connected', 'Synced', `Connected to ${status.connectedCount}/${status.totalProviders} sync servers`);
+      updateSyncStatus('connected', 'Synced', `Connected to sync server`);
+    } else if (status.available) {
+      updateSyncStatus('disconnected', 'Offline', 'Not connected to sync server - data stored locally');
     } else {
-      updateSyncStatus('disconnected', 'Offline', 'Not connected to sync servers - data stored locally');
+      updateSyncStatus('local-only', 'Local only', 'No sync server configured - data stored locally');
     }
   };
   
@@ -55,22 +57,22 @@ const setupGlobalSyncListener = (system) => {
   checkSyncStatus(); // Initial check
   
   // Listen for provider connection changes
-  system.providers.forEach(provider => {
-    provider.on('status', ({ status }) => {
+  if (system.provider) {
+    system.provider.on('status', ({ status }) => {
       console.log(`Provider status changed: ${status}`);
       checkSyncStatus();
     });
     
-    provider.on('connection-close', () => {
+    system.provider.on('connection-close', () => {
       console.log('Provider connection closed');
       checkSyncStatus();
     });
     
-    provider.on('connection-error', () => {
+    system.provider.on('connection-error', () => {
       console.log('Provider connection error');
       checkSyncStatus();
     });
-  });
+  }
 };
 
 // Mock system for tests
@@ -117,7 +119,7 @@ const createMockSystem = () => {
     settingsMap: { ...mockMap, data: {} },
     summariesMap: { ...mockMap, data: {} },
     persistence: { on: () => {} },
-    providers: []
+    provider: null
   };
 };
 
@@ -158,41 +160,43 @@ const isValidWebSocketUrl = (url) => {
   }
 };
 
-// Get sync server configuration
-const getSyncServers = (yjsSystem = null) => {
+// Get sync server configuration (single server only)
+const getSyncServer = (yjsSystem = null) => {
   try {
     // First try to get from Yjs settings if system is available
     if (yjsSystem?.settingsMap) {
       const savedServer = yjsSystem.settingsMap.get('dnd-journal-sync-server');
       if (savedServer && isValidWebSocketUrl(savedServer)) {
-        return [savedServer.trim()];
+        return savedServer.trim();
       }
     }
     
     // Fallback to static config
     if (SYNC_CONFIG?.server && isValidWebSocketUrl(SYNC_CONFIG.server)) {
-      return [SYNC_CONFIG.server.trim()];
+      return SYNC_CONFIG.server.trim();
     }
   } catch (e) {
     console.warn('Error loading sync config:', e);
   }
   
-  // No fallback servers - user must configure their own sync server
-  return [];
+  // No server configured
+  return null;
 };
 
-// Create sync providers
-const createSyncProviders = (ydoc, yjsSystem = null) => {
-  const servers = getSyncServers(yjsSystem);
+// Create sync provider (single provider only)
+const createSyncProvider = (ydoc, yjsSystem = null) => {
+  const serverUrl = getSyncServer(yjsSystem);
   
-  return servers.map(serverUrl => {
-    try {
-      return new WebsocketProvider(serverUrl, 'dnd-journal', ydoc, { connect: true });
-    } catch (e) {
-      console.error(`Failed to connect to ${serverUrl}:`, e);
-      return null;
-    }
-  }).filter(Boolean);
+  if (!serverUrl) {
+    return null;
+  }
+  
+  try {
+    return new WebsocketProvider(serverUrl, 'dnd-journal', ydoc, { connect: true });
+  } catch (e) {
+    console.error(`Failed to connect to ${serverUrl}:`, e);
+    return null;
+  }
 };
 
 // Create Yjs document with all maps
@@ -258,11 +262,11 @@ export const createSystem = async () => {
     settingsMap,
     summariesMap,
     persistence,
-    providers: []
+    provider: null
   };
   
-  // Create sync providers with access to loaded settings
-  const providers = createSyncProviders(ydoc, tempSystem);
+  // Create sync provider with access to loaded settings
+  const provider = createSyncProvider(ydoc, tempSystem);
   
   const system = {
     ydoc,
@@ -271,7 +275,7 @@ export const createSystem = async () => {
     settingsMap,
     summariesMap,
     persistence,
-    providers
+    provider
   };
   
   // Store the system instance
@@ -289,44 +293,35 @@ export const createSystem = async () => {
   return system;
 };
 
-// Reload sync providers when settings change (for dynamic reconfiguration)
+// Reload sync provider when settings change (for dynamic reconfiguration)
 export const reloadSyncProviders = () => {
   if (!yjsSystem) return;
   
-  // Disconnect existing providers
-  yjsSystem.providers.forEach(provider => {
-    if (provider.disconnect) provider.disconnect();
-  });
+  // Disconnect existing provider
+  if (yjsSystem.provider && yjsSystem.provider.disconnect) {
+    yjsSystem.provider.disconnect();
+  }
   
-  // Create new providers with updated settings
-  const newProviders = createSyncProviders(yjsSystem.ydoc, yjsSystem);
-  yjsSystem.providers = newProviders;
+  // Create new provider with updated settings
+  const newProvider = createSyncProvider(yjsSystem.ydoc, yjsSystem);
+  yjsSystem.provider = newProvider;
   
-  console.log('Sync providers reloaded');
+  console.log('Sync provider reloaded');
 };
 
-// Get sync status
-export const getSyncStatus = (providers) => {
-  if (!providers || providers.length === 0) {
+// Get sync status (single provider)
+export const getSyncStatus = (provider) => {
+  if (!provider) {
     return {
       available: false,
       connected: false,
-      connectedCount: 0,
-      totalProviders: 0,
-      providers: []
+      url: null
     };
   }
   
-  const connectedProviders = providers.filter(p => p.wsconnected);
-  
   return {
     available: true,
-    connected: connectedProviders.length > 0,
-    connectedCount: connectedProviders.length,
-    totalProviders: providers.length,
-    providers: providers.map(p => ({
-      url: p.url,
-      connected: p.wsconnected || false
-    }))
+    connected: provider.wsconnected || false,
+    url: provider.url
   };
 };
