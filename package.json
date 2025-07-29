@@ -49,7 +49,7 @@
     "surge": "^0.23.1"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=22.0.0"
   },
   "dependencies": {
     "y-indexeddb": "^9.0.12",
