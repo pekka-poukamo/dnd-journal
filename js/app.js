@@ -4,7 +4,7 @@
 import { generateId, parseMarkdown } from './utils.js';
 import { renderEntries, focusEntryTitle, setUIUpdateCallback } from './entry-ui.js';
 import { renderCharacter, setCharacterUIUpdateCallback } from './character-ui.js';
-import { initializeYjs, onUpdate, getCharacter, getEntries, addEntry } from './yjs-direct.js';
+import { initializeYjs, onUpdate, getCharacter, getEntries, addEntry } from './yjs.js';
 
 // Simple state for UI rendering (mirrors YJS data)
 let state = { character: {}, entries: [] };

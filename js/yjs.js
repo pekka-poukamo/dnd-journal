@@ -1,211 +1,233 @@
-// Yjs Integration - Real-time collaborative data with IndexedDB and WebSocket sync
-// Following functional programming principles and ADR decisions
+// YJS Direct - Direct data binding to YJS maps
+// Simple, direct access to YJS without abstractions
 
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
-import { createInitialJournalState, createInitialSettings } from './utils.js';
 
-// Global system state
-let yjsSystem = null;
-let syncStatusListeners = [];
+// Global YJS document and maps (direct access)
+export let ydoc = null;
+export let characterMap = null;
+export let journalMap = null;
+export let settingsMap = null;
+export let summariesMap = null;
+export let provider = null;
+export let persistence = null;
 
-// Initialize Yjs system
-export const createSystem = async () => {
-  if (yjsSystem) {
-    return yjsSystem;
-  }
+// Simple update callbacks
+const updateCallbacks = [];
 
-  const ydoc = new Y.Doc();
-  
-  // Create Yjs maps for different data types
-  const characterMap = ydoc.getMap('character');
-  const journalMap = ydoc.getMap('journal');
-  const settingsMap = ydoc.getMap('settings');
-  const summariesMap = ydoc.getMap('summaries');
-
-  // Initialize with default data if empty
-  if (journalMap.size === 0) {
-    const initialState = createInitialJournalState();
-    
-    // Initialize character data
-    Object.entries(initialState.character).forEach(([key, value]) => {
-      characterMap.set(key, value);
-    });
-    
-    // Initialize entries as a Y.Array within the journal map
-    const entriesArray = new Y.Array();
-    journalMap.set('entries', entriesArray);
-    
-    console.log('Initialized Yjs with default data');
-  }
-
-  // Initialize settings if empty
-  if (settingsMap.size === 0) {
-    const initialSettings = createInitialSettings();
-    Object.entries(initialSettings).forEach(([key, value]) => {
-      settingsMap.set(key, value);
-    });
-    console.log('Initialized Yjs settings with defaults');
-  }
-
-  // Set up IndexedDB persistence
-  const indexeddbProvider = new IndexeddbPersistence('dnd-journal', ydoc);
-  
-  // Set up WebSocket provider for real-time sync
-  let websocketProvider = null;
-  
+// Initialize YJS with direct data binding
+export const initializeYjs = async () => {
   try {
-    // Try to connect to local sync server (configurable)
-    const syncServer = settingsMap.get('syncServer') || 'ws://localhost:1234';
-    websocketProvider = new WebsocketProvider(syncServer, 'dnd-journal', ydoc);
+    // Create YJS document
+    ydoc = new Y.Doc();
     
-    websocketProvider.on('status', (event) => {
-      console.log('Sync status:', event.status);
-      notifySyncStatusListeners({
-        connected: websocketProvider.wsconnected,
-        server: syncServer,
-        status: event.status
+    // Create maps for different data types
+    characterMap = ydoc.getMap('character');
+    journalMap = ydoc.getMap('journal');
+    settingsMap = ydoc.getMap('settings');
+    summariesMap = ydoc.getMap('summaries');
+    
+    // Set up IndexedDB persistence
+    persistence = new IndexeddbPersistence('dnd-journal', ydoc);
+    
+    // Set up WebSocket provider for sync
+    provider = new WebsocketProvider('ws://localhost:1234', 'dnd-journal', ydoc);
+    
+    // Set up update listener
+    ydoc.on('update', () => {
+      updateCallbacks.forEach(callback => {
+        try {
+          callback();
+        } catch (error) {
+          console.error('Update callback error:', error);
+        }
       });
     });
     
-    console.log(`WebSocket provider initialized for ${syncServer}`);
+    console.log('YJS initialized with direct data binding');
   } catch (error) {
-    console.warn('WebSocket provider initialization failed:', error);
+    console.error('Failed to initialize YJS:', error);
+    throw error;
   }
+};
 
-  // Create system object
-  yjsSystem = {
+// Register update callback
+export const onUpdate = (callback) => {
+  updateCallbacks.push(callback);
+};
+
+// Character operations (direct)
+export const getCharacter = () => {
+  if (!characterMap) return {};
+  
+  return {
+    name: characterMap.get('name') || '',
+    race: characterMap.get('race') || '',
+    class: characterMap.get('class') || '',
+    backstory: characterMap.get('backstory') || '',
+    notes: characterMap.get('notes') || ''
+  };
+};
+
+export const saveCharacter = (character) => {
+  if (!characterMap) return;
+  
+  characterMap.set('name', character.name || '');
+  characterMap.set('race', character.race || '');
+  characterMap.set('class', character.class || '');
+  characterMap.set('backstory', character.backstory || '');
+  characterMap.set('notes', character.notes || '');
+};
+
+// Journal operations (direct)
+export const getEntries = () => {
+  if (!journalMap) return [];
+  
+  const entries = [];
+  journalMap.forEach((entryData, entryId) => {
+    try {
+      const entry = typeof entryData === 'string' ? JSON.parse(entryData) : entryData;
+      entries.push({ id: entryId, ...entry });
+    } catch (error) {
+      console.error('Error parsing entry:', entryId, error);
+    }
+  });
+  
+  return entries;
+};
+
+export const addEntry = (entry) => {
+  if (!journalMap) return;
+  
+  const { id, ...entryData } = entry;
+  journalMap.set(id, JSON.stringify(entryData));
+};
+
+export const updateEntry = (entryId, title, content) => {
+  if (!journalMap) return;
+  
+  const existingEntry = journalMap.get(entryId);
+  if (!existingEntry) return;
+  
+  try {
+    const entry = typeof existingEntry === 'string' ? JSON.parse(existingEntry) : existingEntry;
+    entry.title = title;
+    entry.content = content;
+    entry.timestamp = Date.now();
+    
+    journalMap.set(entryId, JSON.stringify(entry));
+  } catch (error) {
+    console.error('Error updating entry:', error);
+  }
+};
+
+export const deleteEntry = (entryId) => {
+  if (!journalMap) return;
+  journalMap.delete(entryId);
+};
+
+// Settings operations (direct)
+export const getSettings = () => {
+  if (!settingsMap) return { apiKey: '', enableAIFeatures: false };
+  
+  return {
+    apiKey: settingsMap.get('apiKey') || '',
+    enableAIFeatures: settingsMap.get('enableAIFeatures') || false
+  };
+};
+
+export const saveSettings = (settings) => {
+  if (!settingsMap) return;
+  
+  settingsMap.set('apiKey', settings.apiKey || '');
+  settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
+};
+
+// Summaries operations (direct)
+export const getSummary = (entryId) => {
+  if (!summariesMap) return null;
+  return summariesMap.get(entryId) || null;
+};
+
+export const saveSummary = (entryId, summary) => {
+  if (!summariesMap) return;
+  summariesMap.set(entryId, summary);
+};
+
+export const getAllSummaries = () => {
+  if (!summariesMap) return {};
+  
+  const summaries = {};
+  summariesMap.forEach((summary, entryId) => {
+    summaries[entryId] = summary;
+  });
+  
+  return summaries;
+};
+
+export const clearAllSummaries = () => {
+  if (!summariesMap) return;
+  summariesMap.clear();
+};
+
+// Sync status (direct)
+export const getSyncStatus = () => {
+  if (!provider) return { connected: false, synced: false };
+  
+  return {
+    connected: provider.wsconnected,
+    synced: provider.synced
+  };
+};
+
+// Test compatibility exports
+export const createSystem = async () => {
+  await initializeYjs();
+  return {
     ydoc,
     characterMap,
     journalMap,
     settingsMap,
     summariesMap,
-    indexeddbProvider,
-    websocketProvider,
-    updateCallbacks: []
+    persistence,
+    provider
   };
-
-  // Set up update listener for real-time sync
-  ydoc.on('update', () => {
-    yjsSystem.updateCallbacks.forEach(callback => {
-      try {
-        callback();
-      } catch (error) {
-        console.error('Update callback error:', error);
-      }
-    });
-  });
-
-  console.log('Yjs system initialized successfully');
-  return yjsSystem;
 };
 
-// Get current system
-export const getSystem = () => yjsSystem;
-
-// Export Y for use in other modules
-export { Y };
-
-// Register update callback
-export const onUpdate = (callback) => {
-  if (yjsSystem) {
-    yjsSystem.updateCallbacks.push(callback);
-  }
-};
-
-// Clear system (for testing)
-export const clearSystem = () => {
-  if (yjsSystem) {
-    yjsSystem.ydoc.destroy();
-    yjsSystem = null;
-  }
-};
-
-// Sync status management
-const notifySyncStatusListeners = (status) => {
-  syncStatusListeners.forEach(listener => {
-    try {
-      listener(status);
-    } catch (error) {
-      console.error('Sync status listener error:', error);
-    }
-  });
-};
-
-export const onSyncStatusChange = (listener) => {
-  syncStatusListeners.push(listener);
-};
-
-// Get current sync status
-export const getSyncStatus = () => {
-  if (!yjsSystem?.websocketProvider) {
-    return { connected: false, server: null };
-  }
+export const getSystem = () => {
+  if (!ydoc) return null;
   
   return {
-    connected: yjsSystem.websocketProvider.wsconnected,
-    server: yjsSystem.websocketProvider.url
+    ydoc,
+    characterMap,
+    journalMap,
+    settingsMap,
+    summariesMap,
+    persistence,
+    provider
   };
 };
 
-// Save data to system (compatibility function)
-export const saveToSystem = (data) => {
-  if (!yjsSystem) {
-    console.warn('Yjs system not initialized');
-    return false;
+export const clearSystem = () => {
+  if (ydoc) {
+    ydoc.destroy();
   }
-
-  try {
-    // Save based on data type
-    if (data.character) {
-      Object.entries(data.character).forEach(([key, value]) => {
-        yjsSystem.characterMap.set(key, value);
-      });
-    }
-
-    if (data.entries) {
-      const entriesArray = yjsSystem.journalMap.get('entries') || new Y.Array();
-      
-      // Clear existing entries and add new ones
-      entriesArray.delete(0, entriesArray.length);
-      
-      data.entries.forEach(entry => {
-        const entryMap = new Y.Map();
-        Object.entries(entry).forEach(([key, value]) => {
-          entryMap.set(key, value);
-        });
-        entriesArray.push([entryMap]);
-      });
-      
-      yjsSystem.journalMap.set('entries', entriesArray);
-    }
-
-    if (data.settings) {
-      Object.entries(data.settings).forEach(([key, value]) => {
-        yjsSystem.settingsMap.set(key, value);
-      });
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error saving to system:', error);
-    return false;
-  }
+  ydoc = null;
+  characterMap = null;
+  journalMap = null;
+  settingsMap = null;
+  summariesMap = null;
+  provider = null;
+  persistence = null;
+  updateCallbacks.length = 0;
 };
 
-// Test environment detection
-const isTestEnvironment = () => 
-  (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') ||
-  (typeof global !== 'undefined' && global.describe && global.it) ||
-  (typeof document !== 'undefined' && document.location && document.location.href === 'http://localhost/');
+// Export Y for compatibility
+export { Y };
 
 // Auto-initialize in browser environment
-if (typeof document !== 'undefined' && !isTestEnvironment()) {
-  // Auto-initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createSystem);
-  } else {
-    createSystem();
-  }
+if (typeof document !== 'undefined') {
+  initializeYjs();
 }

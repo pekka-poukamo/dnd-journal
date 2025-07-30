@@ -2,7 +2,7 @@
 // Following functional programming principles and style guide
 
 import { createInitialJournalState } from './utils.js';
-import { getSystem } from './yjs.js';
+import { getCharacter, getEntries } from './yjs.js';
 import { createSystemPromptFunction, isAPIAvailable } from './openai-wrapper.js';
 import { getAllSummaries, summarize } from './summarization.js';
 import { getFormattedCharacterForAI } from './character.js';
@@ -18,179 +18,169 @@ const STORYTELLING_PROMPT = `You are a D&D storytelling companion. Create exactl
 3. How recent events might change their path
 4. An unexpected question that explores hidden depths
 
-Make questions specific to their character and adventures.`;
+Format as numbered list. Make questions thought-provoking and character-specific.`;
 
 // =============================================================================
-// AI FUNCTION (CURRIED)
+// CONTEXT BUILDERS - PURE FUNCTIONS
 // =============================================================================
 
-// Create storytelling function with fixed prompt and settings
-const callStorytelling = createSystemPromptFunction(STORYTELLING_PROMPT, { 
-  temperature: 0.8, 
-  maxTokens: 800 // Increased from 400
-});
-
-// =============================================================================
-// CONTENT FORMATTING FOR AI
-// =============================================================================
-
-// Get comprehensive formatted entries for AI context
-const getFormattedEntries = async (entries) => {
-  const sortedEntries = [...entries].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  let formattedContent = [];
-  let wordCount = 0;
-  const targetWords = 1500; // Leave room for character info
-  
-  // Add recent entries in full (last 3)
-  const recentEntries = sortedEntries.slice(0, 3);
-  const recentFormatted = recentEntries.map(entry => {
-    const content = `Recent Adventure: ${entry.title}\n${entry.content}`;
-    wordCount += content.split(/\s+/).length;
-    return content;
-  });
-  formattedContent = [...formattedContent, ...recentFormatted];
-  
-  // Add summaries for older entries using their IDs
-  const olderEntries = sortedEntries.slice(3);
-  for (const entry of olderEntries) {
-    if (wordCount < targetWords && entry.id) {
-      const summary = await summarize(entry.id, entry.content);
-      if (summary) {
-        const content = `Past Adventure: ${entry.title} - ${summary}`;
-        formattedContent = [...formattedContent, content];
-        wordCount += content.split(/\s+/).length;
-      }
+// Get character data for storytelling context
+const getCharacterContext = () => {
+  try {
+    const character = getCharacter();
+    
+    if (!character.name && !character.race && !character.class && !character.backstory) {
+      return 'Character: No character information available yet.';
     }
+    
+    const parts = [];
+    if (character.name) parts.push(`Name: ${character.name}`);
+    if (character.race) parts.push(`Race: ${character.race}`);
+    if (character.class) parts.push(`Class: ${character.class}`);
+    if (character.backstory) parts.push(`Background: ${character.backstory}`);
+    if (character.notes) parts.push(`Notes: ${character.notes}`);
+    
+    return `Character: ${parts.join(', ')}`;
+  } catch (error) {
+    console.error('Error getting character context:', error);
+    return 'Character: Information unavailable.';
   }
+};
+
+// Get recent entries for storytelling context
+const getRecentEntriesContext = () => {
+  try {
+    const entries = getEntries();
+    
+    if (!entries || entries.length === 0) {
+      return 'Recent Adventures: No journal entries yet.';
+    }
+    
+    // Get the 3 most recent entries
+    const recentEntries = entries
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+      .slice(0, 3);
+    
+    const entriesText = recentEntries
+      .map(entry => `"${entry.title}": ${entry.content.substring(0, 200)}${entry.content.length > 200 ? '...' : ''}`)
+      .join('\n\n');
+    
+    return `Recent Adventures:\n${entriesText}`;
+  } catch (error) {
+    console.error('Error getting entries context:', error);
+    return 'Recent Adventures: Information unavailable.';
+  }
+};
+
+// Get summaries context for storytelling
+const getSummariesContext = () => {
+  try {
+    const summaries = getAllSummaries();
+    
+    if (!summaries || Object.keys(summaries).length === 0) {
+      return 'Adventure Summaries: None available yet.';
+    }
+    
+    const summaryTexts = Object.entries(summaries)
+      .filter(([key, summary]) => summary && summary.content)
+      .slice(0, 5) // Limit to 5 most relevant summaries
+      .map(([key, summary]) => {
+        const summaryType = key.startsWith('character:') ? 'Character' : 'Adventure';
+        return `${summaryType} Summary: ${summary.content}`;
+      })
+      .join('\n\n');
+    
+    return summaryTexts || 'Adventure Summaries: None available yet.';
+  } catch (error) {
+    console.error('Error getting summaries context:', error);
+    return 'Adventure Summaries: Information unavailable.';
+  }
+};
+
+// Build complete storytelling context
+export const buildStorytellingContext = () => {
+  const character = getCharacterContext();
+  const recentEntries = getRecentEntriesContext();
+  const summaries = getSummariesContext();
   
-  // Add meta-summaries for broader historical context
-  const allSummaries = getAllSummaries();
-  const metaSummaries = allSummaries.filter(s => s.type === 'meta');
-  const metaFormatted = metaSummaries
-    .filter(() => wordCount < targetWords)
-    .map(meta => {
-      const content = `Adventure Chronicles: ${meta.content}`;
-      wordCount += content.split(/\s+/).length;
-      return content;
-    });
-  
-  return [...formattedContent, ...metaFormatted];
+  return `${character}\n\n${recentEntries}\n\n${summaries}`;
 };
 
 // =============================================================================
-// STORYTELLING FUNCTIONS
+// STORYTELLING API
 // =============================================================================
 
-// Generate introspection questions for character
-export const generateQuestions = async (character = null, entries = null) => {
-  if (!isAPIAvailable()) return null;
+// Create storytelling prompt function
+const createStorytellingPrompt = createSystemPromptFunction(STORYTELLING_PROMPT);
 
-  // Load from Yjs if not provided
-  const yjsSystem = getSystem();
-  const finalCharacter = character || (yjsSystem ? {
-    name: yjsSystem.characterMap?.get('name') || '',
-    race: yjsSystem.characterMap?.get('race') || '',
-    class: yjsSystem.characterMap?.get('class') || '',
-    backstory: yjsSystem.characterMap?.get('backstory') || '',
-    notes: yjsSystem.characterMap?.get('notes') || ''
-  } : {});
-  const finalEntries = entries || yjsSystem?.journalMap?.get('entries')?.toArray() || [];
-
-  // Format character info with auto-summarization
-  const formattedChar = await getFormattedCharacterForAI(finalCharacter);
-  const charInfo = formattedChar.name ? 
-    `${formattedChar.name}, a ${formattedChar.race || 'character'} ${formattedChar.class || 'adventurer'}` :
-    'your character';
-    
-  // Handle both new combined summary format and original format
-  const characterDetails = formattedChar.summary ? 
-    `\n\nCharacter Details:\n${formattedChar.summary}` :
-    [
-      formattedChar.backstory ? `\n\nCharacter Background:\n${formattedChar.backstory}` : '',
-      formattedChar.notes ? `\n\nCharacter Notes:\n${formattedChar.notes}` : ''
-    ].join('');
+// Generate storytelling questions
+export const generateStorytellingQuestions = async () => {
+  if (!isAPIAvailable()) {
+    return null;
+  }
   
-  // Format entries with comprehensive summaries
-  const formattedEntries = await getFormattedEntries(finalEntries);
-  const entriesContext = formattedEntries.length > 0 ? 
-    `\n\n=== ADVENTURE HISTORY ===\n${formattedEntries.join('\n\n')}` : '';
-
-  const prompt = `Character: ${charInfo}${characterDetails}${entriesContext}
-
-Create 4 introspective questions for this character based on their complete history and development.`;
-
   try {
-    return await callStorytelling(prompt);
+    const context = buildStorytellingContext();
+    const questions = await createStorytellingPrompt(context);
+    
+    return questions;
   } catch (error) {
-    console.error('Failed to generate questions:', error);
+    console.error('Error generating storytelling questions:', error);
     return null;
   }
 };
 
-// Get introspection questions using current journal data
-export const getIntrospectionQuestions = async () => {
-  return await generateQuestions();
+// Get storytelling questions (with caching)
+export const getStorytellingQuestions = async () => {
+  try {
+    return await generateStorytellingQuestions();
+  } catch (error) {
+    console.error('Error getting storytelling questions:', error);
+    return null;
+  }
 };
 
 // =============================================================================
-// CONTEXT UTILITIES
+// UTILITY FUNCTIONS
 // =============================================================================
 
-// Get all available context for character (for debugging/preview)
-export const getCharacterContext = async () => {
-  const yjsSystem = getSystem();
-  const character = yjsSystem ? {
-    name: yjsSystem.characterMap?.get('name') || '',
-    race: yjsSystem.characterMap?.get('race') || '',
-    class: yjsSystem.characterMap?.get('class') || '',
-    backstory: yjsSystem.characterMap?.get('backstory') || '',
-    notes: yjsSystem.characterMap?.get('notes') || ''
-  } : {};
-  const entries = yjsSystem?.journalMap?.get('entries')?.toArray() || [];
-  
-  const formattedCharacter = await getFormattedCharacterForAI(character);
-  const formattedEntries = await getFormattedEntries(entries);
-  
-  // Calculate total context length
-  const characterText = JSON.stringify(formattedCharacter);
-  const entriesText = formattedEntries.join(' ');
-  const totalWords = (characterText + entriesText).split(/\s+/).length;
-  
-  return {
-    character: formattedCharacter,
-    entries: formattedEntries,
-    contextLength: {
-      totalWords,
-      characterWords: characterText.split(/\s+/).length,
-      entriesWords: entriesText.split(/\s+/).length
-    },
-    summaryStats: {
-      totalSummaries: getAllSummaries().length,
-      metaSummaries: getAllSummaries().filter(s => s.type === 'meta').length,
-      regularSummaries: getAllSummaries().filter(s => s.type === 'regular').length
-    }
-  };
+// Check if enough content exists for storytelling
+export const hasEnoughContentForStorytelling = () => {
+  try {
+    const character = getCharacter();
+    const entries = getEntries();
+    
+    // Need either character backstory or at least one journal entry
+    const hasCharacterStory = character.backstory && character.backstory.trim().length > 50;
+    const hasJournalEntries = entries && entries.length > 0;
+    
+    return hasCharacterStory || hasJournalEntries;
+  } catch (error) {
+    console.error('Error checking content for storytelling:', error);
+    return false;
+  }
 };
 
-// Check if storytelling has good context
-export const hasGoodContext = () => {
-  const yjsSystem = getSystem();
-  const entries = yjsSystem?.journalMap?.get('entries')?.toArray() || [];
-  const summaries = getAllSummaries();
-  
-  const hasCharacter = Boolean(yjsSystem?.characterMap?.get('name'));
-  const hasContent = entries.length > 0 || summaries.length > 0;
-  
-  return {
-    hasCharacter,
-    hasContent,
-    ready: hasCharacter && hasContent
-  };
+// Get storytelling stats
+export const getStorytellingStats = () => {
+  try {
+    const character = getCharacter();
+    const entries = getEntries();
+    const summaries = getAllSummaries();
+    
+    return {
+      hasCharacter: Boolean(character.name || character.backstory),
+      entryCount: entries ? entries.length : 0,
+      summaryCount: summaries ? Object.keys(summaries).length : 0,
+      readyForStorytelling: hasEnoughContentForStorytelling()
+    };
+  } catch (error) {
+    console.error('Error getting storytelling stats:', error);
+    return {
+      hasCharacter: false,
+      entryCount: 0,
+      summaryCount: 0,
+      readyForStorytelling: false
+    };
+  }
 };
-
-// =============================================================================
-// LEGACY COMPATIBILITY
-// =============================================================================
-
-export const generateIntrospectionQuestions = generateQuestions;
-export const generateIntrospectionPrompt = getIntrospectionQuestions;

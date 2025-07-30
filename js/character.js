@@ -5,29 +5,12 @@ import { safeDomOperation, createSuccess, createError, handleError } from './err
 import { setElementContent, getElementValue, setElementValue } from './dom-utils.js';
 import { getFormData, clearFormFields, populateFormFields, validateFormData } from './form-utils.js';
 import { getCharacterFormFieldIds, getPropertyNameFromFieldId } from './utils.js';
-import { getSystem, saveToSystem } from './yjs.js';
+import { getCharacter, saveCharacter, characterMap } from './yjs.js';
 
 // Get current character data
 export const getCurrentCharacterData = () => {
   try {
-    const yjsSystem = getSystem();
-    if (!yjsSystem) {
-      return createError('YJS system not available');
-    }
-
-    const characterMap = yjsSystem.characterMap;
-    if (!characterMap) {
-      return createError('Character map not available');
-    }
-
-    const character = {
-      name: characterMap.get('name') || '',
-      race: characterMap.get('race') || '',
-      class: characterMap.get('class') || '',
-      backstory: characterMap.get('backstory') || '',
-      notes: characterMap.get('notes') || ''
-    };
-
+    const character = getCharacter();
     return createSuccess(character);
   } catch (error) {
     return handleError('getCurrentCharacterData', error);
@@ -37,23 +20,7 @@ export const getCurrentCharacterData = () => {
 // Save character data
 export const saveCharacterData = (characterData) => {
   try {
-    const yjsSystem = getSystem();
-    if (!yjsSystem) {
-      return createError('YJS system not available');
-    }
-
-    const characterMap = yjsSystem.characterMap;
-    if (!characterMap) {
-      return createError('Character map not available');
-    }
-
-    // Save all character properties
-    characterMap.set('name', characterData.name || '');
-    characterMap.set('race', characterData.race || '');
-    characterMap.set('class', characterData.class || '');
-    characterMap.set('backstory', characterData.backstory || '');
-    characterMap.set('notes', characterData.notes || '');
-
+    saveCharacter(characterData);
     return createSuccess('Character saved successfully');
   } catch (error) {
     return handleError('saveCharacterData', error);
@@ -124,12 +91,6 @@ export const clearCharacterForm = () => {
 // Delete character data
 export const deleteCharacterData = () => {
   return safeDomOperation(() => {
-    const yjsSystem = getSystem();
-    if (!yjsSystem) {
-      throw new Error('YJS system not available');
-    }
-
-    const characterMap = yjsSystem.characterMap;
     if (!characterMap) {
       throw new Error('Character map not available');
     }

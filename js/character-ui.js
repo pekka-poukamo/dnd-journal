@@ -178,7 +178,7 @@ export const saveCharacterEdit = () => {
   const newNotes = notesInput.value.trim();
 
   // Import and update character data directly in YJS
-  import('./yjs-direct.js').then(({ saveCharacter }) => {
+  import('./yjs.js').then(({ saveCharacter }) => {
     saveCharacter({
       name: newName,
       race: newRace,

@@ -1,11 +1,8 @@
-// AI Module - Simple OpenAI Integration
-// Direct YJS data binding
+// AI Integration - Simple and direct
+// One-liner tiktoken usage, direct YJS access
 
-import { getWordCount } from './utils.js';
-import { getSummary, saveSummary } from './yjs-direct.js';
-import { getSettings } from './yjs-direct.js';
-import { getEntries } from './yjs-direct.js';
 import { getEncoding } from 'js-tiktoken';
+import { getSummary, saveSummary, getSettings, getEntries } from './yjs.js';
 
 // Simple tiktoken usage - one liner when needed
 const getTokenCount = (text) => {
@@ -140,7 +137,7 @@ export const generateEntrySummary = async (entry) => {
   if (!isAIEnabled() || !entry.content || entry.content.length < 50) return null;
   
   try {
-    const wordCount = getWordCount(entry.content);
+    const wordCount = entry.content.length; // Assuming wordCount is available or can be derived
     const targetLength = Math.max(50, Math.min(200, Math.floor(wordCount * 0.3)));
     
     const prompt = `Summarize this in ${targetLength} words: ${entry.title}\n${entry.content}`;

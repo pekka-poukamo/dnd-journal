@@ -2,7 +2,7 @@
 // Just render everything fresh on changes
 
 import { formatDate, sortEntriesByDate, parseMarkdown } from './utils.js';
-import { updateEntry, deleteEntry } from './yjs-direct.js';
+import { updateEntry, deleteEntry } from './yjs.js';
 
 // Simple state for edit mode
 let editingEntryId = null;
