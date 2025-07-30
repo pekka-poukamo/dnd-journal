@@ -1,179 +1,91 @@
-// DOM Utilities - Common DOM manipulation functions
-// Following functional programming principles and style guide
+// DOM Utilities - Simple DOM manipulation functions
+// Following radical simplicity principles
 
-import { safeDomOperation, createSuccess, createError } from './error-handling.js';
-
-// Pure function to create DOM elements with optional attributes
+// Simple element creation
 export const createElement = (tag, className = '', content = '') => {
-  return safeDomOperation(() => {
-    const element = document.createElement(tag);
-    if (className) element.className = className;
-    if (content) element.textContent = content;
-    return element;
-  }, 'createElement');
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (content) element.textContent = content;
+  return element;
 };
 
-// Pure function to create element with attributes
+// Simple element creation with attributes
 export const createElementWithAttributes = (tag, attributes = {}) => {
-  return safeDomOperation(() => {
-    const element = document.createElement(tag);
-    Object.entries(attributes).forEach(([key, value]) => {
-      if (key === 'textContent' || key === 'innerHTML') {
-        element[key] = value;
-      } else {
-        element.setAttribute(key, value);
-      }
-    });
-    return element;
-  }, 'createElementWithAttributes');
-};
-
-// Pure function to safely get element by ID
-export const getElementById = (id) => {
-  return safeDomOperation(() => {
-    const element = document.getElementById(id);
-    if (!element) {
-      throw new Error(`Element with ID '${id}' not found`);
+  const element = document.createElement(tag);
+  Object.entries(attributes).forEach(([key, value]) => {
+    if (key === 'textContent' || key === 'innerHTML') {
+      element[key] = value;
+    } else {
+      element.setAttribute(key, value);
     }
-    return element;
-  }, `getElementById(${id})`);
+  });
+  return element;
 };
 
-// Pure function to safely query selector
-export const querySelector = (selector) => {
-  return safeDomOperation(() => {
-    const element = document.querySelector(selector);
-    if (!element) {
-      throw new Error(`Element with selector '${selector}' not found`);
-    }
-    return element;
-  }, `querySelector(${selector})`);
-};
+// Simple element selection
+export const getElementById = (id) => document.getElementById(id);
+export const querySelector = (selector) => document.querySelector(selector);
 
-// Pure function to safely set element content
+// Simple content setting
 export const setElementContent = (elementId, content) => {
-  return safeDomOperation(() => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.textContent = content;
-      return element;
-    }
-    return null;
-  }, `setElementContent(${elementId})`);
+  const element = document.getElementById(elementId);
+  if (element) element.textContent = content;
 };
 
-// Pure function to safely set element HTML
 export const setElementHTML = (elementId, html) => {
-  return safeDomOperation(() => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.innerHTML = html;
-      return element;
-    }
-    return null;
-  }, `setElementHTML(${elementId})`);
+  const element = document.getElementById(elementId);
+  if (element) element.innerHTML = html;
 };
 
-// Pure function to safely add class to element
+// Simple class manipulation
 export const addClass = (elementId, className) => {
-  return safeDomOperation(() => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.classList.add(className);
-      return element;
-    }
-    return null;
-  }, `addClass(${elementId}, ${className})`);
+  const element = document.getElementById(elementId);
+  if (element) element.classList.add(className);
 };
 
-// Pure function to safely remove class from element
 export const removeClass = (elementId, className) => {
-  return safeDomOperation(() => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.classList.remove(className);
-      return element;
-    }
-    return null;
-  }, `removeClass(${elementId}, ${className})`);
+  const element = document.getElementById(elementId);
+  if (element) element.classList.remove(className);
 };
 
-// Pure function to safely toggle class on element
 export const toggleClass = (elementId, className) => {
-  return safeDomOperation(() => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.classList.toggle(className);
-      return element;
-    }
-    return null;
-  }, `toggleClass(${elementId}, ${className})`);
+  const element = document.getElementById(elementId);
+  if (element) element.classList.toggle(className);
 };
 
-// Pure function to safely clear element content
+// Simple element clearing
 export const clearElement = (elementId) => {
-  return safeDomOperation(() => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.innerHTML = '';
-      return element;
-    }
-    return null;
-  }, `clearElement(${elementId})`);
+  const element = document.getElementById(elementId);
+  if (element) element.innerHTML = '';
 };
 
-// Pure function to safely append child to element
+// Simple child appending
 export const appendChild = (parentId, child) => {
-  return safeDomOperation(() => {
-    const parent = document.getElementById(parentId);
-    if (parent && child) {
-      parent.appendChild(child);
-      return parent;
-    }
-    return null;
-  }, `appendChild(${parentId})`);
+  const parent = document.getElementById(parentId);
+  if (parent && child) parent.appendChild(child);
 };
 
-// Pure function to safely add event listener
+// Simple event listening
 export const addEventListener = (elementId, event, handler) => {
-  return safeDomOperation(() => {
-    const element = document.getElementById(elementId);
-    if (element && typeof handler === 'function') {
-      element.addEventListener(event, handler);
-      return element;
-    }
-    return null;
-  }, `addEventListener(${elementId}, ${event})`);
+  const element = document.getElementById(elementId);
+  if (element && typeof handler === 'function') {
+    element.addEventListener(event, handler);
+  }
 };
 
-// Pure function to safely focus element
+// Simple focus
 export const focusElement = (elementId) => {
-  return safeDomOperation(() => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.focus();
-      return element;
-    }
-    return null;
-  }, `focusElement(${elementId})`);
+  const element = document.getElementById(elementId);
+  if (element) element.focus();
 };
 
-// Pure function to safely get element value
+// Simple value getting/setting
 export const getElementValue = (elementId) => {
-  return safeDomOperation(() => {
-    const element = document.getElementById(elementId);
-    return element?.value || '';
-  }, `getElementValue(${elementId})`);
+  const element = document.getElementById(elementId);
+  return element?.value || '';
 };
 
-// Pure function to safely set element value
 export const setElementValue = (elementId, value) => {
-  return safeDomOperation(() => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.value = value;
-      return element;
-    }
-    return null;
-  }, `setElementValue(${elementId})`);
+  const element = document.getElementById(elementId);
+  if (element) element.value = value;
 };

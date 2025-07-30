@@ -2,7 +2,6 @@
 // Following functional programming principles and style guide
 
 import { formatDate, sortEntriesByDate } from './utils.js';
-import { handleError, createSuccess, safeDomOperation } from './error-handling.js';
 import { 
   createElement, 
   createElementWithAttributes,
@@ -11,9 +10,8 @@ import {
   appendChild,
   focusElement
 } from './dom-utils.js';
-import { updateEntry, deleteEntry } from './entry-management.js';
 
-// Pure function for simple markdown parsing
+// Simple markdown parsing
 export const parseMarkdown = (text) => {
   if (!text) return '';
   
@@ -43,156 +41,137 @@ export const parseMarkdown = (text) => {
     .replace(/__LINE_BREAK__/g, '<br>'); // Single line breaks
 };
 
-// Pure function to create delete button
+// Create delete button
 export const createDeleteButton = (entry) => {
-  return safeDomOperation(() => {
-    const deleteBtn = createElement('button', 'delete-btn', '🗑️').data;
-    deleteBtn.onclick = () => handleDeleteEntry(entry.id, entry.title);
-    deleteBtn.title = 'Delete entry';
-    return deleteBtn;
-  }, 'createDeleteButton');
+  const deleteBtn = createElement('button', 'delete-btn', '🗑️');
+  deleteBtn.onclick = () => handleDeleteEntry(entry.id, entry.title);
+  deleteBtn.title = 'Delete entry';
+  return deleteBtn;
 };
 
-// Pure function to create edit button
+// Create edit button
 export const createEditButton = (entry, entryDiv) => {
-  return safeDomOperation(() => {
-    const editBtn = createElement('button', 'edit-btn', '✏️').data;
-    editBtn.onclick = () => enableEditMode(entryDiv, entry);
-    editBtn.title = 'Edit entry';
-    return editBtn;
-  }, 'createEditButton');
+  const editBtn = createElement('button', 'edit-btn', '✏️');
+  editBtn.onclick = () => enableEditMode(entryDiv, entry);
+  editBtn.title = 'Edit entry';
+  return editBtn;
 };
 
-// Pure function to create entry element
+// Create entry element
 export const createEntryElement = (entry) => {
-  return safeDomOperation(() => {
-    const entryDiv = createElement('article', 'entry').data;
-    entryDiv.dataset.entryId = entry.id;
+  const entryDiv = createElement('article', 'entry');
+  entryDiv.dataset.entryId = entry.id;
 
-    // Create header with title and meta info
-    const header = createElement('header', 'entry-header').data;
-    
-    const title = createElement('h3', 'entry-title', entry.title).data;
-    const meta = createElement('div', 'entry-meta').data;
-    
-    const timestamp = createElement('span', 'entry-timestamp', formatDate(entry.timestamp)).data;
-    
-    // Create action buttons
-    const deleteBtn = createDeleteButton(entry).data;
-    const editBtn = createEditButton(entry, entryDiv).data;
-    
-    meta.appendChild(timestamp);
-    meta.appendChild(editBtn);
-    meta.appendChild(deleteBtn);
-    
-    header.appendChild(title);
-    header.appendChild(meta);
+  // Create header with title and meta info
+  const header = createElement('header', 'entry-header');
+  
+  const title = createElement('h3', 'entry-title', entry.title);
+  const meta = createElement('div', 'entry-meta');
+  
+  const timestamp = createElement('span', 'entry-timestamp', formatDate(entry.timestamp));
+  
+  // Create action buttons
+  const deleteBtn = createDeleteButton(entry);
+  const editBtn = createEditButton(entry, entryDiv);
+  
+  meta.appendChild(timestamp);
+  meta.appendChild(editBtn);
+  meta.appendChild(deleteBtn);
+  
+  header.appendChild(title);
+  header.appendChild(meta);
 
-    // Create content
-    const content = createElement('div', 'entry-content').data;
-    content.innerHTML = parseMarkdown(entry.content);
+  // Create content
+  const content = createElement('div', 'entry-content');
+  content.innerHTML = parseMarkdown(entry.content);
 
-    entryDiv.appendChild(header);
-    entryDiv.appendChild(content);
+  entryDiv.appendChild(header);
+  entryDiv.appendChild(content);
 
-    return entryDiv;
-  }, 'createEntryElement');
+  return entryDiv;
 };
 
-// Pure function to create empty state element
+// Create empty state element
 export const createEmptyStateElement = () => {
-  return safeDomOperation(() => {
-    const emptyDiv = createElement('div', 'empty-state').data;
-    const message = createElement('p', '', 'No entries yet. Start writing your adventure!').data;
-    emptyDiv.appendChild(message);
-    return emptyDiv;
-  }, 'createEmptyStateElement');
+  const emptyDiv = createElement('div', 'empty-state');
+  const message = createElement('p', '', 'No entries yet. Start writing your adventure!');
+  emptyDiv.appendChild(message);
+  return emptyDiv;
 };
 
-// Pure function to render entries list
+// Render entries list
 export const renderEntries = (entries = []) => {
-  return safeDomOperation(() => {
-    const container = document.getElementById('entries-list') || document.getElementById('entries-container');
-    if (!container) {
-      throw new Error('Entries container not found');
-    }
+  const container = document.getElementById('entries-list') || document.getElementById('entries-container');
+  if (!container) {
+    console.warn('Entries container not found');
+    return;
+  }
 
-    // Clear existing content
-    container.innerHTML = '';
+  // Clear existing content
+  container.innerHTML = '';
 
-    if (entries.length === 0) {
-      const emptyState = createEmptyStateElement().data;
-      container.appendChild(emptyState);
-      return container;
-    }
+  if (entries.length === 0) {
+    const emptyState = createEmptyStateElement();
+    container.appendChild(emptyState);
+    return;
+  }
 
-    // Sort entries by date (newest first)
-    const sortedEntries = sortEntriesByDate(entries);
+  // Sort entries by date (newest first)
+  const sortedEntries = sortEntriesByDate(entries);
 
-    // Create and append entry elements
-    sortedEntries.forEach(entry => {
-      const entryElement = createEntryElement(entry);
-      if (entryElement.success) {
-        container.appendChild(entryElement.data);
-      }
-    });
-
-    return container;
-  }, 'renderEntries');
+  // Create and append entry elements
+  sortedEntries.forEach(entry => {
+    const entryElement = createEntryElement(entry);
+    container.appendChild(entryElement);
+  });
 };
 
-// Pure function to create edit form elements
+// Create edit form elements
 export const createEditForm = (entry) => {
-  return safeDomOperation(() => {
-    const editForm = createElement('div', 'edit-form').data;
-    
-    const titleInput = createElementWithAttributes('input', {
-      type: 'text',
-      value: entry.title,
-      className: 'edit-title-input'
-    }).data;
-    
-    const contentTextarea = createElementWithAttributes('textarea', {
-      textContent: entry.content,
-      className: 'edit-content-textarea'
-    }).data;
-    
-    const saveBtn = createElement('button', '', 'Save').data;
-    const cancelBtn = createElement('button', '', 'Cancel').data;
-    
-    editForm.appendChild(titleInput);
-    editForm.appendChild(contentTextarea);
-    editForm.appendChild(saveBtn);
-    editForm.appendChild(cancelBtn);
-    
-    return {
-      editForm,
-      titleInput,
-      contentTextarea,
-      saveBtn,
-      cancelBtn
-    };
-  }, 'createEditForm');
+  const editForm = createElement('div', 'edit-form');
+  
+  const titleInput = createElementWithAttributes('input', {
+    type: 'text',
+    value: entry.title,
+    className: 'edit-title-input'
+  });
+  
+  const contentTextarea = createElementWithAttributes('textarea', {
+    textContent: entry.content,
+    className: 'edit-content-textarea'
+  });
+  
+  const saveBtn = createElement('button', '', 'Save');
+  const cancelBtn = createElement('button', '', 'Cancel');
+  
+  editForm.appendChild(titleInput);
+  editForm.appendChild(contentTextarea);
+  editForm.appendChild(saveBtn);
+  editForm.appendChild(cancelBtn);
+  
+  return {
+    editForm,
+    titleInput,
+    contentTextarea,
+    saveBtn,
+    cancelBtn
+  };
 };
 
-// Function to enable edit mode for an entry
+// Enable edit mode for an entry
 export const enableEditMode = (entryDiv, entry) => {
-  return safeDomOperation(() => {
+  try {
     const title = entryDiv.querySelector('.entry-title');
     const content = entryDiv.querySelector('.entry-content');
     const headerActions = entryDiv.querySelector('.entry-meta');
     
     if (!title || !content || !headerActions) {
-      throw new Error('Entry elements not found');
+      console.error('Entry elements not found');
+      return;
     }
     
     // Create edit form
-    const formResult = createEditForm(entry);
-    if (!formResult.success) {
-      throw new Error('Failed to create edit form');
-    }
-    
-    const { editForm, titleInput, contentTextarea, saveBtn, cancelBtn } = formResult.data;
+    const { editForm, titleInput, contentTextarea, saveBtn, cancelBtn } = createEditForm(entry);
     
     // Set up event handlers
     saveBtn.onclick = () => saveEdit(entryDiv, entry, titleInput.value, contentTextarea.value);
@@ -205,12 +184,12 @@ export const enableEditMode = (entryDiv, entry) => {
     
     entryDiv.appendChild(editForm);
     titleInput.focus();
-    
-    return editForm;
-  }, 'enableEditMode');
+  } catch (error) {
+    console.error('Error enabling edit mode:', error);
+  }
 };
 
-// Function to save edit changes
+// Save edit changes
 export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
   try {
     if (!newTitle.trim() || !newContent.trim()) {
@@ -218,11 +197,22 @@ export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
       return;
     }
 
-    // Update the entry using the entry management module
-    const updateResult = updateEntry(entry.id, newTitle, newContent);
-    if (!updateResult.success) {
-      alert(`Failed to save changes: ${updateResult.error}`);
-      return;
+    // Update entry using YJS
+    const yjsSystem = window.getSystem ? window.getSystem() : null;
+    if (yjsSystem?.journalMap) {
+      const entriesArray = yjsSystem.journalMap.get('entries');
+      if (entriesArray) {
+        const entries = entriesArray.toArray();
+        const entryIndex = entries.findIndex(entryMap => entryMap.get('id') === entry.id);
+        
+        if (entryIndex >= 0) {
+          const entryMap = entries[entryIndex];
+          entryMap.set('title', newTitle.trim());
+          entryMap.set('content', newContent.trim());
+          entryMap.set('timestamp', Date.now());
+          yjsSystem.journalMap.set('lastModified', Date.now());
+        }
+      }
     }
 
     // Update the entry object for compatibility
@@ -253,9 +243,9 @@ export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
   }
 };
 
-// Function to cancel edit mode
+// Cancel edit mode
 export const cancelEdit = (entryDiv, entry) => {
-  return safeDomOperation(() => {
+  try {
     const editForm = entryDiv.querySelector('.edit-form');
     if (editForm) {
       editForm.remove();
@@ -270,21 +260,38 @@ export const cancelEdit = (entryDiv, entry) => {
       content.style.display = '';
       headerActions.style.display = '';
     }
-    
-    return entryDiv;
-  }, 'cancelEdit');
-};
-
-// Function to handle entry deletion
-export const handleDeleteEntry = (entryId, entryTitle) => {
-  const deleteResult = deleteEntry(entryId, entryTitle);
-  if (!deleteResult.success && !deleteResult.error.includes('cancelled')) {
-    alert(`Failed to delete entry: ${deleteResult.error}`);
+  } catch (error) {
+    console.error('Error cancelling edit:', error);
   }
-  // Note: UI will be updated by the YJS change listener
 };
 
-// Function to focus entry title input
+// Handle entry deletion
+export const handleDeleteEntry = (entryId, entryTitle) => {
+  try {
+    const confirmed = confirm(`Are you sure you want to delete "${entryTitle}"?`);
+    if (!confirmed) return;
+
+    // Delete from YJS
+    const yjsSystem = window.getSystem ? window.getSystem() : null;
+    if (yjsSystem?.journalMap) {
+      const entriesArray = yjsSystem.journalMap.get('entries');
+      if (entriesArray) {
+        const entries = entriesArray.toArray();
+        const entryIndex = entries.findIndex(entryMap => entryMap.get('id') === entryId);
+        
+        if (entryIndex >= 0) {
+          entriesArray.delete(entryIndex, 1);
+          yjsSystem.journalMap.set('lastModified', Date.now());
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error deleting entry:', error);
+    alert('Failed to delete entry');
+  }
+};
+
+// Focus entry title input
 export const focusEntryTitle = () => {
   focusElement('entry-title');
 };

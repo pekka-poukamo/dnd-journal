@@ -1,0 +1,174 @@
+// AI Module - Simple OpenAI Integration
+// Following radical simplicity principles
+
+import { getWordCount } from './utils.js';
+import { getSummaryByKey, storeSummary } from './summarization.js';
+import { loadSettings } from './settings.js';
+import { getSystem } from './yjs.js';
+import { getEncoding } from 'js-tiktoken';
+
+// Simple tiktoken usage - one liner when needed
+const getTokenCount = (text) => {
+  try {
+    return getEncoding('cl100k_base').encode(text).length;
+  } catch {
+    return Math.ceil(text.length / 4); // fallback
+  }
+};
+
+// Simple system prompt
+export const NARRATIVE_INTROSPECTION_PROMPT = `You are a D&D storytelling companion who helps players discover compelling narratives and unexpected character depths.
+
+Present exactly 4 questions as a simple numbered list without headings:
+
+1. A pivotal moment, memory, or relationship that has shaped who they are
+2. A current internal conflict, dilemma, or aspiration they're wrestling with  
+3. How recent events might change their path or reveal something new about them
+4. An unobvious, surprising question that explores an unconventional perspective, hidden motivation, or unexpected character truth
+
+Make questions specific to the character's situation and recent adventures. Focus on narrative depth and emotional truth.`;
+
+// Check if AI is available
+export const isAIEnabled = () => {
+  const settings = loadSettings();
+  return settings.enableAIFeatures && settings.apiKey?.startsWith('sk-');
+};
+
+// Simple OpenAI API call
+export const callOpenAI = async (prompt, maxTokens = 1000) => {
+  const settings = loadSettings();
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${settings.apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: maxTokens,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`API call failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
+};
+
+// Format character for AI
+const formatCharacter = (character) => {
+  if (!character?.name?.trim()) return 'CHARACTER: Unnamed character';
+  
+  const parts = [`CHARACTER: ${character.name.trim()}`];
+  if (character.race) parts.push(`Race: ${character.race}`);
+  if (character.class) parts.push(`Class: ${character.class}`);
+  if (character.backstory?.trim()) parts.push(`BACKSTORY: ${character.backstory.trim()}`);
+  if (character.notes?.trim()) parts.push(`NOTES: ${character.notes.trim()}`);
+  
+  return parts.join('\n');
+};
+
+// Format entries for AI
+const formatEntries = (entries = []) => {
+  if (!entries.length) return 'No journal entries available';
+  
+  const formatted = entries.slice(0, 10).map(entry => 
+    `ENTRY: ${entry.title || 'Untitled'}\nCONTENT: ${entry.content || ''}`
+  );
+  
+  return `RECENT ADVENTURES:\n${formatted.join('\n\n')}`;
+};
+
+// Create introspection prompt
+export const createIntrospectionPrompt = (character, entries) => {
+  const characterSection = formatCharacter(character);
+  const entriesSection = formatEntries(entries);
+  
+  return `${characterSection}\n\n${entriesSection}\n\nBased on this character and their recent adventures, generate introspective questions that help explore their story and reveal unexpected depths.`;
+};
+
+// Generate introspection prompt
+export const generateIntrospectionPrompt = async (character, entries) => {
+  if (!isAIEnabled()) return null;
+  
+  try {
+    const prompt = createIntrospectionPrompt(character, entries);
+    return await callOpenAI(prompt);
+  } catch (error) {
+    console.error('Failed to generate introspection prompt:', error);
+    return null;
+  }
+};
+
+// Generate entry summary
+export const generateEntrySummary = async (entry) => {
+  if (!isAIEnabled() || !entry.content || entry.content.length < 50) return null;
+  
+  try {
+    const wordCount = getWordCount(entry.content);
+    const targetLength = Math.max(50, Math.min(200, Math.floor(wordCount * 0.3)));
+    
+    const prompt = `Summarize this in ${targetLength} words: ${entry.title}\n${entry.content}`;
+    const summary = await callOpenAI(prompt, targetLength * 4);
+    
+    return {
+      id: entry.id,
+      summary,
+      timestamp: Date.now()
+    };
+  } catch (error) {
+    console.error('Error generating summary:', error);
+    return null;
+  }
+};
+
+// Get or generate summary
+export const getEntrySummary = async (entry) => {
+  const existing = getSummaryByKey(entry.id);
+  if (existing) return existing;
+  
+  const summary = await generateEntrySummary(entry);
+  if (summary) storeSummary(entry.id, summary);
+  
+  return summary;
+};
+
+// Get preview of what would be sent to AI
+export const getIntrospectionPromptForPreview = async (character, entries) => {
+  if (!isAIEnabled()) return null;
+  
+  const userPrompt = createIntrospectionPrompt(character, entries);
+  
+  return {
+    systemPrompt: NARRATIVE_INTROSPECTION_PROMPT,
+    user: userPrompt,
+    totalTokens: getTokenCount(NARRATIVE_INTROSPECTION_PROMPT + userPrompt)
+  };
+};
+
+// Simple helper to get formatted entries with summaries
+export const getFormattedEntriesForAI = () => {
+  try {
+    const yjsSystem = getSystem();
+    const entriesArray = yjsSystem?.journalMap?.get('entries');
+    if (!entriesArray) return [];
+
+    const entries = entriesArray.toArray().map(entryMap => ({
+      id: entryMap.get('id'),
+      title: entryMap.get('title'),
+      content: entryMap.get('content'),
+      timestamp: entryMap.get('timestamp')
+    }));
+
+    return entries.sort((a, b) => b.timestamp - a.timestamp);
+  } catch {
+    return [];
+  }
+};
+
+export const getPromptDescription = () => 'Narrative-focused introspection with 3 core questions + 1 unobvious question';
