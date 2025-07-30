@@ -1,23 +1,9 @@
 // D&D Journal Sync Configuration
 // Edit this file to set your sync server, or configure via Settings page
 
-import { getSystem } from './js/yjs.js';
-
-// Get server configuration from Yjs settingsMap or fallback to empty string
+// Static configuration - can be overridden by settings in Y.js
 const getServerConfig = () => {
-  try {
-    const yjsSystem = getSystem();
-    if (yjsSystem?.settingsMap) {
-      const savedServer = yjsSystem.settingsMap.get('dnd-journal-sync-server');
-      if (savedServer) {
-        return savedServer;
-      }
-    }
-  } catch (e) {
-    // Yjs system not available, fallback to static config
-  }
-  
-  // Static configuration fallback
+  // Static configuration fallback (Y.js settings take precedence)
   return '';
 };
 

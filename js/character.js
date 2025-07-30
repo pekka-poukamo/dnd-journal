@@ -1,13 +1,11 @@
-// Character Page - Simplified Architecture
+// Character Page - Simplified Direct Y.js Integration
 import { 
-  initData, 
-  onStateChange, 
-  getState,
-  updateCharacter,
-  getSetting,
-  updateSummary,
-  getSummary
-} from './data.js';
+  initYjs,
+  getCharacterData,
+  setCharacter,
+  getSummary,
+  onCharacterChange
+} from './simple-yjs.js';
 
 import {
   renderCharacterForm,
@@ -17,17 +15,17 @@ import {
   showNotification
 } from './character-views.js';
 
-import { summarize } from './summarization.js';
+import { summarize } from './simple-summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
 
 // Initialize character page
 const initCharacterPage = async () => {
   try {
-    // Initialize data layer
-    await initData();
+    // Initialize Y.js
+    await initYjs();
     
-    // Set up reactive rendering
-    onStateChange(handleStateChange);
+    // Set up reactive rendering - direct Y.js observer
+    onCharacterChange(renderCharacterPage);
     
     // Set up event listeners
     setupEventListeners();
@@ -41,17 +39,11 @@ const initCharacterPage = async () => {
   }
 };
 
-// Handle state changes from Y.js
-const handleStateChange = (state) => {
-  renderCharacterPage();
-};
-
 // Render the character page
 const renderCharacterPage = () => {
-  const state = getState();
-  
-  // Update form fields with current character data
-  renderCharacterForm(state.character);
+  // Update form fields - direct from Y.js
+  const character = getCharacterData();
+  renderCharacterForm(character);
   
   // Update summaries display
   updateSummariesDisplay();
@@ -59,25 +51,24 @@ const renderCharacterPage = () => {
 
 // Set up event listeners
 const setupEventListeners = () => {
-  // Character form submission
   const characterForm = document.getElementById('character-form');
   if (characterForm) {
     characterForm.addEventListener('submit', handleCharacterFormSubmit);
     
-    // Add real-time field updates
+    // Real-time field updates - direct to Y.js
     const inputs = characterForm.querySelectorAll('input, textarea');
     inputs.forEach(input => {
-      input.addEventListener('blur', handleFieldChange);
+      input.addEventListener('blur', (e) => {
+        setCharacter(e.target.name, e.target.value.trim());
+      });
     });
   }
   
-  // Summary refresh button
   const refreshBtn = document.getElementById('refresh-summaries');
   if (refreshBtn) {
     refreshBtn.addEventListener('click', handleRefreshSummaries);
   }
   
-  // Generate summaries button
   const generateBtn = document.getElementById('generate-summaries');
   if (generateBtn) {
     generateBtn.addEventListener('click', handleGenerateSummaries);
@@ -89,28 +80,17 @@ const handleCharacterFormSubmit = (event) => {
   event.preventDefault();
   const formData = getFormData(event.target);
   
-  // Update each field in Y.js
+  // Direct Y.js operations
   Object.entries(formData).forEach(([field, value]) => {
-    updateCharacter(field, value.trim());
+    setCharacter(field, value.trim());
   });
   
   showNotification('Character information saved!', 'success');
 };
 
-// Handle individual field changes for real-time updates
-const handleFieldChange = (event) => {
-  const field = event.target.name;
-  const value = event.target.value.trim();
-  
-  if (field) {
-    updateCharacter(field, value);
-  }
-};
-
 // Handle refresh summaries
 const handleRefreshSummaries = async () => {
-  const state = getState();
-  const character = state.character;
+  const character = getCharacterData();
   
   if (!await isAPIAvailable()) {
     showNotification('AI features not available. Please configure API settings.', 'error');
@@ -118,7 +98,6 @@ const handleRefreshSummaries = async () => {
   }
   
   try {
-    // Generate summaries for backstory and notes if they exist
     if (character.backstory && character.backstory.length > 100) {
       await summarize('character-backstory', character.backstory);
     }
@@ -143,12 +122,12 @@ const handleGenerateSummaries = async () => {
 
 // Update summaries display
 const updateSummariesDisplay = () => {
+  // Direct Y.js access
   const backstorySummary = getSummary('character-backstory');
   const notesSummary = getSummary('character-notes');
   
   renderSummaries(backstorySummary, notesSummary);
   
-  // Show generate button if API is available
   isAPIAvailable().then(available => {
     toggleGenerateButton(available);
   });
@@ -160,7 +139,5 @@ document.addEventListener('DOMContentLoaded', initCharacterPage);
 // Export for testing
 export { 
   initCharacterPage,
-  handleCharacterFormSubmit,
-  handleFieldChange,
   renderCharacterPage 
 };

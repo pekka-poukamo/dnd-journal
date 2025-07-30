@@ -27,8 +27,7 @@ import {
   getWordCount 
 } from './utils.js';
 import { getSummaryByKey, storeSummary } from './summarization.js';
-import { loadSettings } from './settings.js';
-import { getSystem } from './yjs.js';
+import { getSetting } from './simple-yjs.js';
 import { getEncoding } from 'js-tiktoken';
 
 // Unified narrative-focused system prompt with unobvious question element
@@ -103,13 +102,17 @@ export const calculateTotalTokens = async (messages) => {
 
 // Pure function to load settings
 export const loadAISettings = () => {
-  return loadSettings();
+  return {
+    apiKey: getSetting('openai-api-key', ''),
+    enableAIFeatures: getSetting('ai-enabled', false)
+  };
 };
 
 // Pure function to check if AI features are available
 export const isAIEnabled = () => {
-  const settings = loadAISettings();
-  return Boolean(settings.enableAIFeatures && settings.apiKey);
+  const apiKey = getSetting('openai-api-key', '');
+  const enabled = getSetting('ai-enabled', false);
+  return Boolean(enabled && apiKey);
 };
 
 // Pure function to create introspection prompt

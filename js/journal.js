@@ -1,12 +1,14 @@
-// Journal Page Controller - Coordinates Data and Views for Journal
+// Journal Page - Simplified Direct Y.js Integration
 import { 
-  initData, 
-  onStateChange, 
-  getState,
-  addJournalEntry,
-  updateJournalEntry,
-  deleteJournalEntry 
-} from './data.js';
+  initYjs,
+  getCharacterData,
+  getEntries,
+  addEntry,
+  updateEntry,
+  deleteEntry,
+  onCharacterChange,
+  onJournalChange
+} from './simple-yjs.js';
 
 import {
   renderCharacterSummary,
@@ -19,17 +21,18 @@ import {
 
 import { generateId } from './utils.js';
 
-// Application state
+// Current editing state
 let currentEditingEntryId = null;
 
 // Initialize the journal page
 const initJournalPage = async () => {
   try {
-    // Initialize data layer
-    await initData();
+    // Initialize Y.js
+    await initYjs();
     
-    // Set up reactive rendering
-    onStateChange(handleStateChange);
+    // Set up reactive rendering - direct Y.js observers
+    onCharacterChange(renderJournalPage);
+    onJournalChange(renderJournalPage);
     
     // Set up event listeners
     setupEventListeners();
@@ -43,31 +46,25 @@ const initJournalPage = async () => {
   }
 };
 
-// Handle state changes from Y.js
-const handleStateChange = (state) => {
-  renderJournalPage();
-};
-
 // Render the journal page
 const renderJournalPage = () => {
-  const state = getState();
-  
-  // Render character summary
+  // Render character summary - direct from Y.js
   const characterContainer = document.querySelector('.character-info-container');
   if (characterContainer) {
-    renderCharacterSummary(characterContainer, state.character);
+    const character = getCharacterData();
+    renderCharacterSummary(characterContainer, character);
   }
   
-  // Render journal entries
+  // Render journal entries - direct from Y.js
   const entriesContainer = document.getElementById('entries-list');
   if (entriesContainer) {
-    renderEntries(entriesContainer, state.entries, handleEditEntry, handleDeleteEntry);
+    const entries = getEntries();
+    renderEntries(entriesContainer, entries, handleEditEntry, handleDeleteEntry);
   }
 };
 
 // Set up event listeners
 const setupEventListeners = () => {
-  // Journal entry form submission
   const entryForm = document.getElementById('entry-form');
   if (entryForm) {
     entryForm.addEventListener('submit', handleEntryFormSubmit);
@@ -91,30 +88,28 @@ const handleEntryFormSubmit = (event) => {
     timestamp: Date.now()
   };
   
-  addJournalEntry(entry);
+  // Direct Y.js operation
+  addEntry(entry);
   clearForm(event.target);
   showNotification('Journal entry added!', 'success');
 };
 
 // Handle editing an entry
 const handleEditEntry = (entryId) => {
-  const state = getState();
-  const entry = state.entries.find(e => e.id === entryId);
+  const entries = getEntries();
+  const entry = entries.find(e => e.id === entryId);
   
   if (!entry) return;
   
-  // Find the entry element in the DOM
   const entryElement = document.querySelector(`[data-entry-id="${entryId}"]`);
   if (!entryElement) return;
   
-  // Create edit form
   const editForm = createEntryEditForm(
     entry,
     (updates) => handleSaveEdit(entryId, updates),
     () => handleCancelEdit(entryId)
   );
   
-  // Hide the entry content and show edit form
   const entryContent = entryElement.querySelector('.entry-content');
   const entryHeader = entryElement.querySelector('.entry-header');
   
@@ -122,7 +117,6 @@ const handleEditEntry = (entryId) => {
     entryContent.style.display = 'none';
     entryHeader.style.display = 'none';
     entryElement.appendChild(editForm);
-    
     currentEditingEntryId = entryId;
   }
 };
@@ -134,7 +128,8 @@ const handleSaveEdit = (entryId, updates) => {
     return;
   }
   
-  updateJournalEntry(entryId, {
+  // Direct Y.js operation
+  updateEntry(entryId, {
     title: updates.title,
     content: updates.content
   });
@@ -148,13 +143,9 @@ const handleCancelEdit = (entryId) => {
   const entryElement = document.querySelector(`[data-entry-id="${entryId}"]`);
   if (!entryElement) return;
   
-  // Remove edit form
   const editForm = entryElement.querySelector('.entry-edit-form');
-  if (editForm) {
-    editForm.remove();
-  }
+  if (editForm) editForm.remove();
   
-  // Show the entry content again
   const entryContent = entryElement.querySelector('.entry-content');
   const entryHeader = entryElement.querySelector('.entry-header');
   
@@ -169,7 +160,8 @@ const handleCancelEdit = (entryId) => {
 // Handle deleting an entry
 const handleDeleteEntry = (entryId) => {
   if (confirm('Are you sure you want to delete this entry?')) {
-    deleteJournalEntry(entryId);
+    // Direct Y.js operation
+    deleteEntry(entryId);
     showNotification('Entry deleted!', 'success');
   }
 };
@@ -180,8 +172,5 @@ document.addEventListener('DOMContentLoaded', initJournalPage);
 // Export for testing
 export { 
   initJournalPage,
-  handleEntryFormSubmit,
-  handleEditEntry,
-  handleDeleteEntry,
   renderJournalPage 
 };

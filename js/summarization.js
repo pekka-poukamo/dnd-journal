@@ -3,7 +3,7 @@
 
 import { generateId, createInitialJournalState } from './utils.js';
 import { createUserPromptFunction, createTemplateFunction, isAPIAvailable } from './openai-wrapper.js';
-import { getSystem, Y } from './yjs.js';
+import { summariesMap, setSummary, getSummary } from './simple-yjs.js';
 
 // =============================================================================
 // CONFIGURATION

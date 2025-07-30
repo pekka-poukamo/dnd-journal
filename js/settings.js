@@ -1,11 +1,10 @@
-// Settings Page - Simplified Architecture
+// Settings Page - Simplified Direct Y.js Integration
 import { 
-  initData, 
-  onStateChange, 
-  getState,
-  updateSetting,
-  getSetting
-} from './data.js';
+  initYjs,
+  setSetting,
+  getSetting,
+  onSettingsChange
+} from './simple-yjs.js';
 
 import {
   renderSettingsForm,
@@ -18,11 +17,11 @@ import {
 // Initialize settings page
 const initSettingsPage = async () => {
   try {
-    // Initialize data layer
-    await initData();
+    // Initialize Y.js
+    await initYjs();
     
-    // Set up reactive rendering
-    onStateChange(handleStateChange);
+    // Set up reactive rendering - direct Y.js observer
+    onSettingsChange(renderSettingsPage);
     
     // Set up event listeners
     setupEventListeners();
@@ -36,63 +35,57 @@ const initSettingsPage = async () => {
   }
 };
 
-// Handle state changes from Y.js
-const handleStateChange = (state) => {
-  renderSettingsPage();
-};
-
 // Render the settings page
 const renderSettingsPage = () => {
-  const state = getState();
+  // Get current settings - direct from Y.js
+  const settings = {
+    'openai-api-key': getSetting('openai-api-key', ''),
+    'ai-enabled': getSetting('ai-enabled', false),
+    'dnd-journal-sync-server': getSetting('dnd-journal-sync-server', '')
+  };
   
-  // Render settings form with current data
-  renderSettingsForm(state.settings);
+  renderSettingsForm(settings);
   
-  // Update connection status
   const syncServer = getSetting('dnd-journal-sync-server');
-  // TODO: Get actual connection status from Y.js provider
   renderConnectionStatus(false, syncServer);
 };
 
 // Set up event listeners
 const setupEventListeners = () => {
-  // Settings form submission
   const settingsForm = document.getElementById('settings-form');
   if (settingsForm) {
     settingsForm.addEventListener('submit', handleSettingsFormSubmit);
   }
   
-  // Test API key button
   const testApiBtn = document.getElementById('test-api-key');
   if (testApiBtn) {
     testApiBtn.addEventListener('click', handleTestApiKey);
   }
   
-  // Test connection button
   const testConnBtn = document.getElementById('test-connection');
   if (testConnBtn) {
     testConnBtn.addEventListener('click', handleTestConnection);
   }
   
-  // Real-time field updates
+  // Real-time field updates - direct to Y.js
   const apiKeyInput = document.getElementById('api-key');
   if (apiKeyInput) {
     apiKeyInput.addEventListener('blur', (e) => {
-      updateSetting('openai-api-key', e.target.value.trim());
+      setSetting('openai-api-key', e.target.value.trim());
     });
   }
   
   const aiEnabledCheckbox = document.getElementById('ai-enabled');
   if (aiEnabledCheckbox) {
     aiEnabledCheckbox.addEventListener('change', (e) => {
-      updateSetting('ai-enabled', e.target.checked);
+      setSetting('ai-enabled', e.target.checked);
     });
   }
   
   const syncServerInput = document.getElementById('sync-server');
   if (syncServerInput) {
     syncServerInput.addEventListener('blur', (e) => {
-      updateSetting('dnd-journal-sync-server', e.target.value.trim());
+      setSetting('dnd-journal-sync-server', e.target.value.trim());
     });
   }
 };
@@ -102,14 +95,14 @@ const handleSettingsFormSubmit = (event) => {
   event.preventDefault();
   const formData = getFormData(event.target);
   
-  // Update all settings in Y.js
+  // Direct Y.js operations
   Object.entries(formData).forEach(([key, value]) => {
     if (key === 'ai-enabled') {
-      updateSetting('ai-enabled', value === 'on');
+      setSetting('ai-enabled', value === 'on');
     } else if (key === 'api-key') {
-      updateSetting('openai-api-key', value.trim());
+      setSetting('openai-api-key', value.trim());
     } else if (key === 'sync-server') {
-      updateSetting('dnd-journal-sync-server', value.trim());
+      setSetting('dnd-journal-sync-server', value.trim());
     }
   });
   
@@ -184,7 +177,6 @@ const handleTestConnection = async () => {
   setTestConnectionLoading(true);
   
   try {
-    // Test WebSocket connection
     const ws = new WebSocket(serverUrl);
     
     const testResult = await new Promise((resolve) => {
@@ -224,7 +216,6 @@ document.addEventListener('DOMContentLoaded', initSettingsPage);
 // Export for testing
 export { 
   initSettingsPage,
-  handleSettingsFormSubmit,
   testApiKey,
   renderSettingsPage 
 };
