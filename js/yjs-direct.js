@@ -182,6 +182,45 @@ export const getSyncStatus = () => {
   };
 };
 
+// Compatibility functions for old yjs.js API
+export const getSystem = () => {
+  if (!ydoc) return null;
+  
+  return {
+    ydoc,
+    characterMap,
+    journalMap,
+    settingsMap,
+    summariesMap,
+    persistence,
+    provider
+  };
+};
+
+export const createSystem = async () => {
+  await initializeYjs();
+  return getSystem();
+};
+
+export const saveToSystem = (data) => {
+  if (data.character) {
+    saveCharacter(data.character);
+  }
+  if (data.settings) {
+    saveSettings(data.settings);
+  }
+  // Add other data types as needed
+  return true;
+};
+
+export const reloadSyncProviders = () => {
+  // Simple implementation - in direct approach we don't need complex reload
+  console.log('Sync provider reload not needed in direct YJS approach');
+};
+
+// Export Y and WebsocketProvider for compatibility
+export { Y, WebsocketProvider };
+
 // Auto-initialize in browser environment
 if (typeof document !== 'undefined') {
   initializeYjs();
