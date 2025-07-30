@@ -1,99 +1,71 @@
-// Entry UI - DOM rendering and editing for journal entries
-// Direct YJS data binding
+// Entry UI - Simple re-render approach
+// Just render everything fresh on changes
 
 import { formatDate, sortEntriesByDate } from './utils.js';
-import { createElement, createElementWithAttributes } from './dom-utils.js';
 import { updateEntry, deleteEntry } from './yjs-direct.js';
+
+// Simple state for edit mode
+let editingEntryId = null;
+let editData = { title: '', content: '' };
 
 // Simple markdown parsing
 export const parseMarkdown = (text) => {
   if (!text) return '';
   
   return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-    .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
-    .replace(/`(.*?)`/g, '<code>$1</code>') // Code
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>') // H3
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>') // H2
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>') // H1
-    // Handle unordered lists
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
     .replace(/^- (.+)(\n- .+)*/gm, (match) => {
       const items = match.split('\n').map(line => line.replace(/^- /, '').trim()).join('</li><li>');
       return `<ul><li>${items}</li></ul>`;
     })
-    // Handle ordered lists
     .replace(/^\d+\. (.+)(\n\d+\. .+)*/gm, (match) => {
       const items = match.split('\n').map(line => line.replace(/^\d+\. /, '').trim()).join('</li><li>');
       return `<ol><li>${items}</li></ol>`;
     })
-    .replace(/\n\n/g, '__PARAGRAPH__') // Paragraph breaks
-    .replace(/\n/g, '__LINE_BREAK__') // Line breaks
-    .replace(/__PARAGRAPH__/g, '</p><p>') // Convert paragraph breaks
-    .replace(/^/, '<p>') // Start with paragraph
-    .replace(/$/, '</p>') // End with paragraph
-    .replace(/<p><\/p>/g, '') // Remove empty paragraphs
-    .replace(/__LINE_BREAK__/g, '<br>'); // Single line breaks
+    .replace(/\n\n/g, '__PARAGRAPH__')
+    .replace(/\n/g, '__LINE_BREAK__')
+    .replace(/__PARAGRAPH__/g, '</p><p>')
+    .replace(/^/, '<p>')
+    .replace(/$/, '</p>')
+    .replace(/<p><\/p>/g, '')
+    .replace(/__LINE_BREAK__/g, '<br>');
 };
 
-// Create delete button
-export const createDeleteButton = (entry) => {
-  const deleteBtn = createElement('button', 'delete-btn', '🗑️');
-  deleteBtn.onclick = () => handleDeleteEntry(entry.id, entry.title);
-  deleteBtn.title = 'Delete entry';
-  return deleteBtn;
-};
+// Create entry HTML (view mode)
+const createEntryViewHTML = (entry) => `
+  <article class="entry" data-entry-id="${entry.id}">
+    <header class="entry-header">
+      <h3 class="entry-title">${entry.title}</h3>
+      <div class="entry-meta">
+        <span class="entry-timestamp">${formatDate(entry.timestamp)}</span>
+        <button class="edit-btn" onclick="startEdit('${entry.id}')" title="Edit entry">✏️</button>
+        <button class="delete-btn" onclick="deleteEntryAction('${entry.id}', '${entry.title.replace(/'/g, '\\\'')}')" title="Delete entry">🗑️</button>
+      </div>
+    </header>
+    <div class="entry-content">${parseMarkdown(entry.content)}</div>
+  </article>
+`;
 
-// Create edit button
-export const createEditButton = (entry, entryDiv) => {
-  const editBtn = createElement('button', 'edit-btn', '✏️');
-  editBtn.onclick = () => enableEditMode(entryDiv, entry);
-  editBtn.title = 'Edit entry';
-  return editBtn;
-};
+// Create entry HTML (edit mode)
+const createEntryEditHTML = (entry) => `
+  <article class="entry entry-editing" data-entry-id="${entry.id}">
+    <div class="edit-form">
+      <input type="text" class="edit-title-input" value="${entry.title}" placeholder="Entry title">
+      <textarea class="edit-content-textarea" placeholder="Entry content">${entry.content}</textarea>
+      <div class="edit-actions">
+        <button onclick="saveEdit('${entry.id}')">Save</button>
+        <button onclick="cancelEdit()">Cancel</button>
+      </div>
+    </div>
+  </article>
+`;
 
-// Create entry element
-export const createEntryElement = (entry) => {
-  const entryDiv = createElement('article', 'entry');
-  entryDiv.dataset.entryId = entry.id;
-
-  // Create header with title and meta info
-  const header = createElement('header', 'entry-header');
-  
-  const title = createElement('h3', 'entry-title', entry.title);
-  const meta = createElement('div', 'entry-meta');
-  
-  const timestamp = createElement('span', 'entry-timestamp', formatDate(entry.timestamp));
-  
-  // Create action buttons
-  const deleteBtn = createDeleteButton(entry);
-  const editBtn = createEditButton(entry, entryDiv);
-  
-  meta.appendChild(timestamp);
-  meta.appendChild(editBtn);
-  meta.appendChild(deleteBtn);
-  
-  header.appendChild(title);
-  header.appendChild(meta);
-
-  // Create content
-  const content = createElement('div', 'entry-content');
-  content.innerHTML = parseMarkdown(entry.content);
-
-  entryDiv.appendChild(header);
-  entryDiv.appendChild(content);
-
-  return entryDiv;
-};
-
-// Create empty state element
-export const createEmptyStateElement = () => {
-  const emptyDiv = createElement('div', 'empty-state');
-  const message = createElement('p', '', 'No entries yet. Start writing your adventure!');
-  emptyDiv.appendChild(message);
-  return emptyDiv;
-};
-
-// Render entries list
+// Render all entries (simple approach)
 export const renderEntries = (entries = []) => {
   const container = document.getElementById('entries-list') || document.getElementById('entries-container');
   if (!container) {
@@ -101,165 +73,105 @@ export const renderEntries = (entries = []) => {
     return;
   }
 
-  // Clear existing content
-  container.innerHTML = '';
-
   if (entries.length === 0) {
-    const emptyState = createEmptyStateElement();
-    container.appendChild(emptyState);
+    container.innerHTML = '<div class="empty-state"><p>No entries yet. Start writing your adventure!</p></div>';
     return;
   }
 
-  // Sort entries by date (newest first)
+  // Sort entries and render
   const sortedEntries = sortEntriesByDate(entries);
-
-  // Create and append entry elements
-  sortedEntries.forEach(entry => {
-    const entryElement = createEntryElement(entry);
-    container.appendChild(entryElement);
-  });
-};
-
-// Create edit form elements
-export const createEditForm = (entry) => {
-  const editForm = createElement('div', 'edit-form');
   
-  const titleInput = createElementWithAttributes('input', {
-    type: 'text',
-    value: entry.title,
-    className: 'edit-title-input'
-  });
-  
-  const contentTextarea = createElementWithAttributes('textarea', {
-    textContent: entry.content,
-    className: 'edit-content-textarea'
-  });
-  
-  const saveBtn = createElement('button', '', 'Save');
-  const cancelBtn = createElement('button', '', 'Cancel');
-  
-  editForm.appendChild(titleInput);
-  editForm.appendChild(contentTextarea);
-  editForm.appendChild(saveBtn);
-  editForm.appendChild(cancelBtn);
-  
-  return {
-    editForm,
-    titleInput,
-    contentTextarea,
-    saveBtn,
-    cancelBtn
-  };
-};
-
-// Enable edit mode for an entry
-export const enableEditMode = (entryDiv, entry) => {
-  try {
-    const title = entryDiv.querySelector('.entry-title');
-    const content = entryDiv.querySelector('.entry-content');
-    const headerActions = entryDiv.querySelector('.entry-meta');
-    
-    if (!title || !content || !headerActions) {
-      console.error('Entry elements not found');
-      return;
+  container.innerHTML = sortedEntries.map(entry => {
+    // If this entry is being edited, render edit form
+    if (editingEntryId === entry.id) {
+      // Use current edit data or entry data
+      const entryToEdit = {
+        ...entry,
+        title: editData.title || entry.title,
+        content: editData.content || entry.content
+      };
+      return createEntryEditHTML(entryToEdit);
     }
-    
-    // Create edit form
-    const { editForm, titleInput, contentTextarea, saveBtn, cancelBtn } = createEditForm(entry);
-    
-    // Set up event handlers
-    saveBtn.onclick = () => saveEdit(entryDiv, entry, titleInput.value, contentTextarea.value);
-    cancelBtn.onclick = () => cancelEdit(entryDiv, entry);
-    
-    // Hide original content and show edit form
-    title.style.display = 'none';
-    content.style.display = 'none';
-    headerActions.style.display = 'none';
-    
-    entryDiv.appendChild(editForm);
-    titleInput.focus();
-  } catch (error) {
-    console.error('Error enabling edit mode:', error);
+    // Otherwise render normal view
+    return createEntryViewHTML(entry);
+  }).join('');
+  
+  // Focus edit field if we're editing
+  if (editingEntryId) {
+    const titleInput = container.querySelector('.edit-title-input');
+    if (titleInput) {
+      titleInput.focus();
+      // Update edit data when inputs change
+      titleInput.oninput = (e) => editData.title = e.target.value;
+      const contentInput = container.querySelector('.edit-content-textarea');
+      if (contentInput) {
+        contentInput.oninput = (e) => editData.content = e.target.value;
+      }
+    }
   }
 };
 
-// Save edit changes
-export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
-  try {
-    if (!newTitle.trim() || !newContent.trim()) {
-      alert('Title and content cannot be empty');
-      return;
-    }
-
-    // Update entry directly in YJS
-    updateEntry(entry.id, newTitle.trim(), newContent.trim());
-
-    // Update the entry object for local display
-    entry.title = newTitle.trim();
-    entry.content = newContent.trim();
-    entry.timestamp = Date.now();
-
-    // Remove edit form and restore display
-    const editForm = entryDiv.querySelector('.edit-form');
-    if (editForm) {
-      editForm.remove();
-    }
-    
-    const title = entryDiv.querySelector('.entry-title');
-    const content = entryDiv.querySelector('.entry-content');
-    const headerActions = entryDiv.querySelector('.entry-meta');
-    
-    if (title && content && headerActions) {
-      title.textContent = newTitle.trim();
-      title.style.display = '';
-      content.innerHTML = parseMarkdown(newContent.trim());
-      content.style.display = '';
-      headerActions.style.display = '';
-    }
-  } catch (error) {
-    console.error('Error saving edit:', error);
-    alert('Failed to save changes');
-  }
+// Start editing an entry
+export const startEdit = (entryId) => {
+  editingEntryId = entryId;
+  editData = { title: '', content: '' }; // Reset edit data
+  // Trigger re-render (this will be called by the app's update cycle)
+  if (window.triggerUIUpdate) window.triggerUIUpdate();
 };
 
-// Cancel edit mode
-export const cancelEdit = (entryDiv, entry) => {
-  try {
-    const editForm = entryDiv.querySelector('.edit-form');
-    if (editForm) {
-      editForm.remove();
-    }
-    
-    const title = entryDiv.querySelector('.entry-title');
-    const content = entryDiv.querySelector('.entry-content');
-    const headerActions = entryDiv.querySelector('.entry-meta');
-    
-    if (title && content && headerActions) {
-      title.style.display = '';
-      content.style.display = '';
-      headerActions.style.display = '';
-    }
-  } catch (error) {
-    console.error('Error cancelling edit:', error);
+// Save edit
+export const saveEdit = (entryId) => {
+  const titleInput = document.querySelector('.edit-title-input');
+  const contentInput = document.querySelector('.edit-content-textarea');
+  
+  if (!titleInput || !contentInput) return;
+  
+  const newTitle = titleInput.value.trim();
+  const newContent = contentInput.value.trim();
+  
+  if (!newTitle || !newContent) {
+    alert('Title and content cannot be empty');
+    return;
   }
+
+  // Update in YJS (this will trigger re-render)
+  updateEntry(entryId, newTitle, newContent);
+  
+  // Exit edit mode
+  editingEntryId = null;
+  editData = { title: '', content: '' };
 };
 
-// Handle entry deletion
-export const handleDeleteEntry = (entryId, entryTitle) => {
-  try {
-    const confirmed = confirm(`Are you sure you want to delete "${entryTitle}"?`);
-    if (!confirmed) return;
-
-    // Delete directly from YJS
-    deleteEntry(entryId);
-  } catch (error) {
-    console.error('Error deleting entry:', error);
-    alert('Failed to delete entry');
-  }
+// Cancel edit
+export const cancelEdit = () => {
+  editingEntryId = null;
+  editData = { title: '', content: '' };
+  // Trigger re-render
+  if (window.triggerUIUpdate) window.triggerUIUpdate();
 };
 
-// Focus entry title input
+// Delete entry
+export const deleteEntryAction = (entryId, entryTitle) => {
+  const confirmed = confirm(`Are you sure you want to delete "${entryTitle}"?`);
+  if (!confirmed) return;
+  
+  // Delete from YJS (this will trigger re-render)
+  deleteEntry(entryId);
+};
+
+// Focus entry title input (for main form)
 export const focusEntryTitle = () => {
   const titleInput = document.getElementById('entry-title');
   if (titleInput) titleInput.focus();
 };
+
+// Make functions globally available (for onclick handlers)
+if (typeof window !== 'undefined') {
+  window.startEdit = startEdit;
+  window.saveEdit = saveEdit;
+  window.cancelEdit = cancelEdit;
+  window.deleteEntryAction = deleteEntryAction;
+}
+
+// Export for compatibility
+export { startEdit as enableEditMode, saveEdit, cancelEdit, deleteEntryAction as handleDeleteEntry };

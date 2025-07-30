@@ -1,8 +1,8 @@
 // D&D Journal - Simple Main Application
-// Direct YJS data binding, no "system" abstraction
+// Direct YJS data binding, simple re-render approach
 
 import { generateId } from './utils.js';
-import { renderEntries, parseMarkdown, enableEditMode, saveEdit, cancelEdit, focusEntryTitle } from './entry-ui.js';
+import { renderEntries, parseMarkdown, focusEntryTitle } from './entry-ui.js';
 import { displayCharacterSummary } from './character-display.js';
 import { initializeYjs, onUpdate, getCharacter, getEntries, addEntry } from './yjs-direct.js';
 
@@ -35,12 +35,17 @@ const loadStateFromYjs = () => {
   }
 };
 
-// Simple UI update
+// Simple UI update - just re-render everything
 const updateUI = () => {
   loadStateFromYjs();
   renderEntries(state.entries);
   displayCharacterSummary(state.character);
 };
+
+// Make updateUI available globally for the simple entry UI
+if (typeof window !== 'undefined') {
+  window.triggerUIUpdate = updateUI;
+}
 
 // Add new entry
 export const addNewEntry = async () => {
@@ -81,7 +86,7 @@ export const addNewEntry = async () => {
 };
 
 // Setup event handlers
-export const setupEventHandlers = () => {
+const setupEventHandlers = () => {
   // Add entry button
   const addBtn = document.getElementById('add-entry-btn');
   if (addBtn) {
@@ -95,13 +100,6 @@ export const setupEventHandlers = () => {
       e.preventDefault();
       addNewEntry();
     });
-  }
-  
-  // Make functions globally available for onclick handlers
-  if (typeof window !== 'undefined') {
-    window.enableEditMode = enableEditMode;
-    window.saveEdit = saveEdit;
-    window.cancelEdit = cancelEdit;
   }
 };
 
@@ -165,9 +163,9 @@ export const initializeApp = async () => {
     // Load initial state
     loadStateFromYjs();
     
-    // Setup YJS update listener
+    // Setup YJS update listener - just re-render on any change
     onUpdate(() => {
-      console.log('YJS updated - refreshing UI');
+      console.log('YJS updated - re-rendering UI');
       updateUI();
     });
     
@@ -182,7 +180,7 @@ export const initializeApp = async () => {
       displayAIPrompt();
     }
     
-    console.log('D&D Journal initialized with direct YJS binding');
+    console.log('D&D Journal initialized with simple re-render approach');
   } catch (error) {
     console.error('Failed to initialize app:', error);
   }
@@ -195,13 +193,13 @@ if (document.readyState === 'loading') {
   initializeApp();
 }
 
-// Export for compatibility
+// Re-export entry UI functions for compatibility
+export { enableEditMode, saveEdit, cancelEdit, handleDeleteEntry } from './entry-ui.js';
+
+// Export app-specific functions
 export { 
   state, 
-  parseMarkdown, 
-  enableEditMode, 
-  saveEdit, 
-  cancelEdit,
+  parseMarkdown,
   displayCharacterSummary,
   setupEventHandlers,
   addNewEntry as addEntry // Alias for compatibility
