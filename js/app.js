@@ -1,9 +1,9 @@
 // D&D Journal - Simple Main Application
 // Direct YJS data binding, simple re-render approach
 
-import { generateId } from './utils.js';
-import { renderEntries, parseMarkdown, focusEntryTitle } from './entry-ui.js';
-import { displayCharacterSummary } from './character-display.js';
+import { generateId, parseMarkdown } from './utils.js';
+import { renderEntries, focusEntryTitle } from './entry-ui.js';
+import { renderCharacter } from './character-ui.js';
 import { initializeYjs, onUpdate, getCharacter, getEntries, addEntry } from './yjs-direct.js';
 
 // Simple state for UI rendering (mirrors YJS data)
@@ -39,10 +39,10 @@ const loadStateFromYjs = () => {
 const updateUI = () => {
   loadStateFromYjs();
   renderEntries(state.entries);
-  displayCharacterSummary(state.character);
+  renderCharacter(state.character);
 };
 
-// Make updateUI available globally for the simple entry UI
+// Make updateUI available globally for the simple UIs
 if (typeof window !== 'undefined') {
   window.triggerUIUpdate = updateUI;
 }
@@ -193,14 +193,14 @@ if (document.readyState === 'loading') {
   initializeApp();
 }
 
-// Re-export entry UI functions for compatibility
+// Re-export UI functions for compatibility
 export { enableEditMode, saveEdit, cancelEdit, handleDeleteEntry } from './entry-ui.js';
+export { renderCharacter as displayCharacterSummary } from './character-ui.js';
 
 // Export app-specific functions
 export { 
   state, 
   parseMarkdown,
-  displayCharacterSummary,
   setupEventHandlers,
   addNewEntry as addEntry // Alias for compatibility
 };
