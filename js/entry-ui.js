@@ -1,15 +1,9 @@
 // Entry UI - DOM rendering and editing for journal entries
-// Following functional programming principles and style guide
+// Direct YJS data binding
 
 import { formatDate, sortEntriesByDate } from './utils.js';
-import { 
-  createElement, 
-  createElementWithAttributes,
-  setElementHTML,
-  clearElement,
-  appendChild,
-  focusElement
-} from './dom-utils.js';
+import { createElement, createElementWithAttributes } from './dom-utils.js';
+import { updateEntry, deleteEntry } from './yjs-simple.js';
 
 // Simple markdown parsing
 export const parseMarkdown = (text) => {
@@ -197,25 +191,10 @@ export const saveEdit = (entryDiv, entry, newTitle, newContent) => {
       return;
     }
 
-    // Update entry using YJS
-    const yjsSystem = window.getSystem ? window.getSystem() : null;
-    if (yjsSystem?.journalMap) {
-      const entriesArray = yjsSystem.journalMap.get('entries');
-      if (entriesArray) {
-        const entries = entriesArray.toArray();
-        const entryIndex = entries.findIndex(entryMap => entryMap.get('id') === entry.id);
-        
-        if (entryIndex >= 0) {
-          const entryMap = entries[entryIndex];
-          entryMap.set('title', newTitle.trim());
-          entryMap.set('content', newContent.trim());
-          entryMap.set('timestamp', Date.now());
-          yjsSystem.journalMap.set('lastModified', Date.now());
-        }
-      }
-    }
+    // Update entry directly in YJS
+    updateEntry(entry.id, newTitle.trim(), newContent.trim());
 
-    // Update the entry object for compatibility
+    // Update the entry object for local display
     entry.title = newTitle.trim();
     entry.content = newContent.trim();
     entry.timestamp = Date.now();
@@ -271,20 +250,8 @@ export const handleDeleteEntry = (entryId, entryTitle) => {
     const confirmed = confirm(`Are you sure you want to delete "${entryTitle}"?`);
     if (!confirmed) return;
 
-    // Delete from YJS
-    const yjsSystem = window.getSystem ? window.getSystem() : null;
-    if (yjsSystem?.journalMap) {
-      const entriesArray = yjsSystem.journalMap.get('entries');
-      if (entriesArray) {
-        const entries = entriesArray.toArray();
-        const entryIndex = entries.findIndex(entryMap => entryMap.get('id') === entryId);
-        
-        if (entryIndex >= 0) {
-          entriesArray.delete(entryIndex, 1);
-          yjsSystem.journalMap.set('lastModified', Date.now());
-        }
-      }
-    }
+    // Delete directly from YJS
+    deleteEntry(entryId);
   } catch (error) {
     console.error('Error deleting entry:', error);
     alert('Failed to delete entry');
@@ -293,5 +260,6 @@ export const handleDeleteEntry = (entryId, entryTitle) => {
 
 // Focus entry title input
 export const focusEntryTitle = () => {
-  focusElement('entry-title');
+  const titleInput = document.getElementById('entry-title');
+  if (titleInput) titleInput.focus();
 };

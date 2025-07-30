@@ -1,25 +1,12 @@
 // D&D Journal - Simple Main Application
-// Following radical simplicity principles
+// Direct YJS data binding, no "system" abstraction
 
-import { 
-  generateId, 
-  formatDate, 
-  sortEntriesByDate 
-} from './utils.js';
-
-import { 
-  renderEntries, 
-  parseMarkdown, 
-  enableEditMode, 
-  saveEdit, 
-  cancelEdit,
-  focusEntryTitle 
-} from './entry-ui.js';
-
+import { generateId } from './utils.js';
+import { renderEntries, parseMarkdown, enableEditMode, saveEdit, cancelEdit, focusEntryTitle } from './entry-ui.js';
 import { displayCharacterSummary } from './character-display.js';
-import { createSystem, getSystem } from './yjs.js';
+import { initializeYjs, onUpdate, getCharacter, getEntries, addEntry } from './yjs-simple.js';
 
-// Simple state for UI rendering
+// Simple state for UI rendering (mirrors YJS data)
 let state = { character: {}, entries: [] };
 
 // Simple function to get current state
@@ -36,31 +23,9 @@ export const resetState = () => {
 // Load data from YJS into local state
 const loadStateFromYjs = () => {
   try {
-    const yjsSystem = getSystem();
-    if (!yjsSystem) return;
-
-    // Load character
-    if (yjsSystem.characterMap) {
-      state.character = {
-        name: yjsSystem.characterMap.get('name') || '',
-        race: yjsSystem.characterMap.get('race') || '',
-        class: yjsSystem.characterMap.get('class') || '',
-        backstory: yjsSystem.characterMap.get('backstory') || '',
-        notes: yjsSystem.characterMap.get('notes') || ''
-      };
-    }
-
-    // Load entries
-    const entriesArray = yjsSystem.journalMap?.get('entries');
-    if (entriesArray) {
-      state.entries = entriesArray.toArray().map(entryMap => ({
-        id: entryMap.get('id'),
-        title: entryMap.get('title'),
-        content: entryMap.get('content'),
-        timestamp: entryMap.get('timestamp')
-      }));
-    }
-
+    state.character = getCharacter();
+    state.entries = getEntries();
+    
     // Update global state for tests
     if (typeof global !== 'undefined') {
       global.state = state;
@@ -78,7 +43,7 @@ const updateUI = () => {
 };
 
 // Add new entry
-export const addEntry = async () => {
+export const addNewEntry = async () => {
   try {
     const titleInput = document.getElementById('entry-title');
     const contentInput = document.getElementById('entry-content');
@@ -93,7 +58,7 @@ export const addEntry = async () => {
       return;
     }
 
-    // Create entry
+    // Create and add entry directly to YJS
     const entry = {
       id: generateId(),
       title,
@@ -101,31 +66,13 @@ export const addEntry = async () => {
       timestamp: Date.now()
     };
 
-    // Add to YJS
-    const yjsSystem = getSystem();
-    if (yjsSystem?.journalMap) {
-      let entriesArray = yjsSystem.journalMap.get('entries');
-      if (!entriesArray) {
-        entriesArray = yjsSystem.ydoc.getArray('entriesArray');
-        yjsSystem.journalMap.set('entries', entriesArray);
-      }
-
-      const entryMap = yjsSystem.ydoc.getMap();
-      entryMap.set('id', entry.id);
-      entryMap.set('title', entry.title);
-      entryMap.set('content', entry.content);
-      entryMap.set('timestamp', entry.timestamp);
-
-      entriesArray.push([entryMap]);
-      yjsSystem.journalMap.set('lastModified', Date.now());
-    }
+    addEntry(entry);
 
     // Clear form
     titleInput.value = '';
     contentInput.value = '';
     
-    // Update UI and focus
-    updateUI();
+    // Focus for next entry
     focusEntryTitle();
   } catch (error) {
     console.error('Error adding entry:', error);
@@ -138,7 +85,7 @@ export const setupEventHandlers = () => {
   // Add entry button
   const addBtn = document.getElementById('add-entry-btn');
   if (addBtn) {
-    addBtn.addEventListener('click', addEntry);
+    addBtn.addEventListener('click', addNewEntry);
   }
   
   // Form submission
@@ -146,7 +93,7 @@ export const setupEventHandlers = () => {
   if (entryForm) {
     entryForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      addEntry();
+      addNewEntry();
     });
   }
   
@@ -212,20 +159,17 @@ export const getEntrySummaries = async () => {
 // Initialize the application
 export const initializeApp = async () => {
   try {
-    // Initialize YJS system
-    await createSystem();
+    // Initialize YJS with direct data binding
+    await initializeYjs();
     
     // Load initial state
     loadStateFromYjs();
     
     // Setup YJS update listener
-    const yjsSystem = getSystem();
-    if (yjsSystem?.ydoc) {
-      yjsSystem.ydoc.on('update', () => {
-        console.log('YJS document updated - refreshing UI');
-        updateUI();
-      });
-    }
+    onUpdate(() => {
+      console.log('YJS updated - refreshing UI');
+      updateUI();
+    });
     
     // Setup event handlers
     setupEventHandlers();
@@ -238,7 +182,7 @@ export const initializeApp = async () => {
       displayAIPrompt();
     }
     
-    console.log('D&D Journal initialized');
+    console.log('D&D Journal initialized with direct YJS binding');
   } catch (error) {
     console.error('Failed to initialize app:', error);
   }
@@ -259,5 +203,6 @@ export {
   saveEdit, 
   cancelEdit,
   displayCharacterSummary,
-  setupEventHandlers
+  setupEventHandlers,
+  addNewEntry as addEntry // Alias for compatibility
 };

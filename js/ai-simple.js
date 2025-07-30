@@ -1,10 +1,10 @@
 // AI Module - Simple OpenAI Integration
-// Following radical simplicity principles
+// Direct YJS data binding
 
 import { getWordCount } from './utils.js';
-import { getSummaryByKey, storeSummary } from './summarization.js';
-import { loadSettings } from './settings.js';
-import { getSystem } from './yjs.js';
+import { getSummary, saveSummary } from './yjs-simple.js';
+import { getSettings } from './yjs-simple.js';
+import { getEntries } from './yjs-simple.js';
 import { getEncoding } from 'js-tiktoken';
 
 // Simple tiktoken usage - one liner when needed
@@ -30,13 +30,13 @@ Make questions specific to the character's situation and recent adventures. Focu
 
 // Check if AI is available
 export const isAIEnabled = () => {
-  const settings = loadSettings();
+  const settings = getSettings();
   return settings.enableAIFeatures && settings.apiKey?.startsWith('sk-');
 };
 
 // Simple OpenAI API call
 export const callOpenAI = async (prompt, maxTokens = 1000) => {
-  const settings = loadSettings();
+  const settings = getSettings();
   
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -129,11 +129,11 @@ export const generateEntrySummary = async (entry) => {
 
 // Get or generate summary
 export const getEntrySummary = async (entry) => {
-  const existing = getSummaryByKey(entry.id);
+  const existing = getSummary(entry.id);
   if (existing) return existing;
   
   const summary = await generateEntrySummary(entry);
-  if (summary) storeSummary(entry.id, summary);
+  if (summary) saveSummary(entry.id, summary);
   
   return summary;
 };
@@ -154,17 +154,7 @@ export const getIntrospectionPromptForPreview = async (character, entries) => {
 // Simple helper to get formatted entries with summaries
 export const getFormattedEntriesForAI = () => {
   try {
-    const yjsSystem = getSystem();
-    const entriesArray = yjsSystem?.journalMap?.get('entries');
-    if (!entriesArray) return [];
-
-    const entries = entriesArray.toArray().map(entryMap => ({
-      id: entryMap.get('id'),
-      title: entryMap.get('title'),
-      content: entryMap.get('content'),
-      timestamp: entryMap.get('timestamp')
-    }));
-
+    const entries = getEntries();
     return entries.sort((a, b) => b.timestamp - a.timestamp);
   } catch {
     return [];
