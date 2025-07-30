@@ -81,3 +81,33 @@ export const getCharacterFormFieldIds = () => [
 
 // Pure function to convert field ID to property name for character forms
 export const getPropertyNameFromFieldId = (fieldId) => fieldId.replace('character-', '');
+
+// Simple markdown parser for basic formatting
+export const parseMarkdown = (text) => {
+  if (!text) return '';
+  
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+    .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
+    .replace(/`(.*?)`/g, '<code>$1</code>') // Code
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>') // H3
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>') // H2
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>') // H1
+    // Handle unordered lists
+    .replace(/^- (.+)(\n- .+)*/gm, (match) => {
+      const items = match.split('\n').map(line => line.replace(/^- /, '').trim()).join('</li><li>');
+      return `<ul><li>${items}</li></ul>`;
+    })
+    // Handle ordered lists
+    .replace(/^\d+\. (.+)(\n\d+\. .+)*/gm, (match) => {
+      const items = match.split('\n').map(line => line.replace(/^\d+\. /, '').trim()).join('</li><li>');
+      return `<ol><li>${items}</li></ol>`;
+    })
+    .replace(/\n\n/g, '__PARAGRAPH__') // Paragraph breaks
+    .replace(/\n/g, '__LINE_BREAK__') // Line breaks
+    .replace(/__PARAGRAPH__/g, '</p><p>') // Convert paragraph breaks
+    .replace(/^/, '<p>') // Start with paragraph
+    .replace(/$/, '</p>') // End with paragraph
+    .replace(/<p><\/p>/g, '') // Remove empty paragraphs
+    .replace(/__LINE_BREAK__/g, '<br>'); // Single line breaks
+};
