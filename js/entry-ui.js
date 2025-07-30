@@ -1,40 +1,12 @@
 // Entry UI - Simple re-render approach
 // Just render everything fresh on changes
 
-import { formatDate, sortEntriesByDate } from './utils.js';
+import { formatDate, sortEntriesByDate, parseMarkdown } from './utils.js';
 import { updateEntry, deleteEntry } from './yjs-direct.js';
 
 // Simple state for edit mode
 let editingEntryId = null;
 let editData = { title: '', content: '' };
-
-// Simple markdown parsing
-export const parseMarkdown = (text) => {
-  if (!text) return '';
-  
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`(.*?)`/g, '<code>$1</code>')
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    .replace(/^- (.+)(\n- .+)*/gm, (match) => {
-      const items = match.split('\n').map(line => line.replace(/^- /, '').trim()).join('</li><li>');
-      return `<ul><li>${items}</li></ul>`;
-    })
-    .replace(/^\d+\. (.+)(\n\d+\. .+)*/gm, (match) => {
-      const items = match.split('\n').map(line => line.replace(/^\d+\. /, '').trim()).join('</li><li>');
-      return `<ol><li>${items}</li></ol>`;
-    })
-    .replace(/\n\n/g, '__PARAGRAPH__')
-    .replace(/\n/g, '__LINE_BREAK__')
-    .replace(/__PARAGRAPH__/g, '</p><p>')
-    .replace(/^/, '<p>')
-    .replace(/$/, '</p>')
-    .replace(/<p><\/p>/g, '')
-    .replace(/__LINE_BREAK__/g, '<br>');
-};
 
 // Create entry HTML (view mode)
 const createEntryViewHTML = (entry) => `
