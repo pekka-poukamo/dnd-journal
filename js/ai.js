@@ -24,9 +24,11 @@
 
 import { 
   createInitialSettings, 
-  getWordCount 
+  getWordCount,
+  sortEntriesByDate,
+  formatDate
 } from './utils.js';
-import { getSummary, setSummary, getSetting, summariesMap } from './yjs.js';
+import { getSummary, setSummary, getSetting, summariesMap, getEntries } from './yjs.js';
 import { getEncoding } from 'js-tiktoken';
 
 // Unified narrative-focused system prompt with unobvious question element
@@ -380,137 +382,35 @@ export const getFormattedCharacterForAI = (character) => {
 
 // Format entries for AI processing (with summaries for older entries, full content for recent)
 export const getFormattedEntriesForAI = () => {
-  // Use Yjs system first, then fallback to localStorage
-  const yjsSystem = getSystem();
-  let processedJournalData, entrySummaries, metaSummaries;
+  // Get entries directly from Y.js
+  const entries = getEntries();
   
-  if (yjsSystem) {
-    // Get data from Yjs
-    const entriesArray = yjsSystem.journalMap.get('entries');
-    let entries = [];
-    
-    if (entriesArray) {
-      if (Array.isArray(entriesArray)) {
-        // Plain JavaScript array (test environment)
-        entries = entriesArray;
-      } else if (entriesArray.toArray && typeof entriesArray.toArray === 'function') {
-        // Y.Array with Y.Map objects (real app) or mock toArray function
-        try {
-          const rawEntries = entriesArray.toArray();
-          if (rawEntries && Array.isArray(rawEntries)) {
-            entries = rawEntries.map(entryMap => {
-              // Handle both Y.Map objects and plain objects
-              if (entryMap && typeof entryMap.get === 'function') {
-                return {
-                  id: entryMap.get('id'),
-                  title: entryMap.get('title'),
-                  content: entryMap.get('content'),
-                  timestamp: entryMap.get('timestamp')
-                };
-              } else {
-                // Plain object (test environment)
-                return entryMap;
-              }
-            });
-          }
-        } catch (e) {
-          // Fallback if toArray fails
-          entries = [];
-        }
-      }
-    }
-    
-    processedJournalData = { 
-      character: {}, 
-      entries: entries
-    };
-    
-    entrySummaries = {};
-    metaSummaries = {};
-    
-    // Convert Yjs summaries to the expected format
-    if (yjsSystem.summariesMap) {
-      yjsSystem.summariesMap.forEach((value, key) => {
-        if (key === 'summaries') {
-          entrySummaries = value && typeof value === 'object' && value.get ? value.toJSON() : value || {};
-        } else if (key === 'meta-summaries') {
-          metaSummaries = value && typeof value === 'object' && value.get ? value.toJSON() : value || {};
-        }
-      });
-    }
-  } else {
-    // No Yjs system available - use empty data
-    processedJournalData = { character: {}, entries: [] };
-    entrySummaries = {};
-    metaSummaries = {};
+  if (!entries || entries.length === 0) {
+    return 'No journal entries yet. This character is just beginning their adventure.';
   }
   
-  // Get all entry IDs that are already included in meta-summaries to avoid duplication
-  const entriesInMetaSummaries = new Set();
-  Object.values(metaSummaries).forEach(metaSummary => {
-    if (metaSummary.includedSummaryIds) {
-      metaSummary.includedSummaryIds.forEach(entryId => {
-        // Entry summaries are keyed by entry ID, so the summaryId is the entryId
-        entriesInMetaSummaries.add(entryId);
-      });
-    }
-  });
+  // Sort entries by timestamp (newest first) - entries should already be sorted from getEntries()
+  const sortedEntries = sortEntriesByDate(entries);
   
-  const sortedEntries = [...(processedJournalData.entries || [])].sort((a, b) => b.timestamp - a.timestamp);
-  const recentEntries = sortedEntries.slice(0, 5); // Keep 5 most recent entries in full
-  const olderEntries = sortedEntries.slice(5);
+  // Use last 5 entries for context, with full content for recent ones and summaries for older ones
+  const recentEntries = sortedEntries.slice(0, 5);
   
-
-  
-  const formattedEntries = [];
-  
-  // Add recent entries in full (these are always included regardless of meta-summaries)
-  recentEntries.forEach(entry => {
-    formattedEntries.push({
-      type: 'recent',
-      title: entry.title,
-      content: entry.content,
-      timestamp: entry.timestamp
-    });
-  });
-  
-  // Add individual summaries for older entries, but only if they're not already in meta-summaries
-  olderEntries.forEach(entry => {
-    // Skip entries that are already included in meta-summaries
-    if (entriesInMetaSummaries.has(entry.id)) {
-      return;
+  return recentEntries.map((entry, index) => {
+    const summary = getSummary(`entry:${entry.id}`);
+    let content;
+    
+    if (index < 2 && !summary) {
+      // Most recent 2 entries: use full content if no summary available
+      content = entry.content;
+    } else if (summary) {
+      // Use summary if available
+      content = `[Summary: ${summary}]`;
+    } else {
+      // Fallback to full content for older entries without summaries
+      content = entry.content;
     }
     
-    const summary = entrySummaries[entry.id];
-    if (summary) {
-      formattedEntries.push({
-        type: 'summary',
-        title: entry.title,
-        content: summary.summary,
-        timestamp: entry.timestamp
-      });
-    } else {
-      // Fallback to full entry if no summary available
-      formattedEntries.push({
-        type: 'recent',
-        title: entry.title,
-        content: entry.content,
-        timestamp: entry.timestamp
-      });
-    }
-  });
-  
-  // Add meta-summaries for very old entries (these replace the individual entries)
-  Object.values(metaSummaries).forEach(metaSummary => {
-    formattedEntries.push({
-      type: 'meta-summary',
-      title: metaSummary.title,
-      content: metaSummary.summary,
-      timestamp: metaSummary.timestamp
-    });
-  });
-  
-  
-  
-  return formattedEntries;
+    const formattedDate = formatDate ? formatDate(entry.timestamp) : new Date(entry.timestamp).toLocaleDateString();
+    return `**${entry.title}** (${formattedDate})\n${content}`;
+  }).join('\n\n');
 };

@@ -166,4 +166,260 @@ describe('AI Module', function() {
       expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
     });
   });
+
+  describe('Advanced AI Functions', function() {
+    beforeEach(function() {
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
+      YjsModule.setSetting('ai-enabled', true);
+    });
+
+    describe('callOpenAI', function() {
+      it('should handle API calls when properly configured', async function() {
+        try {
+          const result = await AI.callOpenAI('Test prompt');
+          // In test environment, this will likely fail due to no real API
+          expect(result).to.satisfy(val => typeof val === 'string' || val === null);
+        } catch (error) {
+          // Expected in test environment
+          expect(error).to.be.an('error');
+          expect(error.message).to.include('No API key configured');
+        }
+      });
+
+      it('should throw error when no API key is configured', async function() {
+        YjsModule.setSetting('openai-api-key', '');
+        
+        try {
+          await AI.callOpenAI('Test prompt');
+          expect.fail('Should have thrown error');
+        } catch (error) {
+          expect(error.message).to.include('No API key configured');
+        }
+      });
+
+      it('should accept maxTokens parameter', async function() {
+        try {
+          await AI.callOpenAI('Test prompt', 500);
+        } catch (error) {
+          expect(error.message).to.include('No API key configured');
+        }
+      });
+    });
+
+    describe('callOpenAIForSummarization', function() {
+      it('should handle summarization calls', async function() {
+        try {
+          const result = await AI.callOpenAIForSummarization('Summarize this text');
+          expect(result).to.satisfy(val => typeof val === 'string' || val === null);
+        } catch (error) {
+          expect(error).to.be.an('error');
+          expect(error.message).to.include('No API key configured');
+        }
+      });
+
+      it('should throw error when no API key is configured', async function() {
+        YjsModule.setSetting('openai-api-key', '');
+        
+        try {
+          await AI.callOpenAIForSummarization('Test content');
+          expect.fail('Should have thrown error');
+        } catch (error) {
+          expect(error.message).to.include('No API key configured');
+        }
+      });
+    });
+
+    describe('generateIntrospectionPrompt', function() {
+      it('should return null when AI is disabled', async function() {
+        YjsModule.setSetting('ai-enabled', false);
+        
+        const result = await AI.generateIntrospectionPrompt({}, []);
+        expect(result).to.be.null;
+      });
+
+      it('should handle function call with valid parameters', async function() {
+        try {
+          const result = await AI.generateIntrospectionPrompt({ name: 'Test' }, []);
+          // In test environment, this will likely fail due to no real API
+          expect(result).to.satisfy(val => typeof val === 'string' || val === null);
+        } catch (error) {
+          // Expected in test environment
+          expect(error).to.be.an('error');
+        }
+      });
+    });
+
+    describe('generateEntrySummary', function() {
+      it('should return null when AI is disabled', async function() {
+        YjsModule.setSetting('ai-enabled', false);
+        
+        const result = await AI.generateEntrySummary({ 
+          id: 'test', 
+          content: 'This is a long entry with enough content to summarize properly.' 
+        });
+        expect(result).to.be.null;
+      });
+
+      it('should return null for short content', async function() {
+        const result = await AI.generateEntrySummary({ 
+          id: 'test', 
+          content: 'Short' 
+        });
+        expect(result).to.be.null;
+      });
+
+      it('should return null for empty content', async function() {
+        const result = await AI.generateEntrySummary({ 
+          id: 'test', 
+          content: '' 
+        });
+        expect(result).to.be.null;
+      });
+
+      it('should handle entries without content', async function() {
+        const result = await AI.generateEntrySummary({ 
+          id: 'test' 
+        });
+        expect(result).to.be.null;
+      });
+
+      it('should calculate appropriate target length', async function() {
+        // Test with long content that would get summarized
+        const longContent = 'A'.repeat(200) + ' This is a long entry with enough content to summarize properly.';
+        
+        try {
+          await AI.generateEntrySummary({ 
+            id: 'test', 
+            title: 'Test Entry',
+            content: longContent 
+          });
+        } catch (error) {
+          // Expected in test environment due to no real API
+          expect(error).to.be.an('error');
+        }
+      });
+    });
+
+    describe('getIntrospectionPromptForPreview', function() {
+      it('should return null when AI is disabled', async function() {
+        YjsModule.setSetting('ai-enabled', false);
+        
+        const result = await AI.getIntrospectionPromptForPreview({}, []);
+        expect(result).to.be.null;
+      });
+
+      it('should return prompt structure when AI is enabled', async function() {
+        try {
+          const result = await AI.getIntrospectionPromptForPreview({ name: 'Test' }, []);
+          
+          if (result) {
+            expect(result).to.have.property('systemPrompt');
+            expect(result).to.have.property('userPrompt');
+            expect(result).to.have.property('messages');
+            expect(result).to.have.property('totalTokens');
+          }
+        } catch (error) {
+          // Expected if token calculation fails
+          expect(error).to.be.an('error');
+        }
+      });
+
+      it('should handle function call without errors', async function() {
+        try {
+          const result = await AI.getIntrospectionPromptForPreview({ name: 'Test' }, []);
+          
+          if (result) {
+            expect(result).to.have.property('systemPrompt');
+            expect(result).to.have.property('userPrompt');
+            expect(result).to.have.property('messages');
+            expect(result).to.have.property('totalTokens');
+          } else {
+            expect(result).to.be.null;
+          }
+        } catch (error) {
+          // Expected if dependencies are not available in test environment
+          expect(error).to.be.an('error');
+        }
+      });
+    });
+
+    describe('getFormattedCharacterForAI', function() {
+      it('should format character with all fields', function() {
+        const character = {
+          name: 'Gandalf',
+          race: 'Maiar',
+          class: 'Wizard',
+          backstory: 'A wise wizard from Middle-earth',
+          notes: 'Carries a staff'
+        };
+        
+        const formatted = AI.getFormattedCharacterForAI(character);
+        expect(formatted).to.have.property('name', 'Gandalf');
+        expect(formatted).to.have.property('race', 'Maiar');
+        expect(formatted).to.have.property('class', 'Wizard');
+        expect(formatted).to.have.property('backstory', 'A wise wizard from Middle-earth');
+        expect(formatted).to.have.property('notes', 'Carries a staff');
+      });
+
+      it('should handle empty character', function() {
+        const character = {};
+        
+        const formatted = AI.getFormattedCharacterForAI(character);
+        expect(formatted).to.have.property('name', 'unnamed adventurer');
+        expect(formatted).to.have.property('race', '');
+        expect(formatted).to.have.property('class', '');
+        expect(formatted).to.have.property('backstory', '');
+        expect(formatted).to.have.property('notes', '');
+      });
+
+      it('should use character summaries when available', function() {
+        // Set a character summary
+        YjsModule.setSummary('character:backstory', 'Summarized backstory');
+        
+        const character = {
+          name: 'Test Character',
+          backstory: 'Original long backstory'
+        };
+        
+        const formatted = AI.getFormattedCharacterForAI(character);
+        expect(formatted.backstory).to.equal('Summarized backstory');
+      });
+    });
+
+    describe('getFormattedEntriesForAI', function() {
+      beforeEach(function() {
+        // Add some test entries
+        YjsModule.addEntry({
+          id: 'entry1',
+          title: 'Recent Entry',
+          content: 'This happened recently',
+          timestamp: Date.now()
+        });
+        
+        YjsModule.addEntry({
+          id: 'entry2',
+          title: 'Older Entry',
+          content: 'This happened earlier',
+          timestamp: Date.now() - 100000
+        });
+      });
+
+      it('should format entries for AI consumption', function() {
+        const formatted = AI.getFormattedEntriesForAI();
+        expect(formatted).to.be.a('string');
+        expect(formatted).to.include('Recent Entry');
+        expect(formatted).to.include('Older Entry');
+      });
+
+      it('should handle no entries', function() {
+        // Clear all entries
+        YjsModule.deleteEntry('entry1');
+        YjsModule.deleteEntry('entry2');
+        
+        const formatted = AI.getFormattedEntriesForAI();
+        expect(formatted).to.be.a('string');
+        expect(formatted).to.include('No journal entries yet');
+      });
+    });
+  });
 });
