@@ -1,12 +1,12 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as Utils from '../js/utils.js';
-import { createSystem, clearSystem } from '../js/yjs.js';
+import { initializeYjs, clearSystem } from '../js/yjs.js';
 
 describe('Utils Module', function() {
   beforeEach(async function() {
     await clearSystem();
-    await createSystem();
+    await initializeYjs();
     
     // Note: localStorage mock removed per ADR-0004 - all persistence uses Yjs
   });

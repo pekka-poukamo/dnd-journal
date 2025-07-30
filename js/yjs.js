@@ -182,34 +182,7 @@ export const getSyncStatus = () => {
   };
 };
 
-// Test compatibility exports
-export const createSystem = async () => {
-  await initializeYjs();
-  return {
-    ydoc,
-    characterMap,
-    journalMap,
-    settingsMap,
-    summariesMap,
-    persistence,
-    provider
-  };
-};
-
-export const getSystem = () => {
-  if (!ydoc) return null;
-  
-  return {
-    ydoc,
-    characterMap,
-    journalMap,
-    settingsMap,
-    summariesMap,
-    persistence,
-    provider
-  };
-};
-
+// Clear system for tests
 export const clearSystem = () => {
   if (ydoc) {
     ydoc.destroy();
