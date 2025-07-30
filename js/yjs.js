@@ -1,327 +1,211 @@
-// Yjs Module - Local-first collaborative editing
+// Yjs Integration - Real-time collaborative data with IndexedDB and WebSocket sync
+// Following functional programming principles and ADR decisions
+
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
-import { SYNC_CONFIG } from '../sync-config.js';
+import { createInitialJournalState, createInitialSettings } from './utils.js';
 
-// Export Y constructor and WebsocketProvider for other modules
-export { Y, WebsocketProvider };
-
-// Yjs system instance
+// Global system state
 let yjsSystem = null;
+let syncStatusListeners = [];
 
-// Update callbacks
-const updateCallbacks = [];
-
-// Sync status update interval
-let syncStatusInterval = null;
-
-// Update sync status across all pages
-const updateSyncStatus = (status, text, details) => {
-  const syncIndicator = document.getElementById('sync-status');
-  if (syncIndicator) {
-    syncIndicator.textContent = text;
-    syncIndicator.className = `sync-status sync-${status}`;
-    syncIndicator.title = details;
-    syncIndicator.style.display = 'block'; // Make visible
+// Initialize Yjs system
+export const createSystem = async () => {
+  if (yjsSystem) {
+    return yjsSystem;
   }
-  console.log(`Sync status: ${status} - ${text}`);
-};
 
-// Setup sync listener for real-time updates (global for all pages)
-const setupGlobalSyncListener = (system) => {
-  if (!system?.ydoc) {
-    updateSyncStatus('local-only', 'Local only', 'Data is only stored locally');
-    return;
-  }
+  const ydoc = new Y.Doc();
   
-  // Monitor sync status using pure function
-  const checkSyncStatus = () => {
-    const status = getSyncStatus(system.provider);
-    if (status.connected) {
-      updateSyncStatus('connected', 'Synced', `Connected to sync server`);
-    } else if (status.available) {
-      updateSyncStatus('disconnected', 'Offline', 'Not connected to sync server - data stored locally');
-    } else {
-      updateSyncStatus('local-only', 'Local only', 'No sync server configured - data stored locally');
-    }
-  };
-  
-  // Clear existing interval if any
-  if (syncStatusInterval) {
-    clearInterval(syncStatusInterval);
-  }
-  
-  // Check status periodically
-  syncStatusInterval = setInterval(checkSyncStatus, 5000);
-  checkSyncStatus(); // Initial check
-  
-  // Listen for provider connection changes
-  if (system.provider) {
-    system.provider.on('status', ({ status }) => {
-      console.log(`Provider status changed: ${status}`);
-      checkSyncStatus();
+  // Create Yjs maps for different data types
+  const characterMap = ydoc.getMap('character');
+  const journalMap = ydoc.getMap('journal');
+  const settingsMap = ydoc.getMap('settings');
+  const summariesMap = ydoc.getMap('summaries');
+
+  // Initialize with default data if empty
+  if (journalMap.size === 0) {
+    const initialState = createInitialJournalState();
+    
+    // Initialize character data
+    Object.entries(initialState.character).forEach(([key, value]) => {
+      characterMap.set(key, value);
     });
     
-    system.provider.on('connection-close', () => {
-      console.log('Provider connection closed');
-      checkSyncStatus();
-    });
+    // Initialize entries as a Y.Array within the journal map
+    const entriesArray = new Y.Array();
+    journalMap.set('entries', entriesArray);
     
-    system.provider.on('connection-error', () => {
-      console.log('Provider connection error');
-      checkSyncStatus();
-    });
+    console.log('Initialized Yjs with default data');
   }
-};
 
-// Mock system for tests
-const createMockSystem = () => {
-  const mockMap = {
-    data: {},
-    get: function(key) { return this.data[key] || null; },
-    set: function(key, value) { this.data[key] = value; },
-    has: function(key) { return key in this.data; },
-    clear: function() { this.data = {}; },
-    observe: function() {}, // Mock observe
-    forEach: function(callback) {
-      Object.entries(this.data).forEach(([key, value]) => {
-        callback(value, key);
+  // Initialize settings if empty
+  if (settingsMap.size === 0) {
+    const initialSettings = createInitialSettings();
+    Object.entries(initialSettings).forEach(([key, value]) => {
+      settingsMap.set(key, value);
+    });
+    console.log('Initialized Yjs settings with defaults');
+  }
+
+  // Set up IndexedDB persistence
+  const indexeddbProvider = new IndexeddbPersistence('dnd-journal', ydoc);
+  
+  // Set up WebSocket provider for real-time sync
+  let websocketProvider = null;
+  
+  try {
+    // Try to connect to local sync server (configurable)
+    const syncServer = settingsMap.get('syncServer') || 'ws://localhost:1234';
+    websocketProvider = new WebsocketProvider(syncServer, 'dnd-journal', ydoc);
+    
+    websocketProvider.on('status', (event) => {
+      console.log('Sync status:', event.status);
+      notifySyncStatusListeners({
+        connected: websocketProvider.wsconnected,
+        server: syncServer,
+        status: event.status
       });
-    }
+    });
+    
+    console.log(`WebSocket provider initialized for ${syncServer}`);
+  } catch (error) {
+    console.warn('WebSocket provider initialization failed:', error);
+  }
+
+  // Create system object
+  yjsSystem = {
+    ydoc,
+    characterMap,
+    journalMap,
+    settingsMap,
+    summariesMap,
+    indexeddbProvider,
+    websocketProvider,
+    updateCallbacks: []
   };
 
-  return {
-    ydoc: { on: () => {} },
-    characterMap: { ...mockMap, data: {} },
-    journalMap: { 
-      ...mockMap, 
-      data: {},
-      get: function(key) {
-        if (key === 'entries') {
-          const entries = this.data[key];
-          if (entries && Array.isArray(entries)) {
-            // Return array with toArray method attached for compatibility
-            const arrayWithMethod = [...entries];
-            arrayWithMethod.toArray = () => arrayWithMethod;
-            return arrayWithMethod;
-          } else if (entries && entries.toArray) {
-            return entries;
-          }
-          // Default empty structure with toArray method
-          const emptyArray = [];
-          emptyArray.toArray = () => emptyArray;
-          return emptyArray;
-        }
-        return this.data[key] || null;
+  // Set up update listener for real-time sync
+  ydoc.on('update', () => {
+    yjsSystem.updateCallbacks.forEach(callback => {
+      try {
+        callback();
+      } catch (error) {
+        console.error('Update callback error:', error);
       }
-    },
-    settingsMap: { ...mockMap, data: {} },
-    summariesMap: { ...mockMap, data: {} },
-    persistence: { on: () => {} },
-    provider: null
-  };
+    });
+  });
+
+  console.log('Yjs system initialized successfully');
+  return yjsSystem;
 };
+
+// Get current system
+export const getSystem = () => yjsSystem;
+
+// Export Y for use in other modules
+export { Y };
 
 // Register update callback
 export const onUpdate = (callback) => {
-  updateCallbacks.push(callback);
+  if (yjsSystem) {
+    yjsSystem.updateCallbacks.push(callback);
+  }
 };
 
-// Trigger all update callbacks
-const triggerUpdateCallbacks = (system) => {
-  updateCallbacks.forEach(callback => {
+// Clear system (for testing)
+export const clearSystem = () => {
+  if (yjsSystem) {
+    yjsSystem.ydoc.destroy();
+    yjsSystem = null;
+  }
+};
+
+// Sync status management
+const notifySyncStatusListeners = (status) => {
+  syncStatusListeners.forEach(listener => {
     try {
-      callback(system);
-    } catch (e) {
-      console.warn('Error in update callback:', e);
+      listener(status);
+    } catch (error) {
+      console.error('Sync status listener error:', error);
     }
   });
 };
 
-// Get the current Yjs system instance
-export const getSystem = () => yjsSystem;
-
-// Clear the Yjs system instance (for testing)
-export const clearSystem = () => {
-  yjsSystem = null;
-  updateCallbacks.length = 0;
+export const onSyncStatusChange = (listener) => {
+  syncStatusListeners.push(listener);
 };
 
-// Validate WebSocket URL
-const isValidWebSocketUrl = (url) => {
-  if (!url || typeof url !== 'string') return false;
-  if (!url.startsWith('ws://') && !url.startsWith('wss://')) return false;
+// Get current sync status
+export const getSyncStatus = () => {
+  if (!yjsSystem?.websocketProvider) {
+    return { connected: false, server: null };
+  }
+  
+  return {
+    connected: yjsSystem.websocketProvider.wsconnected,
+    server: yjsSystem.websocketProvider.url
+  };
+};
+
+// Save data to system (compatibility function)
+export const saveToSystem = (data) => {
+  if (!yjsSystem) {
+    console.warn('Yjs system not initialized');
+    return false;
+  }
+
   try {
-    const parsedUrl = new URL(url);
-    return parsedUrl.hostname?.length > 0;
-  } catch (e) {
+    // Save based on data type
+    if (data.character) {
+      Object.entries(data.character).forEach(([key, value]) => {
+        yjsSystem.characterMap.set(key, value);
+      });
+    }
+
+    if (data.entries) {
+      const entriesArray = yjsSystem.journalMap.get('entries') || new Y.Array();
+      
+      // Clear existing entries and add new ones
+      entriesArray.delete(0, entriesArray.length);
+      
+      data.entries.forEach(entry => {
+        const entryMap = new Y.Map();
+        Object.entries(entry).forEach(([key, value]) => {
+          entryMap.set(key, value);
+        });
+        entriesArray.push([entryMap]);
+      });
+      
+      yjsSystem.journalMap.set('entries', entriesArray);
+    }
+
+    if (data.settings) {
+      Object.entries(data.settings).forEach(([key, value]) => {
+        yjsSystem.settingsMap.set(key, value);
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error saving to system:', error);
     return false;
   }
 };
 
-// Get sync server configuration (single server only)
-const getSyncServer = (yjsSystem = null) => {
-  try {
-    // First try to get from Yjs settings if system is available
-    if (yjsSystem?.settingsMap) {
-      const savedServer = yjsSystem.settingsMap.get('dnd-journal-sync-server');
-      if (savedServer && isValidWebSocketUrl(savedServer)) {
-        return savedServer.trim();
-      }
-    }
-    
-    // Fallback to static config
-    if (SYNC_CONFIG?.server && isValidWebSocketUrl(SYNC_CONFIG.server)) {
-      return SYNC_CONFIG.server.trim();
-    }
-  } catch (e) {
-    console.warn('Error loading sync config:', e);
-  }
-  
-  // No server configured
-  return null;
-};
+// Test environment detection (without window usage)
+const isTestEnvironment = () => 
+  (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') ||
+  (typeof global !== 'undefined' && global.describe && global.it) ||
+  (typeof document !== 'undefined' && document.location && document.location.href === 'http://localhost/');
 
-// Create sync provider (single provider only)
-const createSyncProvider = (ydoc, yjsSystem = null) => {
-  const serverUrl = getSyncServer(yjsSystem);
-  
-  if (!serverUrl) {
-    return null;
+// Auto-initialize in browser environment
+if (typeof document !== 'undefined' && !isTestEnvironment()) {
+  // Auto-initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', createSystem);
+  } else {
+    createSystem();
   }
-  
-  try {
-    return new WebsocketProvider(serverUrl, 'dnd-journal', ydoc, { connect: true });
-  } catch (e) {
-    console.error(`Failed to connect to ${serverUrl}:`, e);
-    return null;
-  }
-};
-
-// Create Yjs document with all maps
-export const createDocument = () => {
-  const ydoc = new Y.Doc();
-  
-  return {
-    ydoc,
-    characterMap: ydoc.getMap('character'),
-    journalMap: ydoc.getMap('journal'),
-    settingsMap: ydoc.getMap('settings'),
-    summariesMap: ydoc.getMap('summaries')
-  };
-};
-
-// Create persistence layer
-export const createPersistence = (ydoc) => {
-  return new IndexeddbPersistence('dnd-journal', ydoc);
-};
-
-// Create complete Yjs system
-export const createSystem = async () => {
-  // Return existing system if already created
-  if (yjsSystem) {
-    return yjsSystem;
-  }
-  
-  // Return mock system in test environment - multiple checks to ensure reliability
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
-    yjsSystem = createMockSystem();
-    return yjsSystem;
-  }
-  
-  // Additional test environment checks
-  if (typeof global !== 'undefined' && global.localStorage && global.localStorage.data) {
-    // JSDOM localStorage mock detected
-    yjsSystem = createMockSystem();
-    return yjsSystem;
-  }
-  
-  if (typeof window !== 'undefined' && window.location && window.location.href === 'http://localhost/') {
-    // JSDOM environment detected
-    yjsSystem = createMockSystem();
-    return yjsSystem;
-  }
-
-  // Create document and maps
-  const { ydoc, characterMap, journalMap, settingsMap, summariesMap } = createDocument();
-  
-  // Create persistence
-  const persistence = createPersistence(ydoc);
-  
-  // Wait for IndexedDB to sync so settings are loaded
-  await new Promise((resolve) => {
-    persistence.on('synced', resolve);
-  });
-  
-  // Create temporary system to access settings
-  const tempSystem = {
-    ydoc,
-    characterMap,
-    journalMap,
-    settingsMap,
-    summariesMap,
-    persistence,
-    provider: null
-  };
-  
-  // Create sync provider with access to loaded settings
-  const provider = createSyncProvider(ydoc, tempSystem);
-  
-  const system = {
-    ydoc,
-    characterMap,
-    journalMap,
-    settingsMap,
-    summariesMap,
-    persistence,
-    provider
-  };
-  
-  // Store the system instance
-  yjsSystem = system;
-  
-  // Setup update listener
-  ydoc.on('update', () => {
-    triggerUpdateCallbacks(system);
-  });
-  
-  // Setup global sync status listener (works on all pages)
-  setupGlobalSyncListener(system);
-  
-  console.log('Yjs system initialized');
-  return system;
-};
-
-// Reload sync provider when settings change (for dynamic reconfiguration)
-export const reloadSyncProviders = () => {
-  if (!yjsSystem) return;
-  
-  // Disconnect existing provider
-  if (yjsSystem.provider && yjsSystem.provider.disconnect) {
-    yjsSystem.provider.disconnect();
-  }
-  
-  // Create new provider with updated settings
-  const newProvider = createSyncProvider(yjsSystem.ydoc, yjsSystem);
-  yjsSystem.provider = newProvider;
-  
-  console.log('Sync provider reloaded');
-};
-
-// Get sync status (single provider)
-export const getSyncStatus = (provider) => {
-  if (!provider) {
-    return {
-      available: false,
-      connected: false,
-      url: null
-    };
-  }
-  
-  return {
-    available: true,
-    connected: provider.wsconnected || false,
-    url: provider.url
-  };
-};
+}

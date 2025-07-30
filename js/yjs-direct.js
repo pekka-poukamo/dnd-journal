@@ -1,12 +1,11 @@
-// Simple YJS - Direct data binding
-// Following radical simplicity principles
+// YJS Direct - Direct data binding to YJS maps
+// Simple, direct access to YJS without abstractions
 
-import * as Y from 'yjs';
+import { Y } from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
-import { SYNC_CONFIG } from '../sync-config.js';
 
-// Simple globals - direct YJS data
+// Global YJS document and maps (direct access)
 export let ydoc = null;
 export let characterMap = null;
 export let journalMap = null;
@@ -15,62 +14,62 @@ export let summariesMap = null;
 export let provider = null;
 export let persistence = null;
 
-// Update callbacks (simple array)
+// Simple update callbacks
 const updateCallbacks = [];
 
-// Simple initialization
+// Initialize YJS with direct data binding
 export const initializeYjs = async () => {
-  if (ydoc) return; // Already initialized
-  
-  // Create document and maps
-  ydoc = new Y.Doc();
-  characterMap = ydoc.getMap('character');
-  journalMap = ydoc.getMap('journal');
-  settingsMap = ydoc.getMap('settings');
-  summariesMap = ydoc.getMap('summaries');
-  
-  // Setup persistence
-  persistence = new IndexeddbPersistence('dnd-journal', ydoc);
-  
-  // Setup sync provider if configured
-  if (SYNC_CONFIG?.servers?.[0]) {
-    try {
-      provider = new WebsocketProvider(SYNC_CONFIG.servers[0], 'dnd-journal', ydoc);
-      provider.on('status', (event) => {
-        console.log('Sync status:', event.status);
+  try {
+    // Create YJS document
+    ydoc = new Y.Doc();
+    
+    // Create maps for different data types
+    characterMap = ydoc.getMap('character');
+    journalMap = ydoc.getMap('journal');
+    settingsMap = ydoc.getMap('settings');
+    summariesMap = ydoc.getMap('summaries');
+    
+    // Set up IndexedDB persistence
+    persistence = new IndexeddbPersistence('dnd-journal', ydoc);
+    
+    // Set up WebSocket provider for sync
+    provider = new WebsocketProvider('ws://localhost:1234', 'dnd-journal', ydoc);
+    
+    // Set up update listener
+    ydoc.on('update', () => {
+      updateCallbacks.forEach(callback => {
+        try {
+          callback();
+        } catch (error) {
+          console.error('Update callback error:', error);
+        }
       });
-    } catch (error) {
-      console.warn('Sync provider failed:', error);
-    }
-  }
-  
-  // Setup update listener
-  ydoc.on('update', () => {
-    updateCallbacks.forEach(callback => {
-      try {
-        callback();
-      } catch (error) {
-        console.warn('Update callback error:', error);
-      }
     });
-  });
-  
-  console.log('YJS initialized with direct data binding');
+    
+    console.log('YJS initialized with direct data binding');
+  } catch (error) {
+    console.error('Failed to initialize YJS:', error);
+    throw error;
+  }
 };
 
-// Simple update callback registration
+// Register update callback
 export const onUpdate = (callback) => {
   updateCallbacks.push(callback);
 };
 
-// Simple character operations
-export const getCharacter = () => ({
-  name: characterMap?.get('name') || '',
-  race: characterMap?.get('race') || '',
-  class: characterMap?.get('class') || '',
-  backstory: characterMap?.get('backstory') || '',
-  notes: characterMap?.get('notes') || ''
-});
+// Character operations (direct)
+export const getCharacter = () => {
+  if (!characterMap) return {};
+  
+  return {
+    name: characterMap.get('name') || '',
+    race: characterMap.get('race') || '',
+    class: characterMap.get('class') || '',
+    backstory: characterMap.get('backstory') || '',
+    notes: characterMap.get('notes') || ''
+  };
+};
 
 export const saveCharacter = (character) => {
   if (!characterMap) return;
@@ -82,103 +81,90 @@ export const saveCharacter = (character) => {
   characterMap.set('notes', character.notes || '');
 };
 
-// Simple journal operations
+// Journal operations (direct)
 export const getEntries = () => {
   if (!journalMap) return [];
   
-  const entriesArray = journalMap.get('entries');
-  if (!entriesArray) return [];
+  const entries = [];
+  journalMap.forEach((entryData, entryId) => {
+    try {
+      const entry = typeof entryData === 'string' ? JSON.parse(entryData) : entryData;
+      entries.push({ id: entryId, ...entry });
+    } catch (error) {
+      console.error('Error parsing entry:', entryId, error);
+    }
+  });
   
-  return entriesArray.toArray().map(entryMap => ({
-    id: entryMap.get('id'),
-    title: entryMap.get('title'),
-    content: entryMap.get('content'),
-    timestamp: entryMap.get('timestamp')
-  }));
+  return entries;
 };
 
 export const addEntry = (entry) => {
   if (!journalMap) return;
   
-  let entriesArray = journalMap.get('entries');
-  if (!entriesArray) {
-    entriesArray = ydoc.getArray('entries');
-    journalMap.set('entries', entriesArray);
-  }
-  
-  const entryMap = ydoc.getMap();
-  entryMap.set('id', entry.id);
-  entryMap.set('title', entry.title);
-  entryMap.set('content', entry.content);
-  entryMap.set('timestamp', entry.timestamp);
-  
-  entriesArray.push([entryMap]);
+  const { id, ...entryData } = entry;
+  journalMap.set(id, JSON.stringify(entryData));
 };
 
-export const updateEntry = (entryId, newTitle, newContent) => {
+export const updateEntry = (entryId, title, content) => {
   if (!journalMap) return;
   
-  const entriesArray = journalMap.get('entries');
-  if (!entriesArray) return;
+  const existingEntry = journalMap.get(entryId);
+  if (!existingEntry) return;
   
-  const entries = entriesArray.toArray();
-  const entryIndex = entries.findIndex(entryMap => entryMap.get('id') === entryId);
-  
-  if (entryIndex >= 0) {
-    const entryMap = entries[entryIndex];
-    entryMap.set('title', newTitle);
-    entryMap.set('content', newContent);
-    entryMap.set('timestamp', Date.now());
+  try {
+    const entry = typeof existingEntry === 'string' ? JSON.parse(existingEntry) : existingEntry;
+    entry.title = title;
+    entry.content = content;
+    entry.timestamp = Date.now();
+    
+    journalMap.set(entryId, JSON.stringify(entry));
+  } catch (error) {
+    console.error('Error updating entry:', error);
   }
 };
 
 export const deleteEntry = (entryId) => {
   if (!journalMap) return;
-  
-  const entriesArray = journalMap.get('entries');
-  if (!entriesArray) return;
-  
-  const entries = entriesArray.toArray();
-  const entryIndex = entries.findIndex(entryMap => entryMap.get('id') === entryId);
-  
-  if (entryIndex >= 0) {
-    entriesArray.delete(entryIndex, 1);
-  }
+  journalMap.delete(entryId);
 };
 
-// Simple settings operations
-export const getSettings = () => ({
-  apiKey: settingsMap?.get('apiKey') || '',
-  enableAIFeatures: settingsMap?.get('enableAIFeatures') || false,
-  syncServer: settingsMap?.get('syncServer') || ''
-});
+// Settings operations (direct)
+export const getSettings = () => {
+  if (!settingsMap) return { apiKey: '', enableAIFeatures: false };
+  
+  return {
+    apiKey: settingsMap.get('apiKey') || '',
+    enableAIFeatures: settingsMap.get('enableAIFeatures') || false
+  };
+};
 
 export const saveSettings = (settings) => {
   if (!settingsMap) return;
   
   settingsMap.set('apiKey', settings.apiKey || '');
   settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
-  settingsMap.set('syncServer', settings.syncServer || '');
 };
 
-// Simple summaries operations
-export const getSummary = (key) => {
-  return summariesMap?.get(key) || null;
+// Summaries operations (direct)
+export const getSummary = (entryId) => {
+  if (!summariesMap) return null;
+  return summariesMap.get(entryId) || null;
 };
 
-export const saveSummary = (key, summary) => {
+export const saveSummary = (entryId, summary) => {
   if (!summariesMap) return;
-  summariesMap.set(key, summary);
+  summariesMap.set(entryId, summary);
 };
 
 export const getAllSummaries = () => {
   if (!summariesMap) return {};
   
-  const result = {};
-  summariesMap.forEach((value, key) => {
-    result[key] = value;
+  const summaries = {};
+  summariesMap.forEach((summary, entryId) => {
+    summaries[entryId] = summary;
   });
-  return result;
+  
+  return summaries;
 };
 
 export const clearAllSummaries = () => {
@@ -186,17 +172,17 @@ export const clearAllSummaries = () => {
   summariesMap.clear();
 };
 
-// Simple sync status
+// Sync status (direct)
 export const getSyncStatus = () => {
-  if (!provider) return { connected: false, available: false };
+  if (!provider) return { connected: false, synced: false };
   
   return {
-    connected: provider.wsconnected || false,
-    available: Boolean(provider.ws)
+    connected: provider.wsconnected,
+    synced: provider.synced
   };
 };
 
-// Initialize when imported (if in browser)
-if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+// Auto-initialize in browser environment
+if (typeof document !== 'undefined') {
   initializeYjs();
 }

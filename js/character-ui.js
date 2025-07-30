@@ -7,6 +7,21 @@ import { parseMarkdown } from './utils.js';
 let editingCharacter = false;
 let editData = { name: '', race: '', class: '', backstory: '', notes: '' };
 
+// Callback for triggering UI updates
+let uiUpdateCallback = null;
+
+// Set the UI update callback (called by app.js)
+export const setCharacterUIUpdateCallback = (callback) => {
+  uiUpdateCallback = callback;
+};
+
+// Trigger UI update if callback is available
+const triggerUIUpdate = () => {
+  if (uiUpdateCallback) {
+    uiUpdateCallback();
+  }
+};
+
 // Create character HTML (view mode)
 const createCharacterViewHTML = (character) => {
   const hasData = Boolean(
@@ -22,7 +37,7 @@ const createCharacterViewHTML = (character) => {
       <div class="character-summary empty">
         <div class="character-header">
           <h2 class="character-name">No Character</h2>
-          <button class="edit-btn" onclick="startCharacterEdit()" title="Create character">✏️</button>
+          <button class="edit-btn" data-action="edit-character" title="Create character">✏️</button>
         </div>
         <p class="character-details">Create a character to see their details here.</p>
       </div>
@@ -38,7 +53,7 @@ const createCharacterViewHTML = (character) => {
     <div class="character-summary">
       <div class="character-header">
         <h2 class="character-name">${displayName}</h2>
-        <button class="edit-btn" onclick="startCharacterEdit()" title="Edit character">✏️</button>
+        <button class="edit-btn" data-action="edit-character" title="Edit character">✏️</button>
       </div>
       <div class="character-basic">
         <span id="display-name">${displayName}</span>
@@ -62,8 +77,8 @@ const createCharacterEditHTML = (character) => `
       <textarea class="edit-backstory-textarea" placeholder="Character backstory">${character.backstory || ''}</textarea>
       <textarea class="edit-notes-textarea" placeholder="Character notes">${character.notes || ''}</textarea>
       <div class="edit-actions">
-        <button onclick="saveCharacterEdit()">Save</button>
-        <button onclick="cancelCharacterEdit()">Cancel</button>
+        <button data-action="save-character">Save</button>
+        <button data-action="cancel-character">Cancel</button>
       </div>
     </div>
   </div>
@@ -89,6 +104,9 @@ export const renderCharacter = (character = {}) => {
     };
     container.outerHTML = createCharacterEditHTML(characterToEdit);
     
+    // Set up event listeners using event delegation
+    setupCharacterEventListeners();
+    
     // Focus first field and setup input handlers
     const nameInput = document.querySelector('.edit-name-input');
     if (nameInput) {
@@ -103,6 +121,36 @@ export const renderCharacter = (character = {}) => {
   } else {
     // Otherwise render normal view
     container.outerHTML = createCharacterViewHTML(character);
+    setupCharacterEventListeners();
+  }
+};
+
+// Set up event listeners for character actions
+const setupCharacterEventListeners = () => {
+  const characterContainer = document.querySelector('.character-summary');
+  if (characterContainer) {
+    characterContainer.removeEventListener('click', handleCharacterAction);
+    characterContainer.addEventListener('click', handleCharacterAction);
+  }
+};
+
+// Handle character actions via event delegation
+const handleCharacterAction = (event) => {
+  const action = event.target.dataset.action;
+  if (!action) return;
+  
+  event.preventDefault();
+  
+  switch (action) {
+    case 'edit-character':
+      startCharacterEdit();
+      break;
+    case 'save-character':
+      saveCharacterEdit();
+      break;
+    case 'cancel-character':
+      cancelCharacterEdit();
+      break;
   }
 };
 
@@ -110,8 +158,7 @@ export const renderCharacter = (character = {}) => {
 export const startCharacterEdit = () => {
   editingCharacter = true;
   editData = { name: '', race: '', class: '', backstory: '', notes: '' }; // Reset edit data
-  // Trigger re-render (this will be called by the app's update cycle)
-  if (window.triggerUIUpdate) window.triggerUIUpdate();
+  triggerUIUpdate();
 };
 
 // Save character edit
@@ -150,16 +197,8 @@ export const saveCharacterEdit = () => {
 export const cancelCharacterEdit = () => {
   editingCharacter = false;
   editData = { name: '', race: '', class: '', backstory: '', notes: '' };
-  // Trigger re-render
-  if (window.triggerUIUpdate) window.triggerUIUpdate();
+  triggerUIUpdate();
 };
-
-// Make functions globally available (for onclick handlers)
-if (typeof window !== 'undefined') {
-  window.startCharacterEdit = startCharacterEdit;
-  window.saveCharacterEdit = saveCharacterEdit;
-  window.cancelCharacterEdit = cancelCharacterEdit;
-}
 
 // Export for compatibility
 export { 

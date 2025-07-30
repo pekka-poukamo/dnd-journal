@@ -1,363 +1,307 @@
-// Character Page - Simple & Functional
+// Character management - Character creation and editing functionality
+// Following functional programming principles and style guide
 
-import { 
-  createInitialJournalState, 
-  getCharacterFormFieldIds, 
-  getPropertyNameFromFieldId, 
-  debounce,
-  formatDate
-} from './utils.js';
-import { getSystem, Y, createSystem, onUpdate } from './yjs.js';
-import { summarize } from './summarization.js';
-import { isAPIAvailable } from './openai-wrapper.js';
+import { safeDomOperation, createSuccess, createError, handleError } from './error-handling.js';
+import { setElementContent, getElementValue, setElementValue } from './dom-utils.js';
+import { getFormData, clearFormFields, populateFormFields, validateFormData } from './form-utils.js';
+import { getCharacterFormFieldIds, getPropertyNameFromFieldId } from './utils.js';
+import { getSystem, saveToSystem } from './yjs.js';
 
-// Load character data from Yjs
-export const loadCharacterData = () => {
-  const yjsSystem = getSystem();
-  if (!yjsSystem?.characterMap) return { name: '', race: '', class: '', backstory: '', notes: '' };
-  
-  return {
-    name: yjsSystem.characterMap.get('name') || '',
-    race: yjsSystem.characterMap.get('race') || '',
-    class: yjsSystem.characterMap.get('class') || '',
-    backstory: yjsSystem.characterMap.get('backstory') || '',
-    notes: yjsSystem.characterMap.get('notes') || ''
-  };
-};
-
-// Save character data to Yjs (for test compatibility)
-export const saveCharacterData = (characterData) => {
-  const yjsSystem = getSystem();
-  if (!yjsSystem?.characterMap) return { success: false };
-  
-  // Set each field individually for CRDT conflict resolution
-  yjsSystem.characterMap.set('name', characterData.name || '');
-  yjsSystem.characterMap.set('race', characterData.race || '');
-  yjsSystem.characterMap.set('class', characterData.class || '');
-  yjsSystem.characterMap.set('backstory', characterData.backstory || '');
-  yjsSystem.characterMap.set('notes', characterData.notes || '');
-  yjsSystem.characterMap.set('lastModified', Date.now());
-  
-  return { success: true };
-};
-
-// Setup character form with direct Yjs binding for individual fields
-export const setupCharacterForm = () => {
-  const yjsSystem = getSystem();
-  if (!yjsSystem?.characterMap) {
-    console.warn('Yjs system not available for character form setup');
-    return;
-  }
-  
-  // Use the field IDs from utils.js to ensure we match the HTML
-  const fieldIds = getCharacterFormFieldIds();
-  
-  fieldIds.forEach(fieldId => {
-    const input = document.getElementById(fieldId);
-    if (input) {
-      // Convert field ID to property name (removes 'character-' prefix)
-      const propertyName = getPropertyNameFromFieldId(fieldId);
-      
-      // Load initial value from Yjs
-      input.value = yjsSystem.characterMap.get(propertyName) || '';
-      
-      // Update Yjs on input change (individual field updates) - Yjs handles persistence
-      const updateField = debounce(() => {
-        yjsSystem.characterMap.set(propertyName, input.value);
-        yjsSystem.characterMap.set('lastModified', Date.now());
-      }, 300);
-      
-      input.addEventListener('input', updateField);
-      
-      // Listen for Yjs updates to sync field changes from other clients
-      yjsSystem.characterMap.observe((event) => {
-        event.changes.keys.forEach((change, key) => {
-          if (key === propertyName && input.value !== yjsSystem.characterMap.get(key)) {
-            input.value = yjsSystem.characterMap.get(key) || '';
-          }
-        });
-      });
-    } else {
-      console.warn(`Character form field not found: ${fieldId}`);
-    }
-  });
-  
-  console.log('Character form setup complete with Yjs sync');
-};
-
-// Note: Character form setup is now handled in init() after Yjs system is ready
-
-// Pure function to get character data from form
-export const getCharacterFromForm = () => 
-  getCharacterFormFieldIds().reduce((character, fieldId) => {
-    const element = document.getElementById(fieldId);
-    if (element) {
-      const propertyName = getPropertyNameFromFieldId(fieldId);
-      character[propertyName] = element.value.trim();
-    }
-    return character;
-  }, createInitialJournalState().character);
-
-// Pure function to populate form with character data
-export const populateForm = (character) => {
-  getCharacterFormFieldIds().forEach(fieldId => {
-    const element = document.getElementById(fieldId);
-    if (element) {
-      const propertyName = getPropertyNameFromFieldId(fieldId);
-      element.value = character[propertyName] || '';
-    }
-  });
-};
-
-// Load character summaries from storage
-export const loadCharacterSummaries = () => {
-  const yjsSystem = getSystem();
-  if (!yjsSystem?.summariesMap) return {};
-  
-  const combinedSummaries = {};
-  
-  // Get all summaries from Yjs and filter for character-related ones
-  yjsSystem.summariesMap.forEach((summaryMap, key) => {
-    if (key.startsWith('character:') || key === 'character:combined') {
-      combinedSummaries[key] = {
-        content: summaryMap.get ? summaryMap.get('content') : summaryMap.content || '',
-        words: summaryMap.get ? summaryMap.get('words') : summaryMap.words || 0,
-        timestamp: summaryMap.get ? summaryMap.get('timestamp') : summaryMap.timestamp || Date.now()
-      };
-    }
-  });
-  
-  // Note: localStorage fallback removed per ADR-0004 - all data now in Yjs
-   
-   return combinedSummaries;
-};
-
-// Display character summaries in the UI
-export const displayCharacterSummaries = () => {
-  const summariesContent = document.getElementById('summaries-content');
-  const generateBtn = document.getElementById('generate-summaries');
-  
-  if (!summariesContent) return;
-  
-  const summaries = loadCharacterSummaries();
-  const summaryKeys = Object.keys(summaries);
-  
-  if (summaryKeys.length === 0) {
-    summariesContent.innerHTML = `
-      <div class="summary-placeholder">
-        <p>No character summaries available yet. Character summaries are automatically generated when your backstory or notes become lengthy. Generated summaries will appear here as collapsible sections.</p>
-      </div>
-    `;
-    if (generateBtn) generateBtn.style.display = 'none';
-    return;
-  }
-  
-  // Show generate button if API is available
-  if (generateBtn && isAPIAvailable()) {
-    generateBtn.style.display = 'inline-block';
-  }
-  
-  // Display summaries using collapsible sections
-  const summariesHTML = summaryKeys.map(key => {
-    const summary = summaries[key];
-    const fieldName = key.replace('character:', '');
-    const displayName = fieldName === 'combined' 
-      ? 'Character Summary' 
-      : fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
-    const timestamp = summary.timestamp ? formatDate(summary.timestamp) : 'Unknown date';
-    const wordCount = summary.words || 0;
-    
-    return `
-      <div class="entry-summary">
-        <button class="entry-summary__toggle" type="button">
-          <span class="entry-summary__label">${displayName} (${wordCount} words, ${timestamp})</span>
-          <span class="entry-summary__icon">▼</span>
-        </button>
-        <div class="entry-summary__content" style="display: none;">
-          <p>${summary.content || summary.summary || 'No summary content available'}</p>
-        </div>
-      </div>
-    `;
-  }).join('');
-  
-  summariesContent.innerHTML = summariesHTML;
-  
-  // Add click handlers for collapsible functionality
-  const toggles = summariesContent.querySelectorAll('.entry-summary__toggle');
-  toggles.forEach(toggle => {
-    toggle.addEventListener('click', () => {
-      const content = toggle.nextElementSibling;
-      const icon = toggle.querySelector('.entry-summary__icon');
-      const isExpanded = content.style.display !== 'none';
-      
-      content.style.display = isExpanded ? 'none' : 'block';
-      icon.textContent = isExpanded ? '▼' : '▲';
-      toggle.classList.toggle('entry-summary__toggle--expanded', !isExpanded);
-    });
-  });
-};
-
-// Generate summaries for character fields
-export const generateCharacterSummaries = async () => {
-  const character = loadCharacterData();
-  const generateBtn = document.getElementById('generate-summaries');
-  
-  if (!isAPIAvailable()) {
-    alert('AI features are not available. Please configure your API key in Settings.');
-    return;
-  }
-  
-  // Disable button and show loading
-  if (generateBtn) {
-    generateBtn.disabled = true;
-    generateBtn.textContent = 'Generating...';
-  }
-  
+// Get current character data
+export const getCurrentCharacterData = () => {
   try {
-    // Combine all character data into single text
-    const combinedText = [
-      character.name ? `Name: ${character.name}` : '',
-      character.race ? `Race: ${character.race}` : '',
-      character.class ? `Class: ${character.class}` : '',
-      character.backstory || '',
-      character.notes || ''
-    ].filter(text => text.length > 0).join('\n\n');
-    
-    // Count total words in combined text
-    const totalWords = combinedText.trim().split(/\s+/).filter(w => w.length > 0).length;
-    
-    // Only summarize if there's substantial content
-    if (totalWords >= 150) {
-      // Use character:combined as the key for the unified summary
-      // The summarization module will automatically calculate logarithmic length
-      const summaryKey = 'character:combined';
-      const summary = await summarize(summaryKey, combinedText);
-      
-      if (summary) {
-        displayCharacterSummaries();
-        alert('Generated character summary.');
-      } else {
-        alert('No summary was generated. Summary may already exist.');
-      }
-    } else {
-      alert('Character information is too short to summarize. Need at least 150 words.');
+    const yjsSystem = getSystem();
+    if (!yjsSystem) {
+      return createError('YJS system not available');
     }
-    
-  } catch (error) {
-    console.error('Error generating character summaries:', error);
-    alert('Error generating summaries. Please try again.');
-  } finally {
-    // Reset button
-    if (generateBtn) {
-      generateBtn.disabled = false;
-      generateBtn.textContent = 'Generate Summaries';
-    }
-  }
-};
 
-// Get formatted character with automatic summarization for storytelling context
-export const getFormattedCharacterForAI = async (character) => {
-  // Check if we have a combined character summary from Yjs
-  const yjsSystem = getSystem();
-  const combinedSummary = yjsSystem?.summariesMap?.get('character:combined');
-  
-  if (combinedSummary) {
-    // Use the combined summary for storytelling context
-    return {
-      name: character.name || 'Unnamed Character',
-      summary: `${combinedSummary.content} (summarized)`
+    const characterMap = yjsSystem.characterMap;
+    if (!characterMap) {
+      return createError('Character map not available');
+    }
+
+    const character = {
+      name: characterMap.get('name') || '',
+      race: characterMap.get('race') || '',
+      class: characterMap.get('class') || '',
+      backstory: characterMap.get('backstory') || '',
+      notes: characterMap.get('notes') || ''
     };
+
+    return createSuccess(character);
+  } catch (error) {
+    return handleError('getCurrentCharacterData', error);
   }
-  
-  // Fallback: Create combined text and potentially summarize
-  const combinedText = [
-    character.name ? `Name: ${character.name}` : '',
-    character.race ? `Race: ${character.race}` : '',
-    character.class ? `Class: ${character.class}` : '',
-    character.backstory || '',
-    character.notes || ''
-  ].filter(text => text.length > 0).join('\n\n');
-  
-  const totalWords = combinedText.trim().split(/\s+/).filter(w => w.length > 0).length;
-  
-  // If content is substantial, try to create summary
-  if (totalWords >= 150) {
-    const summary = await summarize('character:combined', combinedText);
+};
+
+// Save character data
+export const saveCharacterData = (characterData) => {
+  try {
+    const yjsSystem = getSystem();
+    if (!yjsSystem) {
+      return createError('YJS system not available');
+    }
+
+    const characterMap = yjsSystem.characterMap;
+    if (!characterMap) {
+      return createError('Character map not available');
+    }
+
+    // Save all character properties
+    characterMap.set('name', characterData.name || '');
+    characterMap.set('race', characterData.race || '');
+    characterMap.set('class', characterData.class || '');
+    characterMap.set('backstory', characterData.backstory || '');
+    characterMap.set('notes', characterData.notes || '');
+
+    return createSuccess('Character saved successfully');
+  } catch (error) {
+    return handleError('saveCharacterData', error);
+  }
+};
+
+// Load character data into form
+export const loadCharacterForm = () => {
+  return safeDomOperation(() => {
+    const characterResult = getCurrentCharacterData();
+    if (!characterResult.success) {
+      throw new Error(`Failed to load character: ${characterResult.error}`);
+    }
+
+    const character = characterResult.data;
+    const fieldIds = getCharacterFormFieldIds();
+
+    // Populate form fields
+    fieldIds.forEach(fieldId => {
+      const propertyName = getPropertyNameFromFieldId(fieldId);
+      const value = character[propertyName] || '';
+      setElementValue(fieldId, value);
+    });
+
+    return character;
+  }, 'loadCharacterForm');
+};
+
+// Save character form
+export const saveCharacterForm = () => {
+  return safeDomOperation(() => {
+    // Get form data
+    const fieldIds = getCharacterFormFieldIds();
+    const formData = getFormData(fieldIds);
+
+    // Validate required fields (only name is required)
+    const validationResult = validateFormData(formData, ['character-name']);
+    if (!validationResult.success) {
+      throw new Error(validationResult.error);
+    }
+
+    // Convert field IDs to property names
+    const characterData = {};
+    fieldIds.forEach(fieldId => {
+      const propertyName = getPropertyNameFromFieldId(fieldId);
+      characterData[propertyName] = formData[fieldId] || '';
+    });
+
+    // Save character data
+    const saveResult = saveCharacterData(characterData);
+    if (!saveResult.success) {
+      throw new Error(`Failed to save character: ${saveResult.error}`);
+    }
+
+    return characterData;
+  }, 'saveCharacterForm');
+};
+
+// Clear character form
+export const clearCharacterForm = () => {
+  return safeDomOperation(() => {
+    const fieldIds = getCharacterFormFieldIds();
+    clearFormFields(fieldIds);
+    return true;
+  }, 'clearCharacterForm');
+};
+
+// Delete character data
+export const deleteCharacterData = () => {
+  return safeDomOperation(() => {
+    const yjsSystem = getSystem();
+    if (!yjsSystem) {
+      throw new Error('YJS system not available');
+    }
+
+    const characterMap = yjsSystem.characterMap;
+    if (!characterMap) {
+      throw new Error('Character map not available');
+    }
+
+    // Clear all character data
+    characterMap.clear();
+    return true;
+  }, 'deleteCharacterData');
+};
+
+// Check if character has data
+export const hasCharacterData = () => {
+  try {
+    const characterResult = getCurrentCharacterData();
+    if (!characterResult.success) {
+      return false;
+    }
+
+    const character = characterResult.data;
+    return Boolean(
+      character.name?.trim() ||
+      character.race?.trim() ||
+      character.class?.trim() ||
+      character.backstory?.trim() ||
+      character.notes?.trim()
+    );
+  } catch (error) {
+    console.warn('Error checking character data:', error);
+    return false;
+  }
+};
+
+// Get character summary for display
+export const getCharacterSummary = () => {
+  try {
+    const characterResult = getCurrentCharacterData();
+    if (!characterResult.success) {
+      return 'Character data unavailable';
+    }
+
+    const character = characterResult.data;
     
-    if (summary) {
-      return {
-        name: character.name || 'Unnamed Character',
-        summary: `${summary} (summarized)`
-      };
+    if (!hasCharacterData()) {
+      return 'No character created yet';
     }
-  }
-  
-  // Fallback to original character data
-  return { ...character };
-};
 
-// Auto-save is handled automatically by Yjs - no explicit save needed
+    const parts = [];
+    if (character.name?.trim()) parts.push(`Name: ${character.name.trim()}`);
+    if (character.race?.trim()) parts.push(`Race: ${character.race.trim()}`);
+    if (character.class?.trim()) parts.push(`Class: ${character.class.trim()}`);
 
-// Setup summary-related event listeners
-const setupSummaryEventListeners = () => {
-  const refreshBtn = document.getElementById('refresh-summaries');
-  const generateBtn = document.getElementById('generate-summaries');
-  
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', displayCharacterSummaries);
+    return parts.length > 0 ? parts.join(', ') : 'Unnamed character';
+  } catch (error) {
+    console.warn('Error getting character summary:', error);
+    return 'Character summary unavailable';
   }
-  
-  if (generateBtn) {
-    generateBtn.addEventListener('click', generateCharacterSummaries);
-  }
-};
-
-// Setup keyboard shortcuts
-const setupKeyboardShortcuts = () => {
-  document.addEventListener('keydown', (e) => {
-    // Ctrl/Cmd+S no longer needed - Yjs handles auto-save
-    if (e.key === 'Escape') {
-      window.location.href = 'index.html';
-    }
-  });
 };
 
 // Initialize character page
-const init = async () => {
-  try {
-    // Initialize Yjs system
-    await createSystem();
-    
-    // Setup character form with Yjs bindings (after Yjs system is ready)
-    setupCharacterForm();
-    
-    // Register callback for updates from other clients
-    onUpdate(() => {
-      // Only update summaries on external updates since form fields auto-sync
-      displayCharacterSummaries();
-    });
-    
-    // Setup event listeners
-    setupSummaryEventListeners();
-    setupKeyboardShortcuts();
-    
-    // Display initial summaries
-    displayCharacterSummaries();
-    
-    // Focus on name field if empty
-    const character = loadCharacterData();
-    const nameInput = document.getElementById('character-name');
-    if (nameInput && !character.name) {
-      nameInput.focus();
+export const initializeCharacterPage = () => {
+  return safeDomOperation(() => {
+    // Load existing character data
+    const loadResult = loadCharacterForm();
+    if (!loadResult.success) {
+      console.warn('Could not load character data:', loadResult.error);
     }
-    
-    console.log('Character page initialized successfully');
-  } catch (error) {
-    console.error('Failed to initialize character page:', error);
-  }
+
+    // Set up form submission
+    const characterForm = document.getElementById('character-form');
+    if (characterForm) {
+      characterForm.addEventListener('submit', handleCharacterFormSubmission);
+    }
+
+    // Set up clear button
+    const clearBtn = document.getElementById('clear-character-btn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', handleClearCharacter);
+    }
+
+    // Set up back button
+    const backBtn = document.getElementById('back-to-journal-btn');
+    if (backBtn) {
+      backBtn.addEventListener('click', navigateToJournal);
+    }
+
+    return true;
+  }, 'initializeCharacterPage');
 };
 
-// Start when DOM is ready (only in browser environment)
-if (typeof document !== 'undefined' && document.addEventListener) {
-  document.addEventListener('DOMContentLoaded', init);
+// Handle character form submission
+export const handleCharacterFormSubmission = (event) => {
+  event.preventDefault();
+  
+  return safeDomOperation(() => {
+    const saveResult = saveCharacterForm();
+    if (!saveResult.success) {
+      throw new Error(saveResult.error);
+    }
+
+    // Show success message
+    const messageDiv = document.getElementById('character-message');
+    if (messageDiv) {
+      setElementContent(messageDiv, 'Character saved successfully!');
+      messageDiv.className = 'message success';
+      
+      // Clear message after 3 seconds
+      setTimeout(() => {
+        if (messageDiv) {
+          setElementContent(messageDiv, '');
+          messageDiv.className = 'message';
+        }
+      }, 3000);
+    }
+
+    return saveResult.data;
+  }, 'handleCharacterFormSubmission');
+};
+
+// Handle clear character
+export const handleClearCharacter = (event) => {
+  event.preventDefault();
+  
+  return safeDomOperation(() => {
+    const confirmed = confirm('Are you sure you want to clear all character data? This action cannot be undone.');
+    if (!confirmed) {
+      return false;
+    }
+
+    const deleteResult = deleteCharacterData();
+    if (!deleteResult.success) {
+      throw new Error(deleteResult.error);
+    }
+
+    const clearResult = clearCharacterForm();
+    if (!clearResult.success) {
+      throw new Error(clearResult.error);
+    }
+
+    // Show success message
+    const messageDiv = document.getElementById('character-message');
+    if (messageDiv) {
+      setElementContent(messageDiv, 'Character data cleared successfully!');
+      messageDiv.className = 'message success';
+      
+      // Clear message after 3 seconds
+      setTimeout(() => {
+        if (messageDiv) {
+          setElementContent(messageDiv, '');
+          messageDiv.className = 'message';
+        }
+      }, 3000);
+    }
+
+    return true;
+  }, 'handleClearCharacter');
+};
+
+// Navigate to journal (proper navigation without window usage)
+export const navigateToJournal = () => {
+  // Use document.location instead of window.location
+  document.location.href = 'index.html';
+};
+
+// Auto-initialize if on character page
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('character-form')) {
+      initializeCharacterPage();
+    }
+  });
+} else {
+  if (document.getElementById('character-form')) {
+    initializeCharacterPage();
+  }
 }

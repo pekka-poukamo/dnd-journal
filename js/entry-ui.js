@@ -8,6 +8,21 @@ import { updateEntry, deleteEntry } from './yjs-direct.js';
 let editingEntryId = null;
 let editData = { title: '', content: '' };
 
+// Callback for triggering UI updates
+let uiUpdateCallback = null;
+
+// Set the UI update callback (called by app.js)
+export const setUIUpdateCallback = (callback) => {
+  uiUpdateCallback = callback;
+};
+
+// Trigger UI update if callback is available
+const triggerUIUpdate = () => {
+  if (uiUpdateCallback) {
+    uiUpdateCallback();
+  }
+};
+
 // Create entry HTML (view mode)
 const createEntryViewHTML = (entry) => `
   <article class="entry" data-entry-id="${entry.id}">
@@ -15,8 +30,8 @@ const createEntryViewHTML = (entry) => `
       <h3 class="entry-title">${entry.title}</h3>
       <div class="entry-meta">
         <span class="entry-timestamp">${formatDate(entry.timestamp)}</span>
-        <button class="edit-btn" onclick="startEdit('${entry.id}')" title="Edit entry">✏️</button>
-        <button class="delete-btn" onclick="deleteEntryAction('${entry.id}', '${entry.title.replace(/'/g, '\\\'')}')" title="Delete entry">🗑️</button>
+        <button class="edit-btn" data-action="edit" data-entry-id="${entry.id}" title="Edit entry">✏️</button>
+        <button class="delete-btn" data-action="delete" data-entry-id="${entry.id}" data-entry-title="${entry.title}" title="Delete entry">🗑️</button>
       </div>
     </header>
     <div class="entry-content">${parseMarkdown(entry.content)}</div>
@@ -30,8 +45,8 @@ const createEntryEditHTML = (entry) => `
       <input type="text" class="edit-title-input" value="${entry.title}" placeholder="Entry title">
       <textarea class="edit-content-textarea" placeholder="Entry content">${entry.content}</textarea>
       <div class="edit-actions">
-        <button onclick="saveEdit('${entry.id}')">Save</button>
-        <button onclick="cancelEdit()">Cancel</button>
+        <button data-action="save" data-entry-id="${entry.id}">Save</button>
+        <button data-action="cancel">Cancel</button>
       </div>
     </div>
   </article>
@@ -68,7 +83,11 @@ export const renderEntries = (entries = []) => {
     return createEntryViewHTML(entry);
   }).join('');
   
-  // Focus edit field if we're editing
+  // Set up event listeners for buttons using event delegation
+  container.removeEventListener('click', handleEntryAction);
+  container.addEventListener('click', handleEntryAction);
+  
+  // Set up input listeners for edit mode
   if (editingEntryId) {
     const titleInput = container.querySelector('.edit-title-input');
     if (titleInput) {
@@ -83,12 +102,34 @@ export const renderEntries = (entries = []) => {
   }
 };
 
+// Handle entry actions via event delegation
+const handleEntryAction = (event) => {
+  const action = event.target.dataset.action;
+  if (!action) return;
+  
+  event.preventDefault();
+  
+  switch (action) {
+    case 'edit':
+      startEdit(event.target.dataset.entryId);
+      break;
+    case 'delete':
+      deleteEntryAction(event.target.dataset.entryId, event.target.dataset.entryTitle);
+      break;
+    case 'save':
+      saveEdit(event.target.dataset.entryId);
+      break;
+    case 'cancel':
+      cancelEdit();
+      break;
+  }
+};
+
 // Start editing an entry
 export const startEdit = (entryId) => {
   editingEntryId = entryId;
   editData = { title: '', content: '' }; // Reset edit data
-  // Trigger re-render (this will be called by the app's update cycle)
-  if (window.triggerUIUpdate) window.triggerUIUpdate();
+  triggerUIUpdate();
 };
 
 // Save edit
@@ -118,8 +159,7 @@ export const saveEdit = (entryId) => {
 export const cancelEdit = () => {
   editingEntryId = null;
   editData = { title: '', content: '' };
-  // Trigger re-render
-  if (window.triggerUIUpdate) window.triggerUIUpdate();
+  triggerUIUpdate();
 };
 
 // Delete entry
@@ -136,14 +176,6 @@ export const focusEntryTitle = () => {
   const titleInput = document.getElementById('entry-title');
   if (titleInput) titleInput.focus();
 };
-
-// Make functions globally available (for onclick handlers)
-if (typeof window !== 'undefined') {
-  window.startEdit = startEdit;
-  window.saveEdit = saveEdit;
-  window.cancelEdit = cancelEdit;
-  window.deleteEntryAction = deleteEntryAction;
-}
 
 // Export for compatibility
 export { startEdit as enableEditMode, saveEdit, cancelEdit, deleteEntryAction as handleDeleteEntry };

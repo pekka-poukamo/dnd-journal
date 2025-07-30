@@ -2,8 +2,8 @@
 // Direct YJS data binding, simple re-render approach
 
 import { generateId, parseMarkdown } from './utils.js';
-import { renderEntries, focusEntryTitle } from './entry-ui.js';
-import { renderCharacter } from './character-ui.js';
+import { renderEntries, focusEntryTitle, setUIUpdateCallback } from './entry-ui.js';
+import { renderCharacter, setCharacterUIUpdateCallback } from './character-ui.js';
 import { initializeYjs, onUpdate, getCharacter, getEntries, addEntry } from './yjs-direct.js';
 
 // Simple state for UI rendering (mirrors YJS data)
@@ -42,10 +42,8 @@ const updateUI = () => {
   renderCharacter(state.character);
 };
 
-// Make updateUI available globally for the simple UIs
-if (typeof window !== 'undefined') {
-  window.triggerUIUpdate = updateUI;
-}
+// Export updateUI for modules that need to trigger updates
+export const triggerUIUpdate = updateUI;
 
 // Add new entry
 export const addNewEntry = async () => {
@@ -159,6 +157,10 @@ export const initializeApp = async () => {
   try {
     // Initialize YJS with direct data binding
     await initializeYjs();
+    
+    // Set up UI update callbacks for modules
+    setUIUpdateCallback(updateUI);
+    setCharacterUIUpdateCallback(updateUI);
     
     // Load initial state
     loadStateFromYjs();
