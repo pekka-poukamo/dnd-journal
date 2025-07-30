@@ -12,6 +12,23 @@ export let settingsMap = null;
 export let summariesMap = null;
 export let provider = null;
 
+// Reset function for testing
+export const resetYjs = () => {
+  if (ydoc) {
+    ydoc.destroy();
+  }
+  if (provider) {
+    provider.destroy();
+  }
+  
+  ydoc = null;
+  characterMap = null;
+  journalMap = null;
+  settingsMap = null;
+  summariesMap = null;
+  provider = null;
+};
+
 // Initialize Y.js (call once per page)
 export const initYjs = async () => {
   if (ydoc) return; // Already initialized
@@ -26,10 +43,10 @@ export const initYjs = async () => {
   summariesMap = ydoc.getMap('summaries');
   
   // Set up persistence
-  new IndexeddbPersistence('dnd-journal', ydoc);
+  const persistence = new IndexeddbPersistence('dnd-journal', ydoc);
   
-  // Set up sync if configured
-  const syncServer = settingsMap.get('dnd-journal-sync-server') || SYNC_CONFIG?.server;
+  // Set up sync (if available)
+  const syncServer = SYNC_CONFIG.server;
   if (syncServer) {
     try {
       provider = new WebsocketProvider(syncServer, 'dnd-journal', ydoc);
@@ -37,6 +54,9 @@ export const initYjs = async () => {
       console.warn('Failed to connect to sync server:', error);
     }
   }
+  
+  // Wait for initial sync
+  await new Promise(resolve => setTimeout(resolve, 100));
 };
 
 // Character operations - direct to Y.js

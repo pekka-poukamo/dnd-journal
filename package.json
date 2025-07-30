@@ -42,10 +42,10 @@
   "homepage": "http://dnd-journal.surge.sh",
   "devDependencies": {
     "c8": "^8.0.1",
-    "chai": "^4.3.10",
+    "chai": "^4.5.0",
     "http-server": "^14.1.1",
-    "jsdom": "^23.0.0",
-    "mocha": "^10.2.0",
+    "jsdom": "^23.2.0",
+    "mocha": "^10.8.2",
     "surge": "^0.23.1"
   },
   "engines": {

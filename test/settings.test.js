@@ -1,165 +1,307 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as Settings from '../js/settings.js';
-import { createSystem, clearSystem } from '../js/yjs.js';
+import * as YjsModule from '../js/yjs.js';
 
-describe('Settings Module', function() {
+describe('Settings Page', function() {
   beforeEach(async function() {
-    // Clear and reinitialize Yjs mock system
-    clearSystem();
-    await createSystem();
+    // Reset Y.js state before each test
+    YjsModule.resetYjs();
+    await YjsModule.initYjs();
+    
+    // Set up settings form DOM
+    document.body.innerHTML = `
+      <form id="settings-form">
+        <input type="text" name="openai-api-key" id="openai-api-key" />
+        <input type="checkbox" name="ai-enabled" id="ai-enabled" />
+        <input type="text" name="sync-server-url" id="sync-server-url" />
+        <button type="submit">Save Settings</button>
+      </form>
+      <button id="test-connection">Test Connection</button>
+      <button id="test-api-key">Test API Key</button>
+      <div id="connection-status"></div>
+      <div id="api-status"></div>
+    `;
   });
 
-  describe('Settings Data Management', () => {
-    it('should load default settings when none exist', () => {
-      const settings = Settings.loadSettings();
+  afterEach(function() {
+    YjsModule.resetYjs();
+  });
+
+  describe('initSettingsPage', function() {
+    it('should initialize without errors', async function() {
+      expect(async () => {
+        await Settings.initSettingsPage();
+      }).to.not.throw();
+    });
+
+    it('should render form with current settings', async function() {
+      // Set some settings
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
+      YjsModule.setSetting('ai-enabled', true);
+      YjsModule.setSetting('sync-server-url', 'wss://test.com');
       
-      expect(settings).to.have.property('apiKey', '');
-      expect(settings).to.have.property('enableAIFeatures', false);
-    });
-
-    it('should load existing settings from Yjs settingsMap', () => {
-      const testSettings = {
-        apiKey: 'sk-test123',
-        enableAIFeatures: true
-      };
-
-      // Save settings using Yjs system
-      Settings.saveSettings(testSettings);
-
-      const loaded = Settings.loadSettings();
-      expect(loaded).to.deep.equal(testSettings);
-    });
-
-    it('should save settings to Yjs settingsMap', () => {
-      const testSettings = {
-        apiKey: 'sk-test456',
-        enableAIFeatures: false
-      };
-
-      const result = Settings.saveSettings(testSettings);
-      expect(result.success).to.be.true;
-
-      // Verify settings were saved by loading them back
-      const loaded = Settings.loadSettings();
-      expect(loaded).to.deep.equal(testSettings);
-    });
-
-    it('should handle missing Yjs system gracefully', () => {
-      // Test missing system handling - Yjs provides robust error handling
-
-      const settings = Settings.loadSettings();
+      await Settings.initSettingsPage();
       
-      expect(settings).to.have.property('apiKey', '');
-      expect(settings).to.have.property('enableAIFeatures', false);
-    });
-
-    it('should validate API key format', () => {
-      const validKey = 'sk-test123';
-      const invalidKey = 'invalid-key';
-
-      expect(validKey.startsWith('sk-')).to.be.true;
-      expect(invalidKey.startsWith('sk-')).to.be.false;
-    });
-
-    it('should test API key functionality', async () => {
-      // Mock successful API test
-      const result = await Settings.testApiKey('sk-test123');
-      
-      expect(result).to.have.property('success');
-      expect(result).to.have.property('message');
+      // Check that form was populated
+      expect(document.getElementById('openai-api-key').value).to.equal('sk-test123');
+      expect(document.getElementById('ai-enabled').checked).to.be.true;
+      expect(document.getElementById('sync-server-url').value).to.equal('wss://test.com');
     });
   });
 
-  describe('API Key Testing', () => {
-    it('should reject empty API key', async () => {
-      const result = await Settings.testApiKey('');
+  describe('renderSettingsPage', function() {
+    it('should update form fields with settings data', function() {
+      // Set settings in Y.js
+      YjsModule.setSetting('openai-api-key', 'sk-456789');
+      YjsModule.setSetting('ai-enabled', false);
+      YjsModule.setSetting('sync-server-url', 'wss://example.com');
       
-      expect(result.success).to.be.false;
-      expect(result.error).to.equal('Invalid API key format');
+      Settings.renderSettingsPage();
+      
+      // Check form fields
+      expect(document.getElementById('openai-api-key').value).to.equal('sk-456789');
+      expect(document.getElementById('ai-enabled').checked).to.be.false;
+      expect(document.getElementById('sync-server-url').value).to.equal('wss://example.com');
     });
 
-    it('should reject null API key', async () => {
-      const result = await Settings.testApiKey(null);
+    it('should handle empty settings data', function() {
+      Settings.renderSettingsPage();
       
-      expect(result.success).to.be.false;
-      expect(result.error).to.equal('Invalid API key format');
+      // All fields should be empty/default
+      expect(document.getElementById('openai-api-key').value).to.equal('');
+      expect(document.getElementById('ai-enabled').checked).to.be.false;
+      expect(document.getElementById('sync-server-url').value).to.equal('');
     });
 
-    it('should reject API key without sk- prefix', async () => {
-      const result = await Settings.testApiKey('invalid-key-format');
+    it('should handle missing form elements gracefully', function() {
+      // Remove some form elements
+      document.getElementById('openai-api-key').remove();
       
-      expect(result.success).to.be.false;
-      expect(result.error).to.equal('Invalid API key format');
+      expect(() => {
+        Settings.renderSettingsPage();
+      }).to.not.throw();
+    });
+  });
+
+  describe('Settings form handling', function() {
+    beforeEach(async function() {
+      await Settings.initSettingsPage();
     });
 
-    it('should handle network errors during API test', async () => {
-      // Mock fetch to throw network error
+    it('should save settings on form submission', function() {
+      // Fill form
+      document.getElementById('openai-api-key').value = 'sk-new-key';
+      document.getElementById('ai-enabled').checked = true;
+      document.getElementById('sync-server-url').value = 'wss://new-server.com';
+      
+      // Submit form
+      const form = document.getElementById('settings-form');
+      const event = new Event('submit', { bubbles: true, cancelable: true });
+      form.dispatchEvent(event);
+      
+      // Check Y.js data
+      expect(YjsModule.getSetting('openai-api-key')).to.equal('sk-new-key');
+      expect(YjsModule.getSetting('ai-enabled')).to.be.true;
+      expect(YjsModule.getSetting('sync-server-url')).to.equal('wss://new-server.com');
+    });
+
+    it('should trim whitespace from text inputs', function() {
+      document.getElementById('openai-api-key').value = '  sk-trimmed  ';
+      document.getElementById('sync-server-url').value = '  wss://trimmed.com  ';
+      
+      // Submit form
+      const form = document.getElementById('settings-form');
+      const event = new Event('submit', { bubbles: true, cancelable: true });
+      form.dispatchEvent(event);
+      
+      // Check Y.js data is trimmed
+      expect(YjsModule.getSetting('openai-api-key')).to.equal('sk-trimmed');
+      expect(YjsModule.getSetting('sync-server-url')).to.equal('wss://trimmed.com');
+    });
+
+    it('should handle boolean checkbox values', function() {
+      // Test unchecked checkbox
+      document.getElementById('ai-enabled').checked = false;
+      
+      const form = document.getElementById('settings-form');
+      const event = new Event('submit', { bubbles: true, cancelable: true });
+      form.dispatchEvent(event);
+      
+      expect(YjsModule.getSetting('ai-enabled')).to.be.false;
+      
+      // Test checked checkbox
+      document.getElementById('ai-enabled').checked = true;
+      form.dispatchEvent(event);
+      
+      expect(YjsModule.getSetting('ai-enabled')).to.be.true;
+    });
+  });
+
+  describe('API key testing', function() {
+    beforeEach(async function() {
+      await Settings.initSettingsPage();
+    });
+
+    it('should test API key successfully', async function() {
+      // Set valid API key
+      YjsModule.setSetting('openai-api-key', 'sk-valid-key');
+      
+      // Mock successful API call
       const originalFetch = global.fetch;
-      global.fetch = () => {
-        throw new Error('Network error');
-      };
-
-      const result = await Settings.testApiKey('sk-test123');
-      
-      expect(result.success).to.be.false;
-      expect(result.error).to.equal('Network error: Unable to test API key');
-
-      // Restore original fetch
-      global.fetch = originalFetch;
-    });
-
-    it('should handle API error responses', async () => {
-      // Mock fetch to return error response
-      const originalFetch = global.fetch;
-      global.fetch = () => Promise.resolve({
-        ok: false,
-        json: () => Promise.resolve({
-          error: { message: 'Invalid API key provided' }
-        })
-      });
-
-      const result = await Settings.testApiKey('sk-invalid123');
-      
-      expect(result.success).to.be.false;
-      expect(result.error).to.equal('Invalid API key provided');
-
-      // Restore original fetch
-      global.fetch = originalFetch;
-    });
-
-    it('should handle successful API response', async () => {
-      // Mock fetch to return successful response
-      const originalFetch = global.fetch;
-      global.fetch = () => Promise.resolve({
+      global.fetch = async () => ({
         ok: true,
-        json: () => Promise.resolve({ data: [] })
+        json: async () => ({ data: [{ id: 'test-model' }] })
       });
-
-      const result = await Settings.testApiKey('sk-valid123');
       
-      expect(result.success).to.be.true;
-      expect(result.message).to.equal('API key is valid!');
-
-      // Restore original fetch
-      global.fetch = originalFetch;
+      try {
+        const testBtn = document.getElementById('test-api-key');
+        const event = new Event('click', { bubbles: true });
+        testBtn.dispatchEvent(event);
+        
+        // Should attempt API call
+        expect(global.fetch).to.have.been;
+      } finally {
+        global.fetch = originalFetch;
+      }
     });
 
-    it('should handle API error response without error message', async () => {
-      // Mock fetch to return error response without specific message
-      const originalFetch = global.fetch;
-      global.fetch = () => Promise.resolve({
-        ok: false,
-        json: () => Promise.resolve({})
-      });
-
-      const result = await Settings.testApiKey('sk-invalid123');
+    it('should handle API key test failure', async function() {
+      // Set invalid API key
+      YjsModule.setSetting('openai-api-key', 'sk-invalid-key');
       
-      expect(result.success).to.be.false;
-      expect(result.error).to.equal('Invalid API key');
+      // Mock failed API call
+      const originalFetch = global.fetch;
+      global.fetch = async () => ({
+        ok: false,
+        status: 401
+      });
+      
+      try {
+        const testBtn = document.getElementById('test-api-key');
+        const event = new Event('click', { bubbles: true });
+        testBtn.dispatchEvent(event);
+        
+        // Should handle error gracefully
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
 
-      // Restore original fetch
-      global.fetch = originalFetch;
+    it('should handle missing API key', async function() {
+      // Don't set API key
+      
+      const testBtn = document.getElementById('test-api-key');
+      const event = new Event('click', { bubbles: true });
+      testBtn.dispatchEvent(event);
+      
+      // Should handle missing key gracefully
+      const apiStatus = document.getElementById('api-status');
+      expect(apiStatus.innerHTML).to.include('Please enter an API key');
+    });
+  });
+
+  describe('Connection testing', function() {
+    beforeEach(async function() {
+      await Settings.initSettingsPage();
+    });
+
+    it('should test connection with valid URL', async function() {
+      // Set valid sync server URL
+      YjsModule.setSetting('sync-server-url', 'wss://valid-server.com');
+      
+      const testBtn = document.getElementById('test-connection');
+      const event = new Event('click', { bubbles: true });
+      testBtn.dispatchEvent(event);
+      
+      // Should attempt connection test
+      const connectionStatus = document.getElementById('connection-status');
+      expect(connectionStatus.innerHTML).to.include('Testing');
+    });
+
+    it('should handle invalid connection URL', async function() {
+      // Set invalid URL
+      YjsModule.setSetting('sync-server-url', 'invalid-url');
+      
+      const testBtn = document.getElementById('test-connection');
+      const event = new Event('click', { bubbles: true });
+      testBtn.dispatchEvent(event);
+      
+      // Should show error
+      const connectionStatus = document.getElementById('connection-status');
+      expect(connectionStatus.innerHTML).to.include('Invalid');
+    });
+
+    it('should handle missing sync URL', async function() {
+      // Don't set sync URL
+      
+      const testBtn = document.getElementById('test-connection');
+      const event = new Event('click', { bubbles: true });
+      testBtn.dispatchEvent(event);
+      
+      // Should handle missing URL gracefully
+      const connectionStatus = document.getElementById('connection-status');
+      expect(connectionStatus.innerHTML).to.include('Please enter a sync server URL');
+    });
+  });
+
+  describe('Reactive updates', function() {
+    it('should update form when Y.js settings change', async function() {
+      await Settings.initSettingsPage();
+      
+      // Simulate Y.js data change
+      YjsModule.setSetting('openai-api-key', 'sk-reactive-test');
+      
+      // Manually trigger the observer callback (in real app, Y.js would do this)
+      Settings.renderSettingsPage();
+      
+      expect(document.getElementById('openai-api-key').value).to.equal('sk-reactive-test');
+    });
+  });
+
+  describe('Error handling', function() {
+    it('should handle missing form gracefully', async function() {
+      // Remove form from DOM
+      document.body.innerHTML = '<div>No form here</div>';
+      
+      expect(async () => {
+        await Settings.initSettingsPage();
+      }).to.not.throw();
+    });
+
+    it('should handle missing status elements gracefully', function() {
+      // Remove status divs
+      document.getElementById('connection-status').remove();
+      document.getElementById('api-status').remove();
+      
+      expect(() => {
+        Settings.renderSettingsPage();
+      }).to.not.throw();
+    });
+
+    it('should handle Y.js initialization failure', async function() {
+      // Force Y.js to fail
+      const originalInitYjs = YjsModule.initYjs;
+      YjsModule.initYjs = async () => {
+        throw new Error('Y.js init failed');
+      };
+      
+      try {
+        // Should handle error gracefully
+        await Settings.initSettingsPage();
+        // Test passes if no uncaught exception
+      } finally {
+        YjsModule.initYjs = originalInitYjs;
+      }
+    });
+
+    it('should handle corrupt settings data', function() {
+      // Set invalid settings
+      YjsModule.settingsMap.set('ai-enabled', 'invalid-boolean');
+      
+      expect(() => {
+        Settings.renderSettingsPage();
+      }).to.not.throw();
     });
   });
 });

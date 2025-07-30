@@ -1,171 +1,296 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as OpenAIWrapper from '../js/openai-wrapper.js';
-import { createSystem, clearSystem } from '../js/yjs.js';
-import * as Settings from '../js/settings.js';
+import * as YjsModule from '../js/yjs.js';
 
-describe('OpenAI Wrapper', () => {
-  beforeEach(async () => {
-    // Clear and reinitialize Yjs mock system
-    clearSystem();
-    await createSystem();
+describe('OpenAI Wrapper Module', function() {
+  beforeEach(async function() {
+    // Reset Y.js state before each test
+    YjsModule.resetYjs();
+    await YjsModule.initYjs();
   });
 
-  describe('isAPIAvailable', () => {
-    it('should return false when no settings exist', () => {
-      const result = OpenAIWrapper.isAPIAvailable();
-      result.should.be.false;
+  afterEach(function() {
+    YjsModule.resetYjs();
+  });
+
+  describe('isAPIAvailable', function() {
+    it('should return false when API key is missing', function() {
+      YjsModule.setSetting('ai-enabled', true);
+      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
     });
 
-    it('should return false when AI features are disabled', () => {
-      Settings.saveSettings({
-        enableAIFeatures: false,
-        apiKey: 'sk-test123'
+    it('should return false when AI is disabled', function() {
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
+      YjsModule.setSetting('ai-enabled', false);
+      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+    });
+
+    it('should return true when both API key and AI are enabled', function() {
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
+      YjsModule.setSetting('ai-enabled', true);
+      expect(OpenAIWrapper.isAPIAvailable()).to.be.true;
+    });
+
+    it('should return false when API key is empty string', function() {
+      YjsModule.setSetting('openai-api-key', '');
+      YjsModule.setSetting('ai-enabled', true);
+      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+    });
+
+    it('should return false when API key is whitespace only', function() {
+      YjsModule.setSetting('openai-api-key', '   ');
+      YjsModule.setSetting('ai-enabled', true);
+      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+    });
+  });
+
+  describe('callOpenAI', function() {
+    beforeEach(function() {
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
+      YjsModule.setSetting('ai-enabled', true);
+    });
+
+    it('should make API call with correct parameters', async function() {
+      const originalFetch = global.fetch;
+      let capturedRequest = null;
+      
+      global.fetch = async (url, options) => {
+        capturedRequest = { url, options };
+        return {
+          ok: true,
+          json: async () => ({
+            choices: [{
+              message: {
+                content: 'Test response'
+              }
+            }]
+          })
+        };
+      };
+
+      try {
+        const prompt = 'Test prompt';
+        const result = await OpenAIWrapper.callOpenAI(prompt);
+        
+        expect(result).to.equal('Test response');
+        expect(capturedRequest.url).to.equal('https://api.openai.com/v1/chat/completions');
+        expect(capturedRequest.options.method).to.equal('POST');
+        
+        const body = JSON.parse(capturedRequest.options.body);
+        expect(body.model).to.equal('gpt-4o-mini');
+        expect(body.messages).to.have.length(1);
+        expect(body.messages[0].role).to.equal('user');
+        expect(body.messages[0].content).to.equal(prompt);
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('should handle API errors gracefully', async function() {
+      const originalFetch = global.fetch;
+      global.fetch = async () => ({
+        ok: false,
+        status: 401,
+        json: async () => ({
+          error: {
+            message: 'Invalid API key'
+          }
+        })
       });
-      
-      const result = OpenAIWrapper.isAPIAvailable();
-      result.should.be.false;
+
+      try {
+        const result = await OpenAIWrapper.callOpenAI('Test prompt');
+        expect(result).to.be.null;
+      } finally {
+        global.fetch = originalFetch;
+      }
     });
 
-    it('should return false when API key is missing', () => {
-      Settings.saveSettings({
-        enableAIFeatures: true,
-        apiKey: ''
+    it('should handle network errors', async function() {
+      const originalFetch = global.fetch;
+      global.fetch = async () => {
+        throw new Error('Network error');
+      };
+
+      try {
+        const result = await OpenAIWrapper.callOpenAI('Test prompt');
+        expect(result).to.be.null;
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('should return null when API is not available', async function() {
+      YjsModule.setSetting('ai-enabled', false);
+      
+      const result = await OpenAIWrapper.callOpenAI('Test prompt');
+      expect(result).to.be.null;
+    });
+
+    it('should handle empty prompt', async function() {
+      const result = await OpenAIWrapper.callOpenAI('');
+      expect(result).to.be.null;
+    });
+
+    it('should handle malformed API response', async function() {
+      const originalFetch = global.fetch;
+      global.fetch = async () => ({
+        ok: true,
+        json: async () => ({
+          // Missing choices array
+          invalid: 'response'
+        })
       });
-      
-      const result = OpenAIWrapper.isAPIAvailable();
-      result.should.be.false;
+
+      try {
+        const result = await OpenAIWrapper.callOpenAI('Test prompt');
+        expect(result).to.be.null;
+      } finally {
+        global.fetch = originalFetch;
+      }
     });
 
-    it('should return false when API key does not start with sk-', () => {
-      Settings.saveSettings({
-        enableAIFeatures: true,
-        apiKey: 'invalid-key'
+    it('should use default options when none provided', async function() {
+      const originalFetch = global.fetch;
+      let capturedRequest = null;
+      
+      global.fetch = async (url, options) => {
+        capturedRequest = { url, options };
+        return {
+          ok: true,
+          json: async () => ({
+            choices: [{
+              message: {
+                content: 'Test response'
+              }
+            }]
+          })
+        };
+      };
+
+      try {
+        await OpenAIWrapper.callOpenAI('Test prompt');
+        
+        const body = JSON.parse(capturedRequest.options.body);
+        expect(body.model).to.equal('gpt-4o-mini');
+        expect(body.max_tokens).to.equal(1000);
+        expect(body.temperature).to.equal(0.7);
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('should use custom options when provided', async function() {
+      const originalFetch = global.fetch;
+      let capturedRequest = null;
+      
+      global.fetch = async (url, options) => {
+        capturedRequest = { url, options };
+        return {
+          ok: true,
+          json: async () => ({
+            choices: [{
+              message: {
+                content: 'Test response'
+              }
+            }]
+          })
+        };
+      };
+
+      try {
+        const customOptions = {
+          model: 'gpt-3.5-turbo',
+          max_tokens: 500,
+          temperature: 0.5
+        };
+        
+        await OpenAIWrapper.callOpenAI('Test prompt', customOptions);
+        
+        const body = JSON.parse(capturedRequest.options.body);
+        expect(body.model).to.equal('gpt-3.5-turbo');
+        expect(body.max_tokens).to.equal(500);
+        expect(body.temperature).to.equal(0.5);
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+  });
+
+  describe('Settings integration', function() {
+    it('should read API key from Y.js settings', function() {
+      YjsModule.setSetting('openai-api-key', 'sk-from-yjs');
+      YjsModule.setSetting('ai-enabled', true);
+      
+      expect(OpenAIWrapper.isAPIAvailable()).to.be.true;
+    });
+
+    it('should handle missing settings', function() {
+      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+    });
+
+    it('should handle invalid setting types', function() {
+      YjsModule.setSetting('openai-api-key', 123); // Number instead of string
+      YjsModule.setSetting('ai-enabled', 'invalid'); // String instead of boolean
+      
+      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+    });
+  });
+
+  describe('Error handling edge cases', function() {
+    beforeEach(function() {
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
+      YjsModule.setSetting('ai-enabled', true);
+    });
+
+    it('should handle API timeout', async function() {
+      const originalFetch = global.fetch;
+      global.fetch = async () => {
+        // Simulate timeout
+        await new Promise(resolve => setTimeout(resolve, 100));
+        throw new Error('Request timeout');
+      };
+
+      try {
+        const result = await OpenAIWrapper.callOpenAI('Test prompt');
+        expect(result).to.be.null;
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('should handle non-JSON response', async function() {
+      const originalFetch = global.fetch;
+      global.fetch = async () => ({
+        ok: true,
+        json: async () => {
+          throw new Error('Invalid JSON');
+        }
       });
-      
-      const result = OpenAIWrapper.isAPIAvailable();
-      result.should.be.false;
+
+      try {
+        const result = await OpenAIWrapper.callOpenAI('Test prompt');
+        expect(result).to.be.null;
+      } finally {
+        global.fetch = originalFetch;
+      }
     });
 
-    it('should return true when properly configured', () => {
-      Settings.saveSettings({
-        enableAIFeatures: true,
-        apiKey: 'sk-test123'
+    it('should handle empty choices array', async function() {
+      const originalFetch = global.fetch;
+      global.fetch = async () => ({
+        ok: true,
+        json: async () => ({
+          choices: []
+        })
       });
-      
-      const result = OpenAIWrapper.isAPIAvailable();
-      result.should.be.true;
-    });
-  });
 
-  describe('createSystemPromptFunction', () => {
-    it('should return a function', () => {
-      const fn = OpenAIWrapper.createSystemPromptFunction('Test prompt');
-      fn.should.be.a('function');
-    });
-
-    it('should create function that throws when API not available', async () => {
-      const fn = OpenAIWrapper.createSystemPromptFunction('Test prompt');
-      
       try {
-        await fn('User input');
-        expect.fail('Should have thrown');
-      } catch (error) {
-        error.message.should.contain('OpenAI API not available');
-      }
-    });
-
-    it('should accept options parameter', () => {
-      const fn = OpenAIWrapper.createSystemPromptFunction('Test prompt', { temperature: 0.5 });
-      fn.should.be.a('function');
-    });
-  });
-
-  describe('createUserPromptFunction', () => {
-    it('should return a function', () => {
-      const fn = OpenAIWrapper.createUserPromptFunction();
-      fn.should.be.a('function');
-    });
-
-    it('should create function that throws when API not available', async () => {
-      const fn = OpenAIWrapper.createUserPromptFunction();
-      
-      try {
-        await fn('User input');
-        expect.fail('Should have thrown');
-      } catch (error) {
-        error.message.should.contain('OpenAI API not available');
-      }
-    });
-
-    it('should accept options parameter', () => {
-      const fn = OpenAIWrapper.createUserPromptFunction({ temperature: 0.3 });
-      fn.should.be.a('function');
-    });
-  });
-
-  describe('createTemplateFunction', () => {
-    it('should return a function', () => {
-      const template = (text, words) => `Summarize ${text} in ${words} words`;
-      const fn = OpenAIWrapper.createTemplateFunction(template);
-      fn.should.be.a('function');
-    });
-
-    it('should create function that throws when API not available', async () => {
-      const template = (text) => `Process: ${text}`;
-      const fn = OpenAIWrapper.createTemplateFunction(template);
-      
-      try {
-        await fn('test input');
-        expect.fail('Should have thrown');
-      } catch (error) {
-        error.message.should.contain('OpenAI API not available');
-      }
-    });
-
-    it('should accept options parameter', () => {
-      const template = (text) => `Process: ${text}`;
-      const fn = OpenAIWrapper.createTemplateFunction(template, { maxTokens: 100 });
-      fn.should.be.a('function');
-    });
-  });
-
-  describe('callAI', () => {
-    it('should throw when API not available', async () => {
-      try {
-        await OpenAIWrapper.callAI('Test prompt');
-        expect.fail('Should have thrown');
-      } catch (error) {
-        error.message.should.contain('OpenAI API not available');
-      }
-    });
-
-    it('should accept options parameter', async () => {
-      try {
-        await OpenAIWrapper.callAI('Test prompt', { temperature: 0.5 });
-        expect.fail('Should have thrown');
-      } catch (error) {
-        error.message.should.contain('OpenAI API not available');
-      }
-    });
-  });
-
-  describe('callAIWithSystem', () => {
-    it('should throw when API not available', async () => {
-      try {
-        await OpenAIWrapper.callAIWithSystem('System prompt', 'User prompt');
-        expect.fail('Should have thrown');
-      } catch (error) {
-        error.message.should.contain('OpenAI API not available');
-      }
-    });
-
-    it('should accept options parameter', async () => {
-      try {
-        await OpenAIWrapper.callAIWithSystem('System prompt', 'User prompt', { temperature: 0.5 });
-        expect.fail('Should have thrown');
-      } catch (error) {
-        error.message.should.contain('OpenAI API not available');
+        const result = await OpenAIWrapper.callOpenAI('Test prompt');
+        expect(result).to.be.null;
+      } finally {
+        global.fetch = originalFetch;
       }
     });
   });

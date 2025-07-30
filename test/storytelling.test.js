@@ -1,192 +1,272 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as Storytelling from '../js/storytelling.js';
-import { createSystem, clearSystem } from '../js/yjs.js';
+import * as YjsModule from '../js/yjs.js';
 
-describe('Storytelling Module', function() {
+describe('Simple Storytelling Module', function() {
   beforeEach(async function() {
-    // Clear and reinitialize Yjs mock system
-    clearSystem();
-    await createSystem();
+    // Reset Y.js state before each test
+    YjsModule.resetYjs();
+    await YjsModule.initYjs();
+  });
+
+  afterEach(function() {
+    YjsModule.resetYjs();
   });
 
   describe('generateQuestions', function() {
-    it('should return null when AI is not available', async function() {
-      // AI is not available in test environment
+    it('should return null when API not available', async function() {
+      // Don't set API settings
       const result = await Storytelling.generateQuestions();
       expect(result).to.be.null;
     });
 
-    it('should handle null character input', async function() {
-      const result = await Storytelling.generateQuestions(null, []);
-      expect(result).to.be.null;
-    });
-
-    it('should handle empty entries input', async function() {
-      const character = { name: 'Test Character', class: 'Fighter' };
-      const result = await Storytelling.generateQuestions(character, []);
-      expect(result).to.be.null;
-    });
-
-    it('should handle null entries input', async function() {
-      const character = { name: 'Test Character', class: 'Fighter' };
-      const result = await Storytelling.generateQuestions(character, null);
-      expect(result).to.be.null;
-    });
-  });
-
-  describe('getIntrospectionQuestions', function() {
-    it('should return null when AI is not available', async function() {
-      const result = await Storytelling.getIntrospectionQuestions();
-      expect(result).to.be.null;
-    });
-  });
-
-  describe('getCharacterContext', function() {
-    it('should return character and entries from storage', async function() {
-      const system = await createSystem();
+    it('should generate questions with minimal character data', async function() {
+      // Set up API
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
+      YjsModule.setSetting('ai-enabled', true);
       
-      // Set up test data in Yjs system
-      const testCharacter = { name: 'Aragorn', class: 'Ranger' };
-      const testEntries = [
-        { id: '1', title: 'Adventure 1', content: 'First adventure' },
-        { id: '2', title: 'Adventure 2', content: 'Second adventure' }
+      // Set minimal character data
+      YjsModule.setCharacter('name', 'Aragorn');
+      
+      // Mock successful API call
+      const originalFetch = global.fetch;
+      global.fetch = async () => ({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: '1. What shaped you?\n2. What conflicts?\n3. How change?\n4. Hidden depths?'
+            }
+          }]
+        })
+      });
+      
+      try {
+        const result = await Storytelling.generateQuestions();
+        expect(result).to.include('What shaped you?');
+        expect(result).to.include('conflicts');
+        expect(result).to.include('change');
+        expect(result).to.include('Hidden depths');
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('should generate questions with full character data', async function() {
+      // Set up API
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
+      YjsModule.setSetting('ai-enabled', true);
+      
+      // Set full character data
+      YjsModule.setCharacter('name', 'Legolas');
+      YjsModule.setCharacter('race', 'Elf');
+      YjsModule.setCharacter('class', 'Archer');
+      YjsModule.setCharacter('backstory', 'Prince of the Woodland Realm...');
+      
+      // Mock successful API call
+      const originalFetch = global.fetch;
+      global.fetch = async (url, options) => {
+        const body = JSON.parse(options.body);
+        const userPrompt = body.messages.find(m => m.role === 'user').content;
+        
+        expect(userPrompt).to.include('Legolas');
+        expect(userPrompt).to.include('Elf');
+        expect(userPrompt).to.include('Archer');
+        expect(userPrompt).to.include('Prince of the Woodland Realm');
+        
+        return {
+          ok: true,
+          json: async () => ({
+            choices: [{
+              message: {
+                content: 'Generated questions for Legolas the Elf Archer'
+              }
+            }]
+          })
+        };
+      };
+      
+      try {
+        const result = await Storytelling.generateQuestions();
+        expect(result).to.include('Legolas');
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('should include recent journal entries in context', async function() {
+      // Set up API
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
+      YjsModule.setSetting('ai-enabled', true);
+      
+      // Add character and entries
+      YjsModule.setCharacter('name', 'Gimli');
+      
+      const entries = [
+        { id: 'e1', title: 'Moria Adventure', content: 'We explored the deep tunnels...', timestamp: Date.now() - 1000 },
+        { id: 'e2', title: 'Dragon Fight', content: 'A terrible dragon appeared...', timestamp: Date.now() - 500 },
+        { id: 'e3', title: 'Recent Victory', content: 'We defeated our enemies...', timestamp: Date.now() }
       ];
       
-      system.characterMap.set('name', testCharacter.name);
-      system.characterMap.set('class', testCharacter.class);
-      system.journalMap.set('entries', testEntries);
+      entries.forEach(entry => YjsModule.addEntry(entry));
       
-      const context = await Storytelling.getCharacterContext();
+      // Mock successful API call
+      const originalFetch = global.fetch;
+      global.fetch = async (url, options) => {
+        const body = JSON.parse(options.body);
+        const userPrompt = body.messages.find(m => m.role === 'user').content;
+        
+        // Should include recent entries (last 3)
+        expect(userPrompt).to.include('Recent Victory');
+        expect(userPrompt).to.include('Dragon Fight');
+        expect(userPrompt).to.include('Moria Adventure');
+        
+        return {
+          ok: true,
+          json: async () => ({
+            choices: [{
+              message: {
+                content: 'Questions based on recent adventures'
+              }
+            }]
+          })
+        };
+      };
       
-      expect(context).to.have.property('character');
-      expect(context).to.have.property('entries');
-      expect(context.entries).to.be.an('array');
+      try {
+        const result = await Storytelling.generateQuestions();
+        expect(result).to.include('recent adventures');
+      } finally {
+        global.fetch = originalFetch;
+      }
     });
 
-    it('should handle empty character data', async function() {
-      const context = await Storytelling.getCharacterContext();
+    it('should handle unnamed character', async function() {
+      // Set up API
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
+      YjsModule.setSetting('ai-enabled', true);
       
-      expect(context).to.have.property('character');
-      expect(context).to.have.property('entries');
-      expect(context.character).to.be.an('object');
-      expect(context.entries).to.be.an('array');
+      // Don't set character name
+      
+      // Mock successful API call
+      const originalFetch = global.fetch;
+      global.fetch = async (url, options) => {
+        const body = JSON.parse(options.body);
+        const userPrompt = body.messages.find(m => m.role === 'user').content;
+        
+        expect(userPrompt).to.include('unnamed adventurer');
+        
+        return {
+          ok: true,
+          json: async () => ({
+            choices: [{
+              message: {
+                content: 'Questions for unnamed character'
+              }
+            }]
+          })
+        };
+      };
+      
+      try {
+        const result = await Storytelling.generateQuestions();
+        expect(result).to.include('unnamed character');
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('should handle API errors gracefully', async function() {
+      // Set up API
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
+      YjsModule.setSetting('ai-enabled', true);
+      
+      // Mock API failure
+      const originalFetch = global.fetch;
+      global.fetch = async () => {
+        throw new Error('Network error');
+      };
+      
+      try {
+        const result = await Storytelling.generateQuestions();
+        expect(result).to.be.null;
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+  });
+
+  describe('Alias functions', function() {
+    it('should have working aliases', function() {
+      expect(Storytelling.getIntrospectionQuestions).to.equal(Storytelling.generateQuestions);
+      expect(Storytelling.generateIntrospectionQuestions).to.equal(Storytelling.generateQuestions);
+      expect(Storytelling.generateIntrospectionPrompt).to.equal(Storytelling.generateQuestions);
     });
   });
 
   describe('hasGoodContext', function() {
-    beforeEach(async function() {
-      await createSystem();
+    it('should return false with no data', function() {
+      const result = Storytelling.hasGoodContext();
+      expect(result).to.be.false;
     });
 
-    it('should return object with false ready state with no character or entries', function() {
+    it('should return true with character name', function() {
+      YjsModule.setCharacter('name', 'Frodo');
       const result = Storytelling.hasGoodContext();
-      expect(result).to.be.an('object');
-      expect(result).to.have.property('hasCharacter', false);
-      expect(result).to.have.property('hasContent', false);
-      expect(result).to.have.property('ready', false);
+      expect(result).to.be.true;
     });
 
-    it('should return object with false ready state with character but no entries', function() {
-      // hasGoodContext now uses Yjs system only per ADR-0004
+    it('should return true with character backstory', function() {
+      YjsModule.setCharacter('backstory', 'A hobbit from the Shire...');
       const result = Storytelling.hasGoodContext();
-      expect(result).to.be.an('object');
-      expect(result).to.have.property('hasCharacter', false);
-      expect(result).to.have.property('ready', false);
+      expect(result).to.be.true;
     });
 
-    it('should return object with false ready state with entries but no character', function() {
-      // hasGoodContext now uses Yjs system only per ADR-0004
+    it('should return true with journal entries', function() {
+      YjsModule.addEntry({
+        id: 'test-1',
+        title: 'Adventure begins',
+        content: 'We set out from Hobbiton...',
+        timestamp: Date.now()
+      });
+      
       const result = Storytelling.hasGoodContext();
-      expect(result).to.be.an('object');
-      expect(result).to.have.property('hasCharacter', false);
-      expect(result).to.have.property('ready', false);
-    });
-
-    it('should return object structure for context checking', async function() {
-      // hasGoodContext now uses Yjs system only per ADR-0004
-      const result = Storytelling.hasGoodContext();
-      expect(result).to.be.an('object');
-      expect(result).to.have.property('hasCharacter');
-      expect(result).to.have.property('hasContent');
-      expect(result).to.have.property('ready');
+      expect(result).to.be.true;
     });
   });
 
-  describe('Alias Functions', function() {
-    it('should have generateIntrospectionQuestions as alias for generateQuestions', function() {
-      expect(Storytelling.generateIntrospectionQuestions).to.equal(Storytelling.generateQuestions);
-    });
-
-    it('should have generateIntrospectionPrompt as alias for getIntrospectionQuestions', function() {
-      expect(Storytelling.generateIntrospectionPrompt).to.equal(Storytelling.getIntrospectionQuestions);
-    });
-  });
-
-  describe('Edge Cases and Error Handling', function() {
-    beforeEach(async function() {
-      await createSystem();
-    });
-
-    it('should handle corrupted character data gracefully', async function() {
-      const system = await createSystem();
+  describe('getCharacterContext', function() {
+    it('should return character and entries data', async function() {
+      // Set up some data
+      YjsModule.setCharacter('name', 'Sam');
+      YjsModule.setCharacter('race', 'Hobbit');
       
-      // Set invalid character data
-      system.characterMap.set('name', null);
-      system.characterMap.set('class', undefined);
-      
-      const context = await Storytelling.getCharacterContext();
-      expect(context).to.have.property('character');
-      expect(context.character).to.be.an('object');
-    });
-
-    it('should handle corrupted entries data gracefully', async function() {
-      const system = await createSystem();
-      
-      // Set invalid entries data
-      system.journalMap.set('entries', null);
-      
-      const context = await Storytelling.getCharacterContext();
-      expect(context).to.have.property('entries');
-      expect(context.entries).to.be.an('array');
-    });
-
-    it('should handle missing Yjs system gracefully', async function() {
-      clearSystem();
-      
-      const context = await Storytelling.getCharacterContext();
-      expect(context).to.have.property('character');
-      expect(context).to.have.property('entries');
-    });
-  });
-
-  describe('Integration with Other Modules', function() {
-    it('should work with character data from character module', async function() {
-      const system = await createSystem();
-      
-      // Simulate character data as it would be stored by character.js
-      const characterData = {
-        name: 'Gimli',
-        race: 'Dwarf',
-        class: 'Fighter',
-        backstory: 'Son of Glóin, member of the Fellowship',
-        notes: 'Loyal and brave, wields an axe'
-      };
-      
-      Object.entries(characterData).forEach(([key, value]) => {
-        system.characterMap.set(key, value);
+      YjsModule.addEntry({
+        id: 'test-1',
+        title: 'Test Entry',
+        content: 'Test content',
+        timestamp: Date.now()
       });
       
       const context = await Storytelling.getCharacterContext();
-      expect(context.character).to.be.an('object');
+      
+      expect(context).to.have.property('character');
+      expect(context).to.have.property('entries');
+      expect(context).to.have.property('hasContent');
+      
+      expect(context.character.name).to.equal('Sam');
+      expect(context.character.race).to.equal('Hobbit');
+      expect(context.entries).to.have.length(1);
+      expect(context.hasContent).to.be.true;
     });
 
-    it('should work with journal entries from app module', async function() {
-      // getCharacterContext now uses Yjs system only per ADR-0004
+    it('should return empty context with no data', async function() {
       const context = await Storytelling.getCharacterContext();
-      expect(context.entries).to.be.an('array');
-      // In test environment with empty Yjs mock, entries will be empty
-      expect(context.entries.length).to.be.at.least(0);
+      
+      expect(context.character.name).to.equal('');
+      expect(context.entries).to.have.length(0);
+      expect(context.hasContent).to.be.false;
     });
   });
 });
