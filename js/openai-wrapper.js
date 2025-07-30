@@ -1,8 +1,7 @@
 // OpenAI Wrapper - Pure OpenAI interface with currying
 // Following functional programming principles and style guide
 
-import { createInitialSettings } from './utils.js';
-import { loadSettings } from './settings.js';
+import { getSetting } from './yjs.js';
 
 // =============================================================================
 // CORE OPENAI INTERFACE
@@ -10,8 +9,9 @@ import { loadSettings } from './settings.js';
 
 // Check if API is available
 export const isAPIAvailable = () => {
-  const settings = loadSettings();
-  return Boolean(settings.enableAIFeatures && settings.apiKey && settings.apiKey.startsWith('sk-'));
+  const apiKey = getSetting('openai-api-key', '');
+  const enabled = getSetting('ai-enabled', false);
+  return Boolean(enabled && apiKey && apiKey.startsWith('sk-'));
 };
 
 // Base OpenAI call function
@@ -20,7 +20,7 @@ const callOpenAI = async (systemPrompt, userPrompt, options = {}) => {
     throw new Error('OpenAI API not available - check settings');
   }
 
-  const settings = loadSettings();
+  const apiKey = getSetting('openai-api-key', '');
   const defaultOptions = {
     model: 'gpt-4.1-mini',
     maxTokens: 1200, // Increased from 400
@@ -40,7 +40,7 @@ const callOpenAI = async (systemPrompt, userPrompt, options = {}) => {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${settings.apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({

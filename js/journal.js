@@ -8,7 +8,7 @@ import {
   deleteEntry,
   onCharacterChange,
   onJournalChange
-} from './simple-yjs.js';
+} from './yjs.js';
 
 import {
   renderCharacterSummary,

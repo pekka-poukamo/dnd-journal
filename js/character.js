@@ -5,7 +5,7 @@ import {
   setCharacter,
   getSummary,
   onCharacterChange
-} from './simple-yjs.js';
+} from './yjs.js';
 
 import {
   renderCharacterForm,
@@ -15,7 +15,7 @@ import {
   showNotification
 } from './character-views.js';
 
-import { summarize } from './simple-summarization.js';
+import { summarize } from './summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
 
 // Initialize character page

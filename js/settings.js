@@ -4,7 +4,7 @@ import {
   setSetting,
   getSetting,
   onSettingsChange
-} from './simple-yjs.js';
+} from './yjs.js';
 
 import {
   renderSettingsForm,

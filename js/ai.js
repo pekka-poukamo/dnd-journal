@@ -26,8 +26,7 @@ import {
   createInitialSettings, 
   getWordCount 
 } from './utils.js';
-import { getSummaryByKey, storeSummary } from './summarization.js';
-import { getSetting } from './simple-yjs.js';
+import { getSummary, setSummary, getSetting } from './yjs.js';
 import { getEncoding } from 'js-tiktoken';
 
 // Unified narrative-focused system prompt with unobvious question element
@@ -289,8 +288,8 @@ Content: ${entry.content}`;
 
 // Get or generate summary for an entry
 export const getEntrySummary = async (entry) => {
-  // Check for existing summary using summarization module API
-  const existingSummary = getSummaryByKey(entry.id);
+  // Check for existing summary - direct Y.js
+  const existingSummary = getSummary(entry.id);
   if (existingSummary) {
     return existingSummary;
   }
@@ -298,8 +297,8 @@ export const getEntrySummary = async (entry) => {
   // Generate new summary
   const summary = await generateEntrySummary(entry);
   if (summary) {
-    // Store using summarization module API - automatically persisted via Yjs
-    storeSummary(entry.id, summary);
+    // Store using simple Y.js
+    setSummary(entry.id, summary);
   }
   
   return summary;
