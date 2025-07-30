@@ -194,7 +194,7 @@ export const saveToSystem = (data) => {
   }
 };
 
-// Test environment detection (without window usage)
+// Test environment detection
 const isTestEnvironment = () => 
   (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') ||
   (typeof global !== 'undefined' && global.describe && global.it) ||

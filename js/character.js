@@ -287,9 +287,8 @@ export const handleClearCharacter = (event) => {
   }, 'handleClearCharacter');
 };
 
-// Navigate to journal (proper navigation without window usage)
+// Navigate to journal
 export const navigateToJournal = () => {
-  // Use document.location instead of window.location
   document.location.href = 'index.html';
 };
 
