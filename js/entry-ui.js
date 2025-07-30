@@ -3,7 +3,7 @@
 
 import { formatDate, sortEntriesByDate } from './utils.js';
 import { createElement, createElementWithAttributes } from './dom-utils.js';
-import { updateEntry, deleteEntry } from './yjs-simple.js';
+import { updateEntry, deleteEntry } from './yjs-direct.js';
 
 // Simple markdown parsing
 export const parseMarkdown = (text) => {

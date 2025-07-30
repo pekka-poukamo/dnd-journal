@@ -4,143 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D Journal</title>
-    
-    <!-- PWA -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="D&D Journal">
+    <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="favicon.svg">
-    <link rel="apple-touch-icon" href="favicon.svg">
-    
-    <!-- Google Fonts for Nordic Minimalism Design -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@100;300;400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/components/tabs.css">
-    <link rel="stylesheet" href="css/components/character-summary.css">
-    <link rel="stylesheet" href="css/components/ai-prompt.css">
-    
-    <!-- Import Map for YJS modules -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="D&D Journal">
+    <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>D&D Journal</h1>
+            <nav>
+                <a href="index.html" class="nav-link active">Journal</a>
+                <a href="character.html" class="nav-link">Character</a>
+                <a href="settings.html" class="nav-link">Settings</a>
+            </nav>
+        </header>
+
+        <main>
+            <!-- Character Summary Section -->
+            <section id="character-summary" class="character-summary">
+                <h2>Character</h2>
+                <div id="character-display" class="character-display">
+                    <p id="character-simple-data">No character created yet. <a href="character.html">Create your character</a></p>
+                </div>
+            </section>
+
+            <!-- AI Introspection Section -->
+            <section id="ai-prompt-container" class="ai-section" style="display: none;">
+                <h2>Character Introspection</h2>
+                <div id="ai-prompt-text" class="ai-prompt"></div>
+                <button id="regenerate-prompt-btn" onclick="regenerateAIPrompt()">Regenerate</button>
+            </section>
+
+            <!-- Entry Form -->
+            <section class="entry-form-section">
+                <h2>New Entry</h2>
+                <form id="entry-form">
+                    <input type="text" id="entry-title" placeholder="Entry title..." required>
+                    <textarea id="entry-content" placeholder="What happened in your adventure?" required></textarea>
+                    <button type="submit" id="add-entry-btn">Add Entry</button>
+                </form>
+            </section>
+
+            <!-- Entries List -->
+            <section class="entries-section">
+                <h2>Journal Entries</h2>
+                <div id="entries-list" class="entries-list">
+                    <!-- Entries will be rendered here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Import Map -->
     <script type="importmap">
     {
-      "imports": {
-        "yjs": "./node_modules/yjs/dist/yjs.mjs",
-        "y-websocket": "./node_modules/y-websocket/src/y-websocket.js",
-        "y-indexeddb": "./node_modules/y-indexeddb/src/y-indexeddb.js",
-        "js-tiktoken": "./node_modules/js-tiktoken/dist/index.js",
-        "js-tiktoken/ranks/cl100k_base": "./node_modules/js-tiktoken/dist/ranks/cl100k_base.js",
-        "y-protocols/sync": "./node_modules/y-protocols/sync.js",
-        "y-protocols/auth": "./node_modules/y-protocols/auth.js",
-        "y-protocols/awareness": "./node_modules/y-protocols/awareness.js",
-        "lib0/observable": "./node_modules/lib0/observable.js",
-        "lib0/array": "./node_modules/lib0/array.js",
-        "lib0/math": "./node_modules/lib0/math.js",
-        "lib0/map": "./node_modules/lib0/map.js",
-        "lib0/encoding": "./node_modules/lib0/encoding.js",
-        "lib0/decoding": "./node_modules/lib0/decoding.js",
-        "lib0/random": "./node_modules/lib0/random.js",
-        "lib0/promise": "./node_modules/lib0/promise.js",
-        "lib0/buffer": "./node_modules/lib0/buffer.js",
-        "lib0/error": "./node_modules/lib0/error.js",
-        "lib0/binary": "./node_modules/lib0/binary.js",
-        "lib0/function": "./node_modules/lib0/function.js",
-        "lib0/set": "./node_modules/lib0/set.js",
-        "lib0/logging": "./node_modules/lib0/logging.js",
-        "lib0/time": "./node_modules/lib0/time.js",
-        "lib0/string": "./node_modules/lib0/string.js",
-        "lib0/iterator": "./node_modules/lib0/iterator.js",
-        "lib0/object": "./node_modules/lib0/object.js",
-        "lib0/environment": "./node_modules/lib0/environment.js",
-        "lib0/indexeddb": "./node_modules/lib0/indexeddb.js",
-        "lib0/broadcastchannel": "./node_modules/lib0/broadcastchannel.js",
-        "lib0/url": "./node_modules/lib0/url.js",
-        "lib0/webcrypto": "./node_modules/lib0/webcrypto.js"
-      }
+        "imports": {
+            "yjs": "./node_modules/yjs/dist/yjs.js",
+            "y-indexeddb": "./node_modules/y-indexeddb/dist/y-indexeddb.cjs",
+            "y-websocket": "./node_modules/y-websocket/dist/y-websocket.cjs",
+            "js-tiktoken": "./node_modules/js-tiktoken/dist/tiktoken.js"
+        }
     }
     </script>
 
-</head>
-<body>
-    <header class="tabs">
-        <div class="tabs__container">
-            <h1 class="tabs__title">D&D Journal</h1>
-            <nav class="tabs__nav">
-                <a href="/" class="tabs__tab tabs__tab--active">Journal</a>
-                <a href="/character.html" class="tabs__tab">Character</a>
-                <a href="/settings.html" class="tabs__tab">Settings</a>
-            </nav>
-            <div class="sync-status" id="sync-status" style="display: none;">
-                <span class="sync-indicator">
-                    <span class="sync-dot" id="sync-dot"></span>
-                    <span id="sync-text">Syncing...</span>
-                </span>
-            </div>
-        </div>
-    </header>
-
-    <main>
-        <div class="container-narrow">
-            <!-- AI Introspection Prompt Section -->
-            <section class="ai-prompt" id="ai-prompt-section">
-                <div class="ai-prompt__header">
-                    <h2 class="ai-prompt__title">Session Reflection</h2>
-                    <button id="regenerate-prompt-btn" class="ai-prompt__regenerate-btn">
-                        Regenerate
-                    </button>
-                </div>
-                <div class="ai-prompt__content">
-                    <p class="ai-prompt__text" id="ai-prompt-text">
-                        Loading your personalized reflection prompt...
-                    </p>
-                </div>
-            </section>
-
-            <!-- Character Summary Section -->
-            <section id="character-summary" class="character-summary character-summary--minimal">
-                <div class="character-summary__content">
-                    <div class="character-summary__grid">
-                        <div class="character-summary__field">
-                            <span id="display-name" class="character-summary__value">Unnamed Character</span>
-                        </div>
-                        <div class="character-summary__field">
-                            <span id="display-race" class="character-summary__value">Unknown</span>
-                        </div>
-                        <div class="character-summary__field">
-                            <span id="display-class" class="character-summary__value">Unknown</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- New Entry Section -->
-            <section class="entry-section">
-                <h2>Add Entry</h2>
-                <form class="entry-form">
-                    <div class="form-group">
-                        <label for="entry-title" class="form-label">Title</label>
-                        <input type="text" id="entry-title" class="form-input" placeholder="What happened?">
-                    </div>
-                    <div class="form-group">
-                        <label for="entry-content" class="form-label">Notes</label>
-                        <textarea id="entry-content" class="form-textarea" rows="4" placeholder="Write your notes here..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <button type="button" id="add-entry-btn" class="btn btn-primary">Add Entry</button>
-                    </div>
-                </form>
-            </section>
-            
-            <!-- Journal Entries -->
-            <section class="entries-section">
-                <h2>Journal Entries</h2>
-                <div id="entries-list" class="entries-list"></div>
-            </section>
-        </div>
-    </main>
-
-      <script type="module" src="js/app.js"></script>
+    <!-- Simple App Module -->
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
