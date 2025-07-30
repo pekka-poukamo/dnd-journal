@@ -1,88 +1,25 @@
-// Views Layer - Pure Rendering Functions
-import { parseMarkdown } from './utils.js';
-import { formatDate, sortEntriesByDate } from './utils.js';
-
-// Create character form elements
-export const createCharacterForm = (character) => {
-  const form = document.createElement('form');
-  form.className = 'character-form';
-  
-  const fields = [
-    { key: 'name', label: 'Name', type: 'text' },
-    { key: 'race', label: 'Race', type: 'text' },
-    { key: 'class', label: 'Class', type: 'text' },
-    { key: 'backstory', label: 'Backstory', type: 'textarea' },
-    { key: 'notes', label: 'Notes', type: 'textarea' }
-  ];
-  
-  fields.forEach(field => {
-    const fieldDiv = document.createElement('div');
-    fieldDiv.className = 'form-field';
-    
-    const label = document.createElement('label');
-    label.textContent = field.label;
-    label.htmlFor = `character-${field.key}`;
-    
-    const input = field.type === 'textarea' 
-      ? document.createElement('textarea')
-      : document.createElement('input');
-    
-    input.id = `character-${field.key}`;
-    input.name = field.key;
-    if (field.type !== 'textarea') input.type = field.type;
-    input.value = character[field.key] || '';
-    
-    fieldDiv.appendChild(label);
-    fieldDiv.appendChild(input);
-    form.appendChild(fieldDiv);
-  });
-  
-  return form;
-};
+// Journal Views - Pure Rendering Functions for Journal Page
+import { parseMarkdown, formatDate, sortEntriesByDate } from './utils.js';
 
 // Create journal entry form
 export const createEntryForm = () => {
   const form = document.createElement('form');
+  form.id = 'entry-form';
   form.className = 'entry-form';
   
-  const titleDiv = document.createElement('div');
-  titleDiv.className = 'form-field';
-  const titleLabel = document.createElement('label');
-  titleLabel.textContent = 'Title';
-  titleLabel.htmlFor = 'entry-title';
-  const titleInput = document.createElement('input');
-  titleInput.id = 'entry-title';
-  titleInput.name = 'title';
-  titleInput.type = 'text';
-  titleInput.required = true;
-  
-  titleDiv.appendChild(titleLabel);
-  titleDiv.appendChild(titleInput);
-  
-  const contentDiv = document.createElement('div');
-  contentDiv.className = 'form-field';
-  const contentLabel = document.createElement('label');
-  contentLabel.textContent = 'Content';
-  contentLabel.htmlFor = 'entry-content';
-  const contentTextarea = document.createElement('textarea');
-  contentTextarea.id = 'entry-content';
-  contentTextarea.name = 'content';
-  contentTextarea.required = true;
-  
-  contentDiv.appendChild(contentLabel);
-  contentDiv.appendChild(contentTextarea);
-  
-  const buttonDiv = document.createElement('div');
-  buttonDiv.className = 'form-actions';
-  const submitButton = document.createElement('button');
-  submitButton.type = 'submit';
-  submitButton.textContent = 'Add Entry';
-  
-  buttonDiv.appendChild(submitButton);
-  
-  form.appendChild(titleDiv);
-  form.appendChild(contentDiv);
-  form.appendChild(buttonDiv);
+  form.innerHTML = `
+    <div class="form-group">
+      <label for="entry-title" class="form-label">Title</label>
+      <input type="text" id="entry-title" name="title" class="form-input" placeholder="What happened?" required>
+    </div>
+    <div class="form-group">
+      <label for="entry-content" class="form-label">Notes</label>
+      <textarea id="entry-content" name="content" class="form-textarea" rows="4" placeholder="Write your notes here..." required></textarea>
+    </div>
+    <div class="form-group">
+      <button type="submit" class="btn btn-primary">Add Entry</button>
+    </div>
+  `;
   
   return form;
 };
@@ -206,8 +143,8 @@ export const createEmptyState = (message) => {
   return emptyDiv;
 };
 
-// Render character information
-export const renderCharacter = (container, character) => {
+// Render character summary (simplified for journal page)
+export const renderCharacterSummary = (container, character) => {
   if (!container) return;
   
   container.innerHTML = '';
@@ -223,9 +160,7 @@ export const renderCharacter = (container, character) => {
   const fields = [
     { key: 'name', label: 'Name' },
     { key: 'race', label: 'Race' },
-    { key: 'class', label: 'Class' },
-    { key: 'backstory', label: 'Backstory' },
-    { key: 'notes', label: 'Notes' }
+    { key: 'class', label: 'Class' }
   ];
   
   fields.forEach(field => {
@@ -266,25 +201,6 @@ export const renderEntries = (container, entries, onEdit, onDelete) => {
     const entryElement = createEntryElement(entry, onEdit, onDelete);
     container.appendChild(entryElement);
   });
-};
-
-// Update sync status indicator
-export const updateSyncStatus = (status, text, details) => {
-  const indicator = document.getElementById('sync-status');
-  if (indicator) {
-    indicator.textContent = text;
-    indicator.className = `sync-status sync-${status}`;
-    indicator.title = details;
-    indicator.style.display = 'block';
-  }
-};
-
-// Show/hide loading indicator
-export const setLoading = (isLoading) => {
-  const loader = document.getElementById('loading');
-  if (loader) {
-    loader.style.display = isLoading ? 'block' : 'none';
-  }
 };
 
 // Show notification message

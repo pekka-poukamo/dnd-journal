@@ -1,32 +1,123 @@
-// Settings Page - AI Configuration & Data Management
+// Settings Page - Simplified Architecture
+import { 
+  initData, 
+  onStateChange, 
+  getState,
+  updateSetting,
+  getSetting
+} from './data.js';
 
-import { getSystem, createSystem, reloadSyncProviders, Y, WebsocketProvider } from './yjs.js';
-import { createInitialSettings, createInitialJournalState } from './utils.js';
-// testApiKey is defined in this module
+import {
+  renderSettingsForm,
+  renderConnectionStatus,
+  setTestConnectionLoading,
+  getFormData,
+  showNotification
+} from './settings-views.js';
 
-// Load settings from Yjs
-export const loadSettings = () => {
-  const yjsSystem = getSystem();
-  if (!yjsSystem?.settingsMap) return { apiKey: '', enableAIFeatures: false };
-  
-  return {
-    apiKey: yjsSystem.settingsMap.get('apiKey') || '',
-    enableAIFeatures: yjsSystem.settingsMap.get('enableAIFeatures') || false
-  };
+// Initialize settings page
+const initSettingsPage = async () => {
+  try {
+    // Initialize data layer
+    await initData();
+    
+    // Set up reactive rendering
+    onStateChange(handleStateChange);
+    
+    // Set up event listeners
+    setupEventListeners();
+    
+    // Initial render
+    renderSettingsPage();
+    
+  } catch (error) {
+    console.error('Failed to initialize settings page:', error);
+    showNotification('Failed to load settings page. Please refresh.', 'error');
+  }
 };
 
-// Save settings to Yjs
-export const saveSettings = (settings) => {
-  const yjsSystem = getSystem();
-  if (!yjsSystem?.settingsMap) return { success: false };
+// Handle state changes from Y.js
+const handleStateChange = (state) => {
+  renderSettingsPage();
+};
+
+// Render the settings page
+const renderSettingsPage = () => {
+  const state = getState();
   
-  yjsSystem.settingsMap.set('apiKey', settings.apiKey || '');
-  yjsSystem.settingsMap.set('enableAIFeatures', Boolean(settings.enableAIFeatures));
-  return { success: true };
+  // Render settings form with current data
+  renderSettingsForm(state.settings);
+  
+  // Update connection status
+  const syncServer = getSetting('dnd-journal-sync-server');
+  // TODO: Get actual connection status from Y.js provider
+  renderConnectionStatus(false, syncServer);
+};
+
+// Set up event listeners
+const setupEventListeners = () => {
+  // Settings form submission
+  const settingsForm = document.getElementById('settings-form');
+  if (settingsForm) {
+    settingsForm.addEventListener('submit', handleSettingsFormSubmit);
+  }
+  
+  // Test API key button
+  const testApiBtn = document.getElementById('test-api-key');
+  if (testApiBtn) {
+    testApiBtn.addEventListener('click', handleTestApiKey);
+  }
+  
+  // Test connection button
+  const testConnBtn = document.getElementById('test-connection');
+  if (testConnBtn) {
+    testConnBtn.addEventListener('click', handleTestConnection);
+  }
+  
+  // Real-time field updates
+  const apiKeyInput = document.getElementById('api-key');
+  if (apiKeyInput) {
+    apiKeyInput.addEventListener('blur', (e) => {
+      updateSetting('openai-api-key', e.target.value.trim());
+    });
+  }
+  
+  const aiEnabledCheckbox = document.getElementById('ai-enabled');
+  if (aiEnabledCheckbox) {
+    aiEnabledCheckbox.addEventListener('change', (e) => {
+      updateSetting('ai-enabled', e.target.checked);
+    });
+  }
+  
+  const syncServerInput = document.getElementById('sync-server');
+  if (syncServerInput) {
+    syncServerInput.addEventListener('blur', (e) => {
+      updateSetting('dnd-journal-sync-server', e.target.value.trim());
+    });
+  }
+};
+
+// Handle settings form submission
+const handleSettingsFormSubmit = (event) => {
+  event.preventDefault();
+  const formData = getFormData(event.target);
+  
+  // Update all settings in Y.js
+  Object.entries(formData).forEach(([key, value]) => {
+    if (key === 'ai-enabled') {
+      updateSetting('ai-enabled', value === 'on');
+    } else if (key === 'api-key') {
+      updateSetting('openai-api-key', value.trim());
+    } else if (key === 'sync-server') {
+      updateSetting('dnd-journal-sync-server', value.trim());
+    }
+  });
+  
+  showNotification('Settings saved!', 'success');
 };
 
 // Test API key with OpenAI
-export const testApiKey = async (apiKey) => {
+const testApiKey = async (apiKey) => {
   if (!apiKey || !apiKey.startsWith('sk-')) {
     return { success: false, error: 'Invalid API key format' };
   }
@@ -57,469 +148,83 @@ export const testApiKey = async (apiKey) => {
   }
 };
 
-// Show API test result
-const showApiTestResult = (result) => {
-  const resultDiv = document.getElementById('api-test-result');
-  if (!resultDiv) return;
-
-  resultDiv.className = 'api-test-result';
-  
-  if (result.success) {
-    resultDiv.className += ' success';
-    resultDiv.textContent = result.message;
-  } else {
-    resultDiv.className += ' error';
-    resultDiv.textContent = result.error;
-  }
-};
-
-// Show loading state for API test
-const showApiTestLoading = () => {
-  const resultDiv = document.getElementById('api-test-result');
-  if (!resultDiv) return;
-
-  resultDiv.className = 'api-test-result loading';
-  resultDiv.textContent = 'Testing API key...';
-};
-
 // Handle API key test
-const handleApiKeyTest = async () => {
+const handleTestApiKey = async () => {
   const apiKeyInput = document.getElementById('api-key');
   if (!apiKeyInput) return;
 
   const apiKey = apiKeyInput.value.trim();
   if (!apiKey) {
-    showApiTestResult({ success: false, error: 'Please enter an API key' });
+    showNotification('Please enter an API key', 'error');
     return;
   }
 
-  showApiTestLoading();
+  setTestConnectionLoading(true);
   const result = await testApiKey(apiKey);
-  showApiTestResult(result);
-};
-
-// Handle settings form changes (without auto-saving)
-const handleSettingsChange = () => {
-  const apiKeyInput = document.getElementById('api-key');
-  const enableAIInput = document.getElementById('enable-ai-features');
-  const testButton = document.getElementById('test-api-key');
-  const showPromptButton = document.getElementById('show-ai-prompt');
-
-  if (!apiKeyInput || !enableAIInput || !testButton) return;
-
-  const apiKey = apiKeyInput.value.trim();
-  const enableAI = enableAIInput.checked;
+  setTestConnectionLoading(false);
   
-  // Enable/disable test button based on API key presence
-  testButton.disabled = !apiKey;
-  
-  // Enable/disable show prompt button based on AI being enabled (check current saved state)
-  if (showPromptButton) {
-    // This function is no longer available, so we'll disable it for now
-    // or remove it if it's not needed.
-    // For now, let's keep it disabled as the function is removed.
-    showPromptButton.disabled = true; 
+  if (result.success) {
+    showNotification(result.message, 'success');
+  } else {
+    showNotification(result.error, 'error');
   }
 };
 
-// Unified save handler for all settings
-const handleSaveAllSettings = () => {
-  const apiKeyInput = document.getElementById('api-key');
-  const enableAIInput = document.getElementById('enable-ai-features');
+// Handle connection test
+const handleTestConnection = async () => {
   const syncServerInput = document.getElementById('sync-server');
-  const saveButton = document.getElementById('save-all-settings');
+  if (!syncServerInput) return;
 
-  if (!saveButton) return;
-
-  const originalText = saveButton.textContent;
-  saveButton.textContent = 'Saving...';
-  saveButton.disabled = true;
-
-  try {
-    // Save AI settings
-    if (apiKeyInput && enableAIInput) {
-      const aiSettings = {
-        apiKey: apiKeyInput.value.trim(),
-        enableAIFeatures: enableAIInput.checked
-      };
-      saveSettings(aiSettings);
-    }
-
-    // Save sync settings
-    if (syncServerInput) {
-      const yjsSystem = getSystem();
-      if (yjsSystem?.settingsMap) {
-        const serverUrl = syncServerInput.value.trim();
-        if (serverUrl) {
-          yjsSystem.settingsMap.set('dnd-journal-sync-server', serverUrl);
-        } else {
-          yjsSystem.settingsMap.delete('dnd-journal-sync-server');
-        }
-        
-        // Reload sync providers with new settings
-        reloadSyncProviders();
-      }
-    }
-    
-    saveButton.textContent = 'Saved!';
-    saveButton.className = 'btn btn-success btn-large';
-    
-    // Update UI state after saving
-    handleSettingsChange();
-    
-    // Reset button after a delay
-    setTimeout(() => {
-      saveButton.textContent = originalText;
-      saveButton.className = 'btn btn-primary btn-large';
-      saveButton.disabled = false;
-    }, 2000);
-  } catch (error) {
-    console.error('Failed to save settings:', error);
-    saveButton.textContent = 'Error saving';
-    saveButton.className = 'btn btn-danger btn-large';
-    setTimeout(() => {
-      saveButton.textContent = originalText;
-      saveButton.className = 'btn btn-primary btn-large';
-      saveButton.disabled = false;
-    }, 2000);
-  }
-};
-
-// Setup event handlers
-const setupEventHandlers = () => {
-  const apiKeyInput = document.getElementById('api-key');
-  const enableAIInput = document.getElementById('enable-ai-features');
-  const testButton = document.getElementById('test-api-key');
-  
-  // Listen for input changes to update UI state (without auto-saving)
-  if (apiKeyInput) {
-    apiKeyInput.addEventListener('input', handleSettingsChange);
-  }
-
-  if (enableAIInput) {
-    enableAIInput.addEventListener('change', handleSettingsChange);
-  }
-
-  if (testButton) {
-    testButton.addEventListener('click', handleApiKeyTest);
-  }
-
-  const clearSummariesButton = document.getElementById('clear-summaries');
-  if (clearSummariesButton) {
-    clearSummariesButton.addEventListener('click', handleClearSummaries);
-  }
-  
-  const showPromptButton = document.getElementById('show-ai-prompt');
-  if (showPromptButton) {
-    // showPromptButton.addEventListener('click', handleShowAIPrompt); // This function is removed
-  }
-  
-  // Unified save button
-  const saveAllButton = document.getElementById('save-all-settings');
-  if (saveAllButton) {
-    saveAllButton.addEventListener('click', handleSaveAllSettings);
-  }
-  
-  // Sync event handlers
-  const testSyncButton = document.getElementById('test-sync-server');
-  
-  if (testSyncButton) {
-    testSyncButton.addEventListener('click', handleSyncServerTest);
-  }
-};
-
-// Handle clear summaries button
-const handleClearSummaries = async () => {
-  const button = document.getElementById('clear-summaries');
-  if (!button) return;
-  
-  // Confirm before clearing
-  if (!confirm('Are you sure you want to clear all summaries? This action cannot be undone.')) {
+  const serverUrl = syncServerInput.value.trim();
+  if (!serverUrl) {
+    showNotification('Please enter a sync server URL', 'error');
     return;
   }
-  
-  const originalText = button.textContent;
-  button.textContent = 'Clearing...';
-  button.disabled = true;
+
+  setTestConnectionLoading(true);
   
   try {
-    // The clearAll function was removed, so this will now be a no-op or require a new implementation
-    // For now, we'll just alert that it's not implemented.
-    alert('Summarization clearing is not yet implemented.');
-  } catch (error) {
-    alert('Failed to clear summaries: ' + error.message);
-  } finally {
-    button.textContent = originalText;
-    button.disabled = false;
-  }
-};
-
-// Handle show AI prompt button
-const handleShowAIPrompt = async () => {
-  const button = document.getElementById('show-ai-prompt');
-  const previewDiv = document.getElementById('ai-prompt-preview');
-  const contentDiv = document.getElementById('ai-prompt-content');
-  
-  if (!button || !previewDiv || !contentDiv) return;
-  
-  // Toggle visibility
-  if (previewDiv.style.display === 'none') {
-    button.disabled = true;
-    button.textContent = 'Loading...';
+    // Test WebSocket connection
+    const ws = new WebSocket(serverUrl);
     
-    try {
-      // Load current journal data from Yjs
-      const yjsSystem = getSystem();
-      const journalData = yjsSystem?.journalMap ? {
-        character: {
-          name: yjsSystem.characterMap?.get('name') || '',
-          race: yjsSystem.characterMap?.get('race') || '',
-          class: yjsSystem.characterMap?.get('class') || '',
-          backstory: yjsSystem.characterMap?.get('backstory') || '',
-          notes: yjsSystem.characterMap?.get('notes') || ''
-        },
-        entries: yjsSystem.journalMap?.get('entries')?.toArray() || []
-      } : createInitialJournalState();
-      
-      // Get the prompt that would be sent to AI using the AI module function
-      // This function is no longer available, so we'll just show an error.
-      contentDiv.innerHTML = `<div class="error">AI prompt generation is not yet implemented.</div>`;
-      
-      previewDiv.style.display = 'block';
-      button.textContent = 'Hide AI Prompt';
-    } catch (error) {
-      console.error('Failed to generate prompt preview:', error);
-      contentDiv.innerHTML = `<div class="error">Failed to generate prompt: ${error.message}</div>`;
-      previewDiv.style.display = 'block';
-      button.textContent = 'Hide AI Prompt';
-    } finally {
-      button.disabled = false;
-    }
-  } else {
-    previewDiv.style.display = 'none';
-    button.textContent = 'Show Current AI Prompt';
-  }
-};
-
-// Test sync server connection
-const testSyncServer = async (serverUrl) => {
-
-  // If no custom server URL, return error - no fallback servers available
-  if (!serverUrl) {
-    return {
-      success: false,
-      message: 'No sync server configured. Please set up your own sync server or use localhost for development.'
-    };
-  }
-  
-  // Validate server URL format with better error messages
-  if (!serverUrl.startsWith('ws://') && !serverUrl.startsWith('wss://')) {
-    // Check for common mistakes like email addresses
-    if (serverUrl.includes('@')) {
-      return { 
-        success: false, 
-        error: 'Server URL cannot be an email address. Use a WebSocket URL like ws://your-server.com:1234' 
-      };
-    }
-    
-    // Check for HTTP URLs
-    if (serverUrl.startsWith('http://') || serverUrl.startsWith('https://')) {
-      return { 
-        success: false, 
-        error: 'Use WebSocket URLs (ws:// or wss://) instead of HTTP URLs' 
-      };
-    }
-    
-    // Generic format error
-    return { 
-      success: false, 
-      error: 'Server URL must start with ws:// (unsecured) or wss:// (secured). Example: ws://192.168.1.100:1234' 
-    };
-  }
-  
-  // Additional validation for URL structure
-  try {
-    const url = new URL(serverUrl);
-    if (!url.hostname) {
-      return { 
-        success: false, 
-        error: 'Invalid server hostname in URL' 
-      };
-    }
-  } catch (e) {
-    return { 
-      success: false, 
-      error: 'Invalid URL format. Use format like ws://hostname:port or wss://hostname:port' 
-    };
-  }
-  
-  return await testSingleServer(serverUrl);
-};
-
-// Helper function to test a single server
-const testSingleServer = async (serverUrl) => {
-  return new Promise((resolve) => {
-    try {
-      const testDoc = new Y.Doc();
-      const provider = new WebsocketProvider(serverUrl, 'test-connection', testDoc);
-      
+    const testResult = await new Promise((resolve) => {
       const timeout = setTimeout(() => {
-        provider.destroy();
+        ws.close();
         resolve({ success: false, error: 'Connection timeout' });
       }, 5000);
       
-      provider.on('status', (event) => {
-        if (provider.wsconnected) {
-          clearTimeout(timeout);
-          provider.destroy();
-          resolve({ success: true, message: 'Server connection successful!' });
-        }
-      });
-      
-      provider.on('connection-error', (error) => {
+      ws.onopen = () => {
         clearTimeout(timeout);
-        provider.destroy();
-        resolve({ success: false, error: error.message || 'Connection failed' });
-      });
-    } catch (error) {
-      resolve({ success: false, error: error.message });
-    }
-  });
-};
-
-// Show sync status only when checking or when results are available
-const showSyncStatus = (status, message, helpText) => {
-  const syncContainer = document.getElementById('sync-status-container');
-  const syncDot = document.getElementById('sync-dot');
-  const syncText = document.getElementById('sync-text');
-  const syncHelp = document.getElementById('sync-help');
-  
-  if (!syncContainer) return;
-  
-  // Show the container
-  syncContainer.style.display = 'block';
-  
-  if (syncDot) syncDot.className = `sync-dot ${status}`;
-  if (syncText) syncText.textContent = message;
-  if (syncHelp) syncHelp.textContent = helpText;
-  
-  // Auto-hide after successful connection test (but keep visible during ongoing checks)
-  if (status === 'connected') {
-    setTimeout(() => {
-      syncContainer.style.display = 'none';
-    }, 3000);
-  }
-};
-
-// Hide sync status
-const hideSyncStatus = () => {
-  const syncContainer = document.getElementById('sync-status-container');
-  if (syncContainer) {
-    syncContainer.style.display = 'none';
-  }
-};
-
-// Populate form with current settings
-const populateForm = () => {
-  const settings = loadSettings();
-  
-  const apiKeyInput = document.getElementById('api-key');
-  const enableAIInput = document.getElementById('enable-ai-features');
-  const testButton = document.getElementById('test-api-key');
-  const showPromptButton = document.getElementById('show-ai-prompt');
-
-  if (apiKeyInput) {
-    apiKeyInput.value = settings.apiKey;
-  }
-
-  if (enableAIInput) {
-    enableAIInput.checked = settings.enableAIFeatures;
-  }
-
-  if (testButton) {
-    testButton.disabled = !settings.apiKey;
-  }
-  
-  if (showPromptButton) {
-    // showPromptButton.disabled = !isAIEnabled(); // This function is removed
-    showPromptButton.disabled = true; // Disable as the function is removed
-  }
-  
-  // Load sync server configuration
-  const syncServerInput = document.getElementById('sync-server');
-  if (syncServerInput) {
-    // Try to load from Yjs settingsMap
-    try {
-      const yjsSystem = getSystem();
-      if (yjsSystem?.settingsMap) {
-        const savedServer = yjsSystem.settingsMap.get('dnd-journal-sync-server');
-        if (savedServer) {
-          syncServerInput.value = savedServer;
-        }
-      }
-    } catch (e) {}
-  }
-  
-  // Hide sync status initially
-  hideSyncStatus();
-};
-
-// Handle sync server test
-const handleSyncServerTest = async () => {
-  const syncServerInput = document.getElementById('sync-server');
-  const testButton = document.getElementById('test-sync-server');
-  const resultDiv = document.getElementById('sync-test-result');
-  
-  if (!syncServerInput || !testButton || !resultDiv) return;
-  
-  const serverUrl = syncServerInput.value.trim();
-  
-  testButton.disabled = true;
-  testButton.textContent = 'Testing...';
-  resultDiv.innerHTML = '';
-  
-  // Show sync status as "checking"
-  showSyncStatus('connecting', 'Testing connection...', 'Checking server connectivity');
-  
-  try {
-    const result = await testSyncServer(serverUrl);
-    
-    if (result.success) {
-      resultDiv.innerHTML = `<div class="test-success">✓ ${result.message}</div>`;
-      showSyncStatus('connected', 'Connected', result.message);
-    } else {
-      resultDiv.innerHTML = `<div class="test-error">✗ ${result.error}</div>`;
-      showSyncStatus('disconnected', 'Connection failed', result.error);
+        ws.close();
+        resolve({ success: true, message: 'Connection successful!' });
+      };
       
-      // Hide status after showing error briefly
-      setTimeout(() => {
-        hideSyncStatus();
-      }, 5000);
-    }
-  } catch (error) {
-    resultDiv.innerHTML = `<div class="test-error">✗ Test failed: ${error.message}</div>`;
-    showSyncStatus('disconnected', 'Test failed', error.message);
+      ws.onerror = () => {
+        clearTimeout(timeout);
+        resolve({ success: false, error: 'Connection failed' });
+      };
+    });
     
-    // Hide status after showing error briefly
-    setTimeout(() => {
-      hideSyncStatus();
-    }, 5000);
+    if (testResult.success) {
+      showNotification(testResult.message, 'success');
+    } else {
+      showNotification(testResult.error, 'error');
+    }
+    
+  } catch (error) {
+    showNotification('Failed to test connection', 'error');
   } finally {
-    testButton.disabled = false;
-    testButton.textContent = 'Test Connection';
+    setTestConnectionLoading(false);
   }
 };
 
-// Initialize settings page
-const init = async () => {
-  // Initialize Yjs system first
-  await createSystem();
-  
-  populateForm();
-  setupEventHandlers();
-};
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', initSettingsPage);
 
-// Start when DOM is ready (only in browser environment)
-if (typeof document !== 'undefined' && document.addEventListener) {
-  document.addEventListener('DOMContentLoaded', init);
-}
+// Export for testing
+export { 
+  initSettingsPage,
+  handleSettingsFormSubmit,
+  testApiKey,
+  renderSettingsPage 
+};

@@ -10,10 +10,12 @@ import {
 } from './data.js';
 
 import {
-  createCharacterForm,
+  renderCharacterForm,
+  renderSummaries,
+  toggleGenerateButton,
   getFormData,
   showNotification
-} from './views.js';
+} from './character-views.js';
 
 import { summarize } from './summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
@@ -49,18 +51,9 @@ const renderCharacterPage = () => {
   const state = getState();
   
   // Update form fields with current character data
-  const form = document.getElementById('character-form');
-  if (form) {
-    const fields = ['name', 'race', 'class', 'backstory', 'notes'];
-    fields.forEach(field => {
-      const input = form.querySelector(`[name="${field}"]`);
-      if (input && state.character[field] !== undefined) {
-        input.value = state.character[field];
-      }
-    });
-  }
+  renderCharacterForm(state.character);
   
-  // Update summaries if available
+  // Update summaries display
   updateSummariesDisplay();
 };
 
@@ -150,50 +143,15 @@ const handleGenerateSummaries = async () => {
 
 // Update summaries display
 const updateSummariesDisplay = () => {
-  const summariesContainer = document.getElementById('summaries-content');
-  if (!summariesContainer) return;
-  
   const backstorySummary = getSummary('character-backstory');
   const notesSummary = getSummary('character-notes');
   
-  if (!backstorySummary && !notesSummary) {
-    summariesContainer.innerHTML = `
-      <div class="summary-placeholder">
-        <p>No character summaries available yet. Character summaries are automatically generated when your backstory or notes become lengthy.</p>
-      </div>
-    `;
-    return;
-  }
-  
-  let summariesHTML = '';
-  
-  if (backstorySummary) {
-    summariesHTML += `
-      <div class="summary-item">
-        <h3>Backstory Summary</h3>
-        <p>${backstorySummary}</p>
-      </div>
-    `;
-  }
-  
-  if (notesSummary) {
-    summariesHTML += `
-      <div class="summary-item">
-        <h3>Notes Summary</h3>
-        <p>${notesSummary}</p>
-      </div>
-    `;
-  }
-  
-  summariesContainer.innerHTML = summariesHTML;
+  renderSummaries(backstorySummary, notesSummary);
   
   // Show generate button if API is available
-  const generateBtn = document.getElementById('generate-summaries');
-  if (generateBtn) {
-    isAPIAvailable().then(available => {
-      generateBtn.style.display = available ? 'inline-block' : 'none';
-    });
-  }
+  isAPIAvailable().then(available => {
+    toggleGenerateButton(available);
+  });
 };
 
 // Initialize when DOM is ready

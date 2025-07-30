@@ -1,56 +1,61 @@
-// Application Controller - Coordinates Data and Views
+// Journal Page Controller - Coordinates Data and Views for Journal
 import { 
   initData, 
   onStateChange, 
   getState,
-  updateCharacter,
   addJournalEntry,
   updateJournalEntry,
   deleteJournalEntry 
 } from './data.js';
 
 import {
-  renderCharacter,
+  renderCharacterSummary,
   renderEntries,
   createEntryEditForm,
   showNotification,
   getFormData,
   clearForm
-} from './views.js';
+} from './journal-views.js';
 
 import { generateId } from './utils.js';
 
 // Application state
 let currentEditingEntryId = null;
 
-// Initialize the application
-export const initApp = async () => {
-  // Initialize data layer
-  await initData();
-  
-  // Set up reactive rendering
-  onStateChange(handleStateChange);
-  
-  // Set up event listeners
-  setupEventListeners();
-  
-  // Initial render
-  renderApplication();
+// Initialize the journal page
+const initJournalPage = async () => {
+  try {
+    // Initialize data layer
+    await initData();
+    
+    // Set up reactive rendering
+    onStateChange(handleStateChange);
+    
+    // Set up event listeners
+    setupEventListeners();
+    
+    // Initial render
+    renderJournalPage();
+    
+  } catch (error) {
+    console.error('Failed to initialize journal page:', error);
+    showNotification('Failed to load journal page. Please refresh.', 'error');
+  }
 };
 
 // Handle state changes from Y.js
 const handleStateChange = (state) => {
-  renderApplication();
+  renderJournalPage();
 };
 
-// Render the entire application
-const renderApplication = () => {
+// Render the journal page
+const renderJournalPage = () => {
   const state = getState();
   
-  // Render character info
+  // Render character summary
   const characterContainer = document.querySelector('.character-info-container');
   if (characterContainer) {
-    renderCharacter(characterContainer, state.character);
+    renderCharacterSummary(characterContainer, state.character);
   }
   
   // Render journal entries
@@ -60,47 +65,12 @@ const renderApplication = () => {
   }
 };
 
-// Set up all event listeners
+// Set up event listeners
 const setupEventListeners = () => {
-  // Character form submission
-  const characterForm = document.getElementById('character-form');
-  if (characterForm) {
-    characterForm.addEventListener('submit', handleCharacterFormSubmit);
-  }
-  
   // Journal entry form submission
   const entryForm = document.getElementById('entry-form');
   if (entryForm) {
     entryForm.addEventListener('submit', handleEntryFormSubmit);
-  }
-  
-  // Character form field changes (for reactive updates)
-  const characterInputs = document.querySelectorAll('#character-form input, #character-form textarea');
-  characterInputs.forEach(input => {
-    input.addEventListener('blur', handleCharacterFieldChange);
-  });
-};
-
-// Handle character form submission
-const handleCharacterFormSubmit = (event) => {
-  event.preventDefault();
-  const formData = getFormData(event.target);
-  
-  // Update each field in Y.js
-  Object.entries(formData).forEach(([field, value]) => {
-    updateCharacter(field, value.trim());
-  });
-  
-  showNotification('Character information saved!', 'success');
-};
-
-// Handle character field changes (for real-time updates)
-const handleCharacterFieldChange = (event) => {
-  const field = event.target.name;
-  const value = event.target.value.trim();
-  
-  if (field) {
-    updateCharacter(field, value);
   }
 };
 
@@ -204,5 +174,14 @@ const handleDeleteEntry = (entryId) => {
   }
 };
 
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', initJournalPage);
+
 // Export for testing
-export const getCurrentEditingEntryId = () => currentEditingEntryId;
+export { 
+  initJournalPage,
+  handleEntryFormSubmit,
+  handleEditEntry,
+  handleDeleteEntry,
+  renderJournalPage 
+};
