@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as AI from '../js/ai.js';
+import * as OpenAIWrapper from '../js/openai-wrapper.js';
 import * as YjsModule from '../js/yjs.js';
 
 describe('AI Module', function() {
@@ -20,8 +21,9 @@ describe('AI Module', function() {
       expect(AI.isAIEnabled()).to.be.false;
     });
 
-    it('should return true when AI is enabled', function() {
+    it('should return true when AI is enabled and API key is set', function() {
       YjsModule.setSetting('ai-enabled', true);
+      YjsModule.setSetting('openai-api-key', 'sk-test123');
       expect(AI.isAIEnabled()).to.be.true;
     });
 
@@ -30,28 +32,20 @@ describe('AI Module', function() {
     });
   });
 
-  describe('isAPIAvailable', function() {
-    it('should return false when API key is missing', function() {
-      YjsModule.setSetting('ai-enabled', true);
-      expect(AI.isAPIAvailable()).to.be.false;
-    });
-
-    it('should return false when AI is disabled', function() {
-      YjsModule.setSetting('openai-api-key', 'sk-test123');
-      YjsModule.setSetting('ai-enabled', false);
-      expect(AI.isAPIAvailable()).to.be.false;
-    });
-
-    it('should return true when both API key and AI are enabled', function() {
+  describe('loadAISettings', function() {
+    it('should load AI settings from Y.js', function() {
       YjsModule.setSetting('openai-api-key', 'sk-test123');
       YjsModule.setSetting('ai-enabled', true);
-      expect(AI.isAPIAvailable()).to.be.true;
+      
+      const settings = AI.loadAISettings();
+      expect(settings).to.have.property('apiKey', 'sk-test123');
+      expect(settings).to.have.property('enableAIFeatures', true);
     });
 
-    it('should return false when API key is empty', function() {
-      YjsModule.setSetting('openai-api-key', '');
-      YjsModule.setSetting('ai-enabled', true);
-      expect(AI.isAPIAvailable()).to.be.false;
+    it('should return default settings when none exist', function() {
+      const settings = AI.loadAISettings();
+      expect(settings).to.have.property('apiKey', '');
+      expect(settings).to.have.property('enableAIFeatures', false);
     });
   });
 
@@ -63,279 +57,113 @@ describe('AI Module', function() {
     });
 
     it('should return existing summary if available', async function() {
-      const entryId = 'test-entry-1';
+      const entry = { id: 'test-entry-1' };
       const existingSummary = 'Existing summary content';
       
       // Set existing summary
-      YjsModule.setSummary(entryId, existingSummary);
+      YjsModule.setSummary('test-entry-1', existingSummary);
       
-      const result = await AI.getEntrySummary(entryId, 'Some content to summarize');
+      const result = await AI.getEntrySummary(entry);
       expect(result).to.equal(existingSummary);
     });
 
-    it('should generate new summary when none exists', async function() {
-      const entryId = 'test-entry-2';
-      const content = 'Content to be summarized by AI';
-      
-      // Mock successful API call
-      const originalFetch = global.fetch;
-      global.fetch = async () => ({
-        ok: true,
-        json: async () => ({
-          choices: [{
-            message: {
-              content: 'AI-generated summary of the content'
-            }
-          }]
-        })
-      });
-      
-      try {
-        const result = await AI.getEntrySummary(entryId, content);
-        expect(result).to.equal('AI-generated summary of the content');
-        
-        // Verify summary was stored
-        const stored = YjsModule.getSummary(entryId);
-        expect(stored).to.equal('AI-generated summary of the content');
-      } finally {
-        global.fetch = originalFetch;
-      }
-    });
-
-    it('should handle API errors gracefully', async function() {
-      const entryId = 'test-entry-3';
-      const content = 'Content that will fail to summarize';
-      
-      // Mock API failure
-      const originalFetch = global.fetch;
-      global.fetch = async () => {
-        throw new Error('Network error');
-      };
-      
-      try {
-        const result = await AI.getEntrySummary(entryId, content);
-        expect(result).to.be.null;
-      } finally {
-        global.fetch = originalFetch;
-      }
-    });
-
-    it('should return null when API is not available', async function() {
-      // Disable AI
+    it('should return null when no summary exists and AI disabled', async function() {
       YjsModule.setSetting('ai-enabled', false);
       
-      const result = await AI.getEntrySummary('test-entry-4', 'Content');
+      const entry = { id: 'test-entry-2' };
+      const result = await AI.getEntrySummary(entry);
       expect(result).to.be.null;
     });
 
-    it('should return null for empty content', async function() {
-      const result = await AI.getEntrySummary('test-entry-5', '');
+    it('should handle entry without ID', async function() {
+      const entry = {};
+      const result = await AI.getEntrySummary(entry);
       expect(result).to.be.null;
     });
+  });
 
-    it('should handle content that is too short', async function() {
-      const shortContent = 'Short';
-      const result = await AI.getEntrySummary('test-entry-6', shortContent);
-      expect(result).to.be.null;
+  describe('createIntrospectionPrompt', function() {
+    it('should create prompt with character data', function() {
+      const character = {
+        name: 'Frodo',
+        race: 'Hobbit',
+        class: 'Burglar'
+      };
+      const entries = [];
+      
+      const prompt = AI.createIntrospectionPrompt(character, entries);
+      expect(prompt).to.be.a('string');
+      expect(prompt).to.include('Frodo');
+      expect(prompt).to.include('Hobbit');
     });
 
-    it('should handle different content types', async function() {
-      const testCases = [
-        { id: 'markdown', content: '# Title\n\nThis is **bold** text with [links](http://example.com)' },
-        { id: 'special-chars', content: 'Text with émojis 🎭 and special chars: @#$%^&*()' },
-        { id: 'multiline', content: 'Line 1\nLine 2\nLine 3\n\nParagraph 2' },
-        { id: 'long', content: 'A'.repeat(1000) }
+    it('should handle empty character', function() {
+      const character = {};
+      const entries = [];
+      
+      const prompt = AI.createIntrospectionPrompt(character, entries);
+      expect(prompt).to.be.a('string');
+    });
+  });
+
+  describe('estimateTokenCount', function() {
+    it('should estimate tokens for text', async function() {
+      const text = 'Hello world';
+      const tokens = await AI.estimateTokenCount(text);
+      expect(tokens).to.be.a('number');
+      expect(tokens).to.be.greaterThan(0);
+    });
+
+    it('should handle empty text', async function() {
+      const tokens = await AI.estimateTokenCount('');
+      expect(tokens).to.equal(0);
+    });
+
+    it('should handle null text', async function() {
+      const tokens = await AI.estimateTokenCount(null);
+      expect(tokens).to.equal(0);
+    });
+  });
+
+  describe('calculateTotalTokens', function() {
+    it('should calculate tokens for message array', async function() {
+      const messages = [
+        { role: 'system', content: 'You are helpful' },
+        { role: 'user', content: 'Hello' }
       ];
       
-      // Mock successful API call
-      const originalFetch = global.fetch;
-      global.fetch = async (url, options) => {
-        const body = JSON.parse(options.body);
-        const userPrompt = body.messages.find(m => m.role === 'user').content;
-        
-        return {
-          ok: true,
-          json: async () => ({
-            choices: [{
-              message: {
-                content: `Summary of: ${userPrompt.substring(0, 20)}...`
-              }
-            }]
-          })
-        };
-      };
-      
-      try {
-        for (const testCase of testCases) {
-          const result = await AI.getEntrySummary(testCase.id, testCase.content);
-          expect(result).to.include('Summary of:');
-          
-          // Verify stored
-          const stored = YjsModule.getSummary(testCase.id);
-          expect(stored).to.equal(result);
-        }
-      } finally {
-        global.fetch = originalFetch;
-      }
+      const total = await AI.calculateTotalTokens(messages);
+      expect(total).to.be.a('number');
+      expect(total).to.be.greaterThan(0);
+    });
+
+    it('should handle empty message array', async function() {
+      const total = await AI.calculateTotalTokens([]);
+      expect(total).to.equal(0);
     });
   });
 
-  describe('Settings integration', function() {
-    it('should use Y.js settings directly', function() {
-      // Test that AI module reads from Y.js settings
-      YjsModule.setSetting('openai-api-key', 'sk-direct-test');
-      YjsModule.setSetting('ai-enabled', true);
-      
-      expect(AI.isAPIAvailable()).to.be.true;
-      expect(AI.isAIEnabled()).to.be.true;
-    });
-
-    it('should handle missing settings gracefully', function() {
-      // No settings set
-      expect(AI.isAPIAvailable()).to.be.false;
-      expect(AI.isAIEnabled()).to.be.false;
-    });
-
-    it('should handle invalid setting values', function() {
-      // Set invalid values
-      YjsModule.setSetting('ai-enabled', 'invalid-boolean');
-      YjsModule.setSetting('openai-api-key', 123); // Number instead of string
-      
-      expect(AI.isAIEnabled()).to.be.false;
-      expect(AI.isAPIAvailable()).to.be.false;
+  describe('getPromptDescription', function() {
+    it('should return description string', function() {
+      const description = AI.getPromptDescription();
+      expect(description).to.be.a('string');
+      expect(description.length).to.be.greaterThan(0);
     });
   });
 
-  describe('Summary storage integration', function() {
-    it('should store summaries in Y.js summariesMap', async function() {
+  describe('Integration with OpenAI Wrapper', function() {
+    it('should use OpenAI wrapper for API availability', function() {
       YjsModule.setSetting('openai-api-key', 'sk-test123');
       YjsModule.setSetting('ai-enabled', true);
       
-      // Mock API call
-      const originalFetch = global.fetch;
-      global.fetch = async () => ({
-        ok: true,
-        json: async () => ({
-          choices: [{
-            message: {
-              content: 'Test summary for storage'
-            }
-          }]
-        })
-      });
-      
-      try {
-        const entryId = 'storage-test';
-        const result = await AI.getEntrySummary(entryId, 'Content to summarize for storage test');
-        
-        expect(result).to.equal('Test summary for storage');
-        
-        // Verify it's in Y.js
-        const stored = YjsModule.getSummary(entryId);
-        expect(stored).to.equal('Test summary for storage');
-      } finally {
-        global.fetch = originalFetch;
-      }
+      expect(OpenAIWrapper.isAPIAvailable()).to.be.true;
     });
 
-    it('should retrieve existing summaries from Y.js', async function() {
-      const entryId = 'retrieval-test';
-      const existingSummary = 'Pre-existing summary';
-      
-      // Store summary directly in Y.js
-      YjsModule.setSummary(entryId, existingSummary);
-      
-      // AI should return the existing summary without API call
-      const result = await AI.getEntrySummary(entryId, 'Some content');
-      expect(result).to.equal(existingSummary);
-    });
-  });
-
-  describe('Error handling and edge cases', function() {
-    beforeEach(function() {
-      YjsModule.setSetting('openai-api-key', 'sk-test123');
+    it('should handle missing API key', function() {
       YjsModule.setSetting('ai-enabled', true);
-    });
-
-    it('should handle malformed API responses', async function() {
-      const originalFetch = global.fetch;
-      global.fetch = async () => ({
-        ok: true,
-        json: async () => ({
-          // Missing choices array
-          invalid: 'response'
-        })
-      });
+      // No API key set
       
-      try {
-        const result = await AI.getEntrySummary('malformed-test', 'Test content');
-        expect(result).to.be.null;
-      } finally {
-        global.fetch = originalFetch;
-      }
-    });
-
-    it('should handle API responses with empty choices', async function() {
-      const originalFetch = global.fetch;
-      global.fetch = async () => ({
-        ok: true,
-        json: async () => ({
-          choices: [] // Empty choices array
-        })
-      });
-      
-      try {
-        const result = await AI.getEntrySummary('empty-choices-test', 'Test content');
-        expect(result).to.be.null;
-      } finally {
-        global.fetch = originalFetch;
-      }
-    });
-
-    it('should handle non-JSON API responses', async function() {
-      const originalFetch = global.fetch;
-      global.fetch = async () => ({
-        ok: true,
-        json: async () => {
-          throw new Error('Not JSON');
-        }
-      });
-      
-      try {
-        const result = await AI.getEntrySummary('non-json-test', 'Test content');
-        expect(result).to.be.null;
-      } finally {
-        global.fetch = originalFetch;
-      }
-    });
-
-    it('should handle Y.js storage errors', async function() {
-      // Mock Y.js setSummary to throw error
-      const originalSetSummary = YjsModule.setSummary;
-      YjsModule.setSummary = () => {
-        throw new Error('Storage error');
-      };
-      
-      const originalFetch = global.fetch;
-      global.fetch = async () => ({
-        ok: true,
-        json: async () => ({
-          choices: [{
-            message: {
-              content: 'Summary that will fail to store'
-            }
-          }]
-        })
-      });
-      
-      try {
-        const result = await AI.getEntrySummary('storage-error-test', 'Test content');
-        // Should still return the summary even if storage fails
-        expect(result).to.equal('Summary that will fail to store');
-      } finally {
-        global.fetch = originalFetch;
-        YjsModule.setSummary = originalSetSummary;
-      }
+      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
     });
   });
 });

@@ -11,7 +11,7 @@ import { getSetting } from './yjs.js';
 export const isAPIAvailable = () => {
   const apiKey = getSetting('openai-api-key', '');
   const enabled = getSetting('ai-enabled', false);
-  return Boolean(enabled && apiKey && apiKey.startsWith('sk-'));
+  return Boolean(enabled && typeof apiKey === 'string' && apiKey.trim().length > 0 && apiKey.startsWith('sk-'));
 };
 
 // Base OpenAI call function

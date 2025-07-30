@@ -26,7 +26,7 @@ import {
   createInitialSettings, 
   getWordCount 
 } from './utils.js';
-import { getSummary, setSummary, getSetting } from './yjs.js';
+import { getSummary, setSummary, getSetting, summariesMap } from './yjs.js';
 import { getEncoding } from 'js-tiktoken';
 
 // Unified narrative-focused system prompt with unobvious question element
@@ -351,13 +351,12 @@ export const getIntrospectionPromptForPreview = async (character, entries) => {
 
 // Format character data for AI processing (with summaries if available)
 export const getFormattedCharacterForAI = (character) => {
-  // Get character summaries from Yjs system
-  const yjsSystem = getSystem();
+  // Get character summaries from Y.js directly
   const characterSummaries = {};
   
-  // Collect character-related summaries from Yjs summariesMap
-  if (yjsSystem?.summariesMap) {
-    yjsSystem.summariesMap.forEach((value, key) => {
+  // Collect character-related summaries from Y.js summariesMap
+  if (summariesMap) {
+    summariesMap.forEach((value, key) => {
       if (key.startsWith('character:')) {
         const field = key.replace('character:', '');
         characterSummaries[field] = value;
@@ -365,12 +364,17 @@ export const getFormattedCharacterForAI = (character) => {
     });
   }
   
+  const processField = (fieldName, originalValue) => {
+    const summary = characterSummaries[fieldName];
+    return summary || originalValue || '';
+  };
+
   return {
-    ...character,
-    backstorySummarized: characterSummaries.backstory ? true : false,
-    notesSummarized: characterSummaries.notes ? true : false,
-    backstory: characterSummaries.backstory ? characterSummaries.backstory.summary : character.backstory,
-    notes: characterSummaries.notes ? characterSummaries.notes.summary : character.notes
+    name: character.name || 'unnamed adventurer',
+    race: processField('race', character.race),
+    class: processField('class', character.class),
+    backstory: processField('backstory', character.backstory),
+    notes: processField('notes', character.notes)
   };
 };
 

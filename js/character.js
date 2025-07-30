@@ -128,9 +128,8 @@ const updateSummariesDisplay = () => {
   
   renderSummaries(backstorySummary, notesSummary);
   
-  isAPIAvailable().then(available => {
-    toggleGenerateButton(available);
-  });
+  const available = isAPIAvailable();
+  toggleGenerateButton(available);
 };
 
 // Initialize when DOM is ready
