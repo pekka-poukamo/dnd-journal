@@ -70,22 +70,28 @@ const buildContextSummary = async (character, entries) => {
 };
 
 // Simple context check
-export const hasGoodContext = () => {
-  const state = getYjsState();
-  const character = getCharacterData(state);
-  const entries = getEntries(state);
+export const hasGoodContext = (character = null, entries = null) => {
+  // Use provided parameters or fallback to Y.js state
+  if (character === null || entries === null) {
+    const state = getYjsState();
+    character = character || getCharacterData(state);
+    entries = entries || getEntries(state);
+  }
   return Boolean(character.name || character.backstory || entries.length > 0);
 };
 
 // Simple character context
-export const getCharacterContext = async () => {
-  const state = getYjsState();
-  const character = getCharacterData(state);
-  const entries = getEntries(state);
+export const getCharacterContext = (character = null, entries = null) => {
+  // Use provided parameters or fallback to Y.js state
+  if (character === null || entries === null) {
+    const state = getYjsState();
+    character = character || getCharacterData(state);
+    entries = entries || getEntries(state);
+  }
   
   return {
     character,
     entries,
-    hasContent: hasGoodContext()
+    hasContent: hasGoodContext(character, entries)
   };
 };

@@ -3,25 +3,32 @@ import { getYjsState, setSummary, getSummary } from './yjs.js';
 import { createUserPromptFunction, isAPIAvailable } from './openai-wrapper.js';
 
 // Simple summarize function - stores result in Y.js
-export const summarize = async (content, type = 'general') => {
-  // Check if API is available
-  if (!isAPIAvailable()) {
-    throw new Error('API not available');
-  }
-  
-  const state = getYjsState();
-  const summaryKey = `${type}:${Date.now()}`;
-  
-  // Check if we already have a summary for this content
+export const summarize = (state, summaryKey, content) => {
+  // Check if we already have a summary for this key
   const existingSummary = getSummary(state, summaryKey);
   if (existingSummary) {
     return existingSummary;
   }
   
+  // Validate content before attempting to create new summary
+  if (!content || content.trim() === '') {
+    throw new Error('Content is required for summarization');
+  }
+  
+  // For new summaries that require API calls, return a Promise
+  return createNewSummary(state, summaryKey, content);
+};
+
+// Helper function for creating new summaries (async)
+const createNewSummary = async (state, summaryKey, content) => {
+  // Check if API is available for new summaries
+  if (!isAPIAvailable()) {
+    throw new Error('API not available');
+  }
+  
   try {
-    // Create prompt based on content type
-    const promptTemplate = getPromptTemplate(type);
-    const prompt = `${promptTemplate}\n\nContent to summarize:\n${content}`;
+    // Create a simple summarization prompt
+    const prompt = `Please provide a concise summary of the following content:\n\n${content}`;
     
     // Call OpenAI
     const callAI = createUserPromptFunction();
@@ -43,16 +50,4 @@ export const summarize = async (content, type = 'general') => {
     console.error('Summarization error:', error);
     throw error;
   }
-};
-
-// Get prompt template based on type
-const getPromptTemplate = (type) => {
-  const templates = {
-    general: 'Please provide a concise summary of the following content:',
-    character: 'Please summarize this character description, focusing on key traits and background:',
-    journal: 'Please summarize this journal entry, highlighting the main events and outcomes:',
-    backstory: 'Please create a concise summary of this character backstory:'
-  };
-  
-  return templates[type] || templates.general;
 };

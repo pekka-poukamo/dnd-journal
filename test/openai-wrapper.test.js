@@ -178,9 +178,9 @@ describe('OpenAI Wrapper Module', function() {
       // No API key or disabled AI
     });
 
-    it('should handle callAI when API not available', function() {
+    it('should handle callAI when API not available', async function() {
       try {
-        OpenAIWrapper.callAI('Test prompt');
+        await OpenAIWrapper.callAI('Test prompt');
         expect.fail('Should have thrown error');
       } catch (error) {
         expect(error.message).to.include('OpenAI API not available');

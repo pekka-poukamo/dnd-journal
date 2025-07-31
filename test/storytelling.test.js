@@ -24,12 +24,12 @@ describe('Simple Storytelling Module', function() {
   });
 
   describe('generateQuestions', function() {
-    it('should return null when API not available', function() {
+    it('should return null when API not available', async function() {
       // No API key set, so API should not be available
       const character = { name: 'Test Character' };
       const entries = [];
       
-      const result = Storytelling.generateQuestions(character, entries);
+      const result = await Storytelling.generateQuestions(character, entries);
       expect(result).to.be.null;
     });
 

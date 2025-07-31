@@ -70,8 +70,20 @@ const callOpenAI = async (systemPrompt, userPrompt, options = {}) => {
 // CURRIED FUNCTION GENERATORS
 // =============================================================================
 
-// Create a function with a fixed system prompt
-export const createSystemPromptFunction = (systemPrompt, options = {}) => {
+// Create a function that returns message arrays (for testing/utility)
+export const createSystemPromptFunction = (systemPrompt) => {
+  return (userPrompt) => {
+    return systemPrompt 
+      ? [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ]
+      : [{ role: 'user', content: userPrompt }];
+  };
+};
+
+// Create an async function with a fixed system prompt for API calls
+export const createSystemPromptAPIFunction = (systemPrompt, options = {}) => {
   return async (userPrompt) => {
     return await callOpenAI(systemPrompt, userPrompt, options);
   };
