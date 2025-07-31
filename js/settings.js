@@ -20,10 +20,9 @@ let settingsFormElement = null;
 let connectionStatusElement = null;
 
 // Initialize Settings page
-export const initSettingsPage = async () => {
+export const initSettingsPage = async (stateParam = null) => {
   try {
-    await initYjs();
-    const state = getYjsState();
+    const state = stateParam || (await initYjs(), getYjsState());
     
     // Get DOM elements
     settingsFormElement = document.getElementById('settings-form');

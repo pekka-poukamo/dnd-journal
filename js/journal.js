@@ -27,10 +27,9 @@ let characterInfoContainer = null;
 let entryFormContainer = null;
 
 // Initialize Journal page
-export const initJournalPage = async () => {
+export const initJournalPage = async (stateParam = null) => {
   try {
-    await initYjs();
-    const state = getYjsState();
+    const state = stateParam || (await initYjs(), getYjsState());
     
     // Get DOM elements
     entriesContainer = document.getElementById('entries-container');
@@ -47,11 +46,11 @@ export const initJournalPage = async () => {
     
     // Set up reactive updates
     onJournalChange(state, () => {
-      renderJournalPage();
+      renderJournalPage(state);
     });
     
     onCharacterChange(state, () => {
-      renderCharacterInfo();
+      renderCharacterInfo(state);
     });
     
     // Set up form
@@ -63,9 +62,9 @@ export const initJournalPage = async () => {
 };
 
 // Render journal page
-export const renderJournalPage = () => {
+export const renderJournalPage = (stateParam = null) => {
   try {
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     const entries = getEntries(state);
     
     // Render entries
@@ -85,11 +84,11 @@ export const renderJournalPage = () => {
 };
 
 // Render character information
-const renderCharacterInfo = () => {
+export const renderCharacterInfo = (stateParam = null) => {
   try {
     if (!characterInfoContainer) return;
     
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     const character = getCharacterData(state);
     
     renderCharacterSummary(characterInfoContainer, character);
@@ -111,9 +110,9 @@ const setupEntryForm = () => {
 };
 
 // Handle adding new entry
-const handleAddEntry = (entryData) => {
+export const handleAddEntry = (entryData, stateParam = null) => {
   try {
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     
     // Validate entry
     if (!isValidEntry(entryData)) {
