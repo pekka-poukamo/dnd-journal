@@ -21,7 +21,7 @@ describe('Character Page', function() {
             <textarea id="character-backstory" name="backstory"></textarea>
             <textarea id="character-notes" name="notes"></textarea>
           </form>
-          <div id="character-summaries"></div>
+          <div id="summaries-content"></div>
         </body>
       </html>
     `);
@@ -127,8 +127,8 @@ describe('Character Page', function() {
     it('should show placeholder when no summaries exist', function() {
       Character.updateSummariesDisplay(state);
       
-      const summariesDiv = document.getElementById('character-summaries');
-      expect(summariesDiv.textContent).to.include('No summaries available');
+      const summariesDiv = document.getElementById('summaries-content');
+      expect(summariesDiv.textContent).to.include('No character summaries available');
     });
 
     it('should display existing summaries', function() {
@@ -136,12 +136,12 @@ describe('Character Page', function() {
       
       Character.updateSummariesDisplay(state);
       
-      const summariesDiv = document.getElementById('character-summaries');
+      const summariesDiv = document.getElementById('summaries-content');
       expect(summariesDiv.textContent).to.include('A brief summary of backstory');
     });
 
     it('should handle missing summaries container', function() {
-      document.getElementById('character-summaries').remove();
+      document.getElementById('summaries-content').remove();
       
       expect(() => Character.updateSummariesDisplay(state)).to.not.throw();
     });
@@ -168,7 +168,7 @@ describe('Character Page', function() {
       
       Character.updateSummariesDisplay(state);
       
-      const summariesDiv = document.getElementById('character-summaries');
+      const summariesDiv = document.getElementById('summaries-content');
       expect(summariesDiv.textContent).to.include('Updated summary');
     });
   });

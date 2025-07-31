@@ -25,8 +25,7 @@ let characterFormElement = null;
 // Initialize Character page
 export const initCharacterPage = async (stateParam = null) => {
   try {
-    await initYjs();
-    const state = getYjsState();
+    const state = stateParam || (await initYjs(), getYjsState());
     
     // Get DOM elements
     characterFormElement = document.getElementById('character-form');
@@ -37,19 +36,19 @@ export const initCharacterPage = async (stateParam = null) => {
     }
     
     // Render initial state
-    renderCharacterPage();
+    renderCharacterPage(state);
     
     // Set up reactive updates
     onCharacterChange(state, () => {
-      renderCharacterPage();
-      updateSummariesDisplay();
+      renderCharacterPage(state);
+      updateSummariesDisplay(state);
     });
     
     // Set up form handling
     setupFormHandlers();
     
     // Initial summaries update
-    updateSummariesDisplay();
+    updateSummariesDisplay(state);
     
   } catch (error) {
     console.error('Failed to initialize character page:', error);
@@ -165,7 +164,7 @@ const generateSummary = async (field) => {
     const summary = await summarize(content, 'character');
     showNotification('Summary generated!', 'success');
     
-    updateSummariesDisplay();
+    updateSummariesDisplay(state);
     
   } catch (error) {
     console.error('Failed to generate summary:', error);

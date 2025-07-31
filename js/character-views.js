@@ -18,7 +18,7 @@ export const renderCharacterForm = (form, character) => {
 
 // Update summaries display
 export const renderSummaries = (backstorySummary, notesSummary) => {
-  const summariesContainer = document.getElementById('summaries-content');
+  const summariesContainer = document.getElementById('character-summaries') || document.getElementById('summaries-content');
   if (!summariesContainer) return;
   
   if (!backstorySummary && !notesSummary) {
