@@ -9,8 +9,9 @@ import { getYjsState, getSetting } from './yjs.js';
 
 // Check if API is available
 export const isAPIAvailable = () => {
-  const apiKey = getSetting('openai-api-key', '');
-  const enabled = getSetting('ai-enabled', false);
+  const state = getYjsState();
+  const apiKey = getSetting(state, 'openai-api-key', '');
+  const enabled = getSetting(state, 'ai-enabled', false);
   return Boolean(enabled && typeof apiKey === 'string' && apiKey.trim().length > 0 && apiKey.startsWith('sk-'));
 };
 
@@ -20,7 +21,8 @@ const callOpenAI = async (systemPrompt, userPrompt, options = {}) => {
     throw new Error('OpenAI API not available - check settings');
   }
 
-  const apiKey = getSetting('openai-api-key', '');
+  const state = getYjsState();
+  const apiKey = getSetting(state, 'openai-api-key', '');
   const defaultOptions = {
     model: 'gpt-4.1-mini',
     maxTokens: 1200, // Increased from 400
