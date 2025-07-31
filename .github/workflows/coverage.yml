@@ -33,7 +33,7 @@ jobs:
         run: cd server && npm ci
 
       - name: Run coverage
-        run: npm run coverage
+        run: npm run test:coverage
 
       - name: Coverage comment
         uses: actions/github-script@v6
