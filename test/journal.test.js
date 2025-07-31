@@ -91,7 +91,7 @@ describe('Journal Page', function() {
       YjsModule.setCharacter(state, 'race', 'Human');
       YjsModule.setCharacter(state, 'class', 'Ranger');
       
-      Journal.renderJournalPage(state);
+      Journal.initJournalPage(state);
       
       const characterInfo = document.getElementById('character-info-container');
       expect(characterInfo.textContent).to.include('Aragorn');
@@ -102,10 +102,10 @@ describe('Journal Page', function() {
       const entries = YjsModule.getEntries(state);
       expect(entries).to.have.length(0);
       
-      expect(() => Journal.renderJournalPage(state)).to.not.throw();
+      Journal.initJournalPage(state);
       
       const entriesContainer = document.getElementById('entries-container');
-      expect(entriesContainer.textContent).to.include('No entries yet');
+      expect(entriesContainer.textContent).to.include('No journal entries yet');
     });
   });
 

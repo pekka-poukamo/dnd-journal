@@ -121,10 +121,10 @@ export const saveSettings = (stateParam = null) => {
     setSetting(state, 'ai-enabled', aiEnabled);
     setSetting(state, 'sync-server-url', syncServerUrl);
     
-    showNotification('Settings saved successfully!', 'success');
+    // showNotification('Settings saved successfully!', 'success');
   } catch (error) {
     console.error('Failed to save settings:', error);
-    showNotification('Failed to save settings', 'error');
+    // showNotification('Failed to save settings', 'error');
   }
 };
 

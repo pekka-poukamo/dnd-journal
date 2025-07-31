@@ -62,7 +62,7 @@ describe('Settings Page', function() {
       YjsModule.setSetting(state, 'openai-api-key', 'sk-test456');
       YjsModule.setSetting(state, 'ai-enabled', false);
       
-      Settings.renderSettingsPage(state);
+      Settings.initSettingsPage(state);
       
       expect(document.getElementById('openai-api-key').value).to.equal('sk-test456');
       expect(document.getElementById('ai-enabled').checked).to.be.false;
@@ -84,6 +84,9 @@ describe('Settings Page', function() {
 
   describe('Settings data management', function() {
     it('should save settings data to Y.js', function() {
+      // Initialize the page first to set up form element reference
+      Settings.initSettingsPage(state);
+      
       const form = document.getElementById('settings-form');
       document.getElementById('openai-api-key').value = 'sk-newsecret';
       document.getElementById('ai-enabled').checked = true;
@@ -97,6 +100,9 @@ describe('Settings Page', function() {
     });
 
     it('should handle trimming settings', function() {
+      // Initialize the page first to set up form element reference
+      Settings.initSettingsPage(state);
+      
       document.getElementById('openai-api-key').value = '  sk-trimtest  ';
       document.getElementById('sync-server-url').value = '  ws://trimserver  ';
       
@@ -108,6 +114,9 @@ describe('Settings Page', function() {
     });
 
     it('should handle boolean settings', function() {
+      // Initialize the page first to set up form element reference
+      Settings.initSettingsPage(state);
+      
       document.getElementById('ai-enabled').checked = true;
       
       Settings.saveSettings(state);
