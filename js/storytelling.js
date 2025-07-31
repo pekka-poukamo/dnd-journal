@@ -1,5 +1,5 @@
 // Simple Storytelling - Direct Y.js Integration
-import { getCharacterData, getEntries } from './yjs.js';
+import { getCharacterDataObject as getCharacterData, getJournalEntries as getEntries } from './yjs.js';
 import { createSystemPromptFunction, isAPIAvailable } from './openai-wrapper.js';
 import { summarize } from './summarization.js';
 

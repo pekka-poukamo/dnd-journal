@@ -1,10 +1,10 @@
 // Character Page - Simplified Direct Y.js Integration
 import { 
   initYjs,
-  getCharacterData,
-  setCharacter,
-  getSummary,
-  onCharacterChange
+  getCharacterDataObject as getCharacterData,
+  setCharacterField as setCharacter,
+  getSummaryValue as getSummary,
+  observeCharacterChanges as onCharacterChange
 } from './yjs.js';
 
 import {

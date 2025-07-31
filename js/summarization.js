@@ -1,5 +1,5 @@
 // Simple Summarization - Direct Y.js Integration
-import { setSummary, getSummary } from './yjs.js';
+import { setSummaryValue as setSummary, getSummaryValue as getSummary } from './yjs.js';
 import { createUserPromptFunction, isAPIAvailable } from './openai-wrapper.js';
 
 // Simple summarize function - stores result in Y.js

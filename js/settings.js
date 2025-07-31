@@ -1,9 +1,9 @@
 // Settings Page - Simplified Direct Y.js Integration
 import { 
   initYjs,
-  setSetting,
-  getSetting,
-  onSettingsChange
+  setSettingValue as setSetting,
+  getSettingValue as getSetting,
+  observeSettingsChanges as onSettingsChange
 } from './yjs.js';
 
 import {

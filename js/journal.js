@@ -1,13 +1,13 @@
 // Journal Page - Simplified Direct Y.js Integration
 import { 
   initYjs,
-  getCharacterData,
-  getEntries,
-  addEntry,
-  updateEntry,
-  deleteEntry,
-  onCharacterChange,
-  onJournalChange
+  getCharacterDataObject as getCharacterData,
+  getJournalEntries as getEntries,
+  addJournalEntry as addEntry,
+  updateJournalEntry as updateEntry,
+  deleteJournalEntry as deleteEntry,
+  observeCharacterChanges as onCharacterChange,
+  observeJournalChanges as onJournalChange
 } from './yjs.js';
 
 import {
