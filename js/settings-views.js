@@ -1,23 +1,41 @@
 // Settings Views - Pure Rendering Functions for Settings Page
 
 // Render settings form with current data
-export const renderSettingsForm = (settings) => {
-  // API Key setting
-  const apiKeyInput = document.getElementById('api-key');
-  if (apiKeyInput && settings['openai-api-key'] !== undefined) {
-    apiKeyInput.value = settings['openai-api-key'] || '';
+export const renderSettingsForm = (formOrSettings, settings = null) => {
+  // Handle both old signature (settings) and new signature (form, settings)
+  let form = null;
+  let settingsData = null;
+  
+  if (settings === null) {
+    // Old signature: renderSettingsForm(settings)
+    settingsData = formOrSettings;
+  } else {
+    // New signature: renderSettingsForm(form, settings)
+    form = formOrSettings;
+    settingsData = settings;
+  }
+  
+  // API Key setting - try form-based access first, then try different ID patterns
+  const apiKeyInput = form ? 
+    form.querySelector('[name="openai-api-key"]') : 
+    (document.getElementById('openai-api-key') || document.getElementById('api-key'));
+  if (apiKeyInput) {
+    apiKeyInput.value = settingsData['openai-api-key'] || '';
   }
   
   // AI Features checkbox
-  const aiEnabledCheckbox = document.getElementById('ai-enabled');
-  if (aiEnabledCheckbox && settings['ai-enabled'] !== undefined) {
-    aiEnabledCheckbox.checked = settings['ai-enabled'] === 'true' || settings['ai-enabled'] === true;
+  const aiEnabledCheckbox = form ? form.querySelector('[name="ai-enabled"]') : document.getElementById('ai-enabled');
+  if (aiEnabledCheckbox) {
+    aiEnabledCheckbox.checked = settingsData['ai-enabled'] === 'true' || settingsData['ai-enabled'] === true;
   }
   
-  // Sync server setting
-  const syncServerInput = document.getElementById('sync-server');
-  if (syncServerInput && settings['dnd-journal-sync-server'] !== undefined) {
-    syncServerInput.value = settings['dnd-journal-sync-server'] || '';
+  // Sync server setting - try different ID patterns and key names
+  const syncServerInput = form ? 
+    form.querySelector('[name="sync-server-url"]') : 
+    (document.getElementById('sync-server-url') || document.getElementById('sync-server'));
+  if (syncServerInput) {
+    // Support both key names for backward compatibility
+    syncServerInput.value = settingsData['sync-server-url'] || settingsData['dnd-journal-sync-server'] || '';
   }
 };
 

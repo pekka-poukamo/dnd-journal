@@ -61,8 +61,10 @@ export const renderCharacterPage = (stateParam = null) => {
     const state = stateParam || getYjsState();
     const character = getCharacterData(state);
     
-    if (characterFormElement) {
-      renderCharacterForm(characterFormElement, character);
+    // Use module-level element if available, otherwise find it
+    const formElement = characterFormElement || document.getElementById('character-form');
+    if (formElement) {
+      renderCharacterForm(formElement, character);
     }
   } catch (error) {
     console.error('Failed to render character page:', error);

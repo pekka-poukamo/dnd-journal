@@ -67,16 +67,17 @@ export const renderJournalPage = (stateParam = null) => {
     const state = stateParam || getYjsState();
     const entries = getEntries(state);
     
-    // Render entries
-    if (entriesContainer) {
-      renderEntries(entriesContainer, entries, {
+    // Render entries - use module-level element if available, otherwise find it
+    const entriesElement = entriesContainer || document.getElementById('entries-container');
+    if (entriesElement) {
+      renderEntries(entriesElement, entries, {
         onEdit: handleEditEntry,
         onDelete: handleDeleteEntry
       });
     }
     
     // Render character info
-    renderCharacterInfo();
+    renderCharacterInfo(state);
     
   } catch (error) {
     console.error('Failed to render journal page:', error);
@@ -86,12 +87,14 @@ export const renderJournalPage = (stateParam = null) => {
 // Render character information
 export const renderCharacterInfo = (stateParam = null) => {
   try {
-    if (!characterInfoContainer) return;
-    
     const state = stateParam || getYjsState();
     const character = getCharacterData(state);
     
-    renderCharacterSummary(characterInfoContainer, character);
+    // Use module-level element if available, otherwise find it
+    const charInfoElement = characterInfoContainer || document.getElementById('character-info-container');
+    if (!charInfoElement) return;
+    
+    renderCharacterSummary(charInfoElement, character);
   } catch (error) {
     console.error('Failed to render character info:', error);
   }

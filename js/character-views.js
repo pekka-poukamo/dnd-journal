@@ -10,8 +10,9 @@ export const renderCharacterForm = (form, character) => {
   const fields = ['name', 'race', 'class', 'backstory', 'notes'];
   fields.forEach(field => {
     const input = form.querySelector(`[name="${field}"]`);
-    if (input && character[field] !== undefined) {
-      input.value = character[field];
+    if (input) {
+      // Set value, handling undefined/null/empty values
+      input.value = character[field] || '';
     }
   });
 };

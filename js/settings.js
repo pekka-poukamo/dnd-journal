@@ -50,22 +50,25 @@ export const initSettingsPage = async (stateParam = null) => {
 };
 
 // Render settings page
-export const renderSettingsPage = () => {
+export const renderSettingsPage = (stateParam = null) => {
   try {
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     const settings = {
       'openai-api-key': getSetting(state, 'openai-api-key', ''),
       'ai-enabled': getSetting(state, 'ai-enabled', false),
       'sync-server-url': getSetting(state, 'sync-server-url', '')
     };
     
-    if (settingsFormElement) {
-      renderSettingsForm(settingsFormElement, settings);
+    // Use module-level element if available, otherwise find it
+    const formElement = settingsFormElement || document.getElementById('settings-form');
+    if (formElement) {
+      renderSettingsForm(formElement, settings);
     }
     
-    if (connectionStatusElement) {
+    const statusElement = connectionStatusElement || document.getElementById('connection-status');
+    if (statusElement) {
       const connected = false; // TODO: implement connection status check
-      renderConnectionStatus(connectionStatusElement, connected, settings['sync-server-url']);
+      renderConnectionStatus(statusElement, connected, settings['sync-server-url']);
     }
   } catch (error) {
     console.error('Failed to render settings page:', error);
@@ -99,10 +102,15 @@ const setupFormHandlers = () => {
 };
 
 // Save settings to Y.js
-const saveSettings = () => {
+export const saveSettings = (stateParam = null) => {
   try {
-    const state = getYjsState();
-    const formData = new FormData(settingsFormElement);
+    const state = stateParam || getYjsState();
+    const formElement = settingsFormElement || document.getElementById('settings-form');
+    if (!formElement) {
+      console.warn('Settings form not found');
+      return;
+    }
+    const formData = new FormData(formElement);
     
     // Save individual settings
     const apiKey = (formData.get('openai-api-key') || '').trim();
@@ -121,9 +129,9 @@ const saveSettings = () => {
 };
 
 // Test API key
-const testAPIKey = async () => {
+export const testAPIKey = async (stateParam = null) => {
   try {
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     const apiKey = getSetting(state, 'openai-api-key', '');
     
     if (!apiKey) {
@@ -144,9 +152,9 @@ const testAPIKey = async () => {
 };
 
 // Test connection
-const testConnection = async () => {
+export const testConnection = async (stateParam = null) => {
   try {
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     const syncServerUrl = getSetting(state, 'sync-server-url', '');
     
     if (!syncServerUrl) {

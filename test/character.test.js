@@ -132,7 +132,7 @@ describe('Character Page', function() {
     });
 
     it('should display existing summaries', function() {
-      YjsModule.setSummary(state, 'character:backstory', 'A brief summary of backstory');
+      YjsModule.setSummary(state, 'character-backstory', 'A brief summary of backstory');
       
       Character.updateSummariesDisplay(state);
       
@@ -164,7 +164,7 @@ describe('Character Page', function() {
     });
 
     it('should update summaries when Y.js summary data changes', function() {
-      YjsModule.setSummary(state, 'character:backstory', 'Updated summary');
+      YjsModule.setSummary(state, 'character-backstory', 'Updated summary');
       
       Character.updateSummariesDisplay(state);
       
