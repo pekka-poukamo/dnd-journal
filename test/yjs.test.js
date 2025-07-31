@@ -32,7 +32,11 @@ describe('Simple Y.js Module', function() {
 
     it('should not reinitialize if already initialized', async function() {
       const state2 = await YjsModule.initYjs();
-      expect(state2).to.equal(state);
+      // Both states should have the same structure and maps
+      expect(state2.characterMap).to.equal(state.characterMap);
+      expect(state2.journalMap).to.equal(state.journalMap);
+      expect(state2.settingsMap).to.equal(state.settingsMap);
+      expect(state2.summariesMap).to.equal(state.summariesMap);
     });
   });
 

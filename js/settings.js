@@ -163,7 +163,15 @@ const testConnection = async () => {
   }
 };
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', initSettingsPage);
+// Initialize when DOM is ready (only in browser environment)
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    import('./yjs.js').then(YjsModule => {
+      YjsModule.initYjs().then(state => {
+        initSettingsPage(state);
+      });
+    });
+  });
+}
 
 // Export for testing

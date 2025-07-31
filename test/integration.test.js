@@ -1,47 +1,53 @@
+import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
-import './setup.js';
+import { JSDOM } from 'jsdom';
+
 import * as YjsModule from '../js/yjs.js';
-import * as Journal from '../js/journal.js';
 import * as Character from '../js/character.js';
+import * as Journal from '../js/journal.js';
 import * as Settings from '../js/settings.js';
+import { generateId } from '../js/utils.js';
 
 describe('Integration Tests', function() {
+  let state;
+
   beforeEach(async function() {
-    // Reset Y.js state before each test
-    YjsModule.resetYjs();
-    await YjsModule.initYjs();
+    // Set up a more complete DOM for integration tests
+    const dom = new JSDOM(`
+      <!DOCTYPE html>
+      <html>
+        <body>
+          <div id="character-info"></div>
+          <form id="character-form">
+            <input id="character-name" name="name" />
+            <input id="character-race" name="race" />
+            <input id="character-class" name="class" />
+            <textarea id="character-backstory" name="backstory"></textarea>
+            <textarea id="character-notes" name="notes"></textarea>
+          </form>
+          <div id="character-summaries"></div>
+          
+          <div id="entries-container"></div>
+          <form id="entry-form">
+            <input id="entry-title" />
+            <textarea id="entry-content"></textarea>
+          </form>
+          
+          <form id="settings-form">
+            <input id="openai-api-key" name="openai-api-key" />
+            <input id="ai-enabled" name="ai-enabled" type="checkbox" />
+            <input id="sync-server-url" name="sync-server-url" />
+          </form>
+          <div id="connection-status"></div>
+        </body>
+      </html>
+    `);
+    global.window = dom.window;
+    global.document = dom.window.document;
     
-    // Set up basic DOM structure for all pages
-    document.body.innerHTML = `
-      <!-- Journal page elements -->
-      <form id="entry-form">
-        <input type="text" name="title" id="entry-title" />
-        <textarea name="content" id="entry-content"></textarea>
-        <button type="submit">Add Entry</button>
-      </form>
-      <div id="entries-container"></div>
-      <div class="character-info-container"></div>
-      
-      <!-- Character page elements -->
-      <form id="character-form">
-        <input type="text" name="name" id="character-name" />
-        <input type="text" name="race" id="character-race" />
-        <input type="text" name="class" id="character-class" />
-        <textarea name="backstory" id="character-backstory"></textarea>
-        <textarea name="notes" id="character-notes"></textarea>
-        <button type="submit">Save</button>
-      </form>
-      <div id="summaries-content"></div>
-      
-      <!-- Settings page elements -->
-      <form id="settings-form">
-        <input type="text" name="openai-api-key" id="openai-api-key" />
-        <input type="checkbox" name="ai-enabled" id="ai-enabled" />
-        <input type="text" name="sync-server-url" id="sync-server-url" />
-        <button type="submit">Save Settings</button>
-      </form>
-      <div id="connection-status"></div>
-    `;
+    // Reset and initialize Y.js
+    YjsModule.resetYjs();
+    state = await YjsModule.initYjs();
   });
 
   afterEach(function() {
@@ -49,271 +55,305 @@ describe('Integration Tests', function() {
   });
 
   describe('Character to Journal Integration', function() {
-    it('should show character summary in journal page', async function() {
+    it('should show character summary in journal page', function() {
       // Set character data
-      YjsModule.setCharacter('name', 'Frodo');
-      YjsModule.setCharacter('race', 'Hobbit');
-      YjsModule.setCharacter('class', 'Burglar');
-      YjsModule.setCharacter('backstory', 'A hobbit from the Shire');
+      YjsModule.setCharacter(state, 'name', 'Aragorn');
+      YjsModule.setCharacter(state, 'race', 'Human');
+      YjsModule.setCharacter(state, 'class', 'Ranger');
+      YjsModule.setCharacter(state, 'backstory', 'Heir of Isildur');
       
-      // Initialize journal page
-      await Journal.initJournalPage();
+      // Initialize and render journal page
+      Journal.initJournalPage(state);
+      Journal.renderJournalPage(state);
       
-      // Verify character data is accessible
-      expect(YjsModule.getCharacter('name')).to.equal('Frodo');
-      expect(YjsModule.getCharacter('race')).to.equal('Hobbit');
-      expect(YjsModule.getCharacter('class')).to.equal('Burglar');
+      // Check that character info appears in journal
+      const characterInfo = document.getElementById('character-info');
+      expect(characterInfo.textContent).to.include('Aragorn');
     });
 
-    it('should update journal character summary when character changes', async function() {
+    it('should update journal character summary when character changes', function() {
       // Initialize journal page first
-      await Journal.initJournalPage();
+      Journal.initJournalPage(state);
       
-      // Change character data
-      YjsModule.setCharacter('name', 'Aragorn');
-      YjsModule.setCharacter('race', 'Human');
+      // Set initial character data
+      YjsModule.setCharacter(state, 'name', 'Legolas');
+      YjsModule.setCharacter(state, 'race', 'Elf');
       
-      // Manually trigger render (in real app, Y.js observers would do this)
-      Journal.renderJournalPage();
+      Journal.renderJournalPage(state);
       
-      // Check updated data
-      expect(YjsModule.getCharacter('name')).to.equal('Aragorn');
-      expect(YjsModule.getCharacter('race')).to.equal('Human');
+      let characterInfo = document.getElementById('character-info');
+      expect(characterInfo.textContent).to.include('Legolas');
+      
+      // Update character data
+      YjsModule.setCharacter(state, 'name', 'Gimli');
+      YjsModule.setCharacter(state, 'race', 'Dwarf');
+      
+      // Re-render journal (in real app, Y.js observers would do this)
+      Journal.renderJournalPage(state);
+      
+      characterInfo = document.getElementById('character-info');
+      expect(characterInfo.textContent).to.include('Gimli');
+      expect(characterInfo.textContent).to.include('Dwarf');
     });
   });
 
   describe('Settings to AI Integration', function() {
     it('should enable AI features when properly configured', function() {
-      // Configure AI settings
-      YjsModule.setSetting('openai-api-key', 'sk-test123');
-      YjsModule.setSetting('ai-enabled', true);
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+      YjsModule.setSetting(state, 'ai-enabled', true);
       
-      // Test that other modules can access settings
-      import('../js/openai-wrapper.js').then(OpenAIWrapper => {
-        expect(OpenAIWrapper.isAPIAvailable()).to.be.true;
-      });
-    });
-
-    it('should disable AI features when not configured', function() {
-      // Don't set AI settings
+      // Settings should be accessible across modules
+      const apiKey = YjsModule.getSetting(state, 'openai-api-key');
+      const aiEnabled = YjsModule.getSetting(state, 'ai-enabled');
       
-      import('../js/openai-wrapper.js').then(OpenAIWrapper => {
-        expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
-      });
+      expect(apiKey).to.equal('sk-test123');
+      expect(aiEnabled).to.be.true;
     });
   });
 
   describe('Data Management Workflow', function() {
-    it('should manage journal entries through Y.js', async function() {
-      // Initialize journal page
-      await Journal.initJournalPage();
+    it('should manage journal entries through Y.js', function() {
+      // Add multiple entries
+      const entries = [
+        {
+          id: generateId(),
+          title: 'First Adventure',
+          content: 'We set out from the tavern...',
+          timestamp: Date.now() - 2000
+        },
+        {
+          id: generateId(),
+          title: 'The Dragon',
+          content: 'A fearsome dragon appeared...',
+          timestamp: Date.now() - 1000
+        },
+        {
+          id: generateId(),
+          title: 'Victory',
+          content: 'We defeated our enemies...',
+          timestamp: Date.now()
+        }
+      ];
       
-      // Create entry through Y.js
-      const entry = {
-        id: 'integration-test',
-        title: 'Test Entry',
-        content: 'This is a test entry content.',
-        timestamp: Date.now()
-      };
-      YjsModule.addEntry(entry);
+      entries.forEach(entry => YjsModule.addEntry(state, entry));
       
-      // Check entry was created
-      const entries = YjsModule.getEntries();
-      expect(entries).to.have.length(1);
-      expect(entries[0].title).to.equal('Test Entry');
-      expect(entries[0].content).to.equal('This is a test entry content.');
+      // Verify all entries are stored
+      const storedEntries = YjsModule.getEntries(state);
+      expect(storedEntries).to.have.length(3);
       
-      // Update entry
-      YjsModule.updateEntry('integration-test', {
-        title: 'Updated Entry',
-        content: 'Updated content'
+      // Update an entry
+      YjsModule.updateEntry(state, entries[0].id, {
+        title: 'Updated First Adventure',
+        content: 'We set out from the tavern (updated)...'
       });
       
-      const updatedEntries = YjsModule.getEntries();
-      expect(updatedEntries[0].title).to.equal('Updated Entry');
-      expect(updatedEntries[0].content).to.equal('Updated content');
+      const updatedEntries = YjsModule.getEntries(state);
+      const updatedEntry = updatedEntries.find(e => e.id === entries[0].id);
+      expect(updatedEntry.title).to.equal('Updated First Adventure');
       
-      // Delete entry
-      YjsModule.deleteEntry('integration-test');
-      
-      const finalEntries = YjsModule.getEntries();
-      expect(finalEntries).to.have.length(0);
+      // Delete an entry
+      YjsModule.deleteEntry(state, entries[1].id);
+      const finalEntries = YjsModule.getEntries(state);
+      expect(finalEntries).to.have.length(2);
     });
 
-    it('should manage character data through Y.js', async function() {
-      // Initialize character page
-      await Character.initCharacterPage();
+    it('should manage character data through Y.js', function() {
+      // Set complete character data
+      const characterData = {
+        name: 'Thorin Oakenshield',
+        race: 'Dwarf',
+        class: 'King',
+        backstory: 'Rightful King under the Mountain',
+        notes: 'Proud and sometimes stubborn, but loyal to his people'
+      };
       
-      // Set character data through Y.js
-      YjsModule.setCharacter('name', 'Legolas');
-      YjsModule.setCharacter('race', 'Elf');
-      YjsModule.setCharacter('class', 'Archer');
-      YjsModule.setCharacter('backstory', 'Prince of the Woodland Realm');
-      YjsModule.setCharacter('notes', 'Skilled with bow and arrow');
+      Object.entries(characterData).forEach(([field, value]) => {
+        YjsModule.setCharacter(state, field, value);
+      });
       
-      // Check data was saved
-      expect(YjsModule.getCharacter('name')).to.equal('Legolas');
-      expect(YjsModule.getCharacter('race')).to.equal('Elf');
-      expect(YjsModule.getCharacter('class')).to.equal('Archer');
-      expect(YjsModule.getCharacter('backstory')).to.equal('Prince of the Woodland Realm');
-      expect(YjsModule.getCharacter('notes')).to.equal('Skilled with bow and arrow');
+      // Verify character data
+      const storedData = YjsModule.getCharacterData(state);
+      expect(storedData.name).to.equal('Thorin Oakenshield');
+      expect(storedData.race).to.equal('Dwarf');
+      expect(storedData.class).to.equal('King');
+      expect(storedData.backstory).to.equal('Rightful King under the Mountain');
+      expect(storedData.notes).to.equal('Proud and sometimes stubborn, but loyal to his people');
     });
 
-    it('should manage settings through Y.js', async function() {
-      // Initialize settings page
-      await Settings.initSettingsPage();
+    it('should manage settings through Y.js', function() {
+      // Set various settings
+      const settings = {
+        'openai-api-key': 'sk-workflow-test',
+        'ai-enabled': true,
+        'sync-server-url': 'ws://localhost:8080',
+        'custom-setting': 'custom-value'
+      };
       
-      // Set settings through Y.js
-      YjsModule.setSetting('openai-api-key', 'sk-integration-test');
-      YjsModule.setSetting('ai-enabled', true);
-      YjsModule.setSetting('sync-server-url', 'wss://test-server.com');
+      Object.entries(settings).forEach(([key, value]) => {
+        YjsModule.setSetting(state, key, value);
+      });
       
-      // Check data was saved
-      expect(YjsModule.getSetting('openai-api-key')).to.equal('sk-integration-test');
-      expect(YjsModule.getSetting('ai-enabled')).to.be.true;
-      expect(YjsModule.getSetting('sync-server-url')).to.equal('wss://test-server.com');
+      // Verify all settings
+      Object.entries(settings).forEach(([key, expectedValue]) => {
+        const actualValue = YjsModule.getSetting(state, key);
+        expect(actualValue).to.equal(expectedValue);
+      });
     });
   });
 
   describe('Cross-Page Data Consistency', function() {
-    it('should maintain character data across page switches', async function() {
-      // Set character data in character page
-      await Character.initCharacterPage();
-      YjsModule.setCharacter('name', 'Gimli');
-      YjsModule.setCharacter('race', 'Dwarf');
+    it('should maintain character data across page switches', function() {
+      // Character page: set data
+      YjsModule.setCharacter(state, 'name', 'Bilbo Baggins');
+      YjsModule.setCharacter(state, 'race', 'Hobbit');
       
-      // Switch to journal page and check character data is available
-      await Journal.initJournalPage();
-      Journal.renderJournalPage();
+      // Journal page: verify same data is accessible
+      Journal.initJournalPage(state);
+      Journal.renderJournalPage(state);
       
-      // Verify data persists
-      expect(YjsModule.getCharacter('name')).to.equal('Gimli');
-      expect(YjsModule.getCharacter('race')).to.equal('Dwarf');
+      const characterInfo = document.getElementById('character-info');
+      expect(characterInfo.textContent).to.include('Bilbo Baggins');
+      
+      // Character page: verify data is still there
+      Character.initCharacterPage(state);
+      Character.renderCharacterPage(state);
+      
+      expect(document.getElementById('character-name').value).to.equal('Bilbo Baggins');
+      expect(document.getElementById('character-race').value).to.equal('Hobbit');
     });
 
-    it('should maintain settings across pages', async function() {
-      // Set settings
-      await Settings.initSettingsPage();
-      YjsModule.setSetting('ai-enabled', true);
-      YjsModule.setSetting('openai-api-key', 'sk-cross-page-test');
+    it('should maintain settings across pages', function() {
+      // Settings page: configure API
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-cross-page');
+      YjsModule.setSetting(state, 'ai-enabled', true);
       
-      // Test that other modules can access settings
-      import('../js/openai-wrapper.js').then(OpenAIWrapper => {
-        expect(OpenAIWrapper.isAPIAvailable()).to.be.true;
-      });
+      // Character page: should access same settings
+      const apiKey = YjsModule.getSetting(state, 'openai-api-key');
+      const aiEnabled = YjsModule.getSetting(state, 'ai-enabled');
+      
+      expect(apiKey).to.equal('sk-cross-page');
+      expect(aiEnabled).to.be.true;
+      
+      // Journal page: should access same settings
+      Journal.initJournalPage(state);
+      
+      const sameApiKey = YjsModule.getSetting(state, 'openai-api-key');
+      expect(sameApiKey).to.equal('sk-cross-page');
     });
   });
 
   describe('Error Handling Integration', function() {
-    it('should handle missing DOM elements gracefully across pages', async function() {
+    it('should handle missing DOM elements gracefully across pages', function() {
       // Remove some DOM elements
-      document.getElementById('entry-form').remove();
       document.getElementById('character-form').remove();
+      document.getElementById('entry-form').remove();
       
-      // Pages should still initialize without throwing
-      expect(async () => {
-        await Journal.initJournalPage();
-      }).to.not.throw();
-      
-      expect(async () => {
-        await Character.initCharacterPage();
-      }).to.not.throw();
-      
-      expect(async () => {
-        await Settings.initSettingsPage();
-      }).to.not.throw();
+      // All pages should still initialize without errors
+      expect(() => Character.initCharacterPage(state)).to.not.throw();
+      expect(() => Journal.initJournalPage(state)).to.not.throw();
+      expect(() => Settings.initSettingsPage(state)).to.not.throw();
     });
   });
 
   describe('Y.js Data Integrity', function() {
-    it('should maintain data integrity across operations', async function() {
-      // Initialize all pages
-      await Journal.initJournalPage();
-      await Character.initCharacterPage();
-      await Settings.initSettingsPage();
+    it('should maintain data integrity across operations', function() {
+      // Perform multiple operations rapidly
+      YjsModule.setCharacter(state, 'name', 'Frodo');
       
-      // Set data in all categories
-      YjsModule.setCharacter('name', 'Data Integrity Test');
-      YjsModule.addEntry({
-        id: 'integrity-test',
-        title: 'Integrity Entry',
-        content: 'Testing data integrity',
+      const entry1 = {
+        id: generateId(),
+        title: 'The Ring',
+        content: 'I inherited a mysterious ring...',
         timestamp: Date.now()
-      });
-      YjsModule.setSetting('test-setting', 'test-value');
+      };
       
-      // Verify all data persists
-      expect(YjsModule.getCharacter('name')).to.equal('Data Integrity Test');
+      YjsModule.addEntry(state, entry1);
+      YjsModule.setSetting(state, 'test-setting', 'test-value');
+      YjsModule.setSummary(state, 'test-summary', 'A test summary');
       
-      const entries = YjsModule.getEntries();
-      expect(entries).to.have.length(1);
-      expect(entries[0].title).to.equal('Integrity Entry');
-      
-      expect(YjsModule.getSetting('test-setting')).to.equal('test-value');
+      // Verify all data is intact
+      expect(YjsModule.getCharacter(state, 'name')).to.equal('Frodo');
+      expect(YjsModule.getEntries(state)).to.have.length(1);
+      expect(YjsModule.getSetting(state, 'test-setting')).to.equal('test-value');
+      expect(YjsModule.getSummary(state, 'test-summary')).to.equal('A test summary');
     });
 
-    it('should handle rapid data changes', async function() {
-      await Journal.initJournalPage();
-      
-      // Add multiple entries rapidly
-      const entryIds = [];
-      for (let i = 0; i < 5; i++) {
+    it('should handle rapid data changes', function() {
+      // Rapidly add multiple entries
+      const entries = [];
+      for (let i = 0; i < 10; i++) {
         const entry = {
-          id: `rapid-${i}`,
-          title: `Rapid Entry ${i}`,
-          content: `Content ${i}`,
+          id: generateId(),
+          title: `Entry ${i}`,
+          content: `Content for entry ${i}`,
           timestamp: Date.now() + i
         };
-        YjsModule.addEntry(entry);
-        entryIds.push(entry.id);
+        entries.push(entry);
+        YjsModule.addEntry(state, entry);
       }
       
-      // Check all entries were added
-      const entries = YjsModule.getEntries();
-      expect(entries).to.have.length(5);
-      expect(entries.map(e => e.id)).to.include.members(entryIds);
+      // Verify all entries were added
+      const storedEntries = YjsModule.getEntries(state);
+      expect(storedEntries).to.have.length(10);
+      
+      // Rapidly update character data
+      for (let i = 0; i < 5; i++) {
+        YjsModule.setCharacter(state, 'name', `Character ${i}`);
+      }
+      
+      expect(YjsModule.getCharacter(state, 'name')).to.equal('Character 4');
     });
   });
 
   describe('Page Module Integration', function() {
-    it('should allow all page modules to coexist', async function() {
-      // Initialize all pages without conflicts
-      await Journal.initJournalPage();
-      await Character.initCharacterPage();
-      await Settings.initSettingsPage();
+    it('should allow all page modules to coexist', function() {
+      // Initialize all page modules
+      Character.initCharacterPage(state);
+      Journal.initJournalPage(state);
+      Settings.initSettingsPage(state);
       
-      // All should render without errors
-      expect(() => {
-        Journal.renderJournalPage();
-        Character.renderCharacterPage();
-        Settings.renderSettingsPage();
-      }).to.not.throw();
+      // Set data in each module
+      YjsModule.setCharacter(state, 'name', 'Integration Test Character');
+      
+      const entry = {
+        id: generateId(),
+        title: 'Integration Test Entry',
+        content: 'Testing module integration',
+        timestamp: Date.now()
+      };
+      YjsModule.addEntry(state, entry);
+      
+      YjsModule.setSetting(state, 'integration-test', 'success');
+      
+      // Verify data is accessible from all modules
+      expect(YjsModule.getCharacter(state, 'name')).to.equal('Integration Test Character');
+      expect(YjsModule.getEntries(state)).to.have.length(1);
+      expect(YjsModule.getSetting(state, 'integration-test')).to.equal('success');
     });
 
-    it('should maintain separate responsibilities per page', async function() {
-      // Each page should handle its own data type
-      await Journal.initJournalPage();
-      await Character.initCharacterPage();
-      await Settings.initSettingsPage();
+    it('should maintain separate responsibilities per page', function() {
+      // Character module should handle character data
+      Character.initCharacterPage(state);
+      YjsModule.setCharacter(state, 'name', 'Character Module Test');
       
-      // Journal handles entries
-      YjsModule.addEntry({
-        id: 'journal-test',
-        title: 'Journal Test',
-        content: 'Journal content',
+      // Journal module should handle entries
+      Journal.initJournalPage(state);
+      const entry = {
+        id: generateId(),
+        title: 'Journal Module Test',
+        content: 'Testing journal responsibility',
         timestamp: Date.now()
-      });
+      };
+      YjsModule.addEntry(state, entry);
       
-      // Character handles character data
-      YjsModule.setCharacter('name', 'Character Test');
+      // Settings module should handle settings
+      Settings.initSettingsPage(state);
+      YjsModule.setSetting(state, 'settings-module-test', 'working');
       
-      // Settings handles settings
-      YjsModule.setSetting('setting-test', 'setting-value');
-      
-      // All data should be independently accessible
-      expect(YjsModule.getEntries()).to.have.length(1);
-      expect(YjsModule.getCharacter('name')).to.equal('Character Test');
-      expect(YjsModule.getSetting('setting-test')).to.equal('setting-value');
+      // Each module can access its data
+      expect(YjsModule.getCharacter(state, 'name')).to.equal('Character Module Test');
+      expect(YjsModule.getEntries(state)[0].title).to.equal('Journal Module Test');
+      expect(YjsModule.getSetting(state, 'settings-module-test')).to.equal('working');
     });
   });
 });

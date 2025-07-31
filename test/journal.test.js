@@ -1,24 +1,36 @@
+import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
-import './setup.js';
-import * as Journal from '../js/journal.js';
+import { JSDOM } from 'jsdom';
+
 import * as YjsModule from '../js/yjs.js';
+import * as Journal from '../js/journal.js';
+import { generateId } from '../js/utils.js';
 
 describe('Journal Page', function() {
+  let state;
+
   beforeEach(async function() {
-    // Reset Y.js state before each test
-    YjsModule.resetYjs();
-    await YjsModule.initYjs();
+    // Set up DOM
+    const dom = new JSDOM(`
+      <!DOCTYPE html>
+      <html>
+        <body>
+          <div id="entries-container"></div>
+          <div id="character-info"></div>
+          <form id="entry-form">
+            <input id="entry-title" />
+            <textarea id="entry-content"></textarea>
+            <button type="submit">Add Entry</button>
+          </form>
+        </body>
+      </html>
+    `);
+    global.window = dom.window;
+    global.document = dom.window.document;
     
-    // Set up journal page DOM
-    document.body.innerHTML = `
-      <form id="entry-form">
-        <input type="text" name="title" id="entry-title" />
-        <textarea name="content" id="entry-content"></textarea>
-        <button type="submit">Add Entry</button>
-      </form>
-      <div id="entries-container"></div>
-      <div class="character-info-container"></div>
-    `;
+    // Reset and initialize Y.js
+    YjsModule.resetYjs();
+    state = await YjsModule.initYjs();
   });
 
   afterEach(function() {
@@ -26,249 +38,214 @@ describe('Journal Page', function() {
   });
 
   describe('initJournalPage', function() {
-    it('should initialize without errors', async function() {
-      expect(async () => {
-        await Journal.initJournalPage();
-      }).to.not.throw();
+    it('should initialize without errors', function() {
+      expect(() => Journal.initJournalPage(state)).to.not.throw();
     });
 
-    it('should render existing entries when initialized', async function() {
-      // Add some entries first
-      YjsModule.addEntry({
-        id: 'test-1',
+    it('should render existing entries when initialized', function() {
+      const entry = {
+        id: generateId(),
         title: 'Test Entry',
-        content: 'Test content',
+        content: 'This is a test entry',
         timestamp: Date.now()
-      });
-
-      await Journal.initJournalPage();
+      };
       
-      // Since DOM rendering might be complex, let's test that the data exists
-      const entries = YjsModule.getEntries();
-      expect(entries).to.have.length(1);
-      expect(entries[0].title).to.equal('Test Entry');
+      YjsModule.addEntry(state, entry);
+      Journal.initJournalPage(state);
+      
+      const entriesContainer = document.getElementById('entries-container');
+      expect(entriesContainer.children.length).to.be.greaterThan(0);
     });
   });
 
   describe('renderJournalPage', function() {
     it('should render when called', function() {
-      // Add entries
-      YjsModule.addEntry({
-        id: 'entry-1',
-        title: 'First Adventure',
-        content: 'We began our quest today...',
-        timestamp: Date.now() - 1000
-      });
-
-      YjsModule.addEntry({
-        id: 'entry-2',
-        title: 'Second Day',
-        content: 'The journey continues...',
+      const entry = {
+        id: generateId(),
+        title: 'Sample Entry',
+        content: 'Sample content',
         timestamp: Date.now()
-      });
+      };
+      
+      YjsModule.addEntry(state, entry);
+      
+      expect(() => Journal.renderJournalPage(state)).to.not.throw();
+      
+      const entriesContainer = document.getElementById('entries-container');
+      expect(entriesContainer.children.length).to.be.greaterThan(0);
+    });
 
-      // Call render function
-      expect(() => {
-        Journal.renderJournalPage();
-      }).to.not.throw();
-
-      // Verify data exists in Y.js
-      const entries = YjsModule.getEntries();
-      expect(entries).to.have.length(2);
+    it('should handle missing containers gracefully', function() {
+      document.getElementById('entries-container').remove();
+      document.getElementById('character-info').remove();
+      
+      expect(() => Journal.renderJournalPage(state)).to.not.throw();
     });
 
     it('should display character summary', function() {
-      // Set character data
-      YjsModule.setCharacter('name', 'Aragorn');
-      YjsModule.setCharacter('race', 'Human');
-      YjsModule.setCharacter('class', 'Ranger');
-
-      expect(() => {
-        Journal.renderJournalPage();
-      }).to.not.throw();
-
-      // Verify character data exists
-      expect(YjsModule.getCharacter('name')).to.equal('Aragorn');
-      expect(YjsModule.getCharacter('race')).to.equal('Human');
-      expect(YjsModule.getCharacter('class')).to.equal('Ranger');
+      YjsModule.setCharacter(state, 'name', 'Aragorn');
+      YjsModule.setCharacter(state, 'race', 'Human');
+      YjsModule.setCharacter(state, 'class', 'Ranger');
+      
+      Journal.renderJournalPage(state);
+      
+      const characterInfo = document.getElementById('character-info');
+      expect(characterInfo.textContent).to.include('Aragorn');
     });
 
     it('should handle no entries gracefully', function() {
-      expect(() => {
-        Journal.renderJournalPage();
-      }).to.not.throw();
-
-      const entries = YjsModule.getEntries();
+      // Ensure no entries exist
+      const entries = YjsModule.getEntries(state);
       expect(entries).to.have.length(0);
+      
+      expect(() => Journal.renderJournalPage(state)).to.not.throw();
+      
+      const entriesContainer = document.getElementById('entries-container');
+      expect(entriesContainer.textContent).to.include('No entries yet');
     });
   });
 
   describe('Entry data management', function() {
-    beforeEach(async function() {
-      await Journal.initJournalPage();
-    });
-
     it('should add new entries through Y.js', function() {
       const entry = {
-        id: 'new-entry',
+        id: generateId(),
         title: 'New Adventure',
-        content: 'Today we discovered something amazing...',
+        content: 'Today we started our journey...',
         timestamp: Date.now()
       };
-
-      YjsModule.addEntry(entry);
-
-      // Check entry was added
-      const entries = YjsModule.getEntries();
+      
+      YjsModule.addEntry(state, entry);
+      
+      const entries = YjsModule.getEntries(state);
       expect(entries).to.have.length(1);
       expect(entries[0].title).to.equal('New Adventure');
-      expect(entries[0].content).to.equal('Today we discovered something amazing...');
     });
 
     it('should handle entry updates', function() {
       const entry = {
-        id: 'update-test',
+        id: 'test-entry-1',
         title: 'Original Title',
         content: 'Original content',
         timestamp: Date.now()
       };
-
-      YjsModule.addEntry(entry);
-      YjsModule.updateEntry('update-test', {
+      
+      YjsModule.addEntry(state, entry);
+      
+      const updates = {
         title: 'Updated Title',
         content: 'Updated content'
-      });
-
-      const entries = YjsModule.getEntries();
+      };
+      
+      YjsModule.updateEntry(state, 'test-entry-1', updates);
+      
+      const entries = YjsModule.getEntries(state);
       expect(entries[0].title).to.equal('Updated Title');
       expect(entries[0].content).to.equal('Updated content');
     });
 
     it('should handle entry deletion', function() {
       const entry = {
-        id: 'delete-test',
-        title: 'To be deleted',
-        content: 'This will be removed',
+        id: 'test-entry-2',
+        title: 'To Delete',
+        content: 'This will be deleted',
         timestamp: Date.now()
       };
-
-      YjsModule.addEntry(entry);
-      expect(YjsModule.getEntries()).to.have.length(1);
-
-      YjsModule.deleteEntry('delete-test');
-      expect(YjsModule.getEntries()).to.have.length(0);
+      
+      YjsModule.addEntry(state, entry);
+      expect(YjsModule.getEntries(state)).to.have.length(1);
+      
+      YjsModule.deleteEntry(state, 'test-entry-2');
+      expect(YjsModule.getEntries(state)).to.have.length(0);
     });
 
     it('should handle multiple entries', function() {
       const entries = [
-        { id: 'test-1', title: 'Entry 1', content: 'Content 1', timestamp: 1000 },
-        { id: 'test-2', title: 'Entry 2', content: 'Content 2', timestamp: 2000 },
-        { id: 'test-3', title: 'Entry 3', content: 'Content 3', timestamp: 3000 }
+        { id: 'entry-1', title: 'First', content: 'First entry', timestamp: Date.now() },
+        { id: 'entry-2', title: 'Second', content: 'Second entry', timestamp: Date.now() + 1 },
+        { id: 'entry-3', title: 'Third', content: 'Third entry', timestamp: Date.now() + 2 }
       ];
-
-      entries.forEach(entry => YjsModule.addEntry(entry));
-      const retrieved = YjsModule.getEntries();
-
-      expect(retrieved).to.have.length(3);
-      expect(retrieved.map(e => e.id)).to.include.members(['test-1', 'test-2', 'test-3']);
+      
+      entries.forEach(entry => YjsModule.addEntry(state, entry));
+      
+      const storedEntries = YjsModule.getEntries(state);
+      expect(storedEntries).to.have.length(3);
     });
   });
 
   describe('Reactive updates', function() {
-    it('should update when entries change', async function() {
-      await Journal.initJournalPage();
-
-      // Add entry through Y.js
-      YjsModule.addEntry({
-        id: 'reactive-test',
-        title: 'Reactive Entry',
-        content: 'This should appear automatically',
+    it('should update when entries change', function() {
+      Journal.initJournalPage(state);
+      
+      const entry = {
+        id: generateId(),
+        title: 'Reactive Test',
+        content: 'Testing reactive updates',
         timestamp: Date.now()
-      });
-
-      // Manually trigger render (in real app, Y.js observers would do this)
-      expect(() => {
-        Journal.renderJournalPage();
-      }).to.not.throw();
-
-      // Verify data exists
-      const entries = YjsModule.getEntries();
-      expect(entries).to.have.length(1);
-      expect(entries[0].title).to.equal('Reactive Entry');
+      };
+      
+      YjsModule.addEntry(state, entry);
+      
+      // Note: In real app, Y.js observers would trigger updates
+      // For testing, we manually render
+      Journal.renderJournalPage(state);
+      
+      const entriesContainer = document.getElementById('entries-container');
+      expect(entriesContainer.textContent).to.include('Reactive Test');
     });
 
-    it('should update character summary when character changes', async function() {
-      await Journal.initJournalPage();
-
-      // Change character
-      YjsModule.setCharacter('name', 'Updated Character');
-
-      // Manually trigger render
-      expect(() => {
-        Journal.renderJournalPage();
-      }).to.not.throw();
-
-      // Verify character data
-      expect(YjsModule.getCharacter('name')).to.equal('Updated Character');
+    it('should update character summary when character changes', function() {
+      Journal.initJournalPage(state);
+      
+      YjsModule.setCharacter(state, 'name', 'Legolas');
+      YjsModule.setCharacter(state, 'race', 'Elf');
+      
+      // Note: In real app, Y.js observers would trigger updates
+      Journal.renderJournalPage(state);
+      
+      const characterInfo = document.getElementById('character-info');
+      expect(characterInfo.textContent).to.include('Legolas');
+      expect(characterInfo.textContent).to.include('Elf');
     });
   });
 
   describe('Error handling', function() {
-    it('should handle missing form elements', async function() {
-      // Remove form
+    it('should handle missing form elements', function() {
       document.getElementById('entry-form').remove();
-
-      expect(async () => {
-        await Journal.initJournalPage();
-      }).to.not.throw();
+      
+      expect(() => Journal.initJournalPage(state)).to.not.throw();
+      expect(() => Journal.renderJournalPage(state)).to.not.throw();
     });
 
     it('should handle missing container elements', function() {
-      // Remove containers
       document.getElementById('entries-container').remove();
-      document.querySelector('.character-info-container').remove();
-
-      expect(() => {
-        Journal.renderJournalPage();
-      }).to.not.throw();
+      document.getElementById('character-info').remove();
+      
+      expect(() => Journal.initJournalPage(state)).to.not.throw();
+      expect(() => Journal.renderJournalPage(state)).to.not.throw();
     });
   });
 
   describe('Entry sorting and display', function() {
-    beforeEach(async function() {
-      await Journal.initJournalPage();
-    });
-
     it('should maintain entries in Y.js properly', function() {
-      // Add entries with different timestamps
-      const now = Date.now();
-      YjsModule.addEntry({
-        id: 'old',
-        title: 'Old Entry',
-        content: 'This is older',
-        timestamp: now - 2000
-      });
-
-      YjsModule.addEntry({
-        id: 'new',
-        title: 'New Entry',
-        content: 'This is newer',
-        timestamp: now
-      });
-
-      YjsModule.addEntry({
-        id: 'middle',
-        title: 'Middle Entry',
-        content: 'This is in the middle',
-        timestamp: now - 1000
-      });
-
-      const entries = YjsModule.getEntries();
-      expect(entries).to.have.length(3);
+      const entries = [
+        { id: 'old', title: 'Old Entry', content: 'Old', timestamp: 1000 },
+        { id: 'new', title: 'New Entry', content: 'New', timestamp: 2000 },
+        { id: 'newest', title: 'Newest Entry', content: 'Newest', timestamp: 3000 }
+      ];
       
-      // Test that all entries exist
-      const titles = entries.map(e => e.title);
-      expect(titles).to.include.members(['Old Entry', 'New Entry', 'Middle Entry']);
+      entries.forEach(entry => YjsModule.addEntry(state, entry));
+      
+      const storedEntries = YjsModule.getEntries(state);
+      expect(storedEntries).to.have.length(3);
+      
+      // Find entries by ID to verify they were stored
+      const oldEntry = storedEntries.find(e => e.id === 'old');
+      const newEntry = storedEntries.find(e => e.id === 'new');
+      const newestEntry = storedEntries.find(e => e.id === 'newest');
+      
+      expect(oldEntry).to.exist;
+      expect(newEntry).to.exist;
+      expect(newestEntry).to.exist;
     });
   });
 });

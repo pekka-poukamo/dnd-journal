@@ -1,27 +1,37 @@
+import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
-import './setup.js';
-import * as Settings from '../js/settings.js';
+import { JSDOM } from 'jsdom';
+
 import * as YjsModule from '../js/yjs.js';
+import * as Settings from '../js/settings.js';
 
 describe('Settings Page', function() {
+  let state;
+
   beforeEach(async function() {
-    // Reset Y.js state before each test
-    YjsModule.resetYjs();
-    await YjsModule.initYjs();
+    // Set up DOM
+    const dom = new JSDOM(`
+      <!DOCTYPE html>
+      <html>
+        <body>
+          <form id="settings-form">
+            <input id="openai-api-key" name="openai-api-key" />
+            <input id="ai-enabled" name="ai-enabled" type="checkbox" />
+            <input id="sync-server-url" name="sync-server-url" />
+            <button type="submit">Save Settings</button>
+          </form>
+          <div id="connection-status"></div>
+          <button id="test-api-key">Test API Key</button>
+          <button id="test-connection">Test Connection</button>
+        </body>
+      </html>
+    `);
+    global.window = dom.window;
+    global.document = dom.window.document;
     
-    // Set up settings form DOM
-    document.body.innerHTML = `
-      <form id="settings-form">
-        <input type="text" name="openai-api-key" id="openai-api-key" />
-        <input type="checkbox" name="ai-enabled" id="ai-enabled" />
-        <input type="text" name="sync-server-url" id="sync-server-url" />
-        <button type="submit">Save Settings</button>
-      </form>
-      <button id="test-connection">Test Connection</button>
-      <button id="test-api-key">Test API Key</button>
-      <div id="connection-status"></div>
-      <div id="api-status"></div>
-    `;
+    // Reset and initialize Y.js
+    YjsModule.resetYjs();
+    state = await YjsModule.initYjs();
   });
 
   afterEach(function() {
@@ -29,184 +39,159 @@ describe('Settings Page', function() {
   });
 
   describe('initSettingsPage', function() {
-    it('should initialize without errors', async function() {
-      expect(async () => {
-        await Settings.initSettingsPage();
-      }).to.not.throw();
+    it('should initialize without errors', function() {
+      expect(() => Settings.initSettingsPage(state)).to.not.throw();
     });
 
-    it('should load settings data', async function() {
-      // Set some settings
-      YjsModule.setSetting('openai-api-key', 'sk-test123');
-      YjsModule.setSetting('ai-enabled', true);
-      YjsModule.setSetting('sync-server-url', 'wss://test.com');
+    it('should load settings data', function() {
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      YjsModule.setSetting(state, 'sync-server-url', 'ws://localhost:8080');
       
-      await Settings.initSettingsPage();
+      Settings.initSettingsPage(state);
+      Settings.renderSettingsPage(state);
       
-      // Check that settings exist in Y.js
-      expect(YjsModule.getSetting('openai-api-key')).to.equal('sk-test123');
-      expect(YjsModule.getSetting('ai-enabled')).to.be.true;
-      expect(YjsModule.getSetting('sync-server-url')).to.equal('wss://test.com');
+      expect(document.getElementById('openai-api-key').value).to.equal('sk-test123');
+      expect(document.getElementById('ai-enabled').checked).to.be.true;
+      expect(document.getElementById('sync-server-url').value).to.equal('ws://localhost:8080');
     });
   });
 
   describe('renderSettingsPage', function() {
     it('should render settings form', function() {
-      // Set settings in Y.js
-      YjsModule.setSetting('openai-api-key', 'sk-456789');
-      YjsModule.setSetting('ai-enabled', false);
-      YjsModule.setSetting('sync-server-url', 'wss://example.com');
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test456');
+      YjsModule.setSetting(state, 'ai-enabled', false);
       
-      expect(() => {
-        Settings.renderSettingsPage();
-      }).to.not.throw();
+      Settings.renderSettingsPage(state);
       
-      // Verify data exists in Y.js
-      expect(YjsModule.getSetting('openai-api-key')).to.equal('sk-456789');
-      expect(YjsModule.getSetting('ai-enabled')).to.be.false;
-      expect(YjsModule.getSetting('sync-server-url')).to.equal('wss://example.com');
+      expect(document.getElementById('openai-api-key').value).to.equal('sk-test456');
+      expect(document.getElementById('ai-enabled').checked).to.be.false;
     });
 
     it('should handle empty settings data', function() {
-      expect(() => {
-        Settings.renderSettingsPage();
-      }).to.not.throw();
+      const apiKey = YjsModule.getSetting(state, 'openai-api-key', '');
+      expect(apiKey).to.equal('');
       
-      // Default values should be returned
-      expect(YjsModule.getSetting('openai-api-key', '')).to.equal('');
-      expect(YjsModule.getSetting('ai-enabled', false)).to.be.false;
-      expect(YjsModule.getSetting('sync-server-url', '')).to.equal('');
+      expect(() => Settings.renderSettingsPage(state)).to.not.throw();
     });
 
     it('should handle missing form elements gracefully', function() {
-      // Remove some form elements
-      document.getElementById('openai-api-key').remove();
+      document.getElementById('settings-form').remove();
       
-      expect(() => {
-        Settings.renderSettingsPage();
-      }).to.not.throw();
+      expect(() => Settings.renderSettingsPage(state)).to.not.throw();
     });
   });
 
   describe('Settings data management', function() {
-    beforeEach(async function() {
-      await Settings.initSettingsPage();
-    });
-
     it('should save settings data to Y.js', function() {
-      // Test Y.js operations directly
-      YjsModule.setSetting('openai-api-key', 'sk-new-key');
-      YjsModule.setSetting('ai-enabled', true);
-      YjsModule.setSetting('sync-server-url', 'wss://new-server.com');
+      const form = document.getElementById('settings-form');
+      document.getElementById('openai-api-key').value = 'sk-newsecret';
+      document.getElementById('ai-enabled').checked = true;
+      document.getElementById('sync-server-url').value = 'ws://newserver:9000';
       
-      // Check Y.js data
-      expect(YjsModule.getSetting('openai-api-key')).to.equal('sk-new-key');
-      expect(YjsModule.getSetting('ai-enabled')).to.be.true;
-      expect(YjsModule.getSetting('sync-server-url')).to.equal('wss://new-server.com');
+      Settings.saveSettings(state);
+      
+      expect(YjsModule.getSetting(state, 'openai-api-key')).to.equal('sk-newsecret');
+      expect(YjsModule.getSetting(state, 'ai-enabled')).to.be.true;
+      expect(YjsModule.getSetting(state, 'sync-server-url')).to.equal('ws://newserver:9000');
     });
 
     it('should handle trimming settings', function() {
-      YjsModule.setSetting('openai-api-key', '  sk-trimmed  ');
-      YjsModule.setSetting('sync-server-url', '  wss://trimmed.com  ');
+      document.getElementById('openai-api-key').value = '  sk-trimtest  ';
+      document.getElementById('sync-server-url').value = '  ws://trimserver  ';
       
-      // Y.js stores exactly what we give it, trimming would be done by the form handler
-      expect(YjsModule.getSetting('openai-api-key')).to.equal('  sk-trimmed  ');
-      expect(YjsModule.getSetting('sync-server-url')).to.equal('  wss://trimmed.com  ');
+      Settings.saveSettings(state);
+      
+      // Settings should be trimmed when saved
+      expect(YjsModule.getSetting(state, 'openai-api-key')).to.equal('sk-trimtest');
+      expect(YjsModule.getSetting(state, 'sync-server-url')).to.equal('ws://trimserver');
     });
 
     it('should handle boolean settings', function() {
-      // Test boolean values
-      YjsModule.setSetting('ai-enabled', false);
-      expect(YjsModule.getSetting('ai-enabled')).to.be.false;
+      document.getElementById('ai-enabled').checked = true;
       
-      YjsModule.setSetting('ai-enabled', true);
-      expect(YjsModule.getSetting('ai-enabled')).to.be.true;
+      Settings.saveSettings(state);
+      
+      expect(YjsModule.getSetting(state, 'ai-enabled')).to.be.true;
+      
+      document.getElementById('ai-enabled').checked = false;
+      Settings.saveSettings(state);
+      
+      expect(YjsModule.getSetting(state, 'ai-enabled')).to.be.false;
     });
   });
 
   describe('API and connection testing functionality', function() {
-    beforeEach(async function() {
-      await Settings.initSettingsPage();
-    });
-
     it('should handle API key testing when key is available', function() {
-      YjsModule.setSetting('openai-api-key', 'sk-valid-key');
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+      YjsModule.setSetting(state, 'ai-enabled', true);
       
-      // Test that we can access the API key
-      const apiKey = YjsModule.getSetting('openai-api-key');
-      expect(apiKey).to.equal('sk-valid-key');
+      expect(() => Settings.testAPIKey(state)).to.not.throw();
     });
 
     it('should handle missing API key for testing', function() {
-      // Don't set API key
-      const apiKey = YjsModule.getSetting('openai-api-key', '');
+      const apiKey = YjsModule.getSetting(state, 'openai-api-key', '');
       expect(apiKey).to.equal('');
+      
+      expect(() => Settings.testAPIKey(state)).to.not.throw();
     });
 
     it('should handle connection testing with valid URL', function() {
-      YjsModule.setSetting('sync-server-url', 'wss://valid-server.com');
+      YjsModule.setSetting(state, 'sync-server-url', 'ws://localhost:8080');
       
-      const url = YjsModule.getSetting('sync-server-url');
-      expect(url).to.equal('wss://valid-server.com');
+      expect(() => Settings.testConnection(state)).to.not.throw();
     });
 
     it('should handle invalid connection URL', function() {
-      YjsModule.setSetting('sync-server-url', 'invalid-url');
+      YjsModule.setSetting(state, 'sync-server-url', 'invalid-url');
       
-      const url = YjsModule.getSetting('sync-server-url');
-      expect(url).to.equal('invalid-url');
+      expect(() => Settings.testConnection(state)).to.not.throw();
     });
 
     it('should handle missing sync URL', function() {
-      const url = YjsModule.getSetting('sync-server-url', '');
-      expect(url).to.equal('');
+      const syncUrl = YjsModule.getSetting(state, 'sync-server-url', '');
+      expect(syncUrl).to.equal('');
+      
+      expect(() => Settings.testConnection(state)).to.not.throw();
     });
   });
 
   describe('Reactive updates', function() {
-    it('should update when Y.js settings change', async function() {
-      await Settings.initSettingsPage();
+    it('should update when Y.js settings change', function() {
+      Settings.initSettingsPage(state);
       
-      // Simulate Y.js data change
-      YjsModule.setSetting('openai-api-key', 'sk-reactive-test');
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-reactive');
+      YjsModule.setSetting(state, 'ai-enabled', true);
       
-      // Manually trigger render
-      expect(() => {
-        Settings.renderSettingsPage();
-      }).to.not.throw();
+      // Note: In real app, Y.js observers would trigger updates
+      Settings.renderSettingsPage(state);
       
-      // Verify data
-      expect(YjsModule.getSetting('openai-api-key')).to.equal('sk-reactive-test');
+      expect(document.getElementById('openai-api-key').value).to.equal('sk-reactive');
+      expect(document.getElementById('ai-enabled').checked).to.be.true;
     });
   });
 
   describe('Error handling', function() {
-    it('should handle missing form gracefully', async function() {
-      // Remove form from DOM
-      document.body.innerHTML = '<div>No form here</div>';
+    it('should handle missing form gracefully', function() {
+      document.body.innerHTML = '';
       
-      expect(async () => {
-        await Settings.initSettingsPage();
-      }).to.not.throw();
+      expect(() => Settings.initSettingsPage(state)).to.not.throw();
+      expect(() => Settings.renderSettingsPage(state)).to.not.throw();
+      expect(() => Settings.saveSettings(state)).to.not.throw();
     });
 
     it('should handle missing status elements gracefully', function() {
-      // Remove status divs
       document.getElementById('connection-status').remove();
-      document.getElementById('api-status').remove();
       
-      expect(() => {
-        Settings.renderSettingsPage();
-      }).to.not.throw();
+      expect(() => Settings.initSettingsPage(state)).to.not.throw();
+      expect(() => Settings.renderSettingsPage(state)).to.not.throw();
     });
 
     it('should handle corrupt settings data', function() {
-      // Set invalid but valid-type settings
-      YjsModule.setSetting('ai-enabled', 'invalid-boolean');
+      YjsModule.setSetting(state, 'openai-api-key', null);
+      YjsModule.setSetting(state, 'ai-enabled', 'invalid');
       
-      expect(() => {
-        Settings.renderSettingsPage();
-      }).to.not.throw();
+      expect(() => Settings.renderSettingsPage(state)).to.not.throw();
     });
   });
 });

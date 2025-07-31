@@ -1,8 +1,10 @@
 // Character Views - Pure Rendering Functions for Character Page
 
 // Render character form with current data
-export const renderCharacterForm = (character) => {
-  const form = document.getElementById('character-form');
+export const renderCharacterForm = (form, character) => {
+  if (!form) {
+    form = document.getElementById('character-form');
+  }
   if (!form) return;
   
   const fields = ['name', 'race', 'class', 'backstory', 'notes'];

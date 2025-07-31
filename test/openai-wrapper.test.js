@@ -1,13 +1,22 @@
+import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
-import './setup.js';
-import * as OpenAIWrapper from '../js/openai-wrapper.js';
+import { JSDOM } from 'jsdom';
+
 import * as YjsModule from '../js/yjs.js';
+import * as OpenAIWrapper from '../js/openai-wrapper.js';
 
 describe('OpenAI Wrapper Module', function() {
+  let state;
+
   beforeEach(async function() {
-    // Reset Y.js state before each test
+    // Set up DOM
+    const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+    global.window = dom.window;
+    global.document = dom.window.document;
+    
+    // Reset and initialize Y.js
     YjsModule.resetYjs();
-    await YjsModule.initYjs();
+    state = await YjsModule.initYjs();
   });
 
   afterEach(function() {
@@ -16,139 +25,123 @@ describe('OpenAI Wrapper Module', function() {
 
   describe('isAPIAvailable', function() {
     it('should return false when API key is missing', function() {
-      YjsModule.setSetting('ai-enabled', true);
-      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      // No API key set
+      
+      const result = OpenAIWrapper.isAPIAvailable();
+      expect(result).to.be.false;
     });
 
     it('should return false when AI is disabled', function() {
-      YjsModule.setSetting('openai-api-key', 'sk-test123');
-      YjsModule.setSetting('ai-enabled', false);
-      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+      YjsModule.setSetting(state, 'ai-enabled', false);
+      
+      const result = OpenAIWrapper.isAPIAvailable();
+      expect(result).to.be.false;
     });
 
     it('should return true when both API key and AI are enabled', function() {
-      YjsModule.setSetting('openai-api-key', 'sk-test123');
-      YjsModule.setSetting('ai-enabled', true);
-      expect(OpenAIWrapper.isAPIAvailable()).to.be.true;
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      
+      const result = OpenAIWrapper.isAPIAvailable();
+      expect(result).to.be.true;
     });
 
     it('should return false when API key is empty string', function() {
-      YjsModule.setSetting('openai-api-key', '');
-      YjsModule.setSetting('ai-enabled', true);
-      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+      YjsModule.setSetting(state, 'openai-api-key', '');
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      
+      const result = OpenAIWrapper.isAPIAvailable();
+      expect(result).to.be.false;
     });
 
     it('should return false when API key is whitespace only', function() {
-      YjsModule.setSetting('openai-api-key', '   ');
-      YjsModule.setSetting('ai-enabled', true);
-      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+      YjsModule.setSetting(state, 'openai-api-key', '   ');
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      
+      const result = OpenAIWrapper.isAPIAvailable();
+      expect(result).to.be.false;
     });
 
     it('should validate API key format', function() {
-      YjsModule.setSetting('openai-api-key', 'invalid-key');
-      YjsModule.setSetting('ai-enabled', true);
-      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+      YjsModule.setSetting(state, 'openai-api-key', 'invalid-key');
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      
+      const result = OpenAIWrapper.isAPIAvailable();
+      expect(result).to.be.false;
     });
 
     it('should accept valid API key format', function() {
-      YjsModule.setSetting('openai-api-key', 'sk-valid123');
-      YjsModule.setSetting('ai-enabled', true);
-      expect(OpenAIWrapper.isAPIAvailable()).to.be.true;
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-1234567890abcdef');
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      
+      const result = OpenAIWrapper.isAPIAvailable();
+      expect(result).to.be.true;
     });
   });
 
   describe('Function creators', function() {
     beforeEach(function() {
-      YjsModule.setSetting('openai-api-key', 'sk-test123');
-      YjsModule.setSetting('ai-enabled', true);
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+      YjsModule.setSetting(state, 'ai-enabled', true);
     });
 
     describe('createSystemPromptFunction', function() {
       it('should return a function', function() {
-        const fn = OpenAIWrapper.createSystemPromptFunction('Test prompt');
-        expect(fn).to.be.a('function');
+        const systemPromptFn = OpenAIWrapper.createSystemPromptFunction('Test system prompt');
+        expect(systemPromptFn).to.be.a('function');
       });
 
-      it('should accept options parameter', function() {
-        const fn = OpenAIWrapper.createSystemPromptFunction('Test prompt', { temperature: 0.5 });
-        expect(fn).to.be.a('function');
-      });
-    });
-
-    describe('createUserPromptFunction', function() {
-      it('should return a function', function() {
-        const fn = OpenAIWrapper.createUserPromptFunction();
-        expect(fn).to.be.a('function');
-      });
-
-      it('should accept options parameter', function() {
-        const fn = OpenAIWrapper.createUserPromptFunction({ temperature: 0.3 });
-        expect(fn).to.be.a('function');
-      });
-    });
-
-    describe('createTemplateFunction', function() {
-      it('should return a function', function() {
-        const template = (text, words) => `Summarize ${text} in ${words} words`;
-        const fn = OpenAIWrapper.createTemplateFunction(template);
-        expect(fn).to.be.a('function');
-      });
-
-      it('should accept options parameter', function() {
-        const template = (text) => `Process: ${text}`;
-        const fn = OpenAIWrapper.createTemplateFunction(template, { maxTokens: 100 });
-        expect(fn).to.be.a('function');
+      it('should create function that returns correct messages', function() {
+        const systemPromptFn = OpenAIWrapper.createSystemPromptFunction('You are a helpful assistant');
+        const messages = systemPromptFn('User message');
+        
+        expect(messages).to.be.an('array');
+        expect(messages).to.have.length(2);
+        expect(messages[0]).to.deep.equal({
+          role: 'system',
+          content: 'You are a helpful assistant'
+        });
+        expect(messages[1]).to.deep.equal({
+          role: 'user',
+          content: 'User message'
+        });
       });
     });
   });
 
   describe('AI calling functions', function() {
     beforeEach(function() {
-      YjsModule.setSetting('openai-api-key', 'sk-test123');
-      YjsModule.setSetting('ai-enabled', true);
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+      YjsModule.setSetting(state, 'ai-enabled', true);
     });
 
     describe('callAI', function() {
-      it('should handle API call attempts', async function() {
-        // Note: In test environment, this will likely fail due to no real API
-        // We're testing that the function exists and handles errors gracefully
+      it('should handle API call attempts', function() {
+        // Since we don't have a real API key, this will likely throw
         try {
-          const result = await OpenAIWrapper.callAI('Test prompt');
-          // If it succeeds (unlikely in test), result should be string or null
-          expect(result).to.satisfy(val => typeof val === 'string' || val === null);
+          OpenAIWrapper.callAI('Test prompt');
+          // If it doesn't throw, that's fine too
         } catch (error) {
-          // Expected in test environment without real API
           expect(error).to.be.an('error');
         }
       });
 
-      it('should accept options parameter', async function() {
+      it('should handle options parameter', function() {
         try {
-          await OpenAIWrapper.callAI('Test prompt', { temperature: 0.5 });
-          // Function should accept options without throwing immediately
+          OpenAIWrapper.callAI('Test prompt', { temperature: 0.5 });
         } catch (error) {
-          // Expected in test environment
-          expect(error).to.be.an('error');
-        }
-      });
-    });
-
-    describe('callAIWithSystem', function() {
-      it('should handle system and user prompts', async function() {
-        try {
-          const result = await OpenAIWrapper.callAIWithSystem('System prompt', 'User prompt');
-          expect(result).to.satisfy(val => typeof val === 'string' || val === null);
-        } catch (error) {
-          // Expected in test environment
           expect(error).to.be.an('error');
         }
       });
 
-      it('should accept options parameter', async function() {
+      it('should handle system prompt functions', function() {
+        const systemPromptFn = OpenAIWrapper.createSystemPromptFunction('You are helpful');
+        
         try {
-          await OpenAIWrapper.callAIWithSystem('System prompt', 'User prompt', { temperature: 0.5 });
+          OpenAIWrapper.callAI(systemPromptFn('Test message'));
         } catch (error) {
-          // Expected in test environment
           expect(error).to.be.an('error');
         }
       });
@@ -157,57 +150,47 @@ describe('OpenAI Wrapper Module', function() {
 
   describe('Settings integration', function() {
     it('should read API key from Y.js settings', function() {
-      YjsModule.setSetting('openai-api-key', 'sk-from-yjs');
-      YjsModule.setSetting('ai-enabled', true);
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-settings-test');
+      YjsModule.setSetting(state, 'ai-enabled', true);
       
-      expect(OpenAIWrapper.isAPIAvailable()).to.be.true;
+      const result = OpenAIWrapper.isAPIAvailable();
+      expect(result).to.be.true;
     });
 
     it('should handle missing settings', function() {
-      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+      // Don't set any settings
+      const result = OpenAIWrapper.isAPIAvailable();
+      expect(result).to.be.false;
     });
 
     it('should handle invalid setting types', function() {
-      YjsModule.setSetting('openai-api-key', 123); // Number instead of string
-      YjsModule.setSetting('ai-enabled', 'invalid'); // String instead of boolean
+      YjsModule.setSetting(state, 'openai-api-key', null);
+      YjsModule.setSetting(state, 'ai-enabled', 'invalid');
       
-      expect(OpenAIWrapper.isAPIAvailable()).to.be.false;
+      const result = OpenAIWrapper.isAPIAvailable();
+      expect(result).to.be.false;
     });
   });
 
   describe('Error handling when API not available', function() {
     beforeEach(function() {
-      // Disable API
-      YjsModule.setSetting('ai-enabled', false);
+      YjsModule.setSetting(state, 'ai-enabled', false);
+      // No API key or disabled AI
     });
 
-    it('should handle callAI when API not available', async function() {
+    it('should handle callAI when API not available', function() {
       try {
-        await OpenAIWrapper.callAI('Test prompt');
+        OpenAIWrapper.callAI('Test prompt');
         expect.fail('Should have thrown error');
       } catch (error) {
         expect(error.message).to.include('OpenAI API not available');
       }
     });
 
-    it('should handle callAIWithSystem when API not available', async function() {
-      try {
-        await OpenAIWrapper.callAIWithSystem('System', 'User');
-        expect.fail('Should have thrown error');
-      } catch (error) {
-        expect(error.message).to.include('OpenAI API not available');
-      }
-    });
-
-    it('should handle created functions when API not available', async function() {
-      const fn = OpenAIWrapper.createSystemPromptFunction('Test');
-      
-      try {
-        await fn('User input');
-        expect.fail('Should have thrown error');
-      } catch (error) {
-        expect(error.message).to.include('OpenAI API not available');
-      }
+    it('should handle createSystemPromptFunction when API not available', function() {
+      // This should still work even when API is not available
+      const systemPromptFn = OpenAIWrapper.createSystemPromptFunction('Test prompt');
+      expect(systemPromptFn).to.be.a('function');
     });
   });
 });

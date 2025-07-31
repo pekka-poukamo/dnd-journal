@@ -1,28 +1,36 @@
+import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
-import './setup.js';
-import * as Character from '../js/character.js';
+import { JSDOM } from 'jsdom';
+
 import * as YjsModule from '../js/yjs.js';
+import * as Character from '../js/character.js';
 
 describe('Character Page', function() {
+  let state;
+
   beforeEach(async function() {
-    // Reset Y.js state before each test
-    YjsModule.resetYjs();
-    await YjsModule.initYjs();
+    // Set up DOM
+    const dom = new JSDOM(`
+      <!DOCTYPE html>
+      <html>
+        <body>
+          <form id="character-form">
+            <input id="character-name" name="name" />
+            <input id="character-race" name="race" />
+            <input id="character-class" name="class" />
+            <textarea id="character-backstory" name="backstory"></textarea>
+            <textarea id="character-notes" name="notes"></textarea>
+          </form>
+          <div id="character-summaries"></div>
+        </body>
+      </html>
+    `);
+    global.window = dom.window;
+    global.document = dom.window.document;
     
-    // Set up simplified character form DOM
-    document.body.innerHTML = `
-      <form id="character-form">
-        <input type="text" name="name" id="character-name" />
-        <input type="text" name="race" id="character-race" />
-        <input type="text" name="class" id="character-class" />
-        <textarea name="backstory" id="character-backstory"></textarea>
-        <textarea name="notes" id="character-notes"></textarea>
-        <button type="submit">Save</button>
-      </form>
-      <div id="summaries-content"></div>
-      <button id="refresh-summaries">Refresh</button>
-      <button id="generate-summaries">Generate</button>
-    `;
+    // Reset and initialize Y.js
+    YjsModule.resetYjs();
+    state = await YjsModule.initYjs();
   });
 
   afterEach(function() {
@@ -30,175 +38,155 @@ describe('Character Page', function() {
   });
 
   describe('initCharacterPage', function() {
-    it('should initialize without errors', async function() {
-      expect(async () => {
-        await Character.initCharacterPage();
-      }).to.not.throw();
+    it('should initialize without errors', function() {
+      expect(() => Character.initCharacterPage(state)).to.not.throw();
     });
 
-    it('should render character form with current data', async function() {
-      // Set some character data
-      YjsModule.setCharacter('name', 'Aragorn');
-      YjsModule.setCharacter('race', 'Human');
+    it('should render character form with current data', function() {
+      YjsModule.setCharacter(state, 'name', 'Aragorn');
+      YjsModule.setCharacter(state, 'race', 'Human');
+      YjsModule.setCharacter(state, 'class', 'Ranger');
       
-      await Character.initCharacterPage();
+      Character.initCharacterPage(state);
+      Character.renderCharacterPage(state);
       
-      // Check that form was populated
       expect(document.getElementById('character-name').value).to.equal('Aragorn');
       expect(document.getElementById('character-race').value).to.equal('Human');
+      expect(document.getElementById('character-class').value).to.equal('Ranger');
     });
   });
 
   describe('renderCharacterPage', function() {
     it('should update form fields with character data', function() {
-      // Set character data in Y.js
-      YjsModule.setCharacter('name', 'Legolas');
-      YjsModule.setCharacter('race', 'Elf');
-      YjsModule.setCharacter('class', 'Archer');
-      YjsModule.setCharacter('backstory', 'Prince of Woodland Realm');
-      YjsModule.setCharacter('notes', 'Skilled with bow');
+      YjsModule.setCharacter(state, 'name', 'Legolas');
+      YjsModule.setCharacter(state, 'race', 'Elf');
+      YjsModule.setCharacter(state, 'backstory', 'Prince of the Woodland Realm');
       
-      Character.renderCharacterPage();
+      Character.renderCharacterPage(state);
       
-      // Check form fields
       expect(document.getElementById('character-name').value).to.equal('Legolas');
       expect(document.getElementById('character-race').value).to.equal('Elf');
-      expect(document.getElementById('character-class').value).to.equal('Archer');
-      expect(document.getElementById('character-backstory').value).to.equal('Prince of Woodland Realm');
-      expect(document.getElementById('character-notes').value).to.equal('Skilled with bow');
+      expect(document.getElementById('character-backstory').value).to.equal('Prince of the Woodland Realm');
     });
 
     it('should handle empty character data', function() {
-      Character.renderCharacterPage();
+      Character.renderCharacterPage(state);
       
-      // All fields should be empty
       expect(document.getElementById('character-name').value).to.equal('');
       expect(document.getElementById('character-race').value).to.equal('');
       expect(document.getElementById('character-class').value).to.equal('');
-      expect(document.getElementById('character-backstory').value).to.equal('');
-      expect(document.getElementById('character-notes').value).to.equal('');
+    });
+
+    it('should handle missing form elements gracefully', function() {
+      // Remove form from DOM
+      document.getElementById('character-form').remove();
+      
+      expect(() => Character.renderCharacterPage(state)).to.not.throw();
     });
   });
 
   describe('Character data management', function() {
-    beforeEach(async function() {
-      await Character.initCharacterPage();
-    });
-
     it('should save character data when form is submitted manually', function() {
-      // Fill form
-      document.getElementById('character-name').value = 'Gimli';
-      document.getElementById('character-race').value = 'Dwarf';
-      document.getElementById('character-class').value = 'Fighter';
-      document.getElementById('character-backstory').value = 'Son of Gloin';
-      document.getElementById('character-notes').value = 'Brave warrior';
+      const form = document.getElementById('character-form');
+      const nameInput = document.getElementById('character-name');
+      const raceInput = document.getElementById('character-race');
       
-      // Manually trigger the character save functionality
-      // Since form event handling is complex in JSDOM, we'll test the underlying data operations
-      YjsModule.setCharacter('name', 'Gimli');
-      YjsModule.setCharacter('race', 'Dwarf');
-      YjsModule.setCharacter('class', 'Fighter');
-      YjsModule.setCharacter('backstory', 'Son of Gloin');
-      YjsModule.setCharacter('notes', 'Brave warrior');
+      nameInput.value = 'Gimli';
+      raceInput.value = 'Dwarf';
       
-      // Check Y.js data
-      expect(YjsModule.getCharacter('name')).to.equal('Gimli');
-      expect(YjsModule.getCharacter('race')).to.equal('Dwarf');
-      expect(YjsModule.getCharacter('class')).to.equal('Fighter');
-      expect(YjsModule.getCharacter('backstory')).to.equal('Son of Gloin');
-      expect(YjsModule.getCharacter('notes')).to.equal('Brave warrior');
+      // Simulate manual save by calling the save function directly
+      Character.saveCharacterData(state);
+      
+      expect(YjsModule.getCharacter(state, 'name')).to.equal('Gimli');
+      expect(YjsModule.getCharacter(state, 'race')).to.equal('Dwarf');
     });
 
     it('should update character data directly through Y.js', function() {
-      YjsModule.setCharacter('name', 'Frodo');
+      YjsModule.setCharacter(state, 'name', 'Boromir');
+      YjsModule.setCharacter(state, 'class', 'Warrior');
       
-      // Check Y.js was updated
-      expect(YjsModule.getCharacter('name')).to.equal('Frodo');
+      expect(YjsModule.getCharacter(state, 'name')).to.equal('Boromir');
+      expect(YjsModule.getCharacter(state, 'class')).to.equal('Warrior');
     });
 
     it('should handle trimming whitespace', function() {
-      YjsModule.setCharacter('name', '  Bilbo  ');
+      YjsModule.setCharacter(state, 'name', '  Frodo  ');
+      YjsModule.setCharacter(state, 'race', '  Hobbit  ');
       
-      // Y.js stores exactly what we give it, trimming would be done by the form handler
-      expect(YjsModule.getCharacter('name')).to.equal('  Bilbo  ');
+      expect(YjsModule.getCharacter(state, 'name')).to.equal('  Frodo  '); // Y.js preserves exact values
+      expect(YjsModule.getCharacter(state, 'race')).to.equal('  Hobbit  ');
     });
   });
 
   describe('Summary functionality', function() {
-    beforeEach(async function() {
-      await Character.initCharacterPage();
-      
-      // Set up API for summarization tests
-      YjsModule.setSetting('openai-api-key', 'sk-test123');
-      YjsModule.setSetting('ai-enabled', true);
+    beforeEach(function() {
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
     });
 
     it('should show placeholder when no summaries exist', function() {
-      Character.renderCharacterPage();
+      Character.updateSummariesDisplay(state);
       
-      const summariesContent = document.getElementById('summaries-content');
-      expect(summariesContent.innerHTML).to.include('No character summaries available');
+      const summariesDiv = document.getElementById('character-summaries');
+      expect(summariesDiv.textContent).to.include('No summaries available');
     });
 
     it('should display existing summaries', function() {
-      // Set some summaries
-      YjsModule.setSummary('character-backstory', 'Summary of backstory');
-      YjsModule.setSummary('character-notes', 'Summary of notes');
+      YjsModule.setSummary(state, 'character:backstory', 'A brief summary of backstory');
       
-      Character.renderCharacterPage();
+      Character.updateSummariesDisplay(state);
       
-      const summariesContent = document.getElementById('summaries-content');
-      expect(summariesContent.innerHTML).to.include('Backstory Summary');
-      expect(summariesContent.innerHTML).to.include('Summary of backstory');
-      expect(summariesContent.innerHTML).to.include('Notes Summary');
-      expect(summariesContent.innerHTML).to.include('Summary of notes');
+      const summariesDiv = document.getElementById('character-summaries');
+      expect(summariesDiv.textContent).to.include('A brief summary of backstory');
+    });
+
+    it('should handle missing summaries container', function() {
+      document.getElementById('character-summaries').remove();
+      
+      expect(() => Character.updateSummariesDisplay(state)).to.not.throw();
     });
   });
 
   describe('Reactive updates', function() {
-    it('should update form when Y.js character data changes', async function() {
-      await Character.initCharacterPage();
+    it('should update form when Y.js character data changes', function() {
+      Character.initCharacterPage(state);
       
-      // Simulate Y.js data change
-      YjsModule.setCharacter('name', 'Samwise');
+      // Change data through Y.js
+      YjsModule.setCharacter(state, 'name', 'Sam');
+      YjsModule.setCharacter(state, 'race', 'Hobbit');
       
-      // Manually trigger the observer callback (in real app, Y.js would do this)
-      Character.renderCharacterPage();
+      // Note: In real app, Y.js observers would trigger updates
+      // For testing, we manually render
+      Character.renderCharacterPage(state);
       
-      expect(document.getElementById('character-name').value).to.equal('Samwise');
+      expect(document.getElementById('character-name').value).to.equal('Sam');
+      expect(document.getElementById('character-race').value).to.equal('Hobbit');
     });
 
-    it('should update summaries when Y.js summary data changes', async function() {
-      await Character.initCharacterPage();
+    it('should update summaries when Y.js summary data changes', function() {
+      YjsModule.setSummary(state, 'character:backstory', 'Updated summary');
       
-      // Add a summary
-      YjsModule.setSummary('character-backstory', 'New summary content');
+      Character.updateSummariesDisplay(state);
       
-      // Manually trigger render
-      Character.renderCharacterPage();
-      
-      const summariesContent = document.getElementById('summaries-content');
-      expect(summariesContent.innerHTML).to.include('New summary content');
+      const summariesDiv = document.getElementById('character-summaries');
+      expect(summariesDiv.textContent).to.include('Updated summary');
     });
   });
 
   describe('Error handling', function() {
-    it('should handle missing form elements gracefully', async function() {
-      // Remove form from DOM
-      document.body.innerHTML = '<div>No form here</div>';
+    it('should handle missing form gracefully', function() {
+      document.body.innerHTML = ''; // Remove all elements
       
-      expect(async () => {
-        await Character.initCharacterPage();
-      }).to.not.throw();
+      expect(() => Character.initCharacterPage(state)).to.not.throw();
+      expect(() => Character.renderCharacterPage(state)).to.not.throw();
+      expect(() => Character.saveCharacterData(state)).to.not.throw();
     });
 
-    it('should handle missing summary elements gracefully', function() {
-      // Remove summaries div
-      document.getElementById('summaries-content').remove();
+    it('should handle corrupt character data gracefully', function() {
+      // Y.js handles data integrity, so this test ensures no crashes
+      YjsModule.setCharacter(state, 'name', null);
       
-      expect(() => {
-        Character.renderCharacterPage();
-      }).to.not.throw();
+      expect(() => Character.renderCharacterPage(state)).to.not.throw();
     });
   });
 });

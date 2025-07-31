@@ -23,7 +23,7 @@ import { summarize } from './summarization.js';
 let characterFormElement = null;
 
 // Initialize Character page
-export const initCharacterPage = async () => {
+export const initCharacterPage = async (stateParam = null) => {
   try {
     await initYjs();
     const state = getYjsState();
@@ -57,9 +57,9 @@ export const initCharacterPage = async () => {
 };
 
 // Render character page
-export const renderCharacterPage = () => {
+export const renderCharacterPage = (stateParam = null) => {
   try {
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     const character = getCharacterData(state);
     
     if (characterFormElement) {
@@ -127,9 +127,9 @@ const saveCharacterField = (field, value) => {
 };
 
 // Save all character data from form
-const saveCharacterData = () => {
+export const saveCharacterData = (stateParam = null) => {
   try {
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     const formData = getFormData(characterFormElement);
     
     Object.entries(formData).forEach(([field, value]) => {
@@ -174,9 +174,9 @@ const generateSummary = async (field) => {
 };
 
 // Update summaries display
-const updateSummariesDisplay = () => {
+export const updateSummariesDisplay = (stateParam = null) => {
   try {
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     const backstorySummary = getSummary(state, 'character-backstory');
     const notesSummary = getSummary(state, 'character-notes');
     
@@ -189,6 +189,14 @@ const updateSummariesDisplay = () => {
   }
 };
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', initCharacterPage);
+// Initialize when DOM is ready (only in browser environment)
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    import('./yjs.js').then(YjsModule => {
+      YjsModule.initYjs().then(state => {
+        initCharacterPage(state);
+      });
+    });
+  });
+}
 

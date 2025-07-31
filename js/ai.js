@@ -290,22 +290,9 @@ Content: ${entry.content}`;
 
 // Summaries are now accessed through the summarization module API
 
-// Get or generate summary for an entry
-export const getEntrySummary = async (entry) => {
-  // Check for existing summary - direct Y.js
-  const existingSummary = getSummary(entry.id);
-  if (existingSummary) {
-    return existingSummary;
-  }
-  
-  // Generate new summary
-  const summary = await generateEntrySummary(entry);
-  if (summary) {
-    // Store using simple Y.js
-    setSummary(entry.id, summary);
-  }
-  
-  return summary;
+// Get existing summary for an entry (read-only, no generation)
+export const getEntrySummary = (state, entryId) => {
+  return getSummary(state, entryId);
 };
 
 // Helper function for prompt information
@@ -358,15 +345,21 @@ export const getFormattedCharacterForAI = (character) => {
   // Get character summaries from Y.js directly
   const characterSummaries = {};
   
-  // Collect character-related summaries from Y.js summariesMap
-  const summariesMap = getSummariesMap();
-  if (summariesMap) {
-    summariesMap.forEach((value, key) => {
-      if (key.startsWith('character:')) {
-        const field = key.replace('character:', '');
-        characterSummaries[field] = value;
-      }
-    });
+  try {
+    const state = getYjsState();
+    // Collect character-related summaries from Y.js summariesMap
+    const summariesMap = getSummariesMap(state);
+    if (summariesMap) {
+      summariesMap.forEach((value, key) => {
+        if (key.startsWith('character:')) {
+          const field = key.replace('character:', '');
+          characterSummaries[field] = value;
+        }
+      });
+    }
+  } catch (error) {
+    // Y.js not initialized or summaries not available
+    console.debug('Could not access summaries for character formatting:', error);
   }
   
   const processField = (fieldName, originalValue) => {
@@ -385,35 +378,41 @@ export const getFormattedCharacterForAI = (character) => {
 
 // Format entries for AI processing (with summaries for older entries, full content for recent)
 export const getFormattedEntriesForAI = () => {
-  // Get entries directly from Y.js
-  const entries = getEntries();
+  try {
+    const state = getYjsState();
+    // Get entries directly from Y.js
+    const entries = getEntries(state);
   
   if (!entries || entries.length === 0) {
     return 'No journal entries yet. This character is just beginning their adventure.';
   }
   
-  // Sort entries by timestamp (newest first) - entries should already be sorted from getEntries()
-  const sortedEntries = sortEntriesByDate(entries);
-  
-  // Use last 5 entries for context, with full content for recent ones and summaries for older ones
-  const recentEntries = sortedEntries.slice(0, 5);
-  
-  return recentEntries.map((entry, index) => {
-    const summary = getSummary(`entry:${entry.id}`);
-    let content;
+    // Sort entries by timestamp (newest first) - entries should already be sorted from getEntries()
+    const sortedEntries = sortEntriesByDate(entries);
     
-    if (index < 2 && !summary) {
-      // Most recent 2 entries: use full content if no summary available
-      content = entry.content;
-    } else if (summary) {
-      // Use summary if available
-      content = `[Summary: ${summary}]`;
-    } else {
-      // Fallback to full content for older entries without summaries
-      content = entry.content;
-    }
+    // Use last 5 entries for context, with full content for recent ones and summaries for older ones
+    const recentEntries = sortedEntries.slice(0, 5);
     
-    const formattedDate = formatDate ? formatDate(entry.timestamp) : new Date(entry.timestamp).toLocaleDateString();
-    return `**${entry.title}** (${formattedDate})\n${content}`;
-  }).join('\n\n');
+    return recentEntries.map((entry, index) => {
+      const summary = getSummary(state, `entry:${entry.id}`);
+      let content;
+      
+      if (index < 2 && !summary) {
+        // Most recent 2 entries: use full content if no summary available
+        content = entry.content;
+      } else if (summary) {
+        // Use summary if available
+        content = `[Summary: ${summary}]`;
+      } else {
+        // Fallback to full content for older entries without summaries
+        content = entry.content;
+      }
+      
+      const formattedDate = formatDate ? formatDate(entry.timestamp) : new Date(entry.timestamp).toLocaleDateString();
+      return `**${entry.title}** (${formattedDate})\n${content}`;
+    }).join('\n\n');
+  } catch (error) {
+    console.debug('Could not format entries for AI:', error);
+    return 'No journal entries available.';
+  }
 };
