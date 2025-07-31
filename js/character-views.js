@@ -80,10 +80,31 @@ export const showNotification = (message, type = 'info') => {
 
 // Get form data from any form
 export const getFormData = (form) => {
-  const formData = new FormData(form);
-  const data = {};
-  for (const [key, value] of formData.entries()) {
-    data[key] = value;
+  // Try FormData first, fallback to manual extraction for test environments
+  try {
+    const formData = new FormData(form);
+    const data = {};
+    for (const [key, value] of formData.entries()) {
+      data[key] = value;
+    }
+    // If FormData worked but no entries were found, fall back to manual method
+    if (Object.keys(data).length === 0) {
+      throw new Error('FormData returned empty, falling back to manual method');
+    }
+    return data;
+  } catch (error) {
+    // Fallback: manually extract form data for test environments where FormData might not work
+    const data = {};
+    const elements = form.querySelectorAll('input, textarea, select');
+    elements.forEach(element => {
+      if (element.name) {
+        if (element.type === 'checkbox') {
+          data[element.name] = element.checked;
+        } else {
+          data[element.name] = element.value || '';
+        }
+      }
+    });
+    return data;
   }
-  return data;
 };

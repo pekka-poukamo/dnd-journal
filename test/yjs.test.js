@@ -177,9 +177,8 @@ describe('Simple Y.js Module', function() {
       
       YjsModule.setCharacter(state, 'name', 'Test Character');
       
-      // Note: In real scenarios, Y.js observers are async
-      // For testing purposes, we just verify the observer was added without error
-      expect(changeDetected).to.be.false; // Observer setup, actual change detection is async
+      // Y.js observers fire synchronously when changes occur
+      expect(changeDetected).to.be.true; // Observer should have fired for the character change
     });
 
     it('should allow adding journal change observers', function() {
@@ -198,8 +197,8 @@ describe('Simple Y.js Module', function() {
       
       YjsModule.addEntry(state, entry);
       
-      // Note: In real scenarios, Y.js observers are async
-      expect(changeDetected).to.be.false; // Observer setup, actual change detection is async
+      // Y.js observers fire synchronously when changes occur
+      expect(changeDetected).to.be.true; // Observer should have fired for the journal change
     });
 
     it('should allow adding settings change observers', function() {
@@ -211,8 +210,8 @@ describe('Simple Y.js Module', function() {
       
       YjsModule.setSetting(state, 'test-setting', 'test-value');
       
-      // Note: In real scenarios, Y.js observers are async
-      expect(changeDetected).to.be.false; // Observer setup, actual change detection is async
+      // Y.js observers fire synchronously when changes occur
+      expect(changeDetected).to.be.true; // Observer should have fired for the settings change
     });
   });
 });

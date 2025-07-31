@@ -10,7 +10,8 @@ import {
 import {
   renderSettingsForm,
   renderConnectionStatus,
-  showNotification
+  showNotification,
+  getFormData
 } from './settings-views.js';
 
 import { isAPIAvailable } from './openai-wrapper.js';
@@ -110,17 +111,18 @@ export const saveSettings = (stateParam = null) => {
       console.warn('Settings form not found');
       return;
     }
-    const formData = new FormData(formElement);
+    const formData = getFormData(formElement);
     
     // Save individual settings
-    const apiKey = (formData.get('openai-api-key') || '').trim();
-    const aiEnabled = formData.get('ai-enabled') === 'on';
-    const syncServerUrl = (formData.get('sync-server-url') || '').trim();
+    const apiKey = (formData['openai-api-key'] || '').trim();
+    const aiEnabled = formData['ai-enabled'] === true || formData['ai-enabled'] === 'on';
+    const syncServerUrl = (formData['sync-server-url'] || '').trim();
     
     setSetting(state, 'openai-api-key', apiKey);
     setSetting(state, 'ai-enabled', aiEnabled);
     setSetting(state, 'sync-server-url', syncServerUrl);
     
+    // Temporarily disable notifications for testing
     // showNotification('Settings saved successfully!', 'success');
   } catch (error) {
     console.error('Failed to save settings:', error);
