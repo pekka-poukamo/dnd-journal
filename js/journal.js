@@ -1,176 +1,227 @@
-// Journal Page - Simplified Direct Y.js Integration
+// Journal Page - Pure Functional Y.js Integration
 import { 
   initYjs,
-  getCharacterDataObject as getCharacterData,
-  getJournalEntries as getEntries,
-  addJournalEntry as addEntry,
-  updateJournalEntry as updateEntry,
-  deleteJournalEntry as deleteEntry,
-  observeCharacterChanges as onCharacterChange,
-  observeJournalChanges as onJournalChange
+  getYjsState,
+  getCharacterData,
+  getEntries,
+  addEntry,
+  updateEntry,
+  deleteEntry,
+  onCharacterChange,
+  onJournalChange
 } from './yjs.js';
 
 import {
   renderCharacterSummary,
   renderEntries,
+  createEntryForm,
   createEntryEditForm,
-  showNotification,
-  getFormData,
-  clearForm
+  showNotification
 } from './journal-views.js';
 
-import { generateId } from './utils.js';
+import { generateId, isValidEntry, formatDate } from './utils.js';
 
-// Current editing state
-let currentEditingEntryId = null;
+// State management
+let entriesContainer = null;
+let characterInfoContainer = null;
+let entryFormContainer = null;
 
-// Initialize the journal page
-const initJournalPage = async () => {
+// Initialize Journal page
+export const initJournalPage = async () => {
   try {
-    // Initialize Y.js
     await initYjs();
+    const state = getYjsState();
     
-    // Set up reactive rendering - direct Y.js observers
-    onCharacterChange(renderJournalPage);
-    onJournalChange(renderJournalPage);
+    // Get DOM elements
+    entriesContainer = document.getElementById('entries-container');
+    characterInfoContainer = document.getElementById('character-info-container');
+    entryFormContainer = document.getElementById('entry-form-container');
     
-    // Set up event listeners
-    setupEventListeners();
+    if (!entriesContainer || !entryFormContainer) {
+      console.warn('Required journal containers not found');
+      return;
+    }
     
-    // Initial render
+    // Render initial state
     renderJournalPage();
+    
+    // Set up reactive updates
+    onJournalChange(state, () => {
+      renderJournalPage();
+    });
+    
+    onCharacterChange(state, () => {
+      renderCharacterInfo();
+    });
+    
+    // Set up form
+    setupEntryForm();
     
   } catch (error) {
     console.error('Failed to initialize journal page:', error);
-    showNotification('Failed to load journal page. Please refresh.', 'error');
   }
 };
 
-// Render the journal page
-const renderJournalPage = () => {
-  // Render character summary - direct from Y.js
-  const characterContainer = document.querySelector('.character-info-container');
-  if (characterContainer) {
-    const character = getCharacterData();
-    renderCharacterSummary(characterContainer, character);
-  }
-  
-  // Render journal entries - direct from Y.js
-  const entriesContainer = document.getElementById('entries-list');
-  if (entriesContainer) {
-    const entries = getEntries();
-    renderEntries(entriesContainer, entries, handleEditEntry, handleDeleteEntry);
-  }
-};
-
-// Set up event listeners
-const setupEventListeners = () => {
-  const entryForm = document.getElementById('entry-form');
-  if (entryForm) {
-    entryForm.addEventListener('submit', handleEntryFormSubmit);
+// Render journal page
+export const renderJournalPage = () => {
+  try {
+    const state = getYjsState();
+    const entries = getEntries(state);
+    
+    // Render entries
+    if (entriesContainer) {
+      renderEntries(entriesContainer, entries, {
+        onEdit: handleEditEntry,
+        onDelete: handleDeleteEntry
+      });
+    }
+    
+    // Render character info
+    renderCharacterInfo();
+    
+  } catch (error) {
+    console.error('Failed to render journal page:', error);
   }
 };
 
-// Handle journal entry form submission
-const handleEntryFormSubmit = (event) => {
-  event.preventDefault();
-  const formData = getFormData(event.target);
-  
-  if (!formData.title || !formData.content) {
-    showNotification('Please fill in both title and content.', 'error');
-    return;
-  }
-  
-  const entry = {
-    id: generateId(),
-    title: formData.title.trim(),
-    content: formData.content.trim(),
-    timestamp: Date.now()
-  };
-  
-  // Direct Y.js operation
-  addEntry(entry);
-  clearForm(event.target);
-  showNotification('Journal entry added!', 'success');
-};
-
-// Handle editing an entry
-const handleEditEntry = (entryId) => {
-  const entries = getEntries();
-  const entry = entries.find(e => e.id === entryId);
-  
-  if (!entry) return;
-  
-  const entryElement = document.querySelector(`[data-entry-id="${entryId}"]`);
-  if (!entryElement) return;
-  
-  const editForm = createEntryEditForm(
-    entry,
-    (updates) => handleSaveEdit(entryId, updates),
-    () => handleCancelEdit(entryId)
-  );
-  
-  const entryContent = entryElement.querySelector('.entry-content');
-  const entryHeader = entryElement.querySelector('.entry-header');
-  
-  if (entryContent && entryHeader) {
-    entryContent.style.display = 'none';
-    entryHeader.style.display = 'none';
-    entryElement.appendChild(editForm);
-    currentEditingEntryId = entryId;
+// Render character information
+const renderCharacterInfo = () => {
+  try {
+    if (!characterInfoContainer) return;
+    
+    const state = getYjsState();
+    const character = getCharacterData(state);
+    
+    renderCharacterSummary(characterInfoContainer, character);
+  } catch (error) {
+    console.error('Failed to render character info:', error);
   }
 };
 
-// Handle saving entry edit
-const handleSaveEdit = (entryId, updates) => {
-  if (!updates.title || !updates.content) {
-    showNotification('Please fill in both title and content.', 'error');
-    return;
-  }
+// Set up entry form
+const setupEntryForm = () => {
+  if (!entryFormContainer) return;
   
-  // Direct Y.js operation
-  updateEntry(entryId, {
-    title: updates.title,
-    content: updates.content
+  const form = createEntryForm({
+    onSubmit: handleAddEntry,
+    onCancel: clearEntryForm
   });
   
-  handleCancelEdit(entryId);
-  showNotification('Entry updated!', 'success');
+  entryFormContainer.appendChild(form);
 };
 
-// Handle canceling entry edit
-const handleCancelEdit = (entryId) => {
-  const entryElement = document.querySelector(`[data-entry-id="${entryId}"]`);
-  if (!entryElement) return;
-  
-  const editForm = entryElement.querySelector('.entry-edit-form');
-  if (editForm) editForm.remove();
-  
-  const entryContent = entryElement.querySelector('.entry-content');
-  const entryHeader = entryElement.querySelector('.entry-header');
-  
-  if (entryContent && entryHeader) {
-    entryContent.style.display = '';
-    entryHeader.style.display = '';
+// Handle adding new entry
+const handleAddEntry = (entryData) => {
+  try {
+    const state = getYjsState();
+    
+    // Validate entry
+    if (!isValidEntry(entryData)) {
+      showNotification('Please fill in both title and content', 'warning');
+      return;
+    }
+    
+    // Create new entry
+    const newEntry = {
+      id: generateId(),
+      title: entryData.title.trim(),
+      content: entryData.content.trim(),
+      timestamp: Date.now()
+    };
+    
+    // Add to Y.js
+    addEntry(state, newEntry);
+    
+    // Clear form
+    clearEntryForm();
+    
+    showNotification('Entry added!', 'success');
+    
+  } catch (error) {
+    console.error('Failed to add entry:', error);
+    showNotification('Failed to add entry', 'error');
   }
-  
-  currentEditingEntryId = null;
 };
 
-// Handle deleting an entry
+// Handle editing entry
+const handleEditEntry = (entryId) => {
+  try {
+    const state = getYjsState();
+    const entries = getEntries(state);
+    const entry = entries.find(e => e.id === entryId);
+    
+    if (!entry) {
+      showNotification('Entry not found', 'error');
+      return;
+    }
+    
+    // Create edit form
+    const editForm = createEntryEditForm(entry, {
+      onSave: (updatedData) => {
+        saveEntryEdit(entryId, updatedData);
+      },
+      onCancel: () => {
+        renderJournalPage(); // Re-render to remove edit form
+      }
+    });
+    
+    // Replace entry with edit form
+    const entryElement = document.querySelector(`[data-entry-id="${entryId}"]`);
+    if (entryElement && entryElement.parentNode) {
+      entryElement.parentNode.replaceChild(editForm, entryElement);
+    }
+    
+  } catch (error) {
+    console.error('Failed to edit entry:', error);
+    showNotification('Failed to edit entry', 'error');
+  }
+};
+
+// Save entry edit
+const saveEntryEdit = (entryId, updatedData) => {
+  try {
+    const state = getYjsState();
+    
+    // Validate updated data
+    if (!isValidEntry(updatedData)) {
+      showNotification('Please fill in both title and content', 'warning');
+      return;
+    }
+    
+    // Update entry
+    updateEntry(state, entryId, {
+      title: updatedData.title.trim(),
+      content: updatedData.content.trim()
+    });
+    
+    showNotification('Entry updated!', 'success');
+    
+  } catch (error) {
+    console.error('Failed to save entry edit:', error);
+    showNotification('Failed to save entry', 'error');
+  }
+};
+
+// Handle deleting entry
 const handleDeleteEntry = (entryId) => {
-  if (confirm('Are you sure you want to delete this entry?')) {
-    // Direct Y.js operation
-    deleteEntry(entryId);
-    showNotification('Entry deleted!', 'success');
+  try {
+    const state = getYjsState();
+    
+    if (confirm('Are you sure you want to delete this entry?')) {
+      deleteEntry(state, entryId);
+      showNotification('Entry deleted', 'success');
+    }
+    
+  } catch (error) {
+    console.error('Failed to delete entry:', error);
+    showNotification('Failed to delete entry', 'error');
   }
 };
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', initJournalPage);
-
-// Export for testing
-export { 
-  initJournalPage,
-  renderJournalPage 
+// Clear entry form
+const clearEntryForm = () => {
+  const form = entryFormContainer?.querySelector('form');
+  if (form) {
+    form.reset();
+  }
 };

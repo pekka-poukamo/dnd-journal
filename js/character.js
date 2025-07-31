@@ -1,10 +1,11 @@
-// Character Page - Simplified Direct Y.js Integration
+// Character Page - Pure Functional Y.js Integration
 import { 
   initYjs,
-  getCharacterDataObject as getCharacterData,
-  setCharacterField as setCharacter,
-  getSummaryValue as getSummary,
-  observeCharacterChanges as onCharacterChange
+  getYjsState,
+  getCharacterData,
+  setCharacter,
+  getSummary,
+  onCharacterChange
 } from './yjs.js';
 
 import {
@@ -15,128 +16,179 @@ import {
   showNotification
 } from './character-views.js';
 
-import { summarize } from './summarization.js';
 import { isAPIAvailable } from './openai-wrapper.js';
+import { summarize } from './summarization.js';
 
-// Initialize character page
-const initCharacterPage = async () => {
+// State management
+let characterFormElement = null;
+
+// Initialize Character page
+export const initCharacterPage = async () => {
   try {
-    // Initialize Y.js
     await initYjs();
+    const state = getYjsState();
     
-    // Set up reactive rendering - direct Y.js observer
-    onCharacterChange(renderCharacterPage);
+    // Get DOM elements
+    characterFormElement = document.getElementById('character-form');
     
-    // Set up event listeners
-    setupEventListeners();
+    if (!characterFormElement) {
+      console.warn('Character form not found');
+      return;
+    }
     
-    // Initial render
+    // Render initial state
     renderCharacterPage();
+    
+    // Set up reactive updates
+    onCharacterChange(state, () => {
+      renderCharacterPage();
+      updateSummariesDisplay();
+    });
+    
+    // Set up form handling
+    setupFormHandlers();
+    
+    // Initial summaries update
+    updateSummariesDisplay();
     
   } catch (error) {
     console.error('Failed to initialize character page:', error);
-    showNotification('Failed to load character page. Please refresh.', 'error');
   }
 };
 
-// Render the character page
-const renderCharacterPage = () => {
-  // Update form fields - direct from Y.js
-  const character = getCharacterData();
-  renderCharacterForm(character);
-  
-  // Update summaries display
-  updateSummariesDisplay();
+// Render character page
+export const renderCharacterPage = () => {
+  try {
+    const state = getYjsState();
+    const character = getCharacterData(state);
+    
+    if (characterFormElement) {
+      renderCharacterForm(characterFormElement, character);
+    }
+  } catch (error) {
+    console.error('Failed to render character page:', error);
+  }
 };
 
-// Set up event listeners
-const setupEventListeners = () => {
-  const characterForm = document.getElementById('character-form');
-  if (characterForm) {
-    characterForm.addEventListener('submit', handleCharacterFormSubmit);
-    
-    // Real-time field updates - direct to Y.js
-    const inputs = characterForm.querySelectorAll('input, textarea');
-    inputs.forEach(input => {
-      input.addEventListener('blur', (e) => {
-        setCharacter(e.target.name, e.target.value.trim());
+// Set up form event handlers
+const setupFormHandlers = () => {
+  if (!characterFormElement) return;
+  
+  // Handle form submission
+  characterFormElement.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveCharacterData();
+  });
+  
+  // Handle real-time updates on blur
+  const fields = ['name', 'race', 'class', 'backstory', 'notes'];
+  fields.forEach(field => {
+    const input = characterFormElement.querySelector(`[name="${field}"]`);
+    if (input) {
+      input.addEventListener('blur', () => {
+        saveCharacterField(field, input.value);
       });
+    }
+  });
+  
+  // Summary generation buttons
+  const generateBackstoryBtn = document.getElementById('generate-backstory-summary');
+  const generateNotesBtn = document.getElementById('generate-notes-summary');
+  const refreshSummariesBtn = document.getElementById('refresh-summaries');
+  
+  if (generateBackstoryBtn) {
+    generateBackstoryBtn.addEventListener('click', () => {
+      generateSummary('backstory');
     });
   }
   
-  const refreshBtn = document.getElementById('refresh-summaries');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', handleRefreshSummaries);
+  if (generateNotesBtn) {
+    generateNotesBtn.addEventListener('click', () => {
+      generateSummary('notes');
+    });
   }
   
-  const generateBtn = document.getElementById('generate-summaries');
-  if (generateBtn) {
-    generateBtn.addEventListener('click', handleGenerateSummaries);
+  if (refreshSummariesBtn) {
+    refreshSummariesBtn.addEventListener('click', () => {
+      updateSummariesDisplay();
+    });
   }
 };
 
-// Handle character form submission
-const handleCharacterFormSubmit = (event) => {
-  event.preventDefault();
-  const formData = getFormData(event.target);
-  
-  // Direct Y.js operations
-  Object.entries(formData).forEach(([field, value]) => {
-    setCharacter(field, value.trim());
-  });
-  
-  showNotification('Character information saved!', 'success');
-};
-
-// Handle refresh summaries
-const handleRefreshSummaries = async () => {
-  const character = getCharacterData();
-  
-  if (!await isAPIAvailable()) {
-    showNotification('AI features not available. Please configure API settings.', 'error');
-    return;
-  }
-  
+// Save individual character field
+const saveCharacterField = (field, value) => {
   try {
-    if (character.backstory && character.backstory.length > 100) {
-      await summarize('character-backstory', character.backstory);
+    const state = getYjsState();
+    const trimmedValue = value.trim();
+    setCharacter(state, field, trimmedValue);
+  } catch (error) {
+    console.error(`Failed to save character ${field}:`, error);
+  }
+};
+
+// Save all character data from form
+const saveCharacterData = () => {
+  try {
+    const state = getYjsState();
+    const formData = getFormData(characterFormElement);
+    
+    Object.entries(formData).forEach(([field, value]) => {
+      setCharacter(state, field, value.trim());
+    });
+    
+    showNotification('Character saved!', 'success');
+  } catch (error) {
+    console.error('Failed to save character data:', error);
+    showNotification('Failed to save character', 'error');
+  }
+};
+
+// Generate summary for character field
+const generateSummary = async (field) => {
+  try {
+    const state = getYjsState();
+    const character = getCharacterData(state);
+    const content = character[field];
+    
+    if (!content || content.trim().length === 0) {
+      showNotification(`No ${field} content to summarize`, 'warning');
+      return;
     }
     
-    if (character.notes && character.notes.length > 100) {
-      await summarize('character-notes', character.notes);
+    if (!isAPIAvailable()) {
+      showNotification('AI not available for summary generation', 'warning');
+      return;
     }
+    
+    showNotification('Generating summary...', 'info');
+    
+    const summary = await summarize(content, 'character');
+    showNotification('Summary generated!', 'success');
     
     updateSummariesDisplay();
-    showNotification('Summaries refreshed!', 'success');
     
   } catch (error) {
-    console.error('Failed to refresh summaries:', error);
-    showNotification('Failed to refresh summaries.', 'error');
+    console.error('Failed to generate summary:', error);
+    showNotification('Failed to generate summary', 'error');
   }
-};
-
-// Handle generate summaries
-const handleGenerateSummaries = async () => {
-  await handleRefreshSummaries();
 };
 
 // Update summaries display
 const updateSummariesDisplay = () => {
-  // Direct Y.js access
-  const backstorySummary = getSummary('character-backstory');
-  const notesSummary = getSummary('character-notes');
-  
-  renderSummaries(backstorySummary, notesSummary);
-  
-  const available = isAPIAvailable();
-  toggleGenerateButton(available);
+  try {
+    const state = getYjsState();
+    const backstorySummary = getSummary(state, 'character-backstory');
+    const notesSummary = getSummary(state, 'character-notes');
+    
+    renderSummaries(backstorySummary, notesSummary);
+    
+    const available = isAPIAvailable();
+    toggleGenerateButton(available);
+  } catch (error) {
+    console.error('Failed to update summaries display:', error);
+  }
 };
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', initCharacterPage);
 
-// Export for testing
-export { 
-  initCharacterPage,
-  renderCharacterPage 
-};

@@ -1,4 +1,4 @@
-// Simple Y.js - Direct integration without abstractions
+// Simple Y.js - Pure Functional Interface (ADR-0002 Compliant)
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
@@ -22,9 +22,9 @@ export const resetYjs = () => {
   isInitialized = false;
 };
 
-// Initialize Y.js (call once per page)
+// Initialize Y.js and return the state object (call once per page)
 export const initYjs = async () => {
-  if (isInitialized) return; // Already initialized
+  if (isInitialized) return getYjsState(); // Already initialized
   
   // Create document
   ydoc = new Y.Doc();
@@ -36,11 +36,27 @@ export const initYjs = async () => {
   isInitialized = true;
   
   // Set up sync server from settings (if configured)
-  // Now we can safely access settings since we're initialized
   setupSyncFromSettings();
   
   // Wait for initial sync
   await new Promise(resolve => setTimeout(resolve, 100));
+  
+  return getYjsState();
+};
+
+// Get current Y.js state object for pure functions
+export const getYjsState = () => {
+  if (!isInitialized) {
+    throw new Error('Y.js not initialized. Call initYjs() first.');
+  }
+  
+  return {
+    characterMap: ydoc.getMap('character'),
+    journalMap: ydoc.getMap('journal'),
+    settingsMap: ydoc.getMap('settings'),
+    summariesMap: ydoc.getMap('summaries'),
+    ydoc
+  };
 };
 
 // Set up sync provider from settings
@@ -49,7 +65,8 @@ const setupSyncFromSettings = () => {
   if (!isInitialized) return;
   
   try {
-    const syncServer = getSetting('sync-server-url', '');
+    const state = getYjsState();
+    const syncServer = getSetting(state, 'sync-server-url', '');
     
     if (syncServer && syncServer.trim()) {
       try {
@@ -64,48 +81,37 @@ const setupSyncFromSettings = () => {
   }
 };
 
-// Functional getters for Y.js maps - these ensure initialization and provide safe access
-export const getCharacterMap = () => {
-  if (!isInitialized) {
-    throw new Error('Y.js not initialized. Call initYjs() first.');
+// Reconnect sync provider when settings change
+const reconnectSync = () => {
+  if (provider) {
+    provider.destroy();
+    provider = null;
   }
-  return ydoc.getMap('character');
+  setupSyncFromSettings();
 };
 
-export const getJournalMap = () => {
-  if (!isInitialized) {
-    throw new Error('Y.js not initialized. Call initYjs() first.');
-  }
-  return ydoc.getMap('journal');
+// ============================================================================
+// PURE FUNCTIONAL API - All functions take state as first parameter
+// Following ADR-0002 (Functional Programming Only)
+// ============================================================================
+
+// Pure map accessors
+export const getCharacterMap = (state) => state.characterMap;
+export const getJournalMap = (state) => state.journalMap;
+export const getSettingsMap = (state) => state.settingsMap;
+export const getSummariesMap = (state) => state.summariesMap;
+
+// Pure character operations
+export const setCharacter = (state, field, value) => {
+  getCharacterMap(state).set(field, value);
 };
 
-export const getSettingsMap = () => {
-  if (!isInitialized) {
-    throw new Error('Y.js not initialized. Call initYjs() first.');
-  }
-  return ydoc.getMap('settings');
+export const getCharacter = (state, field, defaultValue = '') => {
+  return getCharacterMap(state).get(field) || defaultValue;
 };
 
-export const getSummariesMap = () => {
-  if (!isInitialized) {
-    throw new Error('Y.js not initialized. Call initYjs() first.');
-  }
-  return ydoc.getMap('summaries');
-};
-
-
-
-// Character operations
-export const setCharacter = (field, value) => {
-  getCharacterMap().set(field, value);
-};
-
-export const getCharacter = (field, defaultValue = '') => {
-  return getCharacterMap().get(field) || defaultValue;
-};
-
-export const getCharacterData = () => {
-  const map = getCharacterMap();
+export const getCharacterData = (state) => {
+  const map = getCharacterMap(state);
   const data = {
     name: '',
     race: '',
@@ -121,35 +127,35 @@ export const getCharacterData = () => {
   return data;
 };
 
-// Journal operations
-export const addEntry = (entry) => {
-  const entries = getEntries();
+// Pure journal operations
+export const addEntry = (state, entry) => {
+  const entries = getEntries(state);
   entries.push(entry);
-  getJournalMap().set('entries', entries);
+  getJournalMap(state).set('entries', entries);
 };
 
-export const updateEntry = (entryId, updates) => {
-  const entries = getEntries();
+export const updateEntry = (state, entryId, updates) => {
+  const entries = getEntries(state);
   const index = entries.findIndex(e => e.id === entryId);
   if (index !== -1) {
     entries[index] = { ...entries[index], ...updates, timestamp: Date.now() };
-    getJournalMap().set('entries', entries);
+    getJournalMap(state).set('entries', entries);
   }
 };
 
-export const deleteEntry = (entryId) => {
-  const entries = getEntries();
+export const deleteEntry = (state, entryId) => {
+  const entries = getEntries(state);
   const filtered = entries.filter(e => e.id !== entryId);
-  getJournalMap().set('entries', filtered);
+  getJournalMap(state).set('entries', filtered);
 };
 
-export const getEntries = () => {
-  return getJournalMap().get('entries') || [];
+export const getEntries = (state) => {
+  return getJournalMap(state).get('entries') || [];
 };
 
-// Settings operations
-export const setSetting = (key, value) => {
-  getSettingsMap().set(key, value);
+// Pure settings operations
+export const setSetting = (state, key, value) => {
+  getSettingsMap(state).set(key, value);
   
   // If sync server was updated, reconnect
   if (key === 'sync-server-url') {
@@ -157,41 +163,32 @@ export const setSetting = (key, value) => {
   }
 };
 
-export const getSetting = (key, defaultValue = null) => {
-  return getSettingsMap().get(key) ?? defaultValue;
+export const getSetting = (state, key, defaultValue = null) => {
+  return getSettingsMap(state).get(key) ?? defaultValue;
 };
 
-// Reconnect sync provider when settings change
-const reconnectSync = () => {
-  if (provider) {
-    provider.destroy();
-    provider = null;
-  }
-  setupSyncFromSettings();
+// Pure summary operations
+export const setSummary = (state, key, summary) => {
+  getSummariesMap(state).set(key, summary);
 };
 
-// Summary operations
-export const setSummary = (key, summary) => {
-  getSummariesMap().set(key, summary);
+export const getSummary = (state, key) => {
+  return getSummariesMap(state).get(key) || null;
 };
 
-export const getSummary = (key) => {
-  return getSummariesMap().get(key) || null;
+// Pure observer functions
+export const onCharacterChange = (state, callback) => {
+  getCharacterMap(state).observe(callback);
 };
 
-// Observer functions for reactive updates
-export const onCharacterChange = (callback) => {
-  getCharacterMap().observe(callback);
+export const onJournalChange = (state, callback) => {
+  getJournalMap(state).observe(callback);
 };
 
-export const onJournalChange = (callback) => {
-  getJournalMap().observe(callback);
+export const onSettingsChange = (state, callback) => {
+  getSettingsMap(state).observe(callback);
 };
 
-export const onSettingsChange = (callback) => {
-  getSettingsMap().observe(callback);
-};
-
-export const onSummariesChange = (callback) => {
-  getSummariesMap().observe(callback);
+export const onSummariesChange = (state, callback) => {
+  getSummariesMap(state).observe(callback);
 };

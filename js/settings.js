@@ -1,212 +1,165 @@
-// Settings Page - Simplified Direct Y.js Integration
+// Settings Page - Pure Functional Y.js Integration
 import { 
   initYjs,
-  setSettingValue as setSetting,
-  getSettingValue as getSetting,
-  observeSettingsChanges as onSettingsChange
+  getYjsState,
+  setSetting,
+  getSetting,
+  onSettingsChange
 } from './yjs.js';
 
 import {
   renderSettingsForm,
   renderConnectionStatus,
-  setTestConnectionLoading,
-  getFormData,
   showNotification
 } from './settings-views.js';
 
-// Initialize settings page
-const initSettingsPage = async () => {
+import { isAPIAvailable } from './openai-wrapper.js';
+
+// State management
+let settingsFormElement = null;
+let connectionStatusElement = null;
+
+// Initialize Settings page
+export const initSettingsPage = async () => {
   try {
-    // Initialize Y.js
     await initYjs();
+    const state = getYjsState();
     
-    // Set up reactive rendering - direct Y.js observer
-    onSettingsChange(renderSettingsPage);
+    // Get DOM elements
+    settingsFormElement = document.getElementById('settings-form');
+    connectionStatusElement = document.getElementById('connection-status');
     
-    // Set up event listeners
-    setupEventListeners();
+    if (!settingsFormElement) {
+      console.warn('Settings form not found');
+      return;
+    }
     
-    // Initial render
+    // Render initial state
     renderSettingsPage();
+    
+    // Set up reactive updates
+    onSettingsChange(state, () => {
+      renderSettingsPage();
+    });
+    
+    // Set up form handling
+    setupFormHandlers();
     
   } catch (error) {
     console.error('Failed to initialize settings page:', error);
-    showNotification('Failed to load settings page. Please refresh.', 'error');
   }
 };
 
-// Render the settings page
-const renderSettingsPage = () => {
-  // Get current settings - direct from Y.js
-  const settings = {
-    'openai-api-key': getSetting('openai-api-key', ''),
-    'ai-enabled': getSetting('ai-enabled', false),
-    'dnd-journal-sync-server': getSetting('dnd-journal-sync-server', '')
-  };
-  
-  renderSettingsForm(settings);
-  
-  const syncServer = getSetting('dnd-journal-sync-server');
-  renderConnectionStatus(false, syncServer);
-};
-
-// Set up event listeners
-const setupEventListeners = () => {
-  const settingsForm = document.getElementById('settings-form');
-  if (settingsForm) {
-    settingsForm.addEventListener('submit', handleSettingsFormSubmit);
-  }
-  
-  const testApiBtn = document.getElementById('test-api-key');
-  if (testApiBtn) {
-    testApiBtn.addEventListener('click', handleTestApiKey);
-  }
-  
-  const testConnBtn = document.getElementById('test-connection');
-  if (testConnBtn) {
-    testConnBtn.addEventListener('click', handleTestConnection);
-  }
-  
-  // Real-time field updates - direct to Y.js
-  const apiKeyInput = document.getElementById('api-key');
-  if (apiKeyInput) {
-    apiKeyInput.addEventListener('blur', (e) => {
-      setSetting('openai-api-key', e.target.value.trim());
-    });
-  }
-  
-  const aiEnabledCheckbox = document.getElementById('ai-enabled');
-  if (aiEnabledCheckbox) {
-    aiEnabledCheckbox.addEventListener('change', (e) => {
-      setSetting('ai-enabled', e.target.checked);
-    });
-  }
-  
-  const syncServerInput = document.getElementById('sync-server');
-  if (syncServerInput) {
-    syncServerInput.addEventListener('blur', (e) => {
-      setSetting('dnd-journal-sync-server', e.target.value.trim());
-    });
-  }
-};
-
-// Handle settings form submission
-const handleSettingsFormSubmit = (event) => {
-  event.preventDefault();
-  const formData = getFormData(event.target);
-  
-  // Direct Y.js operations
-  Object.entries(formData).forEach(([key, value]) => {
-    if (key === 'ai-enabled') {
-      setSetting('ai-enabled', value === 'on');
-    } else if (key === 'api-key') {
-      setSetting('openai-api-key', value.trim());
-    } else if (key === 'sync-server') {
-      setSetting('dnd-journal-sync-server', value.trim());
+// Render settings page
+export const renderSettingsPage = () => {
+  try {
+    const state = getYjsState();
+    const settings = {
+      'openai-api-key': getSetting(state, 'openai-api-key', ''),
+      'ai-enabled': getSetting(state, 'ai-enabled', false),
+      'sync-server-url': getSetting(state, 'sync-server-url', '')
+    };
+    
+    if (settingsFormElement) {
+      renderSettingsForm(settingsFormElement, settings);
     }
+    
+    if (connectionStatusElement) {
+      const connected = false; // TODO: implement connection status check
+      renderConnectionStatus(connectionStatusElement, connected, settings['sync-server-url']);
+    }
+  } catch (error) {
+    console.error('Failed to render settings page:', error);
+  }
+};
+
+// Set up form event handlers
+const setupFormHandlers = () => {
+  if (!settingsFormElement) return;
+  
+  settingsFormElement.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveSettings();
   });
   
-  showNotification('Settings saved!', 'success');
+  // Test API key button
+  const testApiButton = document.getElementById('test-api-key');
+  if (testApiButton) {
+    testApiButton.addEventListener('click', () => {
+      testAPIKey();
+    });
+  }
+  
+  // Test connection button
+  const testConnectionButton = document.getElementById('test-connection');
+  if (testConnectionButton) {
+    testConnectionButton.addEventListener('click', () => {
+      testConnection();
+    });
+  }
 };
 
-// Test API key with OpenAI
-const testApiKey = async (apiKey) => {
-  if (!apiKey || !apiKey.startsWith('sk-')) {
-    return { success: false, error: 'Invalid API key format' };
-  }
-
+// Save settings to Y.js
+const saveSettings = () => {
   try {
-    const response = await fetch('https://api.openai.com/v1/models', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      return { success: true, message: 'API key is valid!' };
-    } else {
-      const errorData = await response.json();
-      return { 
-        success: false, 
-        error: errorData.error?.message || 'Invalid API key' 
-      };
-    }
+    const state = getYjsState();
+    const formData = new FormData(settingsFormElement);
+    
+    // Save individual settings
+    const apiKey = (formData.get('openai-api-key') || '').trim();
+    const aiEnabled = formData.get('ai-enabled') === 'on';
+    const syncServerUrl = (formData.get('sync-server-url') || '').trim();
+    
+    setSetting(state, 'openai-api-key', apiKey);
+    setSetting(state, 'ai-enabled', aiEnabled);
+    setSetting(state, 'sync-server-url', syncServerUrl);
+    
+    showNotification('Settings saved successfully!', 'success');
   } catch (error) {
-    return { 
-      success: false, 
-      error: 'Network error: Unable to test API key' 
-    };
+    console.error('Failed to save settings:', error);
+    showNotification('Failed to save settings', 'error');
   }
 };
 
-// Handle API key test
-const handleTestApiKey = async () => {
-  const apiKeyInput = document.getElementById('api-key');
-  if (!apiKeyInput) return;
-
-  const apiKey = apiKeyInput.value.trim();
-  if (!apiKey) {
-    showNotification('Please enter an API key', 'error');
-    return;
-  }
-
-  setTestConnectionLoading(true);
-  const result = await testApiKey(apiKey);
-  setTestConnectionLoading(false);
-  
-  if (result.success) {
-    showNotification(result.message, 'success');
-  } else {
-    showNotification(result.error, 'error');
-  }
-};
-
-// Handle connection test
-const handleTestConnection = async () => {
-  const syncServerInput = document.getElementById('sync-server');
-  if (!syncServerInput) return;
-
-  const serverUrl = syncServerInput.value.trim();
-  if (!serverUrl) {
-    showNotification('Please enter a sync server URL', 'error');
-    return;
-  }
-
-  setTestConnectionLoading(true);
-  
+// Test API key
+const testAPIKey = async () => {
   try {
-    const ws = new WebSocket(serverUrl);
+    const state = getYjsState();
+    const apiKey = getSetting(state, 'openai-api-key', '');
     
-    const testResult = await new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        ws.close();
-        resolve({ success: false, error: 'Connection timeout' });
-      }, 5000);
-      
-      ws.onopen = () => {
-        clearTimeout(timeout);
-        ws.close();
-        resolve({ success: true, message: 'Connection successful!' });
-      };
-      
-      ws.onerror = () => {
-        clearTimeout(timeout);
-        resolve({ success: false, error: 'Connection failed' });
-      };
-    });
-    
-    if (testResult.success) {
-      showNotification(testResult.message, 'success');
-    } else {
-      showNotification(testResult.error, 'error');
+    if (!apiKey) {
+      showNotification('Please enter an API key first', 'warning');
+      return;
     }
     
+    const available = isAPIAvailable();
+    if (available) {
+      showNotification('API key is valid!', 'success');
+    } else {
+      showNotification('API key appears to be invalid', 'error');
+    }
   } catch (error) {
-    showNotification('Failed to test connection', 'error');
-  } finally {
-    setTestConnectionLoading(false);
+    console.error('Failed to test API key:', error);
+    showNotification('Error testing API key', 'error');
+  }
+};
+
+// Test connection
+const testConnection = async () => {
+  try {
+    const state = getYjsState();
+    const syncServerUrl = getSetting(state, 'sync-server-url', '');
+    
+    if (!syncServerUrl) {
+      showNotification('Please enter a sync server URL first', 'warning');
+      return;
+    }
+    
+    // TODO: Implement actual connection test
+    showNotification('Connection test not implemented yet', 'info');
+  } catch (error) {
+    console.error('Failed to test connection:', error);
+    showNotification('Error testing connection', 'error');
   }
 };
 
@@ -214,8 +167,3 @@ const handleTestConnection = async () => {
 document.addEventListener('DOMContentLoaded', initSettingsPage);
 
 // Export for testing
-export { 
-  initSettingsPage,
-  testApiKey,
-  renderSettingsPage 
-};

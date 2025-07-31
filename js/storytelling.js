@@ -1,74 +1,87 @@
-// Simple Storytelling - Direct Y.js Integration
-import { getCharacterDataObject as getCharacterData, getJournalEntries as getEntries } from './yjs.js';
+// Simple Storytelling - Pure Functional Y.js Integration
+import { getYjsState, getCharacterData, getEntries } from './yjs.js';
 import { createSystemPromptFunction, isAPIAvailable } from './openai-wrapper.js';
 import { summarize } from './summarization.js';
 
-const STORYTELLING_PROMPT = `You are a D&D storytelling companion. Create exactly 4 introspective questions as a numbered list:
-
-1. A pivotal moment that shaped who they are
-2. A current internal conflict they're wrestling with  
-3. How recent events might change their path
-4. An unexpected question that explores hidden depths
-
-Make questions specific to their character and adventures.`;
-
-// Create storytelling function
-const callStorytelling = createSystemPromptFunction(STORYTELLING_PROMPT, { 
-  temperature: 0.8, 
-  maxTokens: 800
-});
-
-// Generate introspection questions for character
-export const generateQuestions = async () => {
-  if (!await isAPIAvailable()) return null;
-
+// Generate introspection questions using AI
+export const generateQuestions = async (character, entries) => {
+  if (!isAPIAvailable()) {
+    return null;
+  }
+  
   try {
-    // Get data directly from Y.js
-    const character = getCharacterData();
-    const entries = getEntries();
+    const contextSummary = await buildContextSummary(character, entries);
+    const prompt = `Based on this D&D character and their recent adventures, suggest 3-5 introspective questions they might ask themselves. Focus on character development, moral dilemmas, relationships, and future goals.
 
-    // Create simple character info
-    const charInfo = character.name ? 
-      `${character.name}, a ${character.race || 'character'} ${character.class || 'adventurer'}` :
-      'An unnamed adventurer';
+${contextSummary}
 
-    // Create simple recent entries context (last 3 entries)
-    const recentEntries = entries
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 3)
-      .map(entry => `${entry.title}: ${entry.content.substring(0, 200)}...`)
-      .join('\n\n');
+Please provide thoughtful questions that would help develop this character's personality and story arc.`;
 
-    // Simple prompt
-    const userPrompt = `Character: ${charInfo}
-
-${character.backstory ? `Background: ${character.backstory.substring(0, 300)}...` : ''}
-
-Recent Adventures:
-${recentEntries || 'No recent adventures recorded.'}
-
-Generate 4 introspective questions for this character.`;
-
-    return await callStorytelling(userPrompt);
+    const generateQuestions = createSystemPromptFunction(
+      'You are a skilled D&D storyteller who helps players develop rich character narratives through introspective questions.'
+    );
+    
+    const result = await generateQuestions(prompt);
+    return result.choices?.[0]?.message?.content?.trim() || null;
+    
   } catch (error) {
-    console.error('Storytelling generation failed:', error);
+    console.error('Question generation failed:', error);
     return null;
   }
 };
 
-
+// Build context summary from character and entries
+const buildContextSummary = async (character, entries) => {
+  const characterName = character?.name || 'unnamed adventurer';
+  
+  // Character summary
+  let characterSummary = `Character: ${characterName}`;
+  if (character?.race) characterSummary += ` (${character.race})`;
+  if (character?.class) characterSummary += ` - ${character.class}`;
+  
+  if (character?.backstory) {
+    try {
+      const backstorySummary = await summarize(character.backstory, 'character');
+      characterSummary += `\nBackstory: ${backstorySummary}`;
+    } catch {
+      characterSummary += `\nBackstory: ${character.backstory.substring(0, 200)}...`;
+    }
+  }
+  
+  // Recent entries summary
+  let entriesSummary = '';
+  if (entries && entries.length > 0) {
+    const recentEntries = entries.slice(-3); // Last 3 entries
+    entriesSummary = '\nRecent Adventures:\n';
+    
+    for (const entry of recentEntries) {
+      try {
+        const entrySummary = await summarize(entry.content, 'journal');
+        entriesSummary += `- ${entry.title}: ${entrySummary}\n`;
+      } catch {
+        entriesSummary += `- ${entry.title}: ${entry.content.substring(0, 100)}...\n`;
+      }
+    }
+  } else {
+    entriesSummary = '\nNo journal entries yet. This character is just beginning their adventure.';
+  }
+  
+  return characterSummary + entriesSummary;
+};
 
 // Simple context check
 export const hasGoodContext = () => {
-  const character = getCharacterData();
-  const entries = getEntries();
+  const state = getYjsState();
+  const character = getCharacterData(state);
+  const entries = getEntries(state);
   return Boolean(character.name || character.backstory || entries.length > 0);
 };
 
 // Simple character context
 export const getCharacterContext = async () => {
-  const character = getCharacterData();
-  const entries = getEntries();
+  const state = getYjsState();
+  const character = getCharacterData(state);
+  const entries = getEntries(state);
   
   return {
     character,

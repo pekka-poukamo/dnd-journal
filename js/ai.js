@@ -1,4 +1,4 @@
-// AI Module - OpenAI Integration for Introspection and Summarization
+// AI Module - Pure Functional Y.js Integration
 
 // ================================
 // NARRATIVE INTROSPECTION SYSTEM
@@ -28,7 +28,7 @@ import {
   sortEntriesByDate,
   formatDate
 } from './utils.js';
-import { getSummary, setSummary, getSetting, getSummariesMap, getEntries } from './yjs.js';
+import { getYjsState, getSummary, setSummary, getSetting, getSummariesMap, getEntries } from './yjs.js';
 import { getEncoding } from 'js-tiktoken';
 
 // Unified narrative-focused system prompt with unobvious question element
@@ -103,16 +103,18 @@ export const calculateTotalTokens = async (messages) => {
 
 // Pure function to load settings
 export const loadAISettings = () => {
+  const state = getYjsState();
   return {
-    apiKey: getSetting('openai-api-key', ''),
-    enableAIFeatures: getSetting('ai-enabled', false)
+    apiKey: getSetting(state, 'openai-api-key', ''),
+    enableAIFeatures: getSetting(state, 'ai-enabled', false)
   };
 };
 
 // Pure function to check if AI features are available
 export const isAIEnabled = () => {
-  const apiKey = getSetting('openai-api-key', '');
-  const enabled = getSetting('ai-enabled', false);
+  const state = getYjsState();
+  const apiKey = getSetting(state, 'openai-api-key', '');
+  const enabled = getSetting(state, 'ai-enabled', false);
   return Boolean(enabled && apiKey);
 };
 

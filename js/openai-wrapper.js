@@ -1,7 +1,7 @@
 // OpenAI Wrapper - Pure OpenAI interface with currying
 // Following functional programming principles and style guide
 
-import { getSetting } from './yjs.js';
+import { getYjsState, getSetting } from './yjs.js';
 
 // =============================================================================
 // CORE OPENAI INTERFACE
