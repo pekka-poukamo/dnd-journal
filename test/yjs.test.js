@@ -15,13 +15,12 @@ describe('Simple Y.js Module', function() {
 
   describe('initYjs', function() {
     it('should initialize Y.js document and maps', async function() {
-      await YjsModule.initYjs();
+            await YjsModule.initYjs();
       
-      expect(YjsModule.ydoc).to.not.be.null;
-      expect(YjsModule.characterMap).to.not.be.null;
-      expect(YjsModule.journalMap).to.not.be.null;
-      expect(YjsModule.settingsMap).to.not.be.null;
-      expect(YjsModule.summariesMap).to.not.be.null;
+      expect(YjsModule.getCharacterMap()).to.not.be.null;
+      expect(YjsModule.getJournalMap()).to.not.be.null;
+      expect(YjsModule.getSettingsMap()).to.not.be.null;
+      expect(YjsModule.getSummariesMap()).to.not.be.null;
     });
 
     it('should not reinitialize if already initialized', async function() {

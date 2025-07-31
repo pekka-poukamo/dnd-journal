@@ -2,7 +2,7 @@
 // Following functional programming principles and style guide
 
 // Note: STORAGE_KEYS removed per ADR-0004 - use Yjs Maps instead
-// All data is now stored in Yjs Maps: characterMap, journalMap, settingsMap, summariesMap
+// All data is now stored in Yjs Maps accessed via functional getters: getCharacterMap(), getJournalMap(), getSettingsMap(), getSummariesMap()
 
 // Pure function for safe JSON parsing
 export const safeParseJSON = (jsonString) => {

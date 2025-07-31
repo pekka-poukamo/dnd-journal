@@ -93,47 +93,7 @@ export const getSummariesMap = () => {
   return ydoc.getMap('summaries');
 };
 
-// Legacy exports for backwards compatibility during transition
-// These will auto-initialize if accessed before manual initialization
-export const characterMap = new Proxy({}, {
-  get(target, prop) {
-    if (!isInitialized) {
-      console.warn('Auto-initializing Y.js. Consider calling initYjs() explicitly.');
-      initYjs();
-    }
-    return getCharacterMap()[prop];
-  }
-});
 
-export const journalMap = new Proxy({}, {
-  get(target, prop) {
-    if (!isInitialized) {
-      console.warn('Auto-initializing Y.js. Consider calling initYjs() explicitly.');
-      initYjs();
-    }
-    return getJournalMap()[prop];
-  }
-});
-
-export const settingsMap = new Proxy({}, {
-  get(target, prop) {
-    if (!isInitialized) {
-      console.warn('Auto-initializing Y.js. Consider calling initYjs() explicitly.');
-      initYjs();
-    }
-    return getSettingsMap()[prop];
-  }
-});
-
-export const summariesMap = new Proxy({}, {
-  get(target, prop) {
-    if (!isInitialized) {
-      console.warn('Auto-initializing Y.js. Consider calling initYjs() explicitly.');
-      initYjs();
-    }
-    return getSummariesMap()[prop];
-  }
-});
 
 // Character operations
 export const setCharacter = (field, value) => {

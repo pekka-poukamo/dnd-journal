@@ -197,13 +197,7 @@ describe('Simple Storytelling Module', function() {
     });
   });
 
-  describe('Alias functions', function() {
-    it('should have working aliases', function() {
-      expect(Storytelling.getIntrospectionQuestions).to.equal(Storytelling.generateQuestions);
-      expect(Storytelling.generateIntrospectionQuestions).to.equal(Storytelling.generateQuestions);
-      expect(Storytelling.generateIntrospectionPrompt).to.equal(Storytelling.generateQuestions);
-    });
-  });
+
 
   describe('hasGoodContext', function() {
     it('should return false with no data', function() {

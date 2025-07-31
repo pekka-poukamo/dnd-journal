@@ -56,10 +56,7 @@ Generate 4 introspective questions for this character.`;
   }
 };
 
-// Aliases for compatibility
-export const getIntrospectionQuestions = generateQuestions;
-export const generateIntrospectionQuestions = generateQuestions;
-export const generateIntrospectionPrompt = generateQuestions;
+
 
 // Simple context check
 export const hasGoodContext = () => {
