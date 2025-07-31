@@ -131,7 +131,15 @@ const saveCharacterField = (field, value) => {
 export const saveCharacterData = (stateParam = null) => {
   try {
     const state = stateParam || getYjsState();
-    const formData = getFormData(characterFormElement);
+    
+    // Use module-level element if available, otherwise find it
+    const formElement = characterFormElement || document.getElementById('character-form');
+    if (!formElement) {
+      console.warn('Character form not found for saving');
+      return;
+    }
+    
+    const formData = getFormData(formElement);
     
     Object.entries(formData).forEach(([field, value]) => {
       setCharacter(state, field, value.trim());

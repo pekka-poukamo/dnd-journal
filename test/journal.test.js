@@ -16,12 +16,14 @@ describe('Journal Page', function() {
       <html>
         <body>
           <div id="entries-container"></div>
-          <div id="character-info"></div>
-          <form id="entry-form">
-            <input id="entry-title" />
-            <textarea id="entry-content"></textarea>
-            <button type="submit">Add Entry</button>
-          </form>
+          <div id="character-info-container"></div>
+          <div id="entry-form-container">
+            <form id="entry-form">
+              <input id="entry-title" />
+              <textarea id="entry-content"></textarea>
+              <button type="submit">Add Entry</button>
+            </form>
+          </div>
         </body>
       </html>
     `);
@@ -69,6 +71,8 @@ describe('Journal Page', function() {
       
       YjsModule.addEntry(state, entry);
       
+      Journal.initJournalPage(state);
+      
       expect(() => Journal.renderJournalPage(state)).to.not.throw();
       
       const entriesContainer = document.getElementById('entries-container');
@@ -77,7 +81,7 @@ describe('Journal Page', function() {
 
     it('should handle missing containers gracefully', function() {
       document.getElementById('entries-container').remove();
-      document.getElementById('character-info').remove();
+      document.getElementById('character-info-container').remove();
       
       expect(() => Journal.renderJournalPage(state)).to.not.throw();
     });
@@ -89,7 +93,7 @@ describe('Journal Page', function() {
       
       Journal.renderJournalPage(state);
       
-      const characterInfo = document.getElementById('character-info');
+      const characterInfo = document.getElementById('character-info-container');
       expect(characterInfo.textContent).to.include('Aragorn');
     });
 
@@ -202,7 +206,7 @@ describe('Journal Page', function() {
       // Note: In real app, Y.js observers would trigger updates
       Journal.renderJournalPage(state);
       
-      const characterInfo = document.getElementById('character-info');
+      const characterInfo = document.getElementById('character-info-container');
       expect(characterInfo.textContent).to.include('Legolas');
       expect(characterInfo.textContent).to.include('Elf');
     });
@@ -218,7 +222,7 @@ describe('Journal Page', function() {
 
     it('should handle missing container elements', function() {
       document.getElementById('entries-container').remove();
-      document.getElementById('character-info').remove();
+      document.getElementById('character-info-container').remove();
       
       expect(() => Journal.initJournalPage(state)).to.not.throw();
       expect(() => Journal.renderJournalPage(state)).to.not.throw();

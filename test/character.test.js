@@ -62,7 +62,7 @@ describe('Character Page', function() {
       YjsModule.setCharacter(state, 'race', 'Elf');
       YjsModule.setCharacter(state, 'backstory', 'Prince of the Woodland Realm');
       
-      Character.renderCharacterPage(state);
+      Character.initCharacterPage(state);
       
       expect(document.getElementById('character-name').value).to.equal('Legolas');
       expect(document.getElementById('character-race').value).to.equal('Elf');
@@ -87,6 +87,9 @@ describe('Character Page', function() {
 
   describe('Character data management', function() {
     it('should save character data when form is submitted manually', function() {
+      // Initialize the page first to set up form element reference
+      Character.initCharacterPage(state);
+      
       const form = document.getElementById('character-form');
       const nameInput = document.getElementById('character-name');
       const raceInput = document.getElementById('character-race');

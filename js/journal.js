@@ -42,7 +42,7 @@ export const initJournalPage = async (stateParam = null) => {
     }
     
     // Render initial state
-    renderJournalPage();
+    renderJournalPage(state);
     
     // Set up reactive updates
     onJournalChange(state, () => {
