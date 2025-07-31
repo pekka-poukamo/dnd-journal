@@ -57,13 +57,12 @@
                 log('Yjs system not available');
             }
             
-            // Test sync config module
+            // Test sync server from settings
             try {
-                const module = await import('./sync-config.js');
-                log('Sync config loaded');
-                log('Config server: ' + module.SYNC_CONFIG.server);
+                const syncServer = await getSetting('sync-server-url', '');
+                log('Sync server from settings: ' + (syncServer || 'Not configured'));
             } catch (e) {
-                log('Error loading sync config: ' + e.message);
+                log('Error getting sync server: ' + e.message);
             }
         }
         

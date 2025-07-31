@@ -2,15 +2,11 @@
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
-import { SYNC_CONFIG } from '../sync-config.js';
 
-// Global Y.js document and maps
-export let ydoc = null;
-export let characterMap = null;
-export let journalMap = null;
-export let settingsMap = null;
-export let summariesMap = null;
-export let provider = null;
+// Internal Y.js state (private)
+let ydoc = null;
+let provider = null;
+let isInitialized = false;
 
 // Reset function for testing
 export const resetYjs = () => {
@@ -22,149 +18,220 @@ export const resetYjs = () => {
   }
   
   ydoc = null;
-  characterMap = null;
-  journalMap = null;
-  settingsMap = null;
-  summariesMap = null;
   provider = null;
+  isInitialized = false;
 };
 
 // Initialize Y.js (call once per page)
 export const initYjs = async () => {
-  if (ydoc) return; // Already initialized
+  if (isInitialized) return; // Already initialized
   
   // Create document
   ydoc = new Y.Doc();
   
-  // Get maps
-  characterMap = ydoc.getMap('character');
-  journalMap = ydoc.getMap('journal');
-  settingsMap = ydoc.getMap('settings');
-  summariesMap = ydoc.getMap('summaries');
-  
   // Set up persistence
   const persistence = new IndexeddbPersistence('dnd-journal', ydoc);
   
-  // Set up sync (if available)
-  const syncServer = SYNC_CONFIG.server;
-  if (syncServer) {
-    try {
-      provider = new WebsocketProvider(syncServer, 'dnd-journal', ydoc);
-    } catch (error) {
-      console.warn('Failed to connect to sync server:', error);
-    }
-  }
+  // Mark as initialized first, then set up sync
+  isInitialized = true;
+  
+  // Set up sync server from settings (if configured)
+  // Now we can safely access settings since we're initialized
+  setupSyncFromSettings();
   
   // Wait for initial sync
   await new Promise(resolve => setTimeout(resolve, 100));
 };
 
-// Character operations - direct to Y.js
-export const setCharacter = (field, value) => {
-  characterMap?.set(field, value);
-};
-
-export const getCharacter = (field) => {
-  return characterMap?.get(field) || '';
-};
-
-// Journal operations - direct to Y.js
-export const addEntry = (entry) => {
-  let entries = journalMap?.get('entries');
-  if (!entries) {
-    entries = new Y.Array();
-    journalMap?.set('entries', entries);
+// Set up sync provider from settings
+const setupSyncFromSettings = () => {
+  // Only try to get settings if we're initialized
+  if (!isInitialized) return;
+  
+  try {
+    const syncServer = getSetting('sync-server-url', '');
+    
+    if (syncServer && syncServer.trim()) {
+      try {
+        provider = new WebsocketProvider(syncServer.trim(), 'dnd-journal', ydoc);
+      } catch (error) {
+        console.warn('Failed to connect to sync server:', error);
+      }
+    }
+  } catch (error) {
+    // Settings not available yet, skip sync setup for now
+    console.debug('Settings not available during initialization, skipping sync setup');
   }
+};
+
+// Functional getters for Y.js maps - these ensure initialization and provide safe access
+export const getCharacterMap = () => {
+  if (!isInitialized) {
+    throw new Error('Y.js not initialized. Call initYjs() first.');
+  }
+  return ydoc.getMap('character');
+};
+
+export const getJournalMap = () => {
+  if (!isInitialized) {
+    throw new Error('Y.js not initialized. Call initYjs() first.');
+  }
+  return ydoc.getMap('journal');
+};
+
+export const getSettingsMap = () => {
+  if (!isInitialized) {
+    throw new Error('Y.js not initialized. Call initYjs() first.');
+  }
+  return ydoc.getMap('settings');
+};
+
+export const getSummariesMap = () => {
+  if (!isInitialized) {
+    throw new Error('Y.js not initialized. Call initYjs() first.');
+  }
+  return ydoc.getMap('summaries');
+};
+
+// Legacy exports for backwards compatibility during transition
+// These will auto-initialize if accessed before manual initialization
+export const characterMap = new Proxy({}, {
+  get(target, prop) {
+    if (!isInitialized) {
+      console.warn('Auto-initializing Y.js. Consider calling initYjs() explicitly.');
+      initYjs();
+    }
+    return getCharacterMap()[prop];
+  }
+});
+
+export const journalMap = new Proxy({}, {
+  get(target, prop) {
+    if (!isInitialized) {
+      console.warn('Auto-initializing Y.js. Consider calling initYjs() explicitly.');
+      initYjs();
+    }
+    return getJournalMap()[prop];
+  }
+});
+
+export const settingsMap = new Proxy({}, {
+  get(target, prop) {
+    if (!isInitialized) {
+      console.warn('Auto-initializing Y.js. Consider calling initYjs() explicitly.');
+      initYjs();
+    }
+    return getSettingsMap()[prop];
+  }
+});
+
+export const summariesMap = new Proxy({}, {
+  get(target, prop) {
+    if (!isInitialized) {
+      console.warn('Auto-initializing Y.js. Consider calling initYjs() explicitly.');
+      initYjs();
+    }
+    return getSummariesMap()[prop];
+  }
+});
+
+// Character operations
+export const setCharacter = (field, value) => {
+  getCharacterMap().set(field, value);
+};
+
+export const getCharacter = (field, defaultValue = '') => {
+  return getCharacterMap().get(field) || defaultValue;
+};
+
+export const getCharacterData = () => {
+  const map = getCharacterMap();
+  const data = {
+    name: '',
+    race: '',
+    class: '',
+    backstory: '',
+    notes: ''
+  };
   
-  const entryMap = new Y.Map();
-  entryMap.set('id', entry.id);
-  entryMap.set('title', entry.title);
-  entryMap.set('content', entry.content);
-  entryMap.set('timestamp', entry.timestamp);
+  map.forEach((value, key) => {
+    data[key] = value;
+  });
   
-  entries.push([entryMap]);
+  return data;
+};
+
+// Journal operations
+export const addEntry = (entry) => {
+  const entries = getEntries();
+  entries.push(entry);
+  getJournalMap().set('entries', entries);
 };
 
 export const updateEntry = (entryId, updates) => {
-  const entries = journalMap?.get('entries');
-  if (!entries) return;
-  
-  const entryArray = entries.toArray();
-  const entryIndex = entryArray.findIndex(entryMap => entryMap.get('id') === entryId);
-  
-  if (entryIndex >= 0) {
-    const entryMap = entryArray[entryIndex];
-    Object.entries(updates).forEach(([key, value]) => {
-      entryMap.set(key, value);
-    });
-    entryMap.set('timestamp', Date.now());
+  const entries = getEntries();
+  const index = entries.findIndex(e => e.id === entryId);
+  if (index !== -1) {
+    entries[index] = { ...entries[index], ...updates, timestamp: Date.now() };
+    getJournalMap().set('entries', entries);
   }
 };
 
 export const deleteEntry = (entryId) => {
-  const entries = journalMap?.get('entries');
-  if (!entries) return;
-  
-  const entryArray = entries.toArray();
-  const entryIndex = entryArray.findIndex(entryMap => entryMap.get('id') === entryId);
-  
-  if (entryIndex >= 0) {
-    entries.delete(entryIndex, 1);
-  }
+  const entries = getEntries();
+  const filtered = entries.filter(e => e.id !== entryId);
+  getJournalMap().set('entries', filtered);
 };
 
 export const getEntries = () => {
-  const entries = journalMap?.get('entries');
-  if (!entries) return [];
-  
-  return entries.toArray().map(entryMap => ({
-    id: entryMap.get('id'),
-    title: entryMap.get('title'),
-    content: entryMap.get('content'),
-    timestamp: entryMap.get('timestamp')
-  }));
+  return getJournalMap().get('entries') || [];
 };
 
-// Settings operations - direct to Y.js
+// Settings operations
 export const setSetting = (key, value) => {
-  settingsMap?.set(key, value);
+  getSettingsMap().set(key, value);
+  
+  // If sync server was updated, reconnect
+  if (key === 'sync-server-url') {
+    reconnectSync();
+  }
 };
 
 export const getSetting = (key, defaultValue = null) => {
-  return settingsMap?.get(key) ?? defaultValue;
+  return getSettingsMap().get(key) ?? defaultValue;
 };
 
-// Summary operations - direct to Y.js
-export const setSummary = (key, value) => {
-  summariesMap?.set(key, value);
+// Reconnect sync provider when settings change
+const reconnectSync = () => {
+  if (provider) {
+    provider.destroy();
+    provider = null;
+  }
+  setupSyncFromSettings();
+};
+
+// Summary operations
+export const setSummary = (key, summary) => {
+  getSummariesMap().set(key, summary);
 };
 
 export const getSummary = (key) => {
-  return summariesMap?.get(key) || null;
+  return getSummariesMap().get(key) || null;
 };
 
-// Listen to changes - direct Y.js observers
+// Observer functions for reactive updates
 export const onCharacterChange = (callback) => {
-  characterMap?.observe(callback);
+  getCharacterMap().observe(callback);
 };
 
 export const onJournalChange = (callback) => {
-  journalMap?.observe(callback);
+  getJournalMap().observe(callback);
 };
 
 export const onSettingsChange = (callback) => {
-  settingsMap?.observe(callback);
+  getSettingsMap().observe(callback);
 };
 
-// Get current character data as object
-export const getCharacterData = () => {
-  if (!characterMap) return {};
-  
-  return {
-    name: characterMap.get('name') || '',
-    race: characterMap.get('race') || '',
-    class: characterMap.get('class') || '',
-    backstory: characterMap.get('backstory') || '',
-    notes: characterMap.get('notes') || ''
-  };
+export const onSummariesChange = (callback) => {
+  getSummariesMap().observe(callback);
 };

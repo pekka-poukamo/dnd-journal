@@ -28,7 +28,7 @@ import {
   sortEntriesByDate,
   formatDate
 } from './utils.js';
-import { getSummary, setSummary, getSetting, summariesMap, getEntries } from './yjs.js';
+import { getSummary, setSummary, getSetting, getSummariesMap, getEntries } from './yjs.js';
 import { getEncoding } from 'js-tiktoken';
 
 // Unified narrative-focused system prompt with unobvious question element
@@ -357,6 +357,7 @@ export const getFormattedCharacterForAI = (character) => {
   const characterSummaries = {};
   
   // Collect character-related summaries from Y.js summariesMap
+  const summariesMap = getSummariesMap();
   if (summariesMap) {
     summariesMap.forEach((value, key) => {
       if (key.startsWith('character:')) {

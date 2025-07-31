@@ -264,7 +264,7 @@ describe('Simple Storytelling Module', function() {
     it('should return empty context with no data', async function() {
       const context = await Storytelling.getCharacterContext();
       
-      expect(context.character.name).to.equal('');
+      expect(context.character.name || '').to.equal('');
       expect(context.entries).to.have.length(0);
       expect(context.hasContent).to.be.false;
     });

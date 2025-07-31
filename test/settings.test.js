@@ -201,8 +201,8 @@ describe('Settings Page', function() {
     });
 
     it('should handle corrupt settings data', function() {
-      // Set invalid settings
-      YjsModule.settingsMap.set('ai-enabled', 'invalid-boolean');
+      // Set invalid but valid-type settings
+      YjsModule.setSetting('ai-enabled', 'invalid-boolean');
       
       expect(() => {
         Settings.renderSettingsPage();
