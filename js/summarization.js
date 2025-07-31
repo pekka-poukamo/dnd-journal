@@ -37,11 +37,11 @@ const createNewSummary = async (state, summaryKey, content) => {
       temperature: 0.3
     });
     
-    const summary = result.choices[0]?.message?.content?.trim();
-    if (summary) {
+    // callOpenAI already returns the trimmed content directly
+    if (result && typeof result === 'string') {
       // Store in Y.js
-      setSummary(state, summaryKey, summary);
-      return summary;
+      setSummary(state, summaryKey, result);
+      return result;
     }
     
     throw new Error('No summary generated');

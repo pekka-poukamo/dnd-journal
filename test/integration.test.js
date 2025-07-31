@@ -17,7 +17,7 @@ describe('Integration Tests', function() {
       <!DOCTYPE html>
       <html>
         <body>
-          <div id="character-info"></div>
+          <div id="character-info-container"></div>
           <form id="character-form">
             <input id="character-name" name="name" />
             <input id="character-race" name="race" />
@@ -67,7 +67,7 @@ describe('Integration Tests', function() {
       Journal.renderJournalPage(state);
       
       // Check that character info appears in journal
-      const characterInfo = document.getElementById('character-info');
+      const characterInfo = document.getElementById('character-info-container');
       expect(characterInfo.textContent).to.include('Aragorn');
     });
 
@@ -81,7 +81,7 @@ describe('Integration Tests', function() {
       
       Journal.renderJournalPage(state);
       
-      let characterInfo = document.getElementById('character-info');
+      let characterInfo = document.getElementById('character-info-container');
       expect(characterInfo.textContent).to.include('Legolas');
       
       // Update character data
@@ -91,7 +91,7 @@ describe('Integration Tests', function() {
       // Re-render journal (in real app, Y.js observers would do this)
       Journal.renderJournalPage(state);
       
-      characterInfo = document.getElementById('character-info');
+      characterInfo = document.getElementById('character-info-container');
       expect(characterInfo.textContent).to.include('Gimli');
       expect(characterInfo.textContent).to.include('Dwarf');
     });
@@ -113,22 +113,25 @@ describe('Integration Tests', function() {
 
   describe('Data Management Workflow', function() {
     it('should manage journal entries through Y.js', function() {
+      // Initialize journal page to ensure proper setup
+      Journal.initJournalPage(state);
+      
       // Add multiple entries
       const entries = [
         {
-          id: generateId(),
+          id: 'entry-1',
           title: 'First Adventure',
           content: 'We set out from the tavern...',
           timestamp: Date.now() - 2000
         },
         {
-          id: generateId(),
+          id: 'entry-2',
           title: 'The Dragon',
           content: 'A fearsome dragon appeared...',
           timestamp: Date.now() - 1000
         },
         {
-          id: generateId(),
+          id: 'entry-3',
           title: 'Victory',
           content: 'We defeated our enemies...',
           timestamp: Date.now()
@@ -142,17 +145,17 @@ describe('Integration Tests', function() {
       expect(storedEntries).to.have.length(3);
       
       // Update an entry
-      YjsModule.updateEntry(state, entries[0].id, {
+      YjsModule.updateEntry(state, 'entry-1', {
         title: 'Updated First Adventure',
         content: 'We set out from the tavern (updated)...'
       });
       
       const updatedEntries = YjsModule.getEntries(state);
-      const updatedEntry = updatedEntries.find(e => e.id === entries[0].id);
+      const updatedEntry = updatedEntries.find(e => e.id === 'entry-1');
       expect(updatedEntry.title).to.equal('Updated First Adventure');
       
       // Delete an entry
-      YjsModule.deleteEntry(state, entries[1].id);
+      YjsModule.deleteEntry(state, 'entry-2');
       const finalEntries = YjsModule.getEntries(state);
       expect(finalEntries).to.have.length(2);
     });
@@ -211,7 +214,7 @@ describe('Integration Tests', function() {
       Journal.initJournalPage(state);
       Journal.renderJournalPage(state);
       
-      const characterInfo = document.getElementById('character-info');
+      const characterInfo = document.getElementById('character-info-container');
       expect(characterInfo.textContent).to.include('Bilbo Baggins');
       
       // Character page: verify data is still there

@@ -130,16 +130,17 @@ export const getCharacterData = (state) => {
 // Pure journal operations
 export const addEntry = (state, entry) => {
   const entries = getEntries(state);
-  entries.push(entry);
-  getJournalMap(state).set('entries', entries);
+  const newEntries = [...entries, entry];
+  getJournalMap(state).set('entries', newEntries);
 };
 
 export const updateEntry = (state, entryId, updates) => {
   const entries = getEntries(state);
   const index = entries.findIndex(e => e.id === entryId);
   if (index !== -1) {
-    entries[index] = { ...entries[index], ...updates, timestamp: Date.now() };
-    getJournalMap(state).set('entries', entries);
+    const newEntries = [...entries];
+    newEntries[index] = { ...entries[index], ...updates, timestamp: Date.now() };
+    getJournalMap(state).set('entries', newEntries);
   }
 };
 
