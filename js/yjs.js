@@ -1,327 +1,195 @@
-// Yjs Module - Local-first collaborative editing
+// Simple Y.js - Pure Functional Interface (ADR-0002 Compliant)
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
-import { SYNC_CONFIG } from '../sync-config.js';
 
-// Export Y constructor and WebsocketProvider for other modules
-export { Y, WebsocketProvider };
+// Internal Y.js state (private)
+let ydoc = null;
+let provider = null;
+let isInitialized = false;
 
-// Yjs system instance
-let yjsSystem = null;
-
-// Update callbacks
-const updateCallbacks = [];
-
-// Sync status update interval
-let syncStatusInterval = null;
-
-// Update sync status across all pages
-const updateSyncStatus = (status, text, details) => {
-  const syncIndicator = document.getElementById('sync-status');
-  if (syncIndicator) {
-    syncIndicator.textContent = text;
-    syncIndicator.className = `sync-status sync-${status}`;
-    syncIndicator.title = details;
-    syncIndicator.style.display = 'block'; // Make visible
+// Reset function for testing
+export const resetYjs = () => {
+  if (ydoc) {
+    ydoc.destroy();
   }
-  console.log(`Sync status: ${status} - ${text}`);
-};
-
-// Setup sync listener for real-time updates (global for all pages)
-const setupGlobalSyncListener = (system) => {
-  if (!system?.ydoc) {
-    updateSyncStatus('local-only', 'Local only', 'Data is only stored locally');
-    return;
+  if (provider) {
+    provider.destroy();
   }
   
-  // Monitor sync status using pure function
-  const checkSyncStatus = () => {
-    const status = getSyncStatus(system.provider);
-    if (status.connected) {
-      updateSyncStatus('connected', 'Synced', `Connected to sync server`);
-    } else if (status.available) {
-      updateSyncStatus('disconnected', 'Offline', 'Not connected to sync server - data stored locally');
-    } else {
-      updateSyncStatus('local-only', 'Local only', 'No sync server configured - data stored locally');
-    }
-  };
+  ydoc = null;
+  provider = null;
+  isInitialized = false;
+};
+
+// Initialize Y.js and return the state object (call once per page)
+export const initYjs = async () => {
+  if (isInitialized) return getYjsState(); // Already initialized
   
-  // Clear existing interval if any
-  if (syncStatusInterval) {
-    clearInterval(syncStatusInterval);
-  }
+  // Create document
+  ydoc = new Y.Doc();
   
-  // Check status periodically
-  syncStatusInterval = setInterval(checkSyncStatus, 5000);
-  checkSyncStatus(); // Initial check
+  // Set up persistence
+  const persistence = new IndexeddbPersistence('dnd-journal', ydoc);
   
-  // Listen for provider connection changes
-  if (system.provider) {
-    system.provider.on('status', ({ status }) => {
-      console.log(`Provider status changed: ${status}`);
-      checkSyncStatus();
-    });
-    
-    system.provider.on('connection-close', () => {
-      console.log('Provider connection closed');
-      checkSyncStatus();
-    });
-    
-    system.provider.on('connection-error', () => {
-      console.log('Provider connection error');
-      checkSyncStatus();
-    });
-  }
-};
-
-// Mock system for tests
-const createMockSystem = () => {
-  const mockMap = {
-    data: {},
-    get: function(key) { return this.data[key] || null; },
-    set: function(key, value) { this.data[key] = value; },
-    has: function(key) { return key in this.data; },
-    clear: function() { this.data = {}; },
-    observe: function() {}, // Mock observe
-    forEach: function(callback) {
-      Object.entries(this.data).forEach(([key, value]) => {
-        callback(value, key);
-      });
-    }
-  };
-
-  return {
-    ydoc: { on: () => {} },
-    characterMap: { ...mockMap, data: {} },
-    journalMap: { 
-      ...mockMap, 
-      data: {},
-      get: function(key) {
-        if (key === 'entries') {
-          const entries = this.data[key];
-          if (entries && Array.isArray(entries)) {
-            // Return array with toArray method attached for compatibility
-            const arrayWithMethod = [...entries];
-            arrayWithMethod.toArray = () => arrayWithMethod;
-            return arrayWithMethod;
-          } else if (entries && entries.toArray) {
-            return entries;
-          }
-          // Default empty structure with toArray method
-          const emptyArray = [];
-          emptyArray.toArray = () => emptyArray;
-          return emptyArray;
-        }
-        return this.data[key] || null;
-      }
-    },
-    settingsMap: { ...mockMap, data: {} },
-    summariesMap: { ...mockMap, data: {} },
-    persistence: { on: () => {} },
-    provider: null
-  };
-};
-
-// Register update callback
-export const onUpdate = (callback) => {
-  updateCallbacks.push(callback);
-};
-
-// Trigger all update callbacks
-const triggerUpdateCallbacks = (system) => {
-  updateCallbacks.forEach(callback => {
-    try {
-      callback(system);
-    } catch (e) {
-      console.warn('Error in update callback:', e);
-    }
-  });
-};
-
-// Get the current Yjs system instance
-export const getSystem = () => yjsSystem;
-
-// Clear the Yjs system instance (for testing)
-export const clearSystem = () => {
-  yjsSystem = null;
-  updateCallbacks.length = 0;
-};
-
-// Validate WebSocket URL
-const isValidWebSocketUrl = (url) => {
-  if (!url || typeof url !== 'string') return false;
-  if (!url.startsWith('ws://') && !url.startsWith('wss://')) return false;
-  try {
-    const parsedUrl = new URL(url);
-    return parsedUrl.hostname?.length > 0;
-  } catch (e) {
-    return false;
-  }
-};
-
-// Get sync server configuration (single server only)
-const getSyncServer = (yjsSystem = null) => {
-  try {
-    // First try to get from Yjs settings if system is available
-    if (yjsSystem?.settingsMap) {
-      const savedServer = yjsSystem.settingsMap.get('dnd-journal-sync-server');
-      if (savedServer && isValidWebSocketUrl(savedServer)) {
-        return savedServer.trim();
-      }
-    }
-    
-    // Fallback to static config
-    if (SYNC_CONFIG?.server && isValidWebSocketUrl(SYNC_CONFIG.server)) {
-      return SYNC_CONFIG.server.trim();
-    }
-  } catch (e) {
-    console.warn('Error loading sync config:', e);
-  }
+  // Mark as initialized first, then set up sync
+  isInitialized = true;
   
-  // No server configured
-  return null;
+  // Set up sync server from settings (if configured)
+  setupSyncFromSettings();
+  
+  // Wait for initial sync
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  return getYjsState();
 };
 
-// Create sync provider (single provider only)
-const createSyncProvider = (ydoc, yjsSystem = null) => {
-  const serverUrl = getSyncServer(yjsSystem);
-  
-  if (!serverUrl) {
-    return null;
+// Get current Y.js state object for pure functions
+export const getYjsState = () => {
+  if (!isInitialized) {
+    throw new Error('Y.js not initialized. Call initYjs() first.');
   }
-  
-  try {
-    return new WebsocketProvider(serverUrl, 'dnd-journal', ydoc, { connect: true });
-  } catch (e) {
-    console.error(`Failed to connect to ${serverUrl}:`, e);
-    return null;
-  }
-};
-
-// Create Yjs document with all maps
-export const createDocument = () => {
-  const ydoc = new Y.Doc();
   
   return {
-    ydoc,
     characterMap: ydoc.getMap('character'),
     journalMap: ydoc.getMap('journal'),
     settingsMap: ydoc.getMap('settings'),
-    summariesMap: ydoc.getMap('summaries')
+    summariesMap: ydoc.getMap('summaries'),
+    ydoc
   };
 };
 
-// Create persistence layer
-export const createPersistence = (ydoc) => {
-  return new IndexeddbPersistence('dnd-journal', ydoc);
+// Set up sync provider from settings
+const setupSyncFromSettings = () => {
+  // Only try to get settings if we're initialized
+  if (!isInitialized) return;
+  
+  try {
+    const state = getYjsState();
+    const syncServer = getSetting(state, 'sync-server-url', '');
+    
+    if (syncServer && syncServer.trim()) {
+      try {
+        provider = new WebsocketProvider(syncServer.trim(), 'dnd-journal', ydoc);
+      } catch (error) {
+        console.warn('Failed to connect to sync server:', error);
+      }
+    }
+  } catch (error) {
+    // Settings not available yet, skip sync setup for now
+    console.debug('Settings not available during initialization, skipping sync setup');
+  }
 };
 
-// Create complete Yjs system
-export const createSystem = async () => {
-  // Return existing system if already created
-  if (yjsSystem) {
-    return yjsSystem;
+// Reconnect sync provider when settings change
+const reconnectSync = () => {
+  if (provider) {
+    provider.destroy();
+    provider = null;
   }
-  
-  // Return mock system in test environment - multiple checks to ensure reliability
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
-    yjsSystem = createMockSystem();
-    return yjsSystem;
-  }
-  
-  // Additional test environment checks
-  if (typeof global !== 'undefined' && global.localStorage && global.localStorage.data) {
-    // JSDOM localStorage mock detected
-    yjsSystem = createMockSystem();
-    return yjsSystem;
-  }
-  
-  if (typeof window !== 'undefined' && window.location && window.location.href === 'http://localhost/') {
-    // JSDOM environment detected
-    yjsSystem = createMockSystem();
-    return yjsSystem;
-  }
+  setupSyncFromSettings();
+};
 
-  // Create document and maps
-  const { ydoc, characterMap, journalMap, settingsMap, summariesMap } = createDocument();
+// ============================================================================
+// PURE FUNCTIONAL API - All functions take state as first parameter
+// Following ADR-0002 (Functional Programming Only)
+// ============================================================================
+
+// Pure map accessors
+export const getCharacterMap = (state) => state.characterMap;
+export const getJournalMap = (state) => state.journalMap;
+export const getSettingsMap = (state) => state.settingsMap;
+export const getSummariesMap = (state) => state.summariesMap;
+
+// Pure character operations
+export const setCharacter = (state, field, value) => {
+  getCharacterMap(state).set(field, value);
+};
+
+export const getCharacter = (state, field, defaultValue = '') => {
+  return getCharacterMap(state).get(field) || defaultValue;
+};
+
+export const getCharacterData = (state) => {
+  const map = getCharacterMap(state);
+  const data = {
+    name: '',
+    race: '',
+    class: '',
+    backstory: '',
+    notes: ''
+  };
   
-  // Create persistence
-  const persistence = createPersistence(ydoc);
-  
-  // Wait for IndexedDB to sync so settings are loaded
-  await new Promise((resolve) => {
-    persistence.on('synced', resolve);
+  map.forEach((value, key) => {
+    data[key] = value;
   });
   
-  // Create temporary system to access settings
-  const tempSystem = {
-    ydoc,
-    characterMap,
-    journalMap,
-    settingsMap,
-    summariesMap,
-    persistence,
-    provider: null
-  };
-  
-  // Create sync provider with access to loaded settings
-  const provider = createSyncProvider(ydoc, tempSystem);
-  
-  const system = {
-    ydoc,
-    characterMap,
-    journalMap,
-    settingsMap,
-    summariesMap,
-    persistence,
-    provider
-  };
-  
-  // Store the system instance
-  yjsSystem = system;
-  
-  // Setup update listener
-  ydoc.on('update', () => {
-    triggerUpdateCallbacks(system);
-  });
-  
-  // Setup global sync status listener (works on all pages)
-  setupGlobalSyncListener(system);
-  
-  console.log('Yjs system initialized');
-  return system;
+  return data;
 };
 
-// Reload sync provider when settings change (for dynamic reconfiguration)
-export const reloadSyncProviders = () => {
-  if (!yjsSystem) return;
-  
-  // Disconnect existing provider
-  if (yjsSystem.provider && yjsSystem.provider.disconnect) {
-    yjsSystem.provider.disconnect();
-  }
-  
-  // Create new provider with updated settings
-  const newProvider = createSyncProvider(yjsSystem.ydoc, yjsSystem);
-  yjsSystem.provider = newProvider;
-  
-  console.log('Sync provider reloaded');
+// Pure journal operations
+export const addEntry = (state, entry) => {
+  const entries = getEntries(state);
+  const newEntries = [...entries, entry];
+  getJournalMap(state).set('entries', newEntries);
 };
 
-// Get sync status (single provider)
-export const getSyncStatus = (provider) => {
-  if (!provider) {
-    return {
-      available: false,
-      connected: false,
-      url: null
-    };
+export const updateEntry = (state, entryId, updates) => {
+  const entries = getEntries(state);
+  const index = entries.findIndex(e => e.id === entryId);
+  if (index !== -1) {
+    const newEntries = [...entries];
+    newEntries[index] = { ...entries[index], ...updates, timestamp: Date.now() };
+    getJournalMap(state).set('entries', newEntries);
   }
+};
+
+export const deleteEntry = (state, entryId) => {
+  const entries = getEntries(state);
+  const filtered = entries.filter(e => e.id !== entryId);
+  getJournalMap(state).set('entries', filtered);
+};
+
+export const getEntries = (state) => {
+  return getJournalMap(state).get('entries') || [];
+};
+
+// Pure settings operations
+export const setSetting = (state, key, value) => {
+  getSettingsMap(state).set(key, value);
   
-  return {
-    available: true,
-    connected: provider.wsconnected || false,
-    url: provider.url
-  };
+  // If sync server was updated, reconnect
+  if (key === 'sync-server-url') {
+    reconnectSync();
+  }
+};
+
+export const getSetting = (state, key, defaultValue = null) => {
+  return getSettingsMap(state).get(key) ?? defaultValue;
+};
+
+// Pure summary operations
+export const setSummary = (state, key, summary) => {
+  getSummariesMap(state).set(key, summary);
+};
+
+export const getSummary = (state, key) => {
+  return getSummariesMap(state).get(key) || null;
+};
+
+// Pure observer functions
+export const onCharacterChange = (state, callback) => {
+  getCharacterMap(state).observe(callback);
+};
+
+export const onJournalChange = (state, callback) => {
+  getJournalMap(state).observe(callback);
+};
+
+export const onSettingsChange = (state, callback) => {
+  getSettingsMap(state).observe(callback);
+};
+
+export const onSummariesChange = (state, callback) => {
+  getSummariesMap(state).observe(callback);
 };

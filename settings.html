@@ -83,7 +83,7 @@
         <div class="container">
             <a href="/" class="nav-back">← Back to Journal</a>
             
-            <div class="settings-container" data-bwignore="true">
+            <form id="settings-form" class="settings-container" data-bwignore="true">
                 <!-- Sync Configuration Section -->
                 <section class="settings-section">
                     <div class="settings-section-header">
@@ -102,6 +102,7 @@
                             <input 
                                 type="text" 
                                 id="sync-server" 
+                                name="sync-server"
                                 class="form-input" 
                                 placeholder="ws://192.168.1.100:1234 or wss://your-server.com:1234"
                                 autocomplete="off"
@@ -122,7 +123,7 @@
                         <h3 class="settings-subsection-title">Testing & Status</h3>
                         
                         <div class="form-group">
-                            <button id="test-sync-server" class="btn btn-secondary">
+                            <button id="test-connection" type="button" class="btn btn-secondary">
                                 Test Connection
                             </button>
                             <div id="sync-test-result" class="api-test-result"></div>
@@ -157,6 +158,7 @@
                             <input 
                                 type="password" 
                                 id="api-key" 
+                                name="api-key"
                                 class="form-input" 
                                 placeholder="sk-..."
                                 autocomplete="off"
@@ -173,7 +175,7 @@
                         
                         <div class="form-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="enable-ai-features" class="checkbox-input">
+                                <input type="checkbox" id="ai-enabled" name="ai-enabled" class="checkbox-input">
                                 <span class="checkbox-text">Enable AI features (requires API key)</span>
                             </label>
                         </div>
@@ -184,7 +186,7 @@
                         <h3 class="settings-subsection-title">Testing & Validation</h3>
                         
                         <div class="form-group">
-                            <button id="test-api-key" class="btn btn-secondary" disabled>
+                            <button id="test-api-key" type="button" class="btn btn-secondary">
                                 Test API Key
                             </button>
                             <div id="api-test-result" class="api-test-result"></div>
@@ -218,12 +220,12 @@
                 
                 <!-- Unified Save Actions -->
                 <div class="settings-actions">
-                    <button id="save-all-settings" class="btn btn-primary btn-large">
+                    <button type="submit" class="btn btn-primary btn-large">
                         Save All Settings
                     </button>
                     <p class="form-help">Saves both sync and AI configuration settings</p>
                 </div>
-            </div>
+            </form>
         </div>
     </main>
 

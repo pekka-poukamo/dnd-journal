@@ -8,10 +8,10 @@
     "start": "npx http-server . -p 3000 -o",
     "build": "echo 'No build step needed - static site' && exit 0",
     "test": "npm run test:client && npm run test:server",
-    "test:client": "node --experimental-modules node_modules/.bin/mocha test/**/*.test.js --timeout 5000 --reporter spec --exit",
+    "test:client": "node --experimental-modules node_modules/.bin/mocha test/setup.js test/**/*.test.js --timeout 5000 --reporter spec --exit",
     "test:server": "cd server && npm test",
     "test:watch": "mocha test/**/*.test.js --watch --timeout 5000",
-    "coverage": "npm run coverage:client && npm run coverage:server",
+    "test:coverage": "npm run coverage:client && npm run coverage:server",
     "coverage:client": "c8 npm run test:client",
     "coverage:server": "cd server && npm run test:coverage",
     "validate": "echo 'Validating static files...' && test -f index.html && echo '✅ All files valid'",
@@ -42,10 +42,10 @@
   "homepage": "http://dnd-journal.surge.sh",
   "devDependencies": {
     "c8": "^8.0.1",
-    "chai": "^4.3.10",
+    "chai": "^4.5.0",
     "http-server": "^14.1.1",
-    "jsdom": "^23.0.0",
-    "mocha": "^10.2.0",
+    "jsdom": "^23.2.0",
+    "mocha": "^10.8.2",
     "surge": "^0.23.1"
   },
   "engines": {

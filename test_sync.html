@@ -34,11 +34,11 @@
                 await initYjs();
             }
             
-            if (yjsSystem?.settingsMap) {
-                yjsSystem.settingsMap.set('dnd-journal-sync-server', 'ws://192.168.1.104:1234');
-                log('Set server to ws://192.168.1.104:1234 in Yjs settingsMap');
-            } else {
-                log('Yjs system not available');
+            try {
+                yjsSystem.setSetting('sync-server-url', 'ws://192.168.1.104:1234');
+                log('Set server to ws://192.168.1.104:1234 in Yjs settings');
+            } catch (e) {
+                log('Error setting sync server: ' + e.message);
             }
         }
         
@@ -49,21 +49,20 @@
                 await initYjs();
             }
             
-            // Check Yjs settingsMap
-            if (yjsSystem?.settingsMap) {
-                const saved = yjsSystem.settingsMap.get('dnd-journal-sync-server');
-                log('Saved server in Yjs: ' + saved);
-            } else {
-                log('Yjs system not available');
+            // Check Yjs settings
+            try {
+                const saved = yjsSystem.getSetting('sync-server-url', '');
+                log('Saved server in Yjs: ' + (saved || 'Not configured'));
+            } catch (e) {
+                log('Error getting sync server: ' + e.message);
             }
             
-            // Test sync config module
+            // Test sync server from settings
             try {
-                const module = await import('./sync-config.js');
-                log('Sync config loaded');
-                log('Config server: ' + module.SYNC_CONFIG.server);
+                const syncServer = await getSetting('sync-server-url', '');
+                log('Sync server from settings: ' + (syncServer || 'Not configured'));
             } catch (e) {
-                log('Error loading sync config: ' + e.message);
+                log('Error getting sync server: ' + e.message);
             }
         }
         

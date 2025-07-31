@@ -1,4 +1,4 @@
-// AI Module - OpenAI Integration for Introspection and Summarization
+// AI Module - Pure Functional Y.js Integration
 
 // ================================
 // NARRATIVE INTROSPECTION SYSTEM
@@ -24,11 +24,11 @@
 
 import { 
   createInitialSettings, 
-  getWordCount 
+  getWordCount,
+  sortEntriesByDate,
+  formatDate
 } from './utils.js';
-import { getSummaryByKey, storeSummary } from './summarization.js';
-import { loadSettings } from './settings.js';
-import { getSystem } from './yjs.js';
+import { getYjsState, getSummary, setSummary, getSetting, getSummariesMap, getEntries } from './yjs.js';
 import { getEncoding } from 'js-tiktoken';
 
 // Unified narrative-focused system prompt with unobvious question element
@@ -103,13 +103,19 @@ export const calculateTotalTokens = async (messages) => {
 
 // Pure function to load settings
 export const loadAISettings = () => {
-  return loadSettings();
+  const state = getYjsState();
+  return {
+    apiKey: getSetting(state, 'openai-api-key', ''),
+    enableAIFeatures: getSetting(state, 'ai-enabled', false)
+  };
 };
 
 // Pure function to check if AI features are available
 export const isAIEnabled = () => {
-  const settings = loadAISettings();
-  return Boolean(settings.enableAIFeatures && settings.apiKey);
+  const state = getYjsState();
+  const apiKey = getSetting(state, 'openai-api-key', '');
+  const enabled = getSetting(state, 'ai-enabled', false);
+  return Boolean(enabled && apiKey);
 };
 
 // Pure function to create introspection prompt
@@ -284,22 +290,9 @@ Content: ${entry.content}`;
 
 // Summaries are now accessed through the summarization module API
 
-// Get or generate summary for an entry
-export const getEntrySummary = async (entry) => {
-  // Check for existing summary using summarization module API
-  const existingSummary = getSummaryByKey(entry.id);
-  if (existingSummary) {
-    return existingSummary;
-  }
-  
-  // Generate new summary
-  const summary = await generateEntrySummary(entry);
-  if (summary) {
-    // Store using summarization module API - automatically persisted via Yjs
-    storeSummary(entry.id, summary);
-  }
-  
-  return summary;
+// Get existing summary for an entry (read-only, no generation)
+export const getEntrySummary = (state, entryId) => {
+  return getSummary(state, entryId);
 };
 
 // Helper function for prompt information
@@ -349,162 +342,77 @@ export const getIntrospectionPromptForPreview = async (character, entries) => {
 
 // Format character data for AI processing (with summaries if available)
 export const getFormattedCharacterForAI = (character) => {
-  // Get character summaries from Yjs system
-  const yjsSystem = getSystem();
+  // Get character summaries from Y.js directly
   const characterSummaries = {};
   
-  // Collect character-related summaries from Yjs summariesMap
-  if (yjsSystem?.summariesMap) {
-    yjsSystem.summariesMap.forEach((value, key) => {
-      if (key.startsWith('character:')) {
-        const field = key.replace('character:', '');
-        characterSummaries[field] = value;
-      }
-    });
+  try {
+    const state = getYjsState();
+    // Collect character-related summaries from Y.js summariesMap
+    const summariesMap = getSummariesMap(state);
+    if (summariesMap) {
+      summariesMap.forEach((value, key) => {
+        if (key.startsWith('character:')) {
+          const field = key.replace('character:', '');
+          characterSummaries[field] = value;
+        }
+      });
+    }
+  } catch (error) {
+    // Y.js not initialized or summaries not available
+    console.debug('Could not access summaries for character formatting:', error);
   }
   
+  const processField = (fieldName, originalValue) => {
+    const summary = characterSummaries[fieldName];
+    return summary || originalValue || '';
+  };
+
   return {
-    ...character,
-    backstorySummarized: characterSummaries.backstory ? true : false,
-    notesSummarized: characterSummaries.notes ? true : false,
-    backstory: characterSummaries.backstory ? characterSummaries.backstory.summary : character.backstory,
-    notes: characterSummaries.notes ? characterSummaries.notes.summary : character.notes
+    name: character.name || 'unnamed adventurer',
+    race: processField('race', character.race),
+    class: processField('class', character.class),
+    backstory: processField('backstory', character.backstory),
+    notes: processField('notes', character.notes)
   };
 };
 
 // Format entries for AI processing (with summaries for older entries, full content for recent)
 export const getFormattedEntriesForAI = () => {
-  // Use Yjs system first, then fallback to localStorage
-  const yjsSystem = getSystem();
-  let processedJournalData, entrySummaries, metaSummaries;
+  try {
+    const state = getYjsState();
+    // Get entries directly from Y.js
+    const entries = getEntries(state);
   
-  if (yjsSystem) {
-    // Get data from Yjs
-    const entriesArray = yjsSystem.journalMap.get('entries');
-    let entries = [];
-    
-    if (entriesArray) {
-      if (Array.isArray(entriesArray)) {
-        // Plain JavaScript array (test environment)
-        entries = entriesArray;
-      } else if (entriesArray.toArray && typeof entriesArray.toArray === 'function') {
-        // Y.Array with Y.Map objects (real app) or mock toArray function
-        try {
-          const rawEntries = entriesArray.toArray();
-          if (rawEntries && Array.isArray(rawEntries)) {
-            entries = rawEntries.map(entryMap => {
-              // Handle both Y.Map objects and plain objects
-              if (entryMap && typeof entryMap.get === 'function') {
-                return {
-                  id: entryMap.get('id'),
-                  title: entryMap.get('title'),
-                  content: entryMap.get('content'),
-                  timestamp: entryMap.get('timestamp')
-                };
-              } else {
-                // Plain object (test environment)
-                return entryMap;
-              }
-            });
-          }
-        } catch (e) {
-          // Fallback if toArray fails
-          entries = [];
-        }
-      }
-    }
-    
-    processedJournalData = { 
-      character: {}, 
-      entries: entries
-    };
-    
-    entrySummaries = {};
-    metaSummaries = {};
-    
-    // Convert Yjs summaries to the expected format
-    if (yjsSystem.summariesMap) {
-      yjsSystem.summariesMap.forEach((value, key) => {
-        if (key === 'summaries') {
-          entrySummaries = value && typeof value === 'object' && value.get ? value.toJSON() : value || {};
-        } else if (key === 'meta-summaries') {
-          metaSummaries = value && typeof value === 'object' && value.get ? value.toJSON() : value || {};
-        }
-      });
-    }
-  } else {
-    // No Yjs system available - use empty data
-    processedJournalData = { character: {}, entries: [] };
-    entrySummaries = {};
-    metaSummaries = {};
+  if (!entries || entries.length === 0) {
+    return 'No journal entries yet. This character is just beginning their adventure.';
   }
   
-  // Get all entry IDs that are already included in meta-summaries to avoid duplication
-  const entriesInMetaSummaries = new Set();
-  Object.values(metaSummaries).forEach(metaSummary => {
-    if (metaSummary.includedSummaryIds) {
-      metaSummary.includedSummaryIds.forEach(entryId => {
-        // Entry summaries are keyed by entry ID, so the summaryId is the entryId
-        entriesInMetaSummaries.add(entryId);
-      });
-    }
-  });
-  
-  const sortedEntries = [...(processedJournalData.entries || [])].sort((a, b) => b.timestamp - a.timestamp);
-  const recentEntries = sortedEntries.slice(0, 5); // Keep 5 most recent entries in full
-  const olderEntries = sortedEntries.slice(5);
-  
-
-  
-  const formattedEntries = [];
-  
-  // Add recent entries in full (these are always included regardless of meta-summaries)
-  recentEntries.forEach(entry => {
-    formattedEntries.push({
-      type: 'recent',
-      title: entry.title,
-      content: entry.content,
-      timestamp: entry.timestamp
-    });
-  });
-  
-  // Add individual summaries for older entries, but only if they're not already in meta-summaries
-  olderEntries.forEach(entry => {
-    // Skip entries that are already included in meta-summaries
-    if (entriesInMetaSummaries.has(entry.id)) {
-      return;
-    }
+    // Sort entries by timestamp (newest first) - entries should already be sorted from getEntries()
+    const sortedEntries = sortEntriesByDate(entries);
     
-    const summary = entrySummaries[entry.id];
-    if (summary) {
-      formattedEntries.push({
-        type: 'summary',
-        title: entry.title,
-        content: summary.summary,
-        timestamp: entry.timestamp
-      });
-    } else {
-      // Fallback to full entry if no summary available
-      formattedEntries.push({
-        type: 'recent',
-        title: entry.title,
-        content: entry.content,
-        timestamp: entry.timestamp
-      });
-    }
-  });
-  
-  // Add meta-summaries for very old entries (these replace the individual entries)
-  Object.values(metaSummaries).forEach(metaSummary => {
-    formattedEntries.push({
-      type: 'meta-summary',
-      title: metaSummary.title,
-      content: metaSummary.summary,
-      timestamp: metaSummary.timestamp
-    });
-  });
-  
-  
-  
-  return formattedEntries;
+    // Use last 5 entries for context, with full content for recent ones and summaries for older ones
+    const recentEntries = sortedEntries.slice(0, 5);
+    
+    return recentEntries.map((entry, index) => {
+      const summary = getSummary(state, `entry:${entry.id}`);
+      let content;
+      
+      if (index < 2 && !summary) {
+        // Most recent 2 entries: use full content if no summary available
+        content = entry.content;
+      } else if (summary) {
+        // Use summary if available
+        content = `[Summary: ${summary}]`;
+      } else {
+        // Fallback to full content for older entries without summaries
+        content = entry.content;
+      }
+      
+      const formattedDate = formatDate ? formatDate(entry.timestamp) : new Date(entry.timestamp).toLocaleDateString();
+      return `**${entry.title}** (${formattedDate})\n${content}`;
+    }).join('\n\n');
+  } catch (error) {
+    console.debug('Could not format entries for AI:', error);
+    return 'No journal entries available.';
+  }
 };

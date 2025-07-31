@@ -1,8 +1,7 @@
 // OpenAI Wrapper - Pure OpenAI interface with currying
 // Following functional programming principles and style guide
 
-import { createInitialSettings } from './utils.js';
-import { loadSettings } from './settings.js';
+import { getYjsState, getSetting } from './yjs.js';
 
 // =============================================================================
 // CORE OPENAI INTERFACE
@@ -10,8 +9,10 @@ import { loadSettings } from './settings.js';
 
 // Check if API is available
 export const isAPIAvailable = () => {
-  const settings = loadSettings();
-  return Boolean(settings.enableAIFeatures && settings.apiKey && settings.apiKey.startsWith('sk-'));
+  const state = getYjsState();
+  const apiKey = getSetting(state, 'openai-api-key', '');
+  const enabled = getSetting(state, 'ai-enabled', false);
+  return Boolean(enabled && typeof apiKey === 'string' && apiKey.trim().length > 0 && apiKey.startsWith('sk-'));
 };
 
 // Base OpenAI call function
@@ -20,7 +21,8 @@ const callOpenAI = async (systemPrompt, userPrompt, options = {}) => {
     throw new Error('OpenAI API not available - check settings');
   }
 
-  const settings = loadSettings();
+  const state = getYjsState();
+  const apiKey = getSetting(state, 'openai-api-key', '');
   const defaultOptions = {
     model: 'gpt-4.1-mini',
     maxTokens: 1200, // Increased from 400
@@ -40,7 +42,7 @@ const callOpenAI = async (systemPrompt, userPrompt, options = {}) => {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${settings.apiKey}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -68,8 +70,20 @@ const callOpenAI = async (systemPrompt, userPrompt, options = {}) => {
 // CURRIED FUNCTION GENERATORS
 // =============================================================================
 
-// Create a function with a fixed system prompt
-export const createSystemPromptFunction = (systemPrompt, options = {}) => {
+// Create a function that returns message arrays (for testing/utility)
+export const createSystemPromptFunction = (systemPrompt) => {
+  return (userPrompt) => {
+    return systemPrompt 
+      ? [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ]
+      : [{ role: 'user', content: userPrompt }];
+  };
+};
+
+// Create an async function with a fixed system prompt for API calls
+export const createSystemPromptAPIFunction = (systemPrompt, options = {}) => {
   return async (userPrompt) => {
     return await callOpenAI(systemPrompt, userPrompt, options);
   };

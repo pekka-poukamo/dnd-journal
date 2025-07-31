@@ -1,438 +1,217 @@
+import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
-import './setup.js';
-import * as Yjs from '../js/yjs.js';
+import { JSDOM } from 'jsdom';
 
-describe('Yjs Module', function() {
+import * as YjsModule from '../js/yjs.js';
+
+describe('Simple Y.js Module', function() {
+  let state;
+
+  beforeEach(async function() {
+    // Set up DOM
+    const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>');
+    global.window = dom.window;
+    global.document = dom.window.document;
+    
+    // Reset and initialize Y.js
+    YjsModule.resetYjs();
+    state = await YjsModule.initYjs();
+  });
+
   afterEach(function() {
-    // Clear system after each test
-    Yjs.clearSystem();
+    YjsModule.resetYjs();
   });
 
-  describe('createDocument', function() {
-    it('should create a document with all required maps', function() {
-      const doc = Yjs.createDocument();
-      
-      expect(doc).to.have.property('ydoc');
-      expect(doc).to.have.property('characterMap');
-      expect(doc).to.have.property('journalMap');
-      expect(doc).to.have.property('settingsMap');
-      expect(doc).to.have.property('summariesMap');
-      
-      // Test that maps are functional
-      expect(typeof doc.characterMap.set).to.equal('function');
-      expect(typeof doc.journalMap.set).to.equal('function');
-      expect(typeof doc.settingsMap.set).to.equal('function');
-      expect(typeof doc.summariesMap.set).to.equal('function');
+  describe('initYjs', function() {
+    it('should initialize Y.js document and maps', function() {
+      expect(YjsModule.getCharacterMap(state)).to.not.be.null;
+      expect(YjsModule.getJournalMap(state)).to.not.be.null;
+      expect(YjsModule.getSettingsMap(state)).to.not.be.null;
+      expect(YjsModule.getSummariesMap(state)).to.not.be.null;
     });
-  });
 
-  describe('createPersistence', function() {
-    it('should create IndexedDB persistence', function() {
-      const ydoc = new Yjs.Y.Doc();
-      const persistence = Yjs.createPersistence(ydoc);
-      
-      expect(persistence).to.be.an('object');
-      expect(typeof persistence.on).to.equal('function');
+    it('should not reinitialize if already initialized', async function() {
+      const state2 = await YjsModule.initYjs();
+      // Both states should have the same structure and maps
+      expect(state2.characterMap).to.equal(state.characterMap);
+      expect(state2.journalMap).to.equal(state.journalMap);
+      expect(state2.settingsMap).to.equal(state.settingsMap);
+      expect(state2.summariesMap).to.equal(state.summariesMap);
     });
   });
 
-  describe('createSystem', function() {
-    it('should create a mock system in test environment', async function() {
-      const system = await Yjs.createSystem();
+  describe('Character operations', function() {
+    it('should set and get character fields', function() {
+      YjsModule.setCharacter(state, 'name', 'Aragorn');
+      const name = YjsModule.getCharacter(state, 'name');
+      expect(name).to.equal('Aragorn');
+    });
+
+    it('should return empty string for non-existent fields', function() {
+      const race = YjsModule.getCharacter(state, 'race');
+      expect(race).to.equal('');
+    });
+
+    it('should get character data as object', function() {
+      YjsModule.setCharacter(state, 'name', 'Legolas');
+      YjsModule.setCharacter(state, 'race', 'Elf');
+      YjsModule.setCharacter(state, 'backstory', 'Prince of the Woodland Realm');
       
-      expect(system).to.have.property('characterMap');
-      expect(system).to.have.property('journalMap');
-      expect(system).to.have.property('settingsMap');
-      expect(system).to.have.property('summariesMap');
-      expect(system).to.have.property('ydoc');
-      
-      // Test that the system is functional
-      system.characterMap.set('name', 'Test Character');
-      expect(system.characterMap.get('name')).to.equal('Test Character');
-    });
-
-    it('should return the same system instance on subsequent calls', async function() {
-      const system1 = await Yjs.createSystem();
-      const system2 = await Yjs.createSystem();
-      
-      // Both should be valid systems, and since we're reusing the same instance
-      expect(system1).to.be.an('object');
-      expect(system2).to.be.an('object');
-      expect(system1).to.equal(system2);
-    });
-
-    it('should create mock system when NODE_ENV is test', async function() {
-      // Test environment should always create mock system
-      const system = await Yjs.createSystem();
-      
-      // Verify it's a mock system by checking mock characteristics
-      expect(system.provider).to.be.null; // Mock has no provider
-    });
-
-    it('should create mock system with JSDOM localStorage detection', async function() {
-      // Simulate JSDOM environment by checking if we get mock system
-      const system = await Yjs.createSystem();
-      
-      // In test environment, should always be mock
-      expect(system).to.have.property('characterMap');
-      expect(system.provider).to.be.null;
-    });
-  });
-
-  describe('getSystem', function() {
-    it('should return null when no system is created', function() {
-      const system = Yjs.getSystem();
-      expect(system).to.be.null;
-    });
-
-    it('should return the created system', async function() {
-      const created = await Yjs.createSystem();
-      const retrieved = Yjs.getSystem();
-      
-      expect(retrieved).to.equal(created);
-    });
-  });
-
-  describe('clearSystem', function() {
-    it('should clear the system instance', async function() {
-      await Yjs.createSystem();
-      expect(Yjs.getSystem()).to.not.be.null;
-      
-      Yjs.clearSystem();
-      expect(Yjs.getSystem()).to.be.null;
-    });
-
-    it('should allow creating a new system after clearing', async function() {
-      const system1 = await Yjs.createSystem();
-      Yjs.clearSystem();
-      const system2 = await Yjs.createSystem();
-      
-      expect(system1).to.not.equal(system2);
-      expect(system2).to.not.be.null;
-    });
-
-    it('should clear update callbacks', async function() {
-      let callbackCalled = false;
-      const callback = () => { callbackCalled = true; };
-      
-      Yjs.onUpdate(callback);
-      Yjs.clearSystem();
-      
-      // After clearing, callback should be removed (tested indirectly)
-      await Yjs.createSystem();
-      // In a mock system, we can't easily trigger callbacks, but clearing doesn't throw
-      expect(callbackCalled).to.be.false;
-    });
-  });
-
-  describe('getSyncStatus', function() {
-    it('should return object with disconnected status when no provider', function() {
-      const status = Yjs.getSyncStatus();
-      expect(status).to.be.an('object');
-      expect(status).to.have.property('available', false);
-      expect(status).to.have.property('connected', false);
-      expect(status).to.have.property('url', null);
-    });
-
-    it('should return object with status for provider', async function() {
-      await Yjs.createSystem();
-      const status = Yjs.getSyncStatus(null);
-      expect(status).to.be.an('object');
-      expect(status).to.have.property('available');
-      expect(status).to.have.property('connected');
-    });
-
-    it('should return correct status for null provider', function() {
-      const status = Yjs.getSyncStatus(null);
-      expect(status).to.deep.equal({
-        available: false,
-        connected: false,
-        url: null
+      const data = YjsModule.getCharacterData(state);
+      expect(data).to.deep.equal({
+        name: 'Legolas',
+        race: 'Elf',
+        class: '',
+        backstory: 'Prince of the Woodland Realm',
+        notes: ''
       });
     });
-
-    it('should handle provider with connected status', function() {
-      const mockProvider = { url: 'wss://test1.com', wsconnected: true };
-      
-      const status = Yjs.getSyncStatus(mockProvider);
-      
-      expect(status.available).to.be.true;
-      expect(status.connected).to.be.true;
-      expect(status.url).to.equal('wss://test1.com');
-    });
-
-    it('should handle provider with no connection', function() {
-      const mockProvider = { url: 'wss://test1.com', wsconnected: false };
-      
-      const status = Yjs.getSyncStatus(mockProvider);
-      
-      expect(status.available).to.be.true;
-      expect(status.connected).to.be.false;
-      expect(status.url).to.equal('wss://test1.com');
-    });
-
-    it('should handle provider with undefined wsconnected property', function() {
-      const mockProvider = { url: 'wss://test1.com' }; // Missing wsconnected
-      
-      const status = Yjs.getSyncStatus(mockProvider);
-      
-      expect(status.available).to.be.true;
-      expect(status.connected).to.be.false;
-      expect(status.url).to.equal('wss://test1.com');
-    });
   });
 
-  describe('onUpdate', function() {
-    it('should register update callback', async function() {
-      let callbackCalled = false;
-      const callback = () => { callbackCalled = true; };
-      
-      await Yjs.createSystem();
-      Yjs.onUpdate(callback);
-      
-      // In a mock system, callbacks are stored but not automatically triggered
-      // This test verifies the registration doesn't throw errors
-      expect(callbackCalled).to.be.false; // Mock doesn't auto-trigger
-    });
-
-    it('should handle callback registration before system creation', function() {
-      let callbackCalled = false;
-      const callback = () => { callbackCalled = true; };
-      
-      // Should not throw when system doesn't exist yet
-      expect(() => Yjs.onUpdate(callback)).to.not.throw();
-    });
-
-    it('should register multiple callbacks', function() {
-      const callback1 = () => {};
-      const callback2 = () => {};
-      
-      expect(() => {
-        Yjs.onUpdate(callback1);
-        Yjs.onUpdate(callback2);
-      }).to.not.throw();
-    });
-  });
-
-  describe('Mock System Behavior', function() {
-    beforeEach(async function() {
-      await Yjs.createSystem();
-    });
-
-    it('should handle character map operations', function() {
-      const system = Yjs.getSystem();
-      
-      system.characterMap.set('name', 'Aragorn');
-      system.characterMap.set('class', 'Ranger');
-      
-      expect(system.characterMap.get('name')).to.equal('Aragorn');
-      expect(system.characterMap.get('class')).to.equal('Ranger');
-      expect(system.characterMap.has('name')).to.be.true;
-      expect(system.characterMap.has('nonexistent')).to.be.false;
-    });
-
-    it('should handle journal map operations', function() {
-      const system = Yjs.getSystem();
-      
-      const entries = [
-        { id: '1', title: 'Entry 1', content: 'Content 1' },
-        { id: '2', title: 'Entry 2', content: 'Content 2' }
-      ];
-      
-      system.journalMap.set('entries', entries);
-      const retrieved = system.journalMap.get('entries');
-      
-      expect(retrieved).to.deep.equal(entries);
-    });
-
-    it('should handle journal map entries with toArray method', function() {
-      const system = Yjs.getSystem();
-      
-      const entries = [{ id: '1', title: 'Test' }];
-      system.journalMap.set('entries', entries);
-      
-      const retrieved = system.journalMap.get('entries');
-      expect(typeof retrieved.toArray).to.equal('function');
-      expect(retrieved.toArray()).to.deep.equal(entries);
-    });
-
-    it('should handle journal map entries with existing toArray method', function() {
-      const system = Yjs.getSystem();
-      
-      const entriesWithToArray = [{ id: '1', title: 'Test' }];
-      entriesWithToArray.toArray = () => entriesWithToArray;
-      
-      system.journalMap.set('entries', entriesWithToArray);
-      const retrieved = system.journalMap.get('entries');
-      
-      expect(retrieved.toArray()).to.deep.equal(entriesWithToArray);
-    });
-
-    it('should return empty array with toArray for non-existent entries', function() {
-      const system = Yjs.getSystem();
-      
-      const retrieved = system.journalMap.get('entries');
-      expect(Array.isArray(retrieved)).to.be.true;
-      expect(retrieved).to.have.lengthOf(0);
-      expect(typeof retrieved.toArray).to.equal('function');
-      expect(retrieved.toArray()).to.deep.equal([]);
-    });
-
-    it('should handle non-array entries data', function() {
-      const system = Yjs.getSystem();
-      
-      // Set non-array data to entries
-      system.journalMap.set('entries', 'not an array');
-      const retrieved = system.journalMap.get('entries');
-      
-      expect(Array.isArray(retrieved)).to.be.true;
-      expect(retrieved).to.have.lengthOf(0);
-      expect(typeof retrieved.toArray).to.equal('function');
-    });
-
-    it('should handle settings map operations', function() {
-      const system = Yjs.getSystem();
-      
-      system.settingsMap.set('apiKey', 'sk-test123');
-      system.settingsMap.set('enableAIFeatures', true);
-      
-      expect(system.settingsMap.get('apiKey')).to.equal('sk-test123');
-      expect(system.settingsMap.get('enableAIFeatures')).to.be.true;
-    });
-
-    it('should handle summaries map operations', function() {
-      const system = Yjs.getSystem();
-      
-      const summary = {
-        content: 'Test summary',
-        words: 10,
+  describe('Journal operations', function() {
+    it('should add journal entries', function() {
+      const entry = {
+        id: 'test-entry',
+        title: 'Test Entry',
+        content: 'This is a test entry',
         timestamp: Date.now()
       };
       
-      system.summariesMap.set('test-key', summary);
-      expect(system.summariesMap.get('test-key')).to.deep.equal(summary);
+      YjsModule.addEntry(state, entry);
+      const entries = YjsModule.getEntries(state);
+      expect(entries).to.have.length(1);
+      expect(entries[0]).to.deep.equal(entry);
     });
 
-    it('should clear map data', function() {
-      const system = Yjs.getSystem();
+    it('should update journal entries', function() {
+      const entry = {
+        id: 'test-entry',
+        title: 'Original Title',
+        content: 'Original content',
+        timestamp: Date.now()
+      };
       
-      system.characterMap.set('name', 'Test');
-      expect(system.characterMap.get('name')).to.equal('Test');
+      YjsModule.addEntry(state, entry);
       
-      system.characterMap.clear();
-      expect(system.characterMap.get('name')).to.be.null;
+      const updates = {
+        title: 'Updated Title',
+        content: 'Updated content'
+      };
+      
+      YjsModule.updateEntry(state, 'test-entry', updates);
+      
+      const entries = YjsModule.getEntries(state);
+      expect(entries[0].title).to.equal('Updated Title');
+      expect(entries[0].content).to.equal('Updated content');
+      expect(entries[0].timestamp).to.be.a('number');
     });
 
-    it('should iterate over map entries with forEach', function() {
-      const system = Yjs.getSystem();
+    it('should delete journal entries', function() {
+      const entry = {
+        id: 'test-entry',
+        title: 'Test Entry',
+        content: 'This is a test entry',
+        timestamp: Date.now()
+      };
       
-      system.characterMap.set('name', 'Legolas');
-      system.characterMap.set('class', 'Archer');
+      YjsModule.addEntry(state, entry);
+      expect(YjsModule.getEntries(state)).to.have.length(1);
       
-      const entries = [];
-      system.characterMap.forEach((value, key) => {
-        entries.push({ key, value });
-      });
-      
-      expect(entries).to.have.lengthOf(2);
-      expect(entries.some(e => e.key === 'name' && e.value === 'Legolas')).to.be.true;
-      expect(entries.some(e => e.key === 'class' && e.value === 'Archer')).to.be.true;
+      YjsModule.deleteEntry(state, 'test-entry');
+      expect(YjsModule.getEntries(state)).to.have.length(0);
     });
 
-    it('should handle observe method calls (mock)', function() {
-      const system = Yjs.getSystem();
+    it('should handle multiple entries', function() {
+      const entries = [
+        { id: 'entry-1', title: 'Entry 1', content: 'Content 1', timestamp: Date.now() },
+        { id: 'entry-2', title: 'Entry 2', content: 'Content 2', timestamp: Date.now() + 1 },
+        { id: 'entry-3', title: 'Entry 3', content: 'Content 3', timestamp: Date.now() + 2 }
+      ];
       
-      // Mock observe should not throw
-      expect(() => {
-        system.characterMap.observe(() => {});
-        system.journalMap.observe(() => {});
-        system.settingsMap.observe(() => {});
-        system.summariesMap.observe(() => {});
-      }).to.not.throw();
-    });
-  });
-
-  describe('Internal Functions (via edge case testing)', function() {
-    // These test internal functions through edge cases and error conditions
-    
-    describe('WebSocket URL Validation (via getSyncStatus)', function() {
-      it('should handle providers with invalid URLs', function() {
-        const mockProvider = { url: null, wsconnected: false };
-        
-        const status = Yjs.getSyncStatus(mockProvider);
-        expect(status.available).to.be.true;
-        expect(status.url).to.be.null;
-      });
-    });
-
-    describe('Update Callback Error Handling', function() {
-      it('should handle callback errors gracefully', async function() {
-        let errorThrown = false;
-        const badCallback = () => {
-          throw new Error('Test error');
-        };
-        
-        const goodCallback = () => {
-          errorThrown = true;
-        };
-        
-        // Register callbacks
-        Yjs.onUpdate(badCallback);
-        Yjs.onUpdate(goodCallback);
-        
-        // In mock system, we can't easily trigger the callbacks
-        // but registration should not throw
-        expect(() => {
-          Yjs.onUpdate(badCallback);
-        }).to.not.throw();
-      });
-    });
-
-    describe('Sync Configuration Edge Cases', function() {
-      it('should handle sync configuration scenarios', async function() {
-        // Test that system creation handles configuration properly
-        const system = await Yjs.createSystem();
-        
-        // Mock system should have null provider
-        expect(system.provider).to.be.null;
-      });
+      entries.forEach(entry => YjsModule.addEntry(state, entry));
+      
+      const retrievedEntries = YjsModule.getEntries(state);
+      expect(retrievedEntries).to.have.length(3);
     });
   });
 
-  describe('Edge Cases and Error Handling', function() {
-    it('should handle null/undefined inputs to getSyncStatus', function() {
-      expect(() => Yjs.getSyncStatus(null)).to.not.throw();
-      expect(() => Yjs.getSyncStatus(undefined)).to.not.throw();
-      
-      const statusNull = Yjs.getSyncStatus(null);
-      const statusUndefined = Yjs.getSyncStatus(undefined);
-      
-      expect(statusNull.available).to.be.false;
-      expect(statusUndefined.available).to.be.false;
+  describe('Settings operations', function() {
+    it('should set and get settings', function() {
+      YjsModule.setSetting(state, 'test-key', 'test-value');
+      const value = YjsModule.getSetting(state, 'test-key');
+      expect(value).to.equal('test-value');
     });
 
-    it('should handle null provider in getSyncStatus', function() {
-      const status = Yjs.getSyncStatus(null);
+    it('should return default value for non-existent settings', function() {
+      const value = YjsModule.getSetting(state, 'non-existent', 'default');
+      expect(value).to.equal('default');
+    });
+
+    it('should handle boolean settings', function() {
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      const enabled = YjsModule.getSetting(state, 'ai-enabled');
+      expect(enabled).to.be.true;
+    });
+  });
+
+  describe('Summary operations', function() {
+    it('should set and get summaries', function() {
+      YjsModule.setSummary(state, 'test-summary', 'This is a summary');
+      const summary = YjsModule.getSummary(state, 'test-summary');
+      expect(summary).to.equal('This is a summary');
+    });
+
+    it('should return null for non-existent summaries', function() {
+      const summary = YjsModule.getSummary(state, 'non-existent');
+      expect(summary).to.be.null;
+    });
+  });
+
+  describe('Observers', function() {
+    it('should allow adding character change observers', function() {
+      let changeDetected = false;
       
-      expect(status).to.deep.equal({
-        available: false,
-        connected: false,
-        url: null
+      YjsModule.onCharacterChange(state, () => {
+        changeDetected = true;
       });
-    });
-
-    it('should handle system creation multiple times', async function() {
-      const system1 = await Yjs.createSystem();
-      const system2 = await Yjs.createSystem();
-      const system3 = await Yjs.createSystem();
       
-      expect(system1).to.equal(system2);
-      expect(system2).to.equal(system3);
+      YjsModule.setCharacter(state, 'name', 'Test Character');
+      
+      // Y.js observers fire synchronously when changes occur
+      expect(changeDetected).to.be.true; // Observer should have fired for the character change
     });
 
-    it('should handle callback registration with null/undefined', function() {
-      expect(() => Yjs.onUpdate(null)).to.not.throw();
-      expect(() => Yjs.onUpdate(undefined)).to.not.throw();
+    it('should allow adding journal change observers', function() {
+      let changeDetected = false;
+      
+      YjsModule.onJournalChange(state, () => {
+        changeDetected = true;
+      });
+      
+      const entry = {
+        id: 'test-entry',
+        title: 'Test Entry',
+        content: 'Test content',
+        timestamp: Date.now()
+      };
+      
+      YjsModule.addEntry(state, entry);
+      
+      // Y.js observers fire synchronously when changes occur
+      expect(changeDetected).to.be.true; // Observer should have fired for the journal change
+    });
+
+    it('should allow adding settings change observers', function() {
+      let changeDetected = false;
+      
+      YjsModule.onSettingsChange(state, () => {
+        changeDetected = true;
+      });
+      
+      YjsModule.setSetting(state, 'test-setting', 'test-value');
+      
+      // Y.js observers fire synchronously when changes occur
+      expect(changeDetected).to.be.true; // Observer should have fired for the settings change
     });
   });
 });
