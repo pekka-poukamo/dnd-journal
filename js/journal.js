@@ -22,6 +22,9 @@ import {
 
 import { generateId, isValidEntry, formatDate } from './utils.js';
 
+import { generateQuestions, hasGoodContext } from './storytelling.js';
+import { isAPIAvailable } from './openai-wrapper.js';
+
 // State management
 let entriesContainer = null;
 let characterInfoContainer = null;
@@ -52,12 +55,12 @@ export const initJournalPage = async (stateParam = null) => {
     // Set up reactive updates
     onJournalChange(state, () => {
       renderJournalPage(state);
-      renderAIPrompt(aiPromptText, regenerateBtn, state);
+      renderAIPromptWithLogic(state);
     });
     
     onCharacterChange(state, () => {
       renderCharacterInfo(state);
-      renderAIPrompt(aiPromptText, regenerateBtn, state);
+      renderAIPromptWithLogic(state);
     });
     
     // Set up form
@@ -252,13 +255,50 @@ const setupAIPrompt = (state) => {
   }
   
   // Initial render
-  renderAIPrompt(aiPromptText, regenerateBtn, state);
+  await renderAIPromptWithLogic(state);
 };
 
 // Handle regenerate button click
 const handleRegeneratePrompt = async (stateParam = null) => {
   const state = stateParam || getYjsState();
-  await renderAIPrompt(aiPromptText, regenerateBtn, state);
+  await renderAIPromptWithLogic(state);
+};
+
+// Render AI prompt with business logic - determines state and calls pure view function
+const renderAIPromptWithLogic = async (stateParam = null) => {
+  if (!aiPromptText) return;
+  
+  try {
+    const state = stateParam || getYjsState();
+    const character = getCharacterData(state);
+    const entries = getEntries(state);
+    
+    // Check API availability first
+    if (!isAPIAvailable()) {
+      renderAIPrompt(aiPromptText, { type: 'api-not-available' }, regenerateBtn);
+      return;
+    }
+    
+    // Check if we have good context for generating questions
+    if (!hasGoodContext(character, entries)) {
+      renderAIPrompt(aiPromptText, { type: 'no-context' }, regenerateBtn);
+      return;
+    }
+    
+    // Show loading and generate questions
+    renderAIPrompt(aiPromptText, { type: 'loading' }, regenerateBtn);
+    const questions = await generateQuestions(character, entries);
+    
+    if (questions) {
+      renderAIPrompt(aiPromptText, { type: 'questions', questions }, regenerateBtn);
+    } else {
+      renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
+    }
+    
+  } catch (error) {
+    console.error('Failed to render AI prompt:', error);
+    renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
+  }
 };
 
 

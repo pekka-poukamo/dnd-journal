@@ -1,8 +1,5 @@
 // Journal Views - Pure Rendering Functions for Journal Page
 import { parseMarkdown, formatDate, sortEntriesByDate } from './utils.js';
-import { generateQuestions, hasGoodContext } from './storytelling.js';
-import { isAPIAvailable } from './openai-wrapper.js';
-import { getCharacterData, getEntries } from './yjs.js';
 
 // Create journal entry form
 export const createEntryForm = (options = {}) => {
@@ -269,39 +266,30 @@ export const clearForm = (form) => {
 // AI PROMPT RENDERING FUNCTIONS
 // =============================================================================
 
-// Main AI prompt render function - pure function based on state
-export const renderAIPrompt = async (aiPromptElement, regenerateBtn = null, state) => {
+// Render AI prompt based on provided state data - pure function
+export const renderAIPrompt = (aiPromptElement, aiPromptState, regenerateBtn = null) => {
   if (!aiPromptElement) return;
   
-  try {
-    const character = getCharacterData(state);
-    const entries = getEntries(state);
-    
-    // Check API availability first
-    if (!isAPIAvailable()) {
+  const { type, message, questions } = aiPromptState;
+  
+  switch (type) {
+    case 'api-not-available':
       showAIPromptAPINotAvailable(aiPromptElement, regenerateBtn);
-      return;
-    }
-    
-    // Check if we have good context for generating questions
-    if (!hasGoodContext(character, entries)) {
+      break;
+    case 'no-context':
       showAIPromptNoContext(aiPromptElement, regenerateBtn);
-      return;
-    }
-    
-    // Show loading and generate questions
-    showAIPromptLoading(aiPromptElement, regenerateBtn);
-    const questions = await generateQuestions(character, entries);
-    
-    if (questions) {
+      break;
+    case 'loading':
+      showAIPromptLoading(aiPromptElement, regenerateBtn);
+      break;
+    case 'questions':
       showAIPromptQuestions(aiPromptElement, questions, regenerateBtn);
-    } else {
+      break;
+    case 'error':
       showAIPromptError(aiPromptElement, regenerateBtn);
-    }
-    
-  } catch (error) {
-    console.error('Failed to render AI prompt:', error);
-    showAIPromptError(aiPromptElement, regenerateBtn);
+      break;
+    default:
+      showAIPromptError(aiPromptElement, regenerateBtn);
   }
 };
 
