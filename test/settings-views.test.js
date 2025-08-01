@@ -12,9 +12,9 @@ describe('Settings Views Module', function() {
     // Set up a clean DOM environment for each test
     document.body.innerHTML = `
       <form id="settings-form">
-        <input type="text" id="api-key" />
-        <input type="checkbox" id="ai-enabled" />
-        <input type="text" id="sync-server" />
+        <input type="text" id="openai-api-key" name="openai-api-key" />
+        <input type="checkbox" id="ai-enabled" name="ai-enabled" />
+        <input type="text" id="sync-server-url" name="sync-server-url" />
       </form>
       <div id="connection-status"></div>
       <div id="test-container"></div>
@@ -29,7 +29,7 @@ describe('Settings Views Module', function() {
 
       SettingsViews.renderSettingsForm(settings);
 
-      const apiKeyInput = document.getElementById('api-key');
+      const apiKeyInput = document.getElementById('openai-api-key');
       expect(apiKeyInput.value).to.equal('sk-test123');
     });
 
@@ -40,7 +40,7 @@ describe('Settings Views Module', function() {
 
       SettingsViews.renderSettingsForm(settings);
 
-      const apiKeyInput = document.getElementById('api-key');
+      const apiKeyInput = document.getElementById('openai-api-key');
       expect(apiKeyInput.value).to.equal('');
     });
 
@@ -49,7 +49,7 @@ describe('Settings Views Module', function() {
 
       SettingsViews.renderSettingsForm(settings);
 
-      const apiKeyInput = document.getElementById('api-key');
+      const apiKeyInput = document.getElementById('openai-api-key');
       expect(apiKeyInput.value).to.equal('');
     });
 
@@ -88,31 +88,31 @@ describe('Settings Views Module', function() {
 
     it('should populate sync server input', function() {
       const settings = {
-        'dnd-journal-sync-server': 'wss://test-server.com'
+        'sync-server-url': 'wss://test-server.com'
       };
 
       SettingsViews.renderSettingsForm(settings);
 
-      const syncServerInput = document.getElementById('sync-server');
+      const syncServerInput = document.getElementById('sync-server-url');
       expect(syncServerInput.value).to.equal('wss://test-server.com');
     });
 
     it('should handle empty sync server', function() {
       const settings = {
-        'dnd-journal-sync-server': ''
+        'sync-server-url': ''
       };
 
       SettingsViews.renderSettingsForm(settings);
 
-      const syncServerInput = document.getElementById('sync-server');
+      const syncServerInput = document.getElementById('sync-server-url');
       expect(syncServerInput.value).to.equal('');
     });
 
     it('should handle missing form elements gracefully', function() {
       // Remove form elements
-      document.getElementById('api-key').remove();
+      document.getElementById('openai-api-key').remove();
       document.getElementById('ai-enabled').remove();
-      document.getElementById('sync-server').remove();
+      document.getElementById('sync-server-url').remove();
 
       const settings = {
         'openai-api-key': 'sk-test',
@@ -139,14 +139,14 @@ describe('Settings Views Module', function() {
       const settings = {
         'openai-api-key': 'sk-complete-test',
         'ai-enabled': true,
-        'dnd-journal-sync-server': 'wss://complete-test.com'
+        'sync-server-url': 'wss://complete-test.com'
       };
 
       SettingsViews.renderSettingsForm(settings);
 
-      expect(document.getElementById('api-key').value).to.equal('sk-complete-test');
+      expect(document.getElementById('openai-api-key').value).to.equal('sk-complete-test');
       expect(document.getElementById('ai-enabled').checked).to.be.true;
-      expect(document.getElementById('sync-server').value).to.equal('wss://complete-test.com');
+      expect(document.getElementById('sync-server-url').value).to.equal('wss://complete-test.com');
     });
   });
 
