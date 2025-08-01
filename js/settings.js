@@ -98,19 +98,7 @@ export const renderSettingsPage = (stateParam = null) => {
 
 // Set up form event handlers
 const setupFormHandlers = () => {
-  const formElement = settingsFormElement || document.getElementById('settings-form');
-  if (!formElement) return;
-  
-  // Only set up form handler once
-  if (!handlersSetup) {
-    formElement.addEventListener('submit', (e) => {
-      e.preventDefault();
-      saveSettings();
-    });
-    handlersSetup = true;
-  }
-  
-  // Set up button handlers directly on the elements
+  // Set up button handlers first (independent of form)
   const testApiButton = document.getElementById('test-api-key');
   if (testApiButton && !testApiButton.hasAttribute('data-handler-attached')) {
     testApiButton.addEventListener('click', (e) => {
@@ -136,6 +124,19 @@ const setupFormHandlers = () => {
       showCurrentAIPrompt();
     });
     showAIPromptButton.setAttribute('data-handler-attached', 'true');
+  }
+
+  // Form handler setup (can return early if form not found)
+  const formElement = settingsFormElement || document.getElementById('settings-form');
+  if (!formElement) return;
+  
+  // Only set up form handler once
+  if (!handlersSetup) {
+    formElement.addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveSettings();
+    });
+    handlersSetup = true;
   }
 };
 
@@ -242,24 +243,20 @@ export const testConnection = async (stateParam = null) => {
 // Show current AI prompt
 export const showCurrentAIPrompt = async () => {
   try {
-    const promptPreviewElement = document.getElementById('ai-prompt-preview');
-    const promptContentElement = document.getElementById('ai-prompt-content');
+    const aiEnabled = isAIEnabled();
     
-    if (!promptPreviewElement || !promptContentElement) {
-      showNotification('Required elements not found', 'error');
+    if (!aiEnabled) {
+      renderAIPromptPreview(aiEnabled, null);
+      showNotification('AI features not enabled', 'info');
       return;
     }
-
-    // Simple test content first
-    promptContentElement.innerHTML = `
-      <div class="system-prompt">
-        <h4>Test - Button Working</h4>
-        <p>If you see this, the button click is working correctly.</p>
-      </div>
-    `;
-    promptPreviewElement.style.display = 'block';
-    showNotification('Button test successful', 'success');
     
+    // Get prompt preview using same logic as AI module
+    const promptPreview = await getPromptPreview();
+    const messages = promptPreview ? buildMessages(promptPreview.systemPrompt, promptPreview.userPrompt) : null;
+    
+    renderAIPromptPreview(aiEnabled, messages);
+    showNotification('Current AI prompts displayed', 'success');
   } catch (error) {
     console.error('Failed to show AI prompt:', error);
     showNotification('Error displaying AI prompts', 'error');
