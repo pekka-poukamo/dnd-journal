@@ -101,7 +101,7 @@ export const renderCharacterInfo = (stateParam = null) => {
 };
 
 // Set up entry form
-const setupEntryForm = () => {
+export const setupEntryForm = () => {
   if (!entryFormContainer) return;
   
   const form = createEntryForm({
@@ -146,7 +146,7 @@ export const handleAddEntry = (entryData, stateParam = null) => {
 };
 
 // Handle editing entry
-const handleEditEntry = (entryId) => {
+export const handleEditEntry = (entryId) => {
   try {
     const state = getYjsState();
     const entries = getEntries(state);
@@ -180,7 +180,7 @@ const handleEditEntry = (entryId) => {
 };
 
 // Save entry edit
-const saveEntryEdit = (entryId, updatedData) => {
+export const saveEntryEdit = (entryId, updatedData) => {
   try {
     const state = getYjsState();
     
@@ -205,7 +205,7 @@ const saveEntryEdit = (entryId, updatedData) => {
 };
 
 // Handle deleting entry
-const handleDeleteEntry = (entryId) => {
+export const handleDeleteEntry = (entryId) => {
   try {
     const state = getYjsState();
     
@@ -221,7 +221,7 @@ const handleDeleteEntry = (entryId) => {
 };
 
 // Clear entry form
-const clearEntryForm = () => {
+export const clearEntryForm = () => {
   const form = entryFormContainer?.querySelector('form');
   if (form) {
     form.reset();
