@@ -21,13 +21,12 @@ import { summarize } from './summarization.js';
 
 // State management
 let characterFormElement = null;
+let loadingIndicator = null;
 
 // Initialize Character page
 export const initCharacterPage = async (stateParam = null) => {
   try {
-    const state = stateParam || (await initYjs(), getYjsState());
-    
-    // Get DOM elements
+    // Get DOM elements first
     characterFormElement = document.getElementById('character-form');
     
     if (!characterFormElement) {
@@ -35,17 +34,35 @@ export const initCharacterPage = async (stateParam = null) => {
       return;
     }
     
-    // Render initial state
+    // Set up form handling immediately
+    setupFormHandlers();
+    
+    // Render empty form immediately for fast initial render
+    renderCharacterForm(characterFormElement, {
+      name: '',
+      race: '',
+      class: '',
+      backstory: '',
+      notes: ''
+    });
+    
+    // Show loading indicator
+    showLoadingIndicator();
+    
+    // Initialize YJS and load data in background
+    const state = stateParam || (await initYjs(), getYjsState());
+    
+    // Render with actual data once available
     renderCharacterPage(state);
+    
+    // Hide loading indicator
+    hideLoadingIndicator();
     
     // Set up reactive updates
     onCharacterChange(state, () => {
       renderCharacterPage(state);
       updateSummariesDisplay(state);
     });
-    
-    // Set up form handling
-    setupFormHandlers();
     
     // Initial summaries update
     updateSummariesDisplay(state);
@@ -179,6 +196,67 @@ const generateSummary = async (field) => {
   } catch (error) {
     console.error('Failed to generate summary:', error);
     showNotification('Failed to generate summary', 'error');
+  }
+};
+
+// Show loading indicator
+const showLoadingIndicator = () => {
+  if (loadingIndicator) return; // Already showing
+  
+  loadingIndicator = document.createElement('div');
+  loadingIndicator.className = 'loading-indicator';
+  loadingIndicator.innerHTML = `
+    <div class="loading-spinner"></div>
+    <span>Loading character data...</span>
+  `;
+  loadingIndicator.style.cssText = `
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    font-size: 14px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  `;
+  
+  const spinner = loadingIndicator.querySelector('.loading-spinner');
+  spinner.style.cssText = `
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #666;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  `;
+  
+  // Add animation keyframes if not already present
+  if (!document.querySelector('#loading-spinner-styles')) {
+    const style = document.createElement('style');
+    style.id = 'loading-spinner-styles';
+    style.textContent = `
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  document.body.appendChild(loadingIndicator);
+};
+
+// Hide loading indicator
+const hideLoadingIndicator = () => {
+  if (loadingIndicator) {
+    document.body.removeChild(loadingIndicator);
+    loadingIndicator = null;
   }
 };
 
