@@ -131,15 +131,12 @@ export const renderCachedCharacterContent = (elements) => {
         onGenerate: () => {} // Disabled during cache phase
       });
       
-      // Add visual indicator that form has cached data
-      if (Object.keys(cachedFormData).length > 0) {
-        characterFormElement.classList.add('character-form--has-cached-data');
-      }
+
     }
     
     // Show loading indicator for summaries
     if (summariesContainer) {
-      summariesContainer.innerHTML = '<p class="summaries__loading">Loading AI summaries...</p>';
+      summariesContainer.innerHTML = '<p>Loading AI summaries...</p>';
     }
   }
 };

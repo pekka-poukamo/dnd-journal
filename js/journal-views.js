@@ -386,7 +386,6 @@ export const renderCachedJournalContent = (elements) => {
   // Show loading indicator for real-time content
   if (aiPromptText) {
     aiPromptText.textContent = 'Loading writing prompt...';
-    aiPromptText.className = 'ai-prompt__loading-state';
   }
 };
 
@@ -415,9 +414,6 @@ export const renderCachedEntryForm = (container) => {
     if (contentTextarea && cachedFormData.content) {
       contentTextarea.value = cachedFormData.content;
     }
-    
-    // Add visual indicator that form has cached data
-    form.classList.add('entry-form--has-cached-data');
   }
   
   container.innerHTML = '';

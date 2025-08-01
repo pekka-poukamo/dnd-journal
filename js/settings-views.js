@@ -134,15 +134,12 @@ export const renderCachedSettingsContent = (elements) => {
         onClear: () => {} // Disabled during cache phase
       });
       
-      // Add visual indicator that form has cached data
-      if (Object.keys(cachedFormData).length > 0) {
-        settingsFormElement.classList.add('settings-form--has-cached-data');
-      }
+
     }
     
     // Show loading indicator for connection status
     if (connectionStatusElement) {
-      connectionStatusElement.innerHTML = '<p class="connection-status__loading">Checking connection status...</p>';
+      connectionStatusElement.innerHTML = '<p>Checking connection status...</p>';
     }
   }
 };
