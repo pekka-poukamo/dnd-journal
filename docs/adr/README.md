@@ -26,6 +26,7 @@ This directory contains Architecture Decision Records (ADRs) that document the k
 | [ADR-0012](0012-radically-simple-summarization.md) | Clean Summarization & Storytelling Architecture | Accepted |
 | [ADR-0013](0013-radical-simplicity-principle.md) | Radical Simplicity Principle | Accepted |
 | [ADR-0014](0014-local-first-modules-via-npm-and-import-maps.md) | Local-First Modules via npm and Import Maps | Accepted |
+| [ADR-0015](0015-view-logic-separation.md) | View-Logic Separation Architecture | Accepted |
 
 ## For AI Agents
 
