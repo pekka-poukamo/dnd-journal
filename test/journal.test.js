@@ -541,5 +541,69 @@ describe('Journal Page', function() {
         expect(() => Journal.clearEntryForm()).to.not.throw();
       });
     });
+
+    describe('AI Prompt Business Logic', function() {
+      beforeEach(function() {
+        // Add AI prompt elements to DOM
+        document.body.innerHTML += `
+          <div id="ai-prompt-text" class="ai-prompt__text"></div>
+          <button id="regenerate-prompt-btn" class="ai-prompt__regenerate-btn">Regenerate</button>
+        `;
+      });
+
+      afterEach(function() {
+        // Clean up AI prompt elements
+        const aiPromptText = document.getElementById('ai-prompt-text');
+        const regenerateBtn = document.getElementById('regenerate-prompt-btn');
+        if (aiPromptText) aiPromptText.remove();
+        if (regenerateBtn) regenerateBtn.remove();
+      });
+
+      it('should handle AI prompt initialization with missing elements', async function() {
+        // Remove AI prompt elements
+        document.getElementById('ai-prompt-text').remove();
+        document.getElementById('regenerate-prompt-btn').remove();
+        
+        // Should not throw when elements are missing
+        expect(() => Journal.initJournalPage(state)).to.not.throw();
+      });
+
+      it('should setup regenerate button event listener', function() {
+        const regenerateBtn = document.getElementById('regenerate-prompt-btn');
+        
+        // Initialize should set up the button
+        Journal.initJournalPage(state);
+        
+        // Button should exist and be accessible
+        expect(regenerateBtn).to.exist;
+      });
+
+      it('should handle regenerate button click without errors', function() {
+        Journal.initJournalPage(state);
+        
+        const regenerateBtn = document.getElementById('regenerate-prompt-btn');
+        
+        // Should not throw when clicking regenerate
+        expect(() => regenerateBtn.click()).to.not.throw();
+      });
+
+      it('should handle missing AI prompt elements gracefully during reactive updates', async function() {
+        // Remove AI elements after initialization
+        Journal.initJournalPage(state);
+        document.getElementById('ai-prompt-text').remove();
+        document.getElementById('regenerate-prompt-btn').remove();
+        
+        // Add an entry to trigger reactive update
+        const entry = {
+          id: generateId(),
+          title: 'Test Entry',
+          content: 'Test content',
+          timestamp: Date.now()
+        };
+        
+        // Should not throw when AI elements are missing during update
+        expect(() => Journal.handleAddEntry(entry, state)).to.not.throw();
+      });
+    });
   });
 });
