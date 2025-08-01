@@ -45,12 +45,10 @@ export const initJournalPage = async (stateParam = null) => {
     
     // Set up reactive updates with explicit state tracking BEFORE initial render
     onJournalChange(state, () => {
-      console.log('Journal change detected, re-rendering...');
       renderJournalPage(state);
     });
 
     onCharacterChange(state, () => {
-      console.log('Character change detected, re-rendering character info...');
       renderCharacterInfo(state);
     });
     
@@ -60,7 +58,7 @@ export const initJournalPage = async (stateParam = null) => {
     // Set up form
     setupEntryForm();
     
-    console.log('Journal page initialized successfully');
+
     
   } catch (error) {
     console.error('Failed to initialize journal page:', error);
@@ -73,7 +71,7 @@ export const renderJournalPage = (stateParam = null) => {
     const state = stateParam || getYjsState();
     const entries = getEntries(state);
     
-    console.log('Rendering journal page with', entries.length, 'entries');
+
     
     // Render entries - use module-level element if available, otherwise find it
     const entriesElement = entriesContainer || document.getElementById('entries-container');
@@ -148,12 +146,6 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     
     showNotification('Entry added!', 'success');
     
-    // Force re-render to ensure entry appears immediately
-    // This helps in case the Y.js observer doesn't fire immediately
-    setTimeout(() => {
-      renderJournalPage(state);
-    }, 50);
-    
   } catch (error) {
     console.error('Failed to add entry:', error);
     showNotification('Failed to add entry', 'error');
@@ -213,11 +205,6 @@ const saveEntryEdit = (entryId, updatedData) => {
     
     showNotification('Entry updated!', 'success');
     
-    // Force re-render
-    setTimeout(() => {
-      renderJournalPage(state);
-    }, 50);
-    
   } catch (error) {
     console.error('Failed to save entry edit:', error);
     showNotification('Failed to save entry', 'error');
@@ -232,11 +219,6 @@ const handleDeleteEntry = (entryId) => {
     if (confirm('Are you sure you want to delete this entry?')) {
       deleteEntry(state, entryId);
       showNotification('Entry deleted', 'success');
-      
-      // Force re-render
-      setTimeout(() => {
-        renderJournalPage(state);
-      }, 50);
     }
     
   } catch (error) {
