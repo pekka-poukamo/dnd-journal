@@ -5,6 +5,8 @@ import {
   getCachedCharacterData,
   getFormDataForPage
 } from './navigation-cache.js';
+import { summarize } from './summarization.js';
+import { getYjsState, getSummary } from './yjs.js';
 
 // Create journal entry form
 export const createEntryForm = (options = {}) => {
@@ -44,7 +46,7 @@ export const createEntryForm = (options = {}) => {
   return form;
 };
 
-// Create single journal entry element
+// Create single journal entry element with summary display by default
 export const createEntryElement = (entry, onEdit, onDelete) => {
   const entryDiv = document.createElement('article');
   entryDiv.className = 'entry';
@@ -85,14 +87,136 @@ export const createEntryElement = (entry, onEdit, onDelete) => {
   header.appendChild(title);
   header.appendChild(meta);
   
-  const content = document.createElement('div');
-  content.className = 'entry-content';
-  content.innerHTML = parseMarkdown(entry.content);
+  // Create summary section with collapsible full content
+  const summarySection = createEntrySummarySection(entry);
   
   entryDiv.appendChild(header);
-  entryDiv.appendChild(content);
+  entryDiv.appendChild(summarySection);
   
   return entryDiv;
+};
+
+// Create entry summary section with collapsible full content
+export const createEntrySummarySection = (entry) => {
+  const summarySection = document.createElement('div');
+  summarySection.className = 'entry-summary-section';
+  
+  let existingSummary = null;
+  
+  // Try to get existing summary (handle case where Y.js isn't initialized)
+  try {
+    const state = getYjsState();
+    const summaryKey = `entry:${entry.id}`;
+    existingSummary = getSummary(state, summaryKey);
+  } catch (error) {
+    // Y.js not initialized - fall back to full content display
+    const fullContentDiv = document.createElement('div');
+    fullContentDiv.className = 'entry-content';
+    fullContentDiv.innerHTML = parseMarkdown(entry.content);
+    summarySection.appendChild(fullContentDiv);
+    return summarySection;
+  }
+  
+  if (existingSummary) {
+    // Show summary with collapsible full content
+    summarySection.appendChild(createSummaryDisplay(existingSummary, entry));
+  } else {
+    // Show full content by default if no summary, with async summary generation
+    summarySection.appendChild(createSummaryDisplay(null, entry));
+    generateSummaryAsync(entry, summarySection);
+  }
+  
+  return summarySection;
+};
+
+// Create summary display with collapsible full content
+const createSummaryDisplay = (summary, entry) => {
+  const container = document.createElement('div');
+  container.className = 'entry-content-container';
+  
+  if (summary) {
+    // Show summary by default
+    const summaryDiv = document.createElement('div');
+    summaryDiv.className = 'entry-summary-text';
+    summaryDiv.innerHTML = parseMarkdown(summary);
+    container.appendChild(summaryDiv);
+    
+    // Add collapsible full content section
+    const collapsibleSection = createCollapsibleFullContent(entry);
+    container.appendChild(collapsibleSection);
+  } else {
+    // Show full content while summary is being generated
+    const fullContentDiv = document.createElement('div');
+    fullContentDiv.className = 'entry-content';
+    fullContentDiv.innerHTML = parseMarkdown(entry.content);
+    container.appendChild(fullContentDiv);
+    
+    // Add loading indicator for summary
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'entry-summary-loading';
+    loadingDiv.textContent = 'Generating summary...';
+    container.appendChild(loadingDiv);
+  }
+  
+  return container;
+};
+
+// Create collapsible section for full content
+const createCollapsibleFullContent = (entry) => {
+  const collapsibleDiv = document.createElement('div');
+  collapsibleDiv.className = 'entry-collapsible';
+  
+  const toggleButton = document.createElement('button');
+  toggleButton.className = 'entry-summary__toggle';
+  toggleButton.type = 'button';
+  
+  const toggleLabel = document.createElement('span');
+  toggleLabel.className = 'entry-summary__label';
+  toggleLabel.textContent = 'Full Entry';
+  
+  const toggleIcon = document.createElement('span');
+  toggleIcon.className = 'entry-summary__icon';
+  toggleIcon.textContent = '▼';
+  
+  toggleButton.appendChild(toggleLabel);
+  toggleButton.appendChild(toggleIcon);
+  
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'entry-summary__content';
+  contentDiv.style.display = 'none';
+  contentDiv.innerHTML = parseMarkdown(entry.content);
+  
+  // Toggle functionality
+  toggleButton.addEventListener('click', () => {
+    const isExpanded = contentDiv.style.display !== 'none';
+    contentDiv.style.display = isExpanded ? 'none' : 'block';
+    toggleButton.classList.toggle('entry-summary__toggle--expanded', !isExpanded);
+  });
+  
+  collapsibleDiv.appendChild(toggleButton);
+  collapsibleDiv.appendChild(contentDiv);
+  
+  return collapsibleDiv;
+};
+
+// Generate summary asynchronously and update display
+const generateSummaryAsync = async (entry, summarySection) => {
+  try {
+    const summaryKey = `entry:${entry.id}`;
+    const summary = await summarize(summaryKey, entry.content);
+    
+    // Replace the content with summary display
+    const newDisplay = createSummaryDisplay(summary, entry);
+    summarySection.innerHTML = '';
+    summarySection.appendChild(newDisplay);
+  } catch (error) {
+    console.error('Failed to generate summary:', error);
+    // Remove loading indicator on error and keep full content
+    const loadingDiv = summarySection.querySelector('.entry-summary-loading');
+    if (loadingDiv) {
+      loadingDiv.remove();
+    }
+  }
 };
 
 // Create edit form for an entry
@@ -272,13 +396,11 @@ const updateEntryElement = (element, entry, onEdit, onDelete) => {
     titleElement.textContent = entry.title;
   }
   
-  // Update content
-  const contentElement = element.querySelector('.entry-content');
-  if (contentElement) {
-    const newContent = parseMarkdown(entry.content);
-    if (contentElement.innerHTML !== newContent) {
-      contentElement.innerHTML = newContent;
-    }
+  // Update summary section - recreate if content changed
+  const summarySection = element.querySelector('.entry-summary-section');
+  if (summarySection) {
+    const newSummarySection = createEntrySummarySection(entry);
+    summarySection.replaceWith(newSummarySection);
   }
   
   // Update timestamp

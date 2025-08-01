@@ -487,6 +487,36 @@ section {
   margin: 0;
 }
 
+/* Entry summary section */
+.entry-summary-section {
+  margin-top: var(--space-md);
+}
+
+.entry-summary-text {
+  padding: var(--space-md);
+  background: var(--color-gray-50);
+  border-left: 3px solid var(--color-accent);
+  margin-bottom: var(--space-md);
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.entry-summary-text p {
+  margin: 0;
+}
+
+.entry-summary-loading {
+  padding: var(--space-sm);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+  text-align: center;
+}
+
+.entry-collapsible {
+  margin-top: var(--space-md);
+}
+
 .entry-actions {
   display: flex;
   gap: var(--space-sm);
