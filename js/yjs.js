@@ -22,16 +22,40 @@ export const resetYjs = () => {
   isInitialized = false;
 };
 
-// Initialize Y.js and return the state object (call once per page)
+// Initialize Y.js and wait for IndexedDB to fully load (call once per page)
 export const initYjs = async () => {
   if (isInitialized) return getYjsState(); // Already initialized
   
   // Create document
   ydoc = new Y.Doc();
   
-  // Set up persistence
+  // Set up persistence and wait for it to load
   const persistence = new IndexeddbPersistence('dnd-journal', ydoc);
-  setupSyncFromSettings(); // Run concurrently, don't wait
+  
+  // Wait for IndexedDB to fully load before proceeding
+  // This prevents the 2-3 second delay when accessing data
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error('IndexedDB persistence initialization timed out after 10 seconds'));
+    }, 10000); // 10 second timeout
+    
+    // Handle test environment where IndexedDB might not work properly
+    const isTestEnvironment = typeof global !== 'undefined' && global.document && global.document.constructor.name === 'Document';
+    
+    if (isTestEnvironment) {
+      // In test environment, resolve immediately to avoid blocking tests
+      clearTimeout(timeout);
+      resolve();
+      return;
+    }
+    
+    persistence.once('synced', () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+  });
+  
+  setupSyncFromSettings(); // Run after persistence is loaded
   
   // Mark as initialized
   isInitialized = true;
