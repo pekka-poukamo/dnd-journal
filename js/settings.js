@@ -98,19 +98,7 @@ export const renderSettingsPage = (stateParam = null) => {
 
 // Set up form event handlers
 const setupFormHandlers = () => {
-  const formElement = settingsFormElement || document.getElementById('settings-form');
-  if (!formElement) return;
-  
-  // Only set up form handler once
-  if (!handlersSetup) {
-    formElement.addEventListener('submit', (e) => {
-      e.preventDefault();
-      saveSettings();
-    });
-    handlersSetup = true;
-  }
-  
-  // Set up button handlers directly on the elements
+  // Set up button handlers first (independent of form)
   const testApiButton = document.getElementById('test-api-key');
   if (testApiButton && !testApiButton.hasAttribute('data-handler-attached')) {
     testApiButton.addEventListener('click', (e) => {
@@ -136,6 +124,19 @@ const setupFormHandlers = () => {
       showCurrentAIPrompt();
     });
     showAIPromptButton.setAttribute('data-handler-attached', 'true');
+  }
+
+  // Form handler setup (can return early if form not found)
+  const formElement = settingsFormElement || document.getElementById('settings-form');
+  if (!formElement) return;
+  
+  // Only set up form handler once
+  if (!handlersSetup) {
+    formElement.addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveSettings();
+    });
+    handlersSetup = true;
   }
 };
 
