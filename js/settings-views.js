@@ -1,4 +1,8 @@
 // Settings Views - Pure Rendering Functions for Settings Page
+import {
+  getCachedSettings,
+  getFormDataForPage
+} from './navigation-cache.js';
 
 // Render settings form with current data
 export const renderSettingsForm = (formOrSettings, settings = null) => {
@@ -109,5 +113,36 @@ export const setTestConnectionLoading = (isLoading) => {
   if (testBtn) {
     testBtn.disabled = isLoading;
     testBtn.textContent = isLoading ? 'Testing...' : 'Test Connection';
+  }
+};
+
+// Pure function to render cached settings content immediately
+export const renderCachedSettingsContent = (elements) => {
+  const { settingsFormElement, connectionStatusElement } = elements;
+  
+  const cachedSettings = getCachedSettings();
+  const cachedFormData = getFormDataForPage('settings');
+  
+  if (Object.keys(cachedSettings).length > 0 || Object.keys(cachedFormData).length > 0) {
+    // Merge cached settings with form data
+    const displayData = { ...cachedSettings, ...cachedFormData };
+    
+    // Render form with cached data
+    if (settingsFormElement) {
+      renderSettingsForm(settingsFormElement, displayData, {
+        onSave: () => {}, // Disabled during cache phase
+        onClear: () => {} // Disabled during cache phase
+      });
+      
+      // Add visual indicator that form has cached data
+      if (Object.keys(cachedFormData).length > 0) {
+        settingsFormElement.classList.add('settings-form--has-cached-data');
+      }
+    }
+    
+    // Show loading indicator for connection status
+    if (connectionStatusElement) {
+      connectionStatusElement.innerHTML = '<p class="connection-status__loading">Checking connection status...</p>';
+    }
   }
 };

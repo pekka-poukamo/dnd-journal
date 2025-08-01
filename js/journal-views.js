@@ -1,5 +1,10 @@
 // Journal Views - Pure Rendering Functions for Journal Page
 import { parseMarkdown, formatDate, sortEntriesByDate } from './utils.js';
+import {
+  getCachedJournalEntries,
+  getCachedCharacterData,
+  getFormDataForPage
+} from './navigation-cache.js';
 
 // Create journal entry form
 export const createEntryForm = (options = {}) => {
@@ -356,4 +361,65 @@ export const showAIPromptError = (aiPromptElement, regenerateBtn = null) => {
   if (regenerateBtn) {
     regenerateBtn.disabled = false;
   }
+};
+
+// Pure function to render cached content immediately (eliminates blank page)
+export const renderCachedJournalContent = (elements) => {
+  const { entriesContainer, characterInfoContainer, aiPromptText } = elements;
+  
+  // Render cached journal entries
+  const cachedEntries = getCachedJournalEntries();
+  if (cachedEntries.length > 0 && entriesContainer) {
+    renderEntries(entriesContainer, cachedEntries, {
+      onEdit: () => {}, // Disabled during cache phase
+      onDelete: () => {}, // Disabled during cache phase
+      onSave: () => {}  // Disabled during cache phase
+    });
+  }
+  
+  // Render cached character info
+  const cachedCharacter = getCachedCharacterData();
+  if (Object.keys(cachedCharacter).length > 0 && characterInfoContainer) {
+    renderCharacterSummary(characterInfoContainer, cachedCharacter);
+  }
+  
+  // Show loading indicator for real-time content
+  if (aiPromptText) {
+    aiPromptText.textContent = 'Loading writing prompt...';
+    aiPromptText.className = 'ai-prompt__loading-state';
+  }
+};
+
+// Pure function to render cached entry form with preserved data
+export const renderCachedEntryForm = (container) => {
+  if (!container) return;
+  
+  // Get cached form data
+  const cachedFormData = getFormDataForPage('journal');
+  
+  // Create form with cached data
+  const form = createEntryForm({
+    onSubmit: () => {}, // Will be replaced when Yjs loads
+    onCancel: () => {}
+  });
+  
+  // Fill form with cached data
+  if (Object.keys(cachedFormData).length > 0) {
+    const titleInput = form.querySelector('#entry-title');
+    const contentTextarea = form.querySelector('#entry-content');
+    
+    if (titleInput && cachedFormData.title) {
+      titleInput.value = cachedFormData.title;
+    }
+    
+    if (contentTextarea && cachedFormData.content) {
+      contentTextarea.value = cachedFormData.content;
+    }
+    
+    // Add visual indicator that form has cached data
+    form.classList.add('entry-form--has-cached-data');
+  }
+  
+  container.innerHTML = '';
+  container.appendChild(form);
 };

@@ -8,19 +8,15 @@ import {
   onCharacterChange
 } from './yjs.js';
 
-import {
-  getCachedCharacterData,
-  getFormDataForPage,
-  saveNavigationCache,
-  saveCurrentFormData
-} from './navigation-cache.js';
+import { createPageInitializer } from './cache-utils.js';
 
 import {
   renderCharacterForm,
   renderSummaries,
   toggleGenerateButton,
   getFormData,
-  showNotification
+  showNotification,
+  renderCachedCharacterContent
 } from './character-views.js';
 
 import { isAPIAvailable } from './openai-wrapper.js';
@@ -29,47 +25,53 @@ import { summarize } from './summarization.js';
 // State management
 let characterFormElement = null;
 
-// Initialize Character page
-export const initCharacterPage = async (stateParam = null) => {
-  try {
-    // Get DOM elements first
+// Create character page initializer using shared pattern
+const initCharacterPageImpl = createPageInitializer('character', {
+  getDOMElements: () => {
     characterFormElement = document.getElementById('character-form');
+    const summariesContainer = document.getElementById('summaries-container');
     
-    if (!characterFormElement) {
-      console.warn('Character form not found');
-      return;
-    }
-    
-    // 1. Show cached content immediately
-    renderCachedCharacterContent();
-    
-    // 2. Initialize Yjs in background
-    const state = stateParam || (await initYjs(), getYjsState());
-    
-    // 3. Set up reactive updates
-    onCharacterChange(state, () => {
+    return {
+      isValid: !!characterFormElement,
+      characterFormElement,
+      summariesContainer,
+      formElement: characterFormElement
+    };
+  },
+  
+  renderCachedContent: (elements) => {
+    renderCachedCharacterContent(elements);
+  },
+  
+  initializeYjs: async () => {
+    await initYjs();
+    return getYjsState();
+  },
+  
+  setupObservers: (state, withCacheSaving) => {
+    onCharacterChange(state, withCacheSaving(() => {
       renderCharacterPage(state);
       updateSummariesDisplay(state);
-      // Save to cache when data changes
-      saveNavigationCache(state);
-    });
-    
-    // 4. Replace cached content with fresh Yjs data
+    }));
+  },
+  
+  renderFreshContent: (state) => {
     renderCharacterPage(state);
-    
-    // 5. Set up form handling with cached data
+  },
+  
+  setupFormHandlers: () => {
     setupFormHandlers();
-    
-    // 6. Update summaries
+  },
+  
+  setupAdditional: (state) => {
     updateSummariesDisplay(state);
-    
-    // 7. Set up navigation caching
-    setupCharacterNavigationCaching(state);
-    
-  } catch (error) {
-    console.error('Failed to initialize character page:', error);
-  }
-};
+  },
+  
+  getFormData: getCharacterFormData
+});
+
+// Export the enhanced initializer
+export const initCharacterPage = initCharacterPageImpl;
 
 // Render character page
 export const renderCharacterPage = (stateParam = null) => {
@@ -227,63 +229,7 @@ if (typeof document !== 'undefined') {
   });
 }
 
-// Pure function to render cached character content immediately
-const renderCachedCharacterContent = () => {
-  const cachedCharacter = getCachedCharacterData();
-  const cachedFormData = getFormDataForPage('character');
-  
-  if (Object.keys(cachedCharacter).length > 0 || Object.keys(cachedFormData).length > 0) {
-    // Merge cached character data with form data
-    const displayData = { ...cachedCharacter, ...cachedFormData };
-    
-    // Render form with cached data
-    renderCharacterForm(characterFormElement, displayData, {
-      onSave: () => {}, // Disabled during cache phase
-      onGenerate: () => {} // Disabled during cache phase
-    });
-    
-    // Show loading indicator for summaries
-    const summariesContainer = document.getElementById('summaries-container');
-    if (summariesContainer) {
-      summariesContainer.innerHTML = '<p>Loading AI summaries...</p>';
-    }
-  }
-};
 
-// Pure function to set up character navigation caching
-const setupCharacterNavigationCaching = (state) => {
-  // Save cache before page unload
-  const handleBeforeUnload = () => {
-    saveNavigationCache(state);
-    
-    // Save current form data
-    const formData = getCharacterFormData();
-    if (formData) {
-      saveCurrentFormData('character', formData);
-    }
-  };
-  
-  // Set up event listener
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  
-  // Save on form changes (debounced)
-  let formTimeout;
-  const debouncedFormSave = () => {
-    clearTimeout(formTimeout);
-    formTimeout = setTimeout(() => {
-      const formData = getCharacterFormData();
-      if (formData) {
-        saveCurrentFormData('character', formData);
-      }
-    }, 1000); // 1 second delay
-  };
-  
-  // Listen for form changes
-  if (characterFormElement) {
-    characterFormElement.addEventListener('input', debouncedFormSave);
-    characterFormElement.addEventListener('change', debouncedFormSave);
-  }
-};
 
 // Pure function to get current character form data
 const getCharacterFormData = () => {

@@ -11,13 +11,7 @@ import {
   onJournalChange
 } from './yjs.js';
 
-import {
-  getCachedJournalEntries,
-  getCachedCharacterData,
-  getCachedFormData,
-  saveNavigationCache,
-  saveCurrentFormData
-} from './navigation-cache.js';
+import { createPageInitializer } from './cache-utils.js';
 
 import {
   renderCharacterSummary,
@@ -25,7 +19,9 @@ import {
   createEntryForm,
   createEntryEditForm,
   showNotification,
-  renderAIPrompt
+  renderAIPrompt,
+  renderCachedJournalContent,
+  renderCachedEntryForm
 } from './journal-views.js';
 
 import { generateId, isValidEntry, formatDate } from './utils.js';
@@ -41,59 +37,66 @@ let currentState = null;
 let aiPromptText = null;
 let regenerateBtn = null;
 
-// Initialize Journal page
-export const initJournalPage = async (stateParam = null) => {
-  try {
-    // Get DOM elements first
+// Create journal page initializer using shared pattern
+const initJournalPageImpl = createPageInitializer('journal', {
+  getDOMElements: () => {
     entriesContainer = document.getElementById('entries-container');
     characterInfoContainer = document.getElementById('character-info-container');
     entryFormContainer = document.getElementById('entry-form-container');
     aiPromptText = document.getElementById('ai-prompt-text');
     regenerateBtn = document.getElementById('regenerate-prompt-btn');
     
-    if (!entriesContainer || !entryFormContainer) {
-      console.warn('Required journal containers not found');
-      return;
-    }
-    
-    // 1. Show cached content immediately (eliminates blank page)
-    renderCachedContent();
-    
-    // 2. Initialize Yjs in background
-    const state = stateParam || (await initYjs());
+    return {
+      isValid: !!(entriesContainer && entryFormContainer),
+      entriesContainer,
+      characterInfoContainer,
+      entryFormContainer,
+      aiPromptText,
+      regenerateBtn,
+      formElement: entryFormContainer
+    };
+  },
+  
+  renderCachedContent: (elements) => {
+    renderCachedJournalContent(elements);
+    renderCachedEntryForm(elements.entryFormContainer);
+  },
+  
+  initializeYjs: async () => {
+    const state = await initYjs();
     currentState = state;
-    
-    // 3. Set up reactive updates with explicit state tracking
-    onJournalChange(state, () => {
+    return state;
+  },
+  
+  setupObservers: (state, withCacheSaving) => {
+    onJournalChange(state, withCacheSaving(() => {
       renderJournalPage(state);
       renderAIPromptWithLogic(state);
-      // Save to cache when data changes
-      saveNavigationCache(state);
-    });
+    }));
 
-    onCharacterChange(state, () => {
+    onCharacterChange(state, withCacheSaving(() => {
       renderCharacterInfo(state);
       renderAIPromptWithLogic(state);
-      // Save to cache when data changes
-      saveNavigationCache(state);
-    });
-    
-    // 4. Replace cached content with fresh Yjs data
+    }));
+  },
+  
+  renderFreshContent: (state) => {
     renderJournalPage(state);
-    
-    // 5. Set up form with cached data
+  },
+  
+  setupFormHandlers: () => {
     setupEntryForm();
-    
-    // 6. Set up AI prompt
+  },
+  
+  setupAdditional: (state) => {
     setupAIPrompt(state);
-    
-    // 7. Set up navigation cache saving on page unload
-    setupNavigationCaching(state);
-    
-  } catch (error) {
-    console.error('Failed to initialize journal page:', error);
-  }
-};
+  },
+  
+  getFormData: getCurrentFormData
+});
+
+// Export the enhanced initializer
+export const initJournalPage = initJournalPageImpl;
 
 // Render journal page
 export const renderJournalPage = (stateParam = null) => {
@@ -332,61 +335,7 @@ const handleRegeneratePrompt = async (stateParam = null) => {
   await renderAIPromptWithLogic(state);
 };
 
-// Pure function to render cached content immediately
-const renderCachedContent = () => {
-  // Render cached journal entries
-  const cachedEntries = getCachedJournalEntries();
-  if (cachedEntries.length > 0) {
-    renderEntries(entriesContainer, cachedEntries, {
-      onEdit: () => {}, // Disabled during cache phase
-      onDelete: () => {}, // Disabled during cache phase
-      onSave: () => {}  // Disabled during cache phase
-    });
-  }
-  
-  // Render cached character info
-  const cachedCharacter = getCachedCharacterData();
-  if (Object.keys(cachedCharacter).length > 0) {
-    renderCharacterSummary(characterInfoContainer, cachedCharacter);
-  }
-  
-  // Show loading indicator for real-time content
-  if (aiPromptText) {
-    aiPromptText.textContent = 'Loading writing prompt...';
-  }
-};
 
-// Pure function to set up navigation caching
-const setupNavigationCaching = (state) => {
-  // Save cache before page unload
-  const handleBeforeUnload = () => {
-    saveNavigationCache(state);
-    
-    // Save any current form data
-    const formData = getCurrentFormData();
-    if (formData) {
-      saveCurrentFormData('journal', formData);
-    }
-  };
-  
-  // Set up event listener
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  
-  // Also save cache periodically during user activity
-  const handleActivity = () => {
-    saveNavigationCache(state);
-  };
-  
-  // Save on user activity (debounced)
-  let activityTimeout;
-  const debouncedActivity = () => {
-    clearTimeout(activityTimeout);
-    activityTimeout = setTimeout(handleActivity, 2000); // 2 second delay
-  };
-  
-  document.addEventListener('input', debouncedActivity);
-  document.addEventListener('change', debouncedActivity);
-};
 
 // Pure function to get current form data
 const getCurrentFormData = () => {

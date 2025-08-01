@@ -1,4 +1,8 @@
 // Character Views - Pure Rendering Functions for Character Page
+import {
+  getCachedCharacterData,
+  getFormDataForPage
+} from './navigation-cache.js';
 
 // Render character form with current data
 export const renderCharacterForm = (form, character) => {
@@ -106,5 +110,36 @@ export const getFormData = (form) => {
       }
     });
     return data;
+  }
+};
+
+// Pure function to render cached character content immediately
+export const renderCachedCharacterContent = (elements) => {
+  const { characterFormElement, summariesContainer } = elements;
+  
+  const cachedCharacter = getCachedCharacterData();
+  const cachedFormData = getFormDataForPage('character');
+  
+  if (Object.keys(cachedCharacter).length > 0 || Object.keys(cachedFormData).length > 0) {
+    // Merge cached character data with form data
+    const displayData = { ...cachedCharacter, ...cachedFormData };
+    
+    // Render form with cached data
+    if (characterFormElement) {
+      renderCharacterForm(characterFormElement, displayData, {
+        onSave: () => {}, // Disabled during cache phase
+        onGenerate: () => {} // Disabled during cache phase
+      });
+      
+      // Add visual indicator that form has cached data
+      if (Object.keys(cachedFormData).length > 0) {
+        characterFormElement.classList.add('character-form--has-cached-data');
+      }
+    }
+    
+    // Show loading indicator for summaries
+    if (summariesContainer) {
+      summariesContainer.innerHTML = '<p class="summaries__loading">Loading AI summaries...</p>';
+    }
   }
 };

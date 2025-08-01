@@ -11,15 +11,11 @@ import {
   renderSettingsForm,
   renderConnectionStatus,
   showNotification,
-  getFormData
+  getFormData,
+  renderCachedSettingsContent
 } from './settings-views.js';
 
-import {
-  getCachedSettings,
-  getFormDataForPage,
-  saveNavigationCache,
-  saveCurrentFormData
-} from './navigation-cache.js';
+import { createPageInitializer } from './cache-utils.js';
 
 import { isAPIAvailable } from './openai-wrapper.js';
 
@@ -27,44 +23,48 @@ import { isAPIAvailable } from './openai-wrapper.js';
 let settingsFormElement = null;
 let connectionStatusElement = null;
 
-// Initialize Settings page
-export const initSettingsPage = async (stateParam = null) => {
-  try {
-    // Get DOM elements first
+// Create settings page initializer using shared pattern
+const initSettingsPageImpl = createPageInitializer('settings', {
+  getDOMElements: () => {
     settingsFormElement = document.getElementById('settings-form');
     connectionStatusElement = document.getElementById('connection-status');
     
-    if (!settingsFormElement) {
-      console.warn('Settings form not found');
-      return;
-    }
-    
-    // 1. Show cached content immediately
-    renderCachedSettingsContent();
-    
-    // 2. Initialize Yjs in background
-    const state = stateParam || (await initYjs(), getYjsState());
-    
-    // 3. Set up reactive updates
-    onSettingsChange(state, () => {
+    return {
+      isValid: !!settingsFormElement,
+      settingsFormElement,
+      connectionStatusElement,
+      formElement: settingsFormElement
+    };
+  },
+  
+  renderCachedContent: (elements) => {
+    renderCachedSettingsContent(elements);
+  },
+  
+  initializeYjs: async () => {
+    await initYjs();
+    return getYjsState();
+  },
+  
+  setupObservers: (state, withCacheSaving) => {
+    onSettingsChange(state, withCacheSaving(() => {
       renderSettingsPage();
-      // Save to cache when data changes
-      saveNavigationCache(state);
-    });
-    
-    // 4. Replace cached content with fresh data
+    }));
+  },
+  
+  renderFreshContent: () => {
     renderSettingsPage();
-    
-    // 5. Set up form handling
+  },
+  
+  setupFormHandlers: () => {
     setupFormHandlers();
-    
-    // 6. Set up navigation caching
-    setupSettingsNavigationCaching(state);
-    
-  } catch (error) {
-    console.error('Failed to initialize settings page:', error);
-  }
-};
+  },
+  
+  getFormData: getSettingsFormData
+});
+
+// Export the enhanced initializer
+export const initSettingsPage = initSettingsPageImpl;
 
 // Render settings page
 export const renderSettingsPage = (stateParam = null) => {
@@ -188,62 +188,7 @@ export const testConnection = async (stateParam = null) => {
   }
 };
 
-// Pure function to render cached settings content immediately
-const renderCachedSettingsContent = () => {
-  const cachedSettings = getCachedSettings();
-  const cachedFormData = getFormDataForPage('settings');
-  
-  if (Object.keys(cachedSettings).length > 0 || Object.keys(cachedFormData).length > 0) {
-    // Merge cached settings with form data
-    const displayData = { ...cachedSettings, ...cachedFormData };
-    
-    // Render form with cached data
-    renderSettingsForm(settingsFormElement, displayData, {
-      onSave: () => {}, // Disabled during cache phase
-      onClear: () => {} // Disabled during cache phase
-    });
-    
-    // Show loading indicator for connection status
-    if (connectionStatusElement) {
-      connectionStatusElement.innerHTML = '<p>Checking connection status...</p>';
-    }
-  }
-};
 
-// Pure function to set up settings navigation caching
-const setupSettingsNavigationCaching = (state) => {
-  // Save cache before page unload
-  const handleBeforeUnload = () => {
-    saveNavigationCache(state);
-    
-    // Save current form data
-    const formData = getSettingsFormData();
-    if (formData) {
-      saveCurrentFormData('settings', formData);
-    }
-  };
-  
-  // Set up event listener
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  
-  // Save on form changes (debounced)
-  let formTimeout;
-  const debouncedFormSave = () => {
-    clearTimeout(formTimeout);
-    formTimeout = setTimeout(() => {
-      const formData = getSettingsFormData();
-      if (formData) {
-        saveCurrentFormData('settings', formData);
-      }
-    }, 1000); // 1 second delay
-  };
-  
-  // Listen for form changes
-  if (settingsFormElement) {
-    settingsFormElement.addEventListener('input', debouncedFormSave);
-    settingsFormElement.addEventListener('change', debouncedFormSave);
-  }
-};
 
 // Pure function to get current settings form data
 const getSettingsFormData = () => {
