@@ -28,7 +28,7 @@ ${text}`,
 
 ${text}`,
     
-    metaSummary: (summaryText) => `Provide a comprehensive overview capturing the major story arcs, character growth, recurring themes, and significant relationships or events. Aim for around 200 words:
+    metaSummary: (summaryText) => `Provide a comprehensive overview capturing the major story arcs, character growth, recurring themes, and significant relationships or events. Aim for around 300 words:
 
 ${summaryText}`
   }
