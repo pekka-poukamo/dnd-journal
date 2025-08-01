@@ -14,6 +14,13 @@ import {
   getFormData
 } from './settings-views.js';
 
+import {
+  getCachedSettings,
+  getFormDataForPage,
+  saveNavigationCache,
+  saveCurrentFormData
+} from './navigation-cache.js';
+
 import { isAPIAvailable } from './openai-wrapper.js';
 
 // State management
@@ -23,9 +30,7 @@ let connectionStatusElement = null;
 // Initialize Settings page
 export const initSettingsPage = async (stateParam = null) => {
   try {
-    const state = stateParam || (await initYjs(), getYjsState());
-    
-    // Get DOM elements
+    // Get DOM elements first
     settingsFormElement = document.getElementById('settings-form');
     connectionStatusElement = document.getElementById('connection-status');
     
@@ -34,16 +39,27 @@ export const initSettingsPage = async (stateParam = null) => {
       return;
     }
     
-    // Render initial state
-    renderSettingsPage();
+    // 1. Show cached content immediately
+    renderCachedSettingsContent();
     
-    // Set up reactive updates
+    // 2. Initialize Yjs in background
+    const state = stateParam || (await initYjs(), getYjsState());
+    
+    // 3. Set up reactive updates
     onSettingsChange(state, () => {
       renderSettingsPage();
+      // Save to cache when data changes
+      saveNavigationCache(state);
     });
     
-    // Set up form handling
+    // 4. Replace cached content with fresh data
+    renderSettingsPage();
+    
+    // 5. Set up form handling
     setupFormHandlers();
+    
+    // 6. Set up navigation caching
+    setupSettingsNavigationCaching(state);
     
   } catch (error) {
     console.error('Failed to initialize settings page:', error);
@@ -170,6 +186,71 @@ export const testConnection = async (stateParam = null) => {
     console.error('Failed to test connection:', error);
     showNotification('Error testing connection', 'error');
   }
+};
+
+// Pure function to render cached settings content immediately
+const renderCachedSettingsContent = () => {
+  const cachedSettings = getCachedSettings();
+  const cachedFormData = getFormDataForPage('settings');
+  
+  if (Object.keys(cachedSettings).length > 0 || Object.keys(cachedFormData).length > 0) {
+    // Merge cached settings with form data
+    const displayData = { ...cachedSettings, ...cachedFormData };
+    
+    // Render form with cached data
+    renderSettingsForm(settingsFormElement, displayData, {
+      onSave: () => {}, // Disabled during cache phase
+      onClear: () => {} // Disabled during cache phase
+    });
+    
+    // Show loading indicator for connection status
+    if (connectionStatusElement) {
+      connectionStatusElement.innerHTML = '<p>Checking connection status...</p>';
+    }
+  }
+};
+
+// Pure function to set up settings navigation caching
+const setupSettingsNavigationCaching = (state) => {
+  // Save cache before page unload
+  const handleBeforeUnload = () => {
+    saveNavigationCache(state);
+    
+    // Save current form data
+    const formData = getSettingsFormData();
+    if (formData) {
+      saveCurrentFormData('settings', formData);
+    }
+  };
+  
+  // Set up event listener
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  
+  // Save on form changes (debounced)
+  let formTimeout;
+  const debouncedFormSave = () => {
+    clearTimeout(formTimeout);
+    formTimeout = setTimeout(() => {
+      const formData = getSettingsFormData();
+      if (formData) {
+        saveCurrentFormData('settings', formData);
+      }
+    }, 1000); // 1 second delay
+  };
+  
+  // Listen for form changes
+  if (settingsFormElement) {
+    settingsFormElement.addEventListener('input', debouncedFormSave);
+    settingsFormElement.addEventListener('change', debouncedFormSave);
+  }
+};
+
+// Pure function to get current settings form data
+const getSettingsFormData = () => {
+  if (!settingsFormElement) return null;
+  
+  const formData = getFormData(settingsFormElement);
+  return Object.keys(formData).length > 0 ? formData : null;
 };
 
 // Initialize when DOM is ready (only in browser environment)

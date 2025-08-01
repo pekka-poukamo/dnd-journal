@@ -9,6 +9,13 @@ import {
 } from './yjs.js';
 
 import {
+  getCachedCharacterData,
+  getFormDataForPage,
+  saveNavigationCache,
+  saveCurrentFormData
+} from './navigation-cache.js';
+
+import {
   renderCharacterForm,
   renderSummaries,
   toggleGenerateButton,
@@ -25,9 +32,7 @@ let characterFormElement = null;
 // Initialize Character page
 export const initCharacterPage = async (stateParam = null) => {
   try {
-    const state = stateParam || (await initYjs(), getYjsState());
-    
-    // Get DOM elements
+    // Get DOM elements first
     characterFormElement = document.getElementById('character-form');
     
     if (!characterFormElement) {
@@ -35,20 +40,31 @@ export const initCharacterPage = async (stateParam = null) => {
       return;
     }
     
-    // Render initial state
-    renderCharacterPage(state);
+    // 1. Show cached content immediately
+    renderCachedCharacterContent();
     
-    // Set up reactive updates
+    // 2. Initialize Yjs in background
+    const state = stateParam || (await initYjs(), getYjsState());
+    
+    // 3. Set up reactive updates
     onCharacterChange(state, () => {
       renderCharacterPage(state);
       updateSummariesDisplay(state);
+      // Save to cache when data changes
+      saveNavigationCache(state);
     });
     
-    // Set up form handling
+    // 4. Replace cached content with fresh Yjs data
+    renderCharacterPage(state);
+    
+    // 5. Set up form handling with cached data
     setupFormHandlers();
     
-    // Initial summaries update
+    // 6. Update summaries
     updateSummariesDisplay(state);
+    
+    // 7. Set up navigation caching
+    setupCharacterNavigationCaching(state);
     
   } catch (error) {
     console.error('Failed to initialize character page:', error);
@@ -210,4 +226,70 @@ if (typeof document !== 'undefined') {
     });
   });
 }
+
+// Pure function to render cached character content immediately
+const renderCachedCharacterContent = () => {
+  const cachedCharacter = getCachedCharacterData();
+  const cachedFormData = getFormDataForPage('character');
+  
+  if (Object.keys(cachedCharacter).length > 0 || Object.keys(cachedFormData).length > 0) {
+    // Merge cached character data with form data
+    const displayData = { ...cachedCharacter, ...cachedFormData };
+    
+    // Render form with cached data
+    renderCharacterForm(characterFormElement, displayData, {
+      onSave: () => {}, // Disabled during cache phase
+      onGenerate: () => {} // Disabled during cache phase
+    });
+    
+    // Show loading indicator for summaries
+    const summariesContainer = document.getElementById('summaries-container');
+    if (summariesContainer) {
+      summariesContainer.innerHTML = '<p>Loading AI summaries...</p>';
+    }
+  }
+};
+
+// Pure function to set up character navigation caching
+const setupCharacterNavigationCaching = (state) => {
+  // Save cache before page unload
+  const handleBeforeUnload = () => {
+    saveNavigationCache(state);
+    
+    // Save current form data
+    const formData = getCharacterFormData();
+    if (formData) {
+      saveCurrentFormData('character', formData);
+    }
+  };
+  
+  // Set up event listener
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  
+  // Save on form changes (debounced)
+  let formTimeout;
+  const debouncedFormSave = () => {
+    clearTimeout(formTimeout);
+    formTimeout = setTimeout(() => {
+      const formData = getCharacterFormData();
+      if (formData) {
+        saveCurrentFormData('character', formData);
+      }
+    }, 1000); // 1 second delay
+  };
+  
+  // Listen for form changes
+  if (characterFormElement) {
+    characterFormElement.addEventListener('input', debouncedFormSave);
+    characterFormElement.addEventListener('change', debouncedFormSave);
+  }
+};
+
+// Pure function to get current character form data
+const getCharacterFormData = () => {
+  if (!characterFormElement) return null;
+  
+  const formData = getFormData(characterFormElement);
+  return Object.keys(formData).length > 0 ? formData : null;
+};
 

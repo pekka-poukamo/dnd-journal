@@ -12,6 +12,14 @@ import {
 } from './yjs.js';
 
 import {
+  getCachedJournalEntries,
+  getCachedCharacterData,
+  getCachedFormData,
+  saveNavigationCache,
+  saveCurrentFormData
+} from './navigation-cache.js';
+
+import {
   renderCharacterSummary,
   renderEntries,
   createEntryForm,
@@ -36,10 +44,7 @@ let regenerateBtn = null;
 // Initialize Journal page
 export const initJournalPage = async (stateParam = null) => {
   try {
-    const state = stateParam || (await initYjs());
-    currentState = state;
-    
-    // Get DOM elements
+    // Get DOM elements first
     entriesContainer = document.getElementById('entries-container');
     characterInfoContainer = document.getElementById('character-info-container');
     entryFormContainer = document.getElementById('entry-form-container');
@@ -51,25 +56,39 @@ export const initJournalPage = async (stateParam = null) => {
       return;
     }
     
-    // Set up reactive updates with explicit state tracking BEFORE initial render
+    // 1. Show cached content immediately (eliminates blank page)
+    renderCachedContent();
+    
+    // 2. Initialize Yjs in background
+    const state = stateParam || (await initYjs());
+    currentState = state;
+    
+    // 3. Set up reactive updates with explicit state tracking
     onJournalChange(state, () => {
       renderJournalPage(state);
       renderAIPromptWithLogic(state);
+      // Save to cache when data changes
+      saveNavigationCache(state);
     });
 
     onCharacterChange(state, () => {
       renderCharacterInfo(state);
       renderAIPromptWithLogic(state);
+      // Save to cache when data changes
+      saveNavigationCache(state);
     });
     
-    // Render initial state AFTER observers are set up
+    // 4. Replace cached content with fresh Yjs data
     renderJournalPage(state);
     
-    // Set up form
+    // 5. Set up form with cached data
     setupEntryForm();
     
-    // Set up AI prompt
+    // 6. Set up AI prompt
     setupAIPrompt(state);
+    
+    // 7. Set up navigation cache saving on page unload
+    setupNavigationCaching(state);
     
   } catch (error) {
     console.error('Failed to initialize journal page:', error);
@@ -311,6 +330,77 @@ const renderAIPromptWithLogic = async (stateParam = null) => {
 const handleRegeneratePrompt = async (stateParam = null) => {
   const state = stateParam || getYjsState();
   await renderAIPromptWithLogic(state);
+};
+
+// Pure function to render cached content immediately
+const renderCachedContent = () => {
+  // Render cached journal entries
+  const cachedEntries = getCachedJournalEntries();
+  if (cachedEntries.length > 0) {
+    renderEntries(entriesContainer, cachedEntries, {
+      onEdit: () => {}, // Disabled during cache phase
+      onDelete: () => {}, // Disabled during cache phase
+      onSave: () => {}  // Disabled during cache phase
+    });
+  }
+  
+  // Render cached character info
+  const cachedCharacter = getCachedCharacterData();
+  if (Object.keys(cachedCharacter).length > 0) {
+    renderCharacterSummary(characterInfoContainer, cachedCharacter);
+  }
+  
+  // Show loading indicator for real-time content
+  if (aiPromptText) {
+    aiPromptText.textContent = 'Loading writing prompt...';
+  }
+};
+
+// Pure function to set up navigation caching
+const setupNavigationCaching = (state) => {
+  // Save cache before page unload
+  const handleBeforeUnload = () => {
+    saveNavigationCache(state);
+    
+    // Save any current form data
+    const formData = getCurrentFormData();
+    if (formData) {
+      saveCurrentFormData('journal', formData);
+    }
+  };
+  
+  // Set up event listener
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  
+  // Also save cache periodically during user activity
+  const handleActivity = () => {
+    saveNavigationCache(state);
+  };
+  
+  // Save on user activity (debounced)
+  let activityTimeout;
+  const debouncedActivity = () => {
+    clearTimeout(activityTimeout);
+    activityTimeout = setTimeout(handleActivity, 2000); // 2 second delay
+  };
+  
+  document.addEventListener('input', debouncedActivity);
+  document.addEventListener('change', debouncedActivity);
+};
+
+// Pure function to get current form data
+const getCurrentFormData = () => {
+  const form = entryFormContainer?.querySelector('form');
+  if (!form) return null;
+  
+  const formData = new FormData(form);
+  const data = {};
+  
+  for (const [key, value] of formData.entries()) {
+    data[key] = value;
+  }
+  
+  return Object.keys(data).length > 0 ? data : null;
 };
 
 // Initialize the journal page when the script loads
