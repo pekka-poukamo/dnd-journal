@@ -23,6 +23,7 @@ import { isAIEnabled } from './ai.js';
 // State management
 let settingsFormElement = null;
 let connectionStatusElement = null;
+let handlersSetup = false;
 
 // Initialize Settings page
 export const initSettingsPage = async (stateParam = null) => {
@@ -42,19 +43,21 @@ export const initSettingsPage = async (stateParam = null) => {
       connectionStatusElement
     });
     
-    // Set up form handling early (improves responsiveness)
-    setupFormHandlers();
-    
     // Initialize Yjs asynchronously (non-blocking)
     const state = stateParam || (await initYjs(), getYjsState());
     
     // Set up reactive updates
     onSettingsChange(state, () => {
       renderSettingsPage();
+      // Re-setup form handlers after rendering to ensure buttons exist
+      setupFormHandlers();
     });
     
     // Replace cached content with fresh data
     renderSettingsPage();
+    
+    // Set up form handling after initial render (ensures DOM elements exist)
+    setupFormHandlers();
     
     // Save cache on page unload
     window.addEventListener('beforeunload', () => {
@@ -94,27 +97,35 @@ export const renderSettingsPage = (stateParam = null) => {
 
 // Set up form event handlers
 const setupFormHandlers = () => {
-  if (!settingsFormElement) return;
+  const formElement = settingsFormElement || document.getElementById('settings-form');
+  if (!formElement) return;
   
-  settingsFormElement.addEventListener('submit', (e) => {
-    e.preventDefault();
-    saveSettings();
-  });
-  
-  // Test API key button
-  const testApiButton = document.getElementById('test-api-key');
-  if (testApiButton) {
-    testApiButton.addEventListener('click', () => {
-      testAPIKey();
+  // Only set up form handler once
+  if (!handlersSetup) {
+    formElement.addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveSettings();
     });
+    handlersSetup = true;
   }
   
-  // Test connection button
+  // Set up button handlers directly on the elements
+  const testApiButton = document.getElementById('test-api-key');
+  if (testApiButton && !testApiButton.hasAttribute('data-handler-attached')) {
+    testApiButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      testAPIKey();
+    });
+    testApiButton.setAttribute('data-handler-attached', 'true');
+  }
+  
   const testConnectionButton = document.getElementById('test-connection');
-  if (testConnectionButton) {
-    testConnectionButton.addEventListener('click', () => {
+  if (testConnectionButton && !testConnectionButton.hasAttribute('data-handler-attached')) {
+    testConnectionButton.addEventListener('click', (e) => {
+      e.preventDefault();
       testConnection();
     });
+    testConnectionButton.setAttribute('data-handler-attached', 'true');
   }
 };
 
