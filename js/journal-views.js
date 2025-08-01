@@ -207,21 +207,36 @@ export const renderCharacterSummary = (container, character) => {
 
 // Render journal entries list
 export const renderEntries = (container, entries, options = {}) => {
-  if (!container) return;
+  console.log('=== renderEntries called ===');
+  console.log('Container:', container);
+  console.log('Entries:', entries);
+  console.log('Entries length:', entries.length);
+  
+  if (!container) {
+    console.log('No container provided to renderEntries');
+    return;
+  }
   
   container.innerHTML = '';
   
   if (entries.length === 0) {
+    console.log('No entries - showing empty state');
     container.appendChild(createEmptyState('No journal entries yet. Start writing your adventure!'));
     return;
   }
   
+  console.log('Sorting entries...');
   const sortedEntries = sortEntriesByDate(entries);
+  console.log('Sorted entries:', sortedEntries);
   
-  sortedEntries.forEach(entry => {
+  sortedEntries.forEach((entry, index) => {
+    console.log(`Creating entry element ${index}:`, entry);
     const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
+    console.log(`Entry element created:`, entryElement);
     container.appendChild(entryElement);
   });
+  
+  console.log('Final container children count:', container.children.length);
 };
 
 // Show notification message
