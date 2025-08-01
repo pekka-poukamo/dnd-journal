@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Show AI Prompt Button</title>
+</head>
+<body>
+    <button id="show-ai-prompt" class="btn btn-secondary" disabled>
+        Show Current AI Prompt
+    </button>
+    <div id="ai-prompt-preview" style="display: none;">
+        <h4>Current AI Prompt Preview:</h4>
+        <div id="ai-prompt-content"></div>
+    </div>
+
+    <script type="module">
+        // Simple test to see if button can be enabled
+        const button = document.getElementById('show-ai-prompt');
+        console.log('Button found:', !!button);
+        console.log('Button disabled:', button.disabled);
+        
+        // Test enabling button
+        setTimeout(() => {
+            button.disabled = false;
+            console.log('Button enabled manually');
+        }, 1000);
+
+        // Test click handler
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Button clicked!');
+            alert('Button works!');
+        });
+    </script>
+</body>
+</html>

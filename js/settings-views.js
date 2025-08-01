@@ -40,6 +40,17 @@ export const renderSettingsForm = (formOrSettings, settings = null) => {
     const hasApiKey = settingsData['openai-api-key'] && settingsData['openai-api-key'].trim().length > 0;
     const aiEnabled = settingsData['ai-enabled'] === 'true' || settingsData['ai-enabled'] === true;
     showPromptButton.disabled = !hasApiKey || !aiEnabled;
+    
+    // Update button title to give user feedback about requirements
+    if (!hasApiKey && !aiEnabled) {
+      showPromptButton.title = 'Requires OpenAI API Key and AI Features to be enabled';
+    } else if (!hasApiKey) {
+      showPromptButton.title = 'Requires OpenAI API Key';
+    } else if (!aiEnabled) {
+      showPromptButton.title = 'Requires AI Features to be enabled';
+    } else {
+      showPromptButton.title = 'Show current AI prompt configuration';
+    }
   }
   
   // Sync server setting - try different ID patterns and key names
