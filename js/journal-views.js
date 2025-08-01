@@ -1,5 +1,5 @@
 // Journal Views - Pure Rendering Functions for Journal Page
-import { parseMarkdown, formatDate, sortEntriesByDate } from './utils.js';
+import { parseMarkdown, formatDate, sortEntriesByDate, getFormData } from './utils.js';
 import {
   getCachedJournalEntries,
   getCachedCharacterData,
@@ -245,15 +245,7 @@ export const showNotification = (message, type = 'info') => {
   }, 3000);
 };
 
-// Get form data from any form
-export const getFormData = (form) => {
-  const formData = new FormData(form);
-  const data = {};
-  for (const [key, value] of formData.entries()) {
-    data[key] = value;
-  }
-  return data;
-};
+
 
 // Clear form inputs
 export const clearForm = (form) => {

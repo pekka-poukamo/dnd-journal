@@ -24,7 +24,7 @@ import {
   renderCachedEntryForm
 } from './journal-views.js';
 
-import { generateId, isValidEntry, formatDate } from './utils.js';
+import { generateId, isValidEntry, formatDate, getFormData } from './utils.js';
 
 import { generateQuestions, hasGoodContext } from './storytelling.js';
 import { isAPIAvailable } from './openai-wrapper.js';
@@ -338,13 +338,7 @@ const getCurrentFormData = () => {
   const form = entryFormContainer?.querySelector('form');
   if (!form) return null;
   
-  const formData = new FormData(form);
-  const data = {};
-  
-  for (const [key, value] of formData.entries()) {
-    data[key] = value;
-  }
-  
+  const data = getFormData(form);
   return Object.keys(data).length > 0 ? data : null;
 };
 

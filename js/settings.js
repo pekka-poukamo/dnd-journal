@@ -11,9 +11,10 @@ import {
   renderSettingsForm,
   renderConnectionStatus,
   showNotification,
-  getFormData,
   renderCachedSettingsContent
 } from './settings-views.js';
+
+import { getFormData } from './utils.js';
 
 import { saveNavigationCache } from './navigation-cache.js';
 

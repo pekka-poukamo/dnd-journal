@@ -111,3 +111,35 @@ export const parseMarkdown = (text) => {
     .replace(/<p><\/p>/g, '') // Remove empty paragraphs
     .replace(/__LINE_BREAK__/g, '<br>'); // Single line breaks
 };
+
+// Pure function to get form data from any form
+export const getFormData = (form) => {
+  // Try FormData first, fallback to manual extraction for test environments
+  try {
+    const formData = new FormData(form);
+    const data = {};
+    for (const [key, value] of formData.entries()) {
+      data[key] = value;
+    }
+    // If FormData worked but no entries were found, fall back to manual method
+    if (Object.keys(data).length === 0) {
+      throw new Error('FormData returned no entries');
+    }
+    return data;
+  } catch (error) {
+    // Manual extraction for test environments or edge cases
+    const data = {};
+    if (form && form.elements) {
+      Array.from(form.elements).forEach(element => {
+        if (element.name) {
+          if (element.type === 'checkbox') {
+            data[element.name] = element.checked;
+          } else {
+            data[element.name] = element.value || '';
+          }
+        }
+      });
+    }
+    return data;
+  }
+};

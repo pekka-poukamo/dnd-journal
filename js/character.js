@@ -14,10 +14,11 @@ import {
   renderCharacterForm,
   renderSummaries,
   toggleGenerateButton,
-  getFormData,
   showNotification,
   renderCachedCharacterContent
 } from './character-views.js';
+
+import { getFormData } from './utils.js';
 
 import { isAPIAvailable } from './openai-wrapper.js';
 import { summarize } from './summarization.js';
