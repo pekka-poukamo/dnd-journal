@@ -11,7 +11,13 @@ const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 // Pure function to check if cache is available
 export const isCacheAvailable = () => {
   try {
-    return typeof sessionStorage !== 'undefined' && sessionStorage !== null;
+    // Check if sessionStorage exists and can be accessed
+    if (typeof sessionStorage === 'undefined' || sessionStorage === null) {
+      return false;
+    }
+    // Try to actually use sessionStorage to detect access errors
+    sessionStorage.getItem('test');
+    return true;
   } catch {
     return false;
   }
@@ -197,6 +203,10 @@ export const getCachedFormData = () => {
 
 // Pure function to save current form data
 export const saveCurrentFormData = (pageType, formData) => {
+  if (!isCacheAvailable()) {
+    return false;
+  }
+  
   const existingCache = loadNavigationCache();
   const currentFormData = existingCache?.formData || {};
   
@@ -205,9 +215,23 @@ export const saveCurrentFormData = (pageType, formData) => {
     [pageType]: formData
   };
   
-  // Save with existing Yjs state or empty state
-  const yjsState = existingCache ? null : {}; // Don't overwrite if we have cache
-  return saveNavigationCache(yjsState, updatedFormData);
+  // If we have existing cache, preserve the Yjs data and just update form data
+  if (existingCache) {
+    const yjsState = {
+      journalArray: { toArray: () => existingCache.journalEntries || [] },
+      characterMap: { get: (key) => existingCache.characterData?.[key] },
+      settingsMap: { get: (key) => existingCache.settings?.[key] }
+    };
+    return saveNavigationCache(yjsState, updatedFormData);
+  } else {
+    // Create minimal Yjs state for form-only cache
+    const yjsState = {
+      journalArray: { toArray: () => [] },
+      characterMap: { get: () => undefined },
+      settingsMap: { get: () => undefined }
+    };
+    return saveNavigationCache(yjsState, updatedFormData);
+  }
 };
 
 // Pure function to get form data for specific page
