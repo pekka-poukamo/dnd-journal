@@ -53,21 +53,21 @@ export const initJournalPage = async (stateParam = null) => {
     renderJournalPage(state);
     
     // Set up reactive updates
-    onJournalChange(state, () => {
+    onJournalChange(state, async () => {
       renderJournalPage(state);
-      renderAIPromptWithLogic(state);
+      await renderAIPromptWithLogic(state);
     });
     
-    onCharacterChange(state, () => {
+    onCharacterChange(state, async () => {
       renderCharacterInfo(state);
-      renderAIPromptWithLogic(state);
+      await renderAIPromptWithLogic(state);
     });
     
     // Set up form
     setupEntryForm();
     
     // Set up AI prompt
-    setupAIPrompt(state);
+    await setupAIPrompt(state);
     
   } catch (error) {
     console.error('Failed to initialize journal page:', error);
@@ -246,7 +246,7 @@ export const clearEntryForm = () => {
 // =============================================================================
 
 // Set up AI prompt section
-const setupAIPrompt = (state) => {
+const setupAIPrompt = async (state) => {
   if (!aiPromptText) return;
   
   // Set up regenerate button if available
