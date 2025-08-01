@@ -21,10 +21,15 @@ import {
 
 import { generateId, isValidEntry, formatDate } from './utils.js';
 
+import { generateQuestions, hasGoodContext } from './storytelling.js';
+import { isAPIAvailable } from './openai-wrapper.js';
+
 // State management
 let entriesContainer = null;
 let characterInfoContainer = null;
 let entryFormContainer = null;
+let aiPromptText = null;
+let regenerateBtn = null;
 
 // Initialize Journal page
 export const initJournalPage = async (stateParam = null) => {
@@ -35,6 +40,8 @@ export const initJournalPage = async (stateParam = null) => {
     entriesContainer = document.getElementById('entries-container');
     characterInfoContainer = document.getElementById('character-info-container');
     entryFormContainer = document.getElementById('entry-form-container');
+    aiPromptText = document.getElementById('ai-prompt-text');
+    regenerateBtn = document.getElementById('regenerate-prompt-btn');
     
     if (!entriesContainer || !entryFormContainer) {
       console.warn('Required journal containers not found');
@@ -47,14 +54,19 @@ export const initJournalPage = async (stateParam = null) => {
     // Set up reactive updates
     onJournalChange(state, () => {
       renderJournalPage(state);
+      renderAIPrompt(state);
     });
     
     onCharacterChange(state, () => {
       renderCharacterInfo(state);
+      renderAIPrompt(state);
     });
     
     // Set up form
     setupEntryForm();
+    
+    // Set up AI prompt
+    setupAIPrompt(state);
     
   } catch (error) {
     console.error('Failed to initialize journal page:', error);
@@ -225,6 +237,131 @@ const clearEntryForm = () => {
   const form = entryFormContainer?.querySelector('form');
   if (form) {
     form.reset();
+  }
+};
+
+// =============================================================================
+// AI PROMPT FUNCTIONALITY
+// =============================================================================
+
+// Set up AI prompt section
+const setupAIPrompt = (state) => {
+  if (!aiPromptText) return;
+  
+  // Set up regenerate button if available
+  if (regenerateBtn) {
+    regenerateBtn.addEventListener('click', () => handleRegeneratePrompt(state));
+  }
+  
+  // Initial render
+  renderAIPrompt(state);
+};
+
+// Render AI prompt based on current state
+const renderAIPrompt = async (stateParam = null) => {
+  if (!aiPromptText) return;
+  
+  try {
+    const state = stateParam || getYjsState();
+    const character = getCharacterData(state);
+    const entries = getEntries(state);
+    
+    // Check API availability first
+    if (!isAPIAvailable()) {
+      showAPINotAvailableState();
+      return;
+    }
+    
+    // Check if we have good context for generating questions
+    if (!hasGoodContext(character, entries)) {
+      showNoContextState();
+      return;
+    }
+    
+    // Show loading and generate questions
+    showLoadingState();
+    const questions = await generateQuestions(character, entries);
+    
+    if (questions) {
+      showQuestionsState(questions);
+    } else {
+      showErrorState();
+    }
+    
+  } catch (error) {
+    console.error('Failed to render AI prompt:', error);
+    showErrorState();
+  }
+};
+
+// Handle regenerate button click
+const handleRegeneratePrompt = async (stateParam = null) => {
+  const state = stateParam || getYjsState();
+  await renderAIPrompt(state);
+};
+
+// Show API not available state
+const showAPINotAvailableState = () => {
+  if (!aiPromptText) return;
+  
+  aiPromptText.className = 'ai-prompt__empty-state';
+  aiPromptText.textContent = 'AI features require an API key to be configured in Settings.';
+  
+  // Disable regenerate button
+  if (regenerateBtn) {
+    regenerateBtn.disabled = true;
+  }
+};
+
+// Show no context state
+const showNoContextState = () => {
+  if (!aiPromptText) return;
+  
+  aiPromptText.className = 'ai-prompt__empty-state';
+  aiPromptText.textContent = 'Add some character details or journal entries to get personalized reflection questions.';
+  
+  // Disable regenerate button
+  if (regenerateBtn) {
+    regenerateBtn.disabled = true;
+  }
+};
+
+// Show loading state
+const showLoadingState = () => {
+  if (!aiPromptText) return;
+  
+  aiPromptText.className = 'ai-prompt__text loading';
+  aiPromptText.textContent = 'Generating your personalized reflection questions...';
+  
+  // Disable regenerate button while loading
+  if (regenerateBtn) {
+    regenerateBtn.disabled = true;
+  }
+};
+
+// Show questions state
+const showQuestionsState = (questions) => {
+  if (!aiPromptText) return;
+  
+  aiPromptText.className = 'ai-prompt__text';
+  aiPromptText.textContent = questions;
+  
+  // Enable regenerate button
+  if (regenerateBtn) {
+    regenerateBtn.disabled = false;
+  }
+};
+
+// Show error state
+const showErrorState = () => {
+  if (!aiPromptText) return;
+  
+  aiPromptText.className = 'ai-prompt__error-state';
+  aiPromptText.textContent = 'Unable to generate reflection questions. Please try again.';
+  
+  // Enable regenerate button to allow retry
+  if (regenerateBtn) {
+    regenerateBtn.disabled = false;
   }
 };
 
