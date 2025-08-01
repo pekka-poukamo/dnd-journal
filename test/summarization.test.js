@@ -126,7 +126,7 @@ describe('Simple Summarization Module', function() {
       
       const testCases = [
         {
-          key: 'character-backstory',
+          key: 'character:backstory',
           content: 'A detailed character backstory with lots of information about their past, motivations, and relationships.'
         },
         {
