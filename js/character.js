@@ -182,6 +182,8 @@ const generateSummary = async (field) => {
   }
 };
 
+
+
 // Update summaries display
 export const updateSummariesDisplay = (stateParam = null) => {
   try {

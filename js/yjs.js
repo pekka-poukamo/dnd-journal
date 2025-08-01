@@ -29,17 +29,12 @@ export const initYjs = async () => {
   // Create document
   ydoc = new Y.Doc();
   
-  // Set up persistence
+  // Set up persistence and sync concurrently
   const persistence = new IndexeddbPersistence('dnd-journal', ydoc);
+  setupSyncFromSettings(); // Run concurrently, don't wait
   
-  // Mark as initialized first, then set up sync
+  // Mark as initialized immediately - IndexedDB is synchronous for reads after creation
   isInitialized = true;
-  
-  // Set up sync server from settings (if configured)
-  setupSyncFromSettings();
-  
-  // Wait for initial sync
-  await new Promise(resolve => setTimeout(resolve, 100));
   
   return getYjsState();
 };
