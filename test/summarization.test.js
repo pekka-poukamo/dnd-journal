@@ -30,14 +30,14 @@ describe('Simple Summarization Module', function() {
       const summaryKey = 'test-summary';
       
       try {
-        await Summarization.summarize(state, summaryKey, content);
+        await Summarization.summarize(summaryKey, content);
         expect.fail('Should have thrown error');
       } catch (error) {
-        expect(error.message).to.include('API not available');
+        expect(error.message).to.include('AI not available');
       }
     });
 
-    it('should return existing summary if available', function() {
+    it('should return existing summary if available', async function() {
       YjsModule.setSetting(state, 'ai-enabled', true);
       YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
       
@@ -46,7 +46,7 @@ describe('Simple Summarization Module', function() {
       
       YjsModule.setSummary(state, summaryKey, existingSummary);
       
-      const result = Summarization.summarize(state, summaryKey, 'Some content');
+      const result = await Summarization.summarize(summaryKey, 'Some content');
       expect(result).to.equal(existingSummary);
     });
 
@@ -71,12 +71,12 @@ describe('Simple Summarization Module', function() {
       });
       
       try {
-        const result = await Summarization.summarize(state, summaryKey, content);
+        const result = await Summarization.summarize(summaryKey, content);
         // In test environment, this will likely return the existing summary or throw
         expect(result).to.be.a('string');
       } catch (error) {
         // Expected in test environment
-        expect(error.message).to.include('API not available');
+        expect(error.message).to.include('AI not available');
       } finally {
         global.fetch = originalFetch;
       }
@@ -96,7 +96,7 @@ describe('Simple Summarization Module', function() {
       };
       
       try {
-        const result = await Summarization.summarize(state, summaryKey, content);
+        const result = await Summarization.summarize(summaryKey, content);
         expect.fail('Should have thrown error');
       } catch (error) {
         expect(error).to.be.an('error');
@@ -105,7 +105,7 @@ describe('Simple Summarization Module', function() {
       }
     });
 
-    it('should handle empty content', function() {
+    it('should handle empty content', async function() {
       YjsModule.setSetting(state, 'ai-enabled', true);
       YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
       
@@ -113,7 +113,7 @@ describe('Simple Summarization Module', function() {
       const content = '';
       
       try {
-        const result = Summarization.summarize(state, summaryKey, content);
+        const result = await Summarization.summarize(summaryKey, content);
         expect.fail('Should have thrown error for empty content');
       } catch (error) {
         expect(error.message).to.include('Content is required');
@@ -141,7 +141,7 @@ describe('Simple Summarization Module', function() {
       
       for (const testCase of testCases) {
         try {
-          const result = await Summarization.summarize(state, testCase.key, testCase.content);
+          const result = await Summarization.summarize(testCase.key, testCase.content);
           // In test environment, this will likely throw due to no real API
           expect(result).to.be.a('string');
         } catch (error) {
