@@ -100,29 +100,32 @@ const setupFormHandlers = () => {
   const formElement = settingsFormElement || document.getElementById('settings-form');
   if (!formElement) return;
   
-  // Only set up global handlers once
+  // Only set up form handler once
   if (!handlersSetup) {
-    // Form submit handler
     formElement.addEventListener('submit', (e) => {
       e.preventDefault();
       saveSettings();
     });
-    
-    // Use simple event delegation on document for button clicks
-    // This ensures buttons work regardless of when they're added to DOM
-    document.addEventListener('click', (e) => {
-      if (e.target && e.target.id === 'test-api-key') {
-        e.preventDefault();
-        testAPIKey();
-      }
-      
-      if (e.target && e.target.id === 'test-connection') {
-        e.preventDefault();
-        testConnection();
-      }
-    });
-    
     handlersSetup = true;
+  }
+  
+  // Set up button handlers directly on the elements
+  const testApiButton = document.getElementById('test-api-key');
+  if (testApiButton && !testApiButton.hasAttribute('data-handler-attached')) {
+    testApiButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      testAPIKey();
+    });
+    testApiButton.setAttribute('data-handler-attached', 'true');
+  }
+  
+  const testConnectionButton = document.getElementById('test-connection');
+  if (testConnectionButton && !testConnectionButton.hasAttribute('data-handler-attached')) {
+    testConnectionButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      testConnection();
+    });
+    testConnectionButton.setAttribute('data-handler-attached', 'true');
   }
 };
 
