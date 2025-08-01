@@ -21,6 +21,8 @@ import { saveNavigationCache } from './navigation-cache.js';
 
 import { isAIEnabled, getPromptPreview, buildMessages } from './ai.js';
 
+import { clearAllSummaries } from './summarization.js';
+
 // State management
 let settingsFormElement = null;
 let connectionStatusElement = null;
@@ -124,6 +126,15 @@ const setupFormHandlers = () => {
       showCurrentAIPrompt();
     });
     showAIPromptButton.setAttribute('data-handler-attached', 'true');
+  }
+  
+  const clearSummariesButton = document.getElementById('clear-summaries');
+  if (clearSummariesButton && !clearSummariesButton.hasAttribute('data-handler-attached')) {
+    clearSummariesButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      clearAllSummariesHandler();
+    });
+    clearSummariesButton.setAttribute('data-handler-attached', 'true');
   }
 
   // Form handler setup (can return early if form not found)
@@ -260,6 +271,21 @@ export const showCurrentAIPrompt = async () => {
   } catch (error) {
     console.error('Failed to show AI prompt:', error);
     showNotification('Error displaying AI prompts', 'error');
+  }
+};
+
+// Clear all summaries handler
+export const clearAllSummariesHandler = () => {
+  try {
+    const confirmed = confirm('Are you sure you want to clear all summaries? This action cannot be undone.');
+    
+    if (confirmed) {
+      clearAllSummaries();
+      showNotification('All summaries have been cleared', 'success');
+    }
+  } catch (error) {
+    console.error('Failed to clear summaries:', error);
+    showNotification('Error clearing summaries', 'error');
   }
 };
 

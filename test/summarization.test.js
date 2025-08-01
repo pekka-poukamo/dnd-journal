@@ -23,6 +23,28 @@ describe('Simple Summarization Module', function() {
     YjsModule.resetYjs();
   });
 
+  describe('clearAllSummaries', function() {
+    it('should clear all summaries from storage', function() {
+      // Add some test summaries
+      YjsModule.setSummary(state, 'test1', 'Summary 1');
+      YjsModule.setSummary(state, 'test2', 'Summary 2');
+      YjsModule.setSummary(state, 'test3', 'Summary 3');
+      
+      // Verify summaries exist
+      expect(YjsModule.getSummary(state, 'test1')).to.equal('Summary 1');
+      expect(YjsModule.getSummary(state, 'test2')).to.equal('Summary 2');
+      expect(YjsModule.getSummary(state, 'test3')).to.equal('Summary 3');
+      
+      // Clear all summaries
+      Summarization.clearAllSummaries();
+      
+      // Verify all summaries are gone
+      expect(YjsModule.getSummary(state, 'test1')).to.be.null;
+      expect(YjsModule.getSummary(state, 'test2')).to.be.null;
+      expect(YjsModule.getSummary(state, 'test3')).to.be.null;
+    });
+  });
+
   describe('summarize', function() {
     it('should throw error when API not available', async function() {
       // No API key set

@@ -20,15 +20,15 @@ Please create 4 introspective questions that would help this player discover com
   },
   
   summarization: {
-    entry: (text) => `Summarize this D&D journal entry in approximately 100 words, capturing the key events, decisions, and character developments:
+    entry: (text) => `Summarize the following content. Keep it concise and preserve the original brevity if the content is already short. If the content is substantial, condense to around 100 words:
 
 ${text}`,
     
-    character: (text) => `Summarize this D&D character information in approximately 50 words:
+    character: (text) => `Summarize the following content. Preserve brevity for short content, or condense longer descriptions to around 200 words:
 
 ${text}`,
     
-    metaSummary: (summaryText) => `Create a comprehensive overview of this D&D character's complete adventure history in approximately 200 words. Capture the major story arcs, character growth, recurring themes, and significant relationships or events that define their journey:
+    metaSummary: (summaryText) => `Provide a comprehensive summary of the following content. Aim for around 300 words:
 
 ${summaryText}`
   }
