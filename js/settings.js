@@ -42,7 +42,10 @@ export const initSettingsPage = async (stateParam = null) => {
       connectionStatusElement
     });
     
-    // Initialize Yjs in background
+    // Set up form handling early (improves responsiveness)
+    setupFormHandlers();
+    
+    // Initialize Yjs asynchronously (non-blocking)
     const state = stateParam || (await initYjs(), getYjsState());
     
     // Set up reactive updates
@@ -52,9 +55,6 @@ export const initSettingsPage = async (stateParam = null) => {
     
     // Replace cached content with fresh data
     renderSettingsPage();
-    
-    // Set up form handling
-    setupFormHandlers();
     
     // Save cache on page unload
     window.addEventListener('beforeunload', () => {

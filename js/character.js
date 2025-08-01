@@ -44,7 +44,10 @@ export const initCharacterPage = async (stateParam = null) => {
       summariesContainer
     });
     
-    // Initialize Yjs in background
+    // Set up form handling early (improves responsiveness)
+    setupFormHandlers();
+    
+    // Initialize Yjs asynchronously (non-blocking)
     const state = stateParam || (await initYjs(), getYjsState());
     
     // Set up reactive updates
@@ -55,9 +58,6 @@ export const initCharacterPage = async (stateParam = null) => {
     
     // Replace cached content with fresh data
     renderCharacterPage(state);
-    
-    // Set up form handling
-    setupFormHandlers();
     
     // Update summaries
     updateSummariesDisplay(state);

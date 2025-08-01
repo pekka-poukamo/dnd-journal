@@ -210,23 +210,93 @@ export const renderCharacterSummary = (container, character) => {
   container.appendChild(characterDiv);
 };
 
-// Render journal entries list
+// Render journal entries list with intelligent DOM updates (performance optimized)
 export const renderEntries = (container, entries, options = {}) => {
   if (!container) return;
   
-  container.innerHTML = '';
-  
   if (entries.length === 0) {
+    container.innerHTML = '';
     container.appendChild(createEmptyState('No journal entries yet. Start writing your adventure!'));
     return;
   }
   
   const sortedEntries = sortEntriesByDate(entries);
   
-  sortedEntries.forEach(entry => {
-    const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
-    container.appendChild(entryElement);
+  // Get existing entry elements for efficient updates
+  const existingEntries = new Map();
+  const existingElements = container.querySelectorAll('[data-entry-id]');
+  existingElements.forEach(element => {
+    const entryId = element.dataset.entryId;
+    if (entryId) {
+      existingEntries.set(entryId, element);
+    }
   });
+  
+  // Use DocumentFragment for efficient DOM manipulation
+  const fragment = document.createDocumentFragment();
+  const updatedIds = new Set();
+  
+  sortedEntries.forEach(entry => {
+    updatedIds.add(entry.id);
+    
+    const existingElement = existingEntries.get(entry.id);
+    if (existingElement) {
+      // Update existing element in place (more efficient than recreation)
+      updateEntryElement(existingElement, entry, options.onEdit, options.onDelete);
+      fragment.appendChild(existingElement);
+    } else {
+      // Create new element only if it doesn't exist
+      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
+      fragment.appendChild(entryElement);
+    }
+  });
+  
+  // Remove elements for entries that no longer exist
+  existingElements.forEach(element => {
+    const entryId = element.dataset.entryId;
+    if (entryId && !updatedIds.has(entryId)) {
+      element.remove();
+    }
+  });
+  
+  // Clear container and append optimized fragment
+  container.innerHTML = '';
+  container.appendChild(fragment);
+};
+
+// Helper function to update existing entry element (performance optimization)
+const updateEntryElement = (element, entry, onEdit, onDelete) => {
+  // Update title
+  const titleElement = element.querySelector('.entry-title');
+  if (titleElement && titleElement.textContent !== entry.title) {
+    titleElement.textContent = entry.title;
+  }
+  
+  // Update content
+  const contentElement = element.querySelector('.entry-content');
+  if (contentElement) {
+    const newContent = parseMarkdown(entry.content);
+    if (contentElement.innerHTML !== newContent) {
+      contentElement.innerHTML = newContent;
+    }
+  }
+  
+  // Update timestamp
+  const timestampElement = element.querySelector('.entry-timestamp');
+  if (timestampElement) {
+    const formattedDate = formatDate(entry.timestamp);
+    if (timestampElement.textContent !== formattedDate) {
+      timestampElement.textContent = formattedDate;
+      timestampElement.dateTime = new Date(entry.timestamp).toISOString();
+    }
+  }
+  
+  // Update event handlers
+  const editButton = element.querySelector('.entry-actions button:first-child');
+  const deleteButton = element.querySelector('.entry-actions button:last-child');
+  
+  if (editButton) editButton.onclick = () => onEdit(entry.id);
+  if (deleteButton) deleteButton.onclick = () => onDelete(entry.id);
 };
 
 // Show notification message

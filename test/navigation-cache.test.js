@@ -131,7 +131,7 @@ describe('Navigation Cache', () => {
       const rawCache = mockSessionStorage.getItem(cacheKey);
       const cacheData = JSON.parse(rawCache);
       
-      expect(cacheData.version).to.equal('1.0');
+      expect(cacheData.version).to.equal('1.1');
       expect(cacheData.timestamp).to.be.a('number');
       expect(cacheData.data).to.be.an('object');
     });
@@ -146,7 +146,7 @@ describe('Navigation Cache', () => {
       const cacheKey = 'dnd-journal-navigation-cache';
       const rawCache = mockSessionStorage.getItem(cacheKey);
       const cacheData = JSON.parse(rawCache);
-      cacheData.timestamp = Date.now() - (6 * 60 * 1000); // 6 minutes ago
+      cacheData.timestamp = Date.now() - (16 * 60 * 1000); // 16 minutes ago (beyond 15min expiry)
       mockSessionStorage.setItem(cacheKey, JSON.stringify(cacheData));
       
       const loaded = loadNavigationCache();

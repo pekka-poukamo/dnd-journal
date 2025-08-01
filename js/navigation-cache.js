@@ -3,10 +3,10 @@
 
 import { formatDate } from './utils.js';
 
-// Cache configuration
+// Cache configuration (optimized for better performance)
 const CACHE_KEY = 'dnd-journal-navigation-cache';
-const CACHE_VERSION = '1.0';
-const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_VERSION = '1.1'; // Bumped version for performance optimizations
+const CACHE_EXPIRY_MS = 15 * 60 * 1000; // Increased to 15 minutes for better persistence
 
 // Pure function to check if cache is available
 export const isCacheAvailable = () => {
@@ -273,4 +273,34 @@ export const getCacheInfo = () => {
     hasSettings: Object.keys(cache?.settings || {}).length > 0,
     hasFormData: Object.keys(cache?.formData || {}).length > 0
   };
+};
+
+// Pre-warm cache for faster subsequent loads (performance optimization)
+export const preWarmCache = (yjsState) => {
+  if (!isCacheAvailable() || !yjsState) {
+    return false;
+  }
+  
+  try {
+    // Save a lightweight version of current state for instant loading
+    return saveNavigationCache(yjsState);
+  } catch (error) {
+    console.warn('Failed to pre-warm navigation cache:', error);
+    return false;
+  }
+};
+
+// Enhanced cache validation with performance focus
+export const isCacheRecentAndValid = () => {
+  const cache = loadNavigationCache();
+  if (!cache) return false;
+  
+  // Check if cache is recent (within last 2 minutes for immediate use)
+  const age = getCacheAge();
+  const isRecent = age !== null && age < (2 * 60 * 1000); // 2 minutes for instant loading
+  
+  return isRecent && cache.data && (
+    cache.data.journalEntries?.length > 0 || 
+    Object.keys(cache.data.characterData || {}).length > 0
+  );
 };
