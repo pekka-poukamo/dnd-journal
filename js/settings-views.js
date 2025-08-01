@@ -98,7 +98,7 @@ export const setTestConnectionLoading = (isLoading) => {
 };
 
 // Render AI prompt preview
-export const renderAIPromptPreview = (aiEnabled, promptPreview = null, contextData = null) => {
+export const renderAIPromptPreview = (aiEnabled, promptPreview = null) => {
   const promptPreviewElement = document.getElementById('ai-prompt-preview');
   const promptContentElement = document.getElementById('ai-prompt-content');
   
@@ -132,50 +132,16 @@ export const renderAIPromptPreview = (aiEnabled, promptPreview = null, contextDa
       </div>
     `;
   } else {
-    // Show the full prompt with actual context and data
-    const characterData = contextData?.character || {};
-    const entriesData = contextData?.entries || [];
-    
+    // Show just the final prompt
     promptContentElement.innerHTML = `
       <div class="system-prompt">
         <h4>System Prompt</h4>
-        <div style="white-space: pre-wrap;">${promptPreview.systemPrompt}</div>
-      </div>
-      
-      <div class="system-prompt">
-        <h4>Current Data Used for Context</h4>
-        <div style="white-space: pre-wrap; font-family: monospace; font-size: 0.9em;">
-          <strong>Character:</strong>
-          Name: ${characterData.name || 'Not set'}
-          Race: ${characterData.race || 'Not set'}
-          Class: ${characterData.class || 'Not set'}
-          
-          <strong>Backstory:</strong> ${characterData.backstory ? (characterData.backstory.length > 100 ? characterData.backstory.substring(0, 100) + '...' : characterData.backstory) : 'Not set'}
-          
-          <strong>Notes:</strong> ${characterData.notes ? (characterData.notes.length > 100 ? characterData.notes.substring(0, 100) + '...' : characterData.notes) : 'Not set'}
-          
-          <strong>Journal Entries:</strong> ${entriesData.length} entries
-          ${entriesData.length > 0 ? entriesData.slice(-3).map(entry => `- ${entry.title}: ${entry.content.substring(0, 80)}${entry.content.length > 80 ? '...' : ''}`).join('\n          ') : 'No entries yet'}
-        </div>
-      </div>
-      
-      <div class="system-prompt">
-        <h4>Built Context String</h4>
-        <div style="white-space: pre-wrap; font-family: monospace; font-size: 0.9em;">${promptPreview.context}</div>
+        <div>${promptPreview.systemPrompt}</div>
       </div>
       
       <div class="user-prompt">
-        <h4>Complete User Prompt (sent to OpenAI)</h4>
-        <div style="white-space: pre-wrap; font-family: monospace; font-size: 0.9em;">${promptPreview.userPrompt}</div>
-      </div>
-      
-      <div class="user-prompt">
-        <h4>Summarization Prompts</h4>
-        <p><strong>Journal Entry Template:</strong></p>
-        <div style="font-family: monospace; font-size: 0.9em;">${PROMPTS.summarization.entry('[ENTRY_TEXT]')}</div>
-        <br>
-        <p><strong>Character Template:</strong></p>
-        <div style="font-family: monospace; font-size: 0.9em;">${PROMPTS.summarization.character('[CHARACTER_TEXT]')}</div>
+        <h4>User Prompt</h4>
+        <div>${promptPreview.userPrompt}</div>
       </div>
     `;
   }
