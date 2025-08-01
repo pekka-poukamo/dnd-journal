@@ -24,23 +24,34 @@ export const resetYjs = () => {
 
 // Initialize Y.js and return the state object (call once per page)
 export const initYjs = async () => {
-  if (isInitialized) return getYjsState(); // Already initialized
+  console.log('🔧 Initializing Y.js...');
+  
+  if (isInitialized) {
+    console.log('✅ Y.js already initialized, returning existing state');
+    return getYjsState(); // Already initialized
+  }
   
   // Create document
+  console.log('📄 Creating Y.Doc...');
   ydoc = new Y.Doc();
   
   // Set up persistence
+  console.log('💾 Setting up IndexedDB persistence...');
   const persistence = new IndexeddbPersistence('dnd-journal', ydoc);
   
   // Mark as initialized first, then set up sync
   isInitialized = true;
+  console.log('✅ Y.js marked as initialized');
   
   // Set up sync server from settings (if configured)
+  console.log('🌐 Setting up sync from settings...');
   setupSyncFromSettings();
   
   // Wait for initial sync
+  console.log('⏳ Waiting for initial sync...');
   await new Promise(resolve => setTimeout(resolve, 100));
   
+  console.log('🎉 Y.js initialization complete!');
   return getYjsState();
 };
 
@@ -124,6 +135,7 @@ export const getCharacterData = (state) => {
     data[key] = value;
   });
   
+  console.log('👤 Getting character data from Y.js:', data);
   return data;
 };
 
@@ -151,7 +163,9 @@ export const deleteEntry = (state, entryId) => {
 };
 
 export const getEntries = (state) => {
-  return getJournalMap(state).get('entries') || [];
+  const entries = getJournalMap(state).get('entries') || [];
+  console.log('📖 Getting entries from Y.js:', entries.length, entries);
+  return entries;
 };
 
 // Pure settings operations
