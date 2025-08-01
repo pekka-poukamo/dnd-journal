@@ -242,20 +242,24 @@ export const testConnection = async (stateParam = null) => {
 // Show current AI prompt
 export const showCurrentAIPrompt = async () => {
   try {
-    const aiEnabled = isAIEnabled();
+    const promptPreviewElement = document.getElementById('ai-prompt-preview');
+    const promptContentElement = document.getElementById('ai-prompt-content');
     
-    if (!aiEnabled) {
-      renderAIPromptPreview(aiEnabled, null);
-      showNotification('AI features not enabled', 'info');
+    if (!promptPreviewElement || !promptContentElement) {
+      showNotification('Required elements not found', 'error');
       return;
     }
+
+    // Simple test content first
+    promptContentElement.innerHTML = `
+      <div class="system-prompt">
+        <h4>Test - Button Working</h4>
+        <p>If you see this, the button click is working correctly.</p>
+      </div>
+    `;
+    promptPreviewElement.style.display = 'block';
+    showNotification('Button test successful', 'success');
     
-    // Get prompt preview using same logic as AI module
-    const promptPreview = await getPromptPreview();
-    const messages = promptPreview ? buildMessages(promptPreview.systemPrompt, promptPreview.userPrompt) : null;
-    
-    renderAIPromptPreview(aiEnabled, messages);
-    showNotification('Current AI prompts displayed', 'success');
   } catch (error) {
     console.error('Failed to show AI prompt:', error);
     showNotification('Error displaying AI prompts', 'error');
