@@ -112,6 +112,18 @@ export const parseMarkdown = (text) => {
     .replace(/__LINE_BREAK__/g, '<br>'); // Single line breaks
 };
 
+// Simple text formatter for AI prompts - supports newlines and basic formatting
+export const formatAIPromptText = (text) => {
+  if (!text) return '';
+  
+  return text
+    .replace(/^\d+\.\s/gm, '<strong>$&</strong>') // Numbered list items (bold the number) - do this first
+    .replace(/\n\n/g, '__PARAGRAPH__') // Paragraph breaks
+    .replace(/\n/g, '<br>') // Line breaks
+    .replace(/__PARAGRAPH__/g, '<br><br>') // Convert paragraph breaks
+    .trim();
+};
+
 // Pure function to get form data from any form
 export const getFormData = (form) => {
   // Try FormData first, fallback to manual extraction for test environments

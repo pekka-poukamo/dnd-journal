@@ -1,5 +1,5 @@
 // Journal Views - Pure Rendering Functions for Journal Page
-import { parseMarkdown, formatDate, sortEntriesByDate, getFormData } from './utils.js';
+import { parseMarkdown, formatDate, sortEntriesByDate, getFormData, formatAIPromptText } from './utils.js';
 import {
   getCachedJournalEntries,
   getCachedCharacterData,
@@ -365,7 +365,7 @@ export const showAIPromptAPINotAvailable = (aiPromptElement, regenerateBtn = nul
   if (!aiPromptElement) return;
   
   aiPromptElement.className = 'ai-prompt__empty-state';
-  aiPromptElement.textContent = 'AI features require an API key to be configured in Settings.';
+  aiPromptElement.innerHTML = formatAIPromptText('AI features require an API key to be configured in Settings.');
   
   // Disable regenerate button
   if (regenerateBtn) {
@@ -378,7 +378,7 @@ export const showAIPromptNoContext = (aiPromptElement, regenerateBtn = null) => 
   if (!aiPromptElement) return;
   
   aiPromptElement.className = 'ai-prompt__empty-state';
-  aiPromptElement.textContent = 'Add some character details or journal entries to get personalized reflection questions.';
+  aiPromptElement.innerHTML = formatAIPromptText('Add some character details or journal entries to get personalized reflection questions.');
   
   // Disable regenerate button
   if (regenerateBtn) {
@@ -391,7 +391,7 @@ export const showAIPromptLoading = (aiPromptElement, regenerateBtn = null) => {
   if (!aiPromptElement) return;
   
   aiPromptElement.className = 'ai-prompt__text loading';
-  aiPromptElement.textContent = 'Generating your personalized reflection questions...';
+  aiPromptElement.innerHTML = formatAIPromptText('Generating your personalized reflection questions...');
   
   // Disable regenerate button while loading
   if (regenerateBtn) {
@@ -404,7 +404,7 @@ export const showAIPromptQuestions = (aiPromptElement, questions, regenerateBtn 
   if (!aiPromptElement) return;
   
   aiPromptElement.className = 'ai-prompt__text';
-  aiPromptElement.textContent = questions;
+  aiPromptElement.innerHTML = formatAIPromptText(questions);
   
   // Enable regenerate button
   if (regenerateBtn) {
@@ -417,7 +417,7 @@ export const showAIPromptError = (aiPromptElement, regenerateBtn = null) => {
   if (!aiPromptElement) return;
   
   aiPromptElement.className = 'ai-prompt__error-state';
-  aiPromptElement.textContent = 'Unable to generate reflection questions. Please try again.';
+  aiPromptElement.innerHTML = formatAIPromptText('Unable to generate reflection questions. Please try again.');
   
   // Enable regenerate button to allow retry
   if (regenerateBtn) {
@@ -447,7 +447,7 @@ export const renderCachedJournalContent = (elements) => {
   
   // Show loading indicator for real-time content
   if (aiPromptText) {
-    aiPromptText.textContent = 'Loading writing prompt...';
+    aiPromptText.innerHTML = formatAIPromptText('Loading writing prompt...');
   }
 };
 

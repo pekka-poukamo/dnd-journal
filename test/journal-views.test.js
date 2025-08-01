@@ -540,7 +540,7 @@ describe('Journal Views Module', function() {
         JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
         
         expect(testElement.className).to.equal('ai-prompt__empty-state');
-        expect(testElement.textContent).to.equal('AI features require an API key to be configured in Settings.');
+        expect(testElement.innerHTML).to.equal('AI features require an API key to be configured in Settings.');
         expect(testButton.disabled).to.be.true;
       });
 
@@ -550,7 +550,7 @@ describe('Journal Views Module', function() {
         JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
         
         expect(testElement.className).to.equal('ai-prompt__empty-state');
-        expect(testElement.textContent).to.equal('Add some character details or journal entries to get personalized reflection questions.');
+        expect(testElement.innerHTML).to.equal('Add some character details or journal entries to get personalized reflection questions.');
         expect(testButton.disabled).to.be.true;
       });
 
@@ -560,7 +560,7 @@ describe('Journal Views Module', function() {
         JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
         
         expect(testElement.className).to.equal('ai-prompt__text loading');
-        expect(testElement.textContent).to.equal('Generating your personalized reflection questions...');
+        expect(testElement.innerHTML).to.equal('Generating your personalized reflection questions...');
         expect(testButton.disabled).to.be.true;
       });
 
@@ -571,7 +571,7 @@ describe('Journal Views Module', function() {
         JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
         
         expect(testElement.className).to.equal('ai-prompt__text');
-        expect(testElement.textContent).to.equal(questions);
+        expect(testElement.innerHTML).to.equal(questions);
         expect(testButton.disabled).to.be.false;
       });
 
@@ -581,7 +581,7 @@ describe('Journal Views Module', function() {
         JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
         
         expect(testElement.className).to.equal('ai-prompt__error-state');
-        expect(testElement.textContent).to.equal('Unable to generate reflection questions. Please try again.');
+        expect(testElement.innerHTML).to.equal('Unable to generate reflection questions. Please try again.');
         expect(testButton.disabled).to.be.false;
       });
 
@@ -591,7 +591,7 @@ describe('Journal Views Module', function() {
         JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
         
         expect(testElement.className).to.equal('ai-prompt__error-state');
-        expect(testElement.textContent).to.equal('Unable to generate reflection questions. Please try again.');
+        expect(testElement.innerHTML).to.equal('Unable to generate reflection questions. Please try again.');
         expect(testButton.disabled).to.be.false;
       });
 
@@ -614,7 +614,7 @@ describe('Journal Views Module', function() {
         JournalViews.showAIPromptAPINotAvailable(testElement, testButton);
         
         expect(testElement.className).to.equal('ai-prompt__empty-state');
-        expect(testElement.textContent).to.equal('AI features require an API key to be configured in Settings.');
+        expect(testElement.innerHTML).to.equal('AI features require an API key to be configured in Settings.');
         expect(testButton.disabled).to.be.true;
       });
 
@@ -632,7 +632,7 @@ describe('Journal Views Module', function() {
         JournalViews.showAIPromptNoContext(testElement, testButton);
         
         expect(testElement.className).to.equal('ai-prompt__empty-state');
-        expect(testElement.textContent).to.equal('Add some character details or journal entries to get personalized reflection questions.');
+        expect(testElement.innerHTML).to.equal('Add some character details or journal entries to get personalized reflection questions.');
         expect(testButton.disabled).to.be.true;
       });
 
@@ -646,7 +646,7 @@ describe('Journal Views Module', function() {
         JournalViews.showAIPromptLoading(testElement, testButton);
         
         expect(testElement.className).to.equal('ai-prompt__text loading');
-        expect(testElement.textContent).to.equal('Generating your personalized reflection questions...');
+        expect(testElement.innerHTML).to.equal('Generating your personalized reflection questions...');
         expect(testButton.disabled).to.be.true;
       });
 
@@ -662,12 +662,25 @@ describe('Journal Views Module', function() {
         JournalViews.showAIPromptQuestions(testElement, questions, testButton);
         
         expect(testElement.className).to.equal('ai-prompt__text');
-        expect(testElement.textContent).to.equal(questions);
+        expect(testElement.innerHTML).to.equal(questions);
         expect(testButton.disabled).to.be.false;
       });
 
       it('should handle missing element', function() {
         expect(() => JournalViews.showAIPromptQuestions(null, 'questions', testButton)).to.not.throw();
+      });
+
+      it('should format questions with newlines and numbered lists', function() {
+        const questions = '1. What drives your character?\n\n2. How do they handle conflict?\n\n3. What are their deepest fears?';
+        
+        JournalViews.showAIPromptQuestions(testElement, questions, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__text');
+        expect(testElement.innerHTML).to.include('<strong>1. </strong>What drives your character?');
+        expect(testElement.innerHTML).to.include('<br><br>');
+        expect(testElement.innerHTML).to.include('<strong>2. </strong>How do they handle conflict?');
+        expect(testElement.innerHTML).to.include('<strong>3. </strong>What are their deepest fears?');
+        expect(testButton.disabled).to.be.false;
       });
     });
 
@@ -676,7 +689,7 @@ describe('Journal Views Module', function() {
         JournalViews.showAIPromptError(testElement, testButton);
         
         expect(testElement.className).to.equal('ai-prompt__error-state');
-        expect(testElement.textContent).to.equal('Unable to generate reflection questions. Please try again.');
+        expect(testElement.innerHTML).to.equal('Unable to generate reflection questions. Please try again.');
         expect(testButton.disabled).to.be.false;
       });
 
