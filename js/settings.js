@@ -19,7 +19,7 @@ import { getFormData } from './utils.js';
 
 import { saveNavigationCache } from './navigation-cache.js';
 
-import { isAIEnabled } from './ai.js';
+import { isAIEnabled, getPromptPreview } from './ai.js';
 
 // State management
 let settingsFormElement = null;
@@ -243,13 +243,19 @@ export const testConnection = async (stateParam = null) => {
 export const showCurrentAIPrompt = async () => {
   try {
     const aiEnabled = isAIEnabled();
-    renderAIPromptPreview(aiEnabled);
     
-    if (aiEnabled) {
-      showNotification('Current AI prompts displayed', 'success');
-    } else {
+    if (!aiEnabled) {
+      renderAIPromptPreview(aiEnabled, null);
       showNotification('AI features not enabled', 'info');
+      return;
     }
+    
+    // Get current prompt preview with actual context
+    showNotification('Building prompt preview...', 'info');
+    const promptPreview = await getPromptPreview();
+    
+    renderAIPromptPreview(aiEnabled, promptPreview);
+    showNotification('Current AI prompts displayed', 'success');
   } catch (error) {
     console.error('Failed to show AI prompt:', error);
     showNotification('Error displaying AI prompts', 'error');

@@ -98,7 +98,7 @@ export const setTestConnectionLoading = (isLoading) => {
 };
 
 // Render AI prompt preview
-export const renderAIPromptPreview = (aiEnabled) => {
+export const renderAIPromptPreview = (aiEnabled, promptPreview = null) => {
   const promptPreviewElement = document.getElementById('ai-prompt-preview');
   const promptContentElement = document.getElementById('ai-prompt-content');
   
@@ -114,21 +114,50 @@ export const renderAIPromptPreview = (aiEnabled) => {
         <p>Please configure your OpenAI API key and enable AI features to view prompts.</p>
       </div>
     `;
-  } else {
-    // Show the current prompts used by the system
+  } else if (!promptPreview) {
     promptContentElement.innerHTML = `
       <div class="system-prompt">
-        <h4>Storytelling System Prompt</h4>
+        <p><strong>No context available.</strong></p>
+        <p>Add some journal entries and character information to see a full prompt preview with context.</p>
+      </div>
+      
+      <div class="user-prompt">
+        <h4>Available Prompt Templates</h4>
+        <p><strong>Storytelling System:</strong></p>
         <div>${PROMPTS.storytelling.system}</div>
+        <br>
+        <p><strong>Summarization Templates:</strong></p>
+        <div>• Journal Entry: ${PROMPTS.summarization.entry('[YOUR_ENTRY_TEXT]')}</div>
+        <div>• Character Info: ${PROMPTS.summarization.character('[YOUR_CHARACTER_TEXT]')}</div>
+      </div>
+    `;
+  } else {
+    // Show the full prompt with actual context
+    promptContentElement.innerHTML = `
+      <div class="system-prompt">
+        <h4>System Prompt</h4>
+        <div>${promptPreview.systemPrompt}</div>
+      </div>
+      
+      ${promptPreview.context ? `
+        <div class="system-prompt">
+          <h4>Context Used</h4>
+          <div style="white-space: pre-wrap;">${promptPreview.context}</div>
+        </div>
+      ` : ''}
+      
+      <div class="user-prompt">
+        <h4>Complete User Prompt (with context)</h4>
+        <div style="white-space: pre-wrap;">${promptPreview.userPrompt}</div>
       </div>
       
       <div class="user-prompt">
         <h4>Summarization Prompts</h4>
-        <p><strong>Journal Entry:</strong></p>
-        <div>Summarize this D&D journal entry in approximately 100 words, capturing the key events, decisions, and character developments: [YOUR_ENTRY_TEXT]</div>
+        <p><strong>Journal Entry Template:</strong></p>
+        <div>${PROMPTS.summarization.entry('[ENTRY_TEXT]')}</div>
         <br>
-        <p><strong>Character Information:</strong></p>
-        <div>Summarize this D&D character information in approximately 50 words: [YOUR_CHARACTER_TEXT]</div>
+        <p><strong>Character Template:</strong></p>
+        <div>${PROMPTS.summarization.character('[CHARACTER_TEXT]')}</div>
       </div>
     `;
   }
