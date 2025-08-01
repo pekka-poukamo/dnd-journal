@@ -287,4 +287,56 @@ describe('Utils Module', function() {
       expect(html).to.include('<br>');
     });
   });
+
+  describe('formatAIPromptText', function() {
+    it('should convert line breaks to <br> tags', function() {
+      const text = 'Line 1\nLine 2\nLine 3';
+      const html = Utils.formatAIPromptText(text);
+      
+      expect(html).to.equal('Line 1<br>Line 2<br>Line 3');
+    });
+
+    it('should convert double line breaks to double <br> tags', function() {
+      const text = 'Paragraph 1\n\nParagraph 2';
+      const html = Utils.formatAIPromptText(text);
+      
+      expect(html).to.equal('Paragraph 1<br><br>Paragraph 2');
+    });
+
+    it('should format numbered list items', function() {
+      const text = '1. First question\n2. Second question\n3. Third question';
+      const html = Utils.formatAIPromptText(text);
+      
+      expect(html).to.include('<strong>1. </strong>First question');
+      expect(html).to.include('<strong>2. </strong>Second question');
+      expect(html).to.include('<strong>3. </strong>Third question');
+    });
+
+    it('should handle empty content', function() {
+      const html = Utils.formatAIPromptText('');
+      expect(html).to.equal('');
+    });
+
+    it('should handle null content', function() {
+      const html = Utils.formatAIPromptText(null);
+      expect(html).to.equal('');
+    });
+
+    it('should trim whitespace', function() {
+      const text = '  Some content with spaces  ';
+      const html = Utils.formatAIPromptText(text);
+      
+      expect(html).to.equal('Some content with spaces');
+    });
+
+    it('should handle complex formatting', function() {
+      const text = '1. What is your character\'s greatest fear?\n\n2. How has their past shaped them?\n\n3. What drives them forward?';
+      const html = Utils.formatAIPromptText(text);
+      
+      expect(html).to.include('<strong>1. </strong>What is your character\'s greatest fear?');
+      expect(html).to.include('<br><br>');
+      expect(html).to.include('<strong>2. </strong>How has their past shaped them?');
+      expect(html).to.include('<strong>3. </strong>What drives them forward?');
+    });
+  });
 });
