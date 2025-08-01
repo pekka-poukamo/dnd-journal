@@ -57,7 +57,7 @@ export const getYjsState = () => {
   
   return {
     characterMap: ydoc.getMap('character'),
-    journalMap: ydoc.getMap('journal'),
+    journalArray: ydoc.getArray('journal-entries'),
     settingsMap: ydoc.getMap('settings'),
     summariesMap: ydoc.getMap('summaries'),
     ydoc
@@ -102,7 +102,7 @@ const reconnectSync = () => {
 
 // Pure map accessors
 export const getCharacterMap = (state) => state.characterMap;
-export const getJournalMap = (state) => state.journalMap;
+export const getJournalArray = (state) => state.journalArray;
 export const getSettingsMap = (state) => state.settingsMap;
 export const getSummariesMap = (state) => state.summariesMap;
 
@@ -134,29 +134,29 @@ export const getCharacterData = (state) => {
 
 // Pure journal operations
 export const addEntry = (state, entry) => {
-  const entries = getEntries(state);
-  const newEntries = [...entries, entry];
-  getJournalMap(state).set('entries', newEntries);
+  getJournalArray(state).push([entry]);
 };
 
 export const updateEntry = (state, entryId, updates) => {
   const entries = getEntries(state);
   const index = entries.findIndex(e => e.id === entryId);
   if (index !== -1) {
-    const newEntries = [...entries];
-    newEntries[index] = { ...entries[index], ...updates, timestamp: Date.now() };
-    getJournalMap(state).set('entries', newEntries);
+    const updatedEntry = { ...entries[index], ...updates, timestamp: Date.now() };
+    getJournalArray(state).delete(index, 1);
+    getJournalArray(state).insert(index, [updatedEntry]);
   }
 };
 
 export const deleteEntry = (state, entryId) => {
   const entries = getEntries(state);
-  const filtered = entries.filter(e => e.id !== entryId);
-  getJournalMap(state).set('entries', filtered);
+  const index = entries.findIndex(e => e.id === entryId);
+  if (index !== -1) {
+    getJournalArray(state).delete(index, 1);
+  }
 };
 
 export const getEntries = (state) => {
-  return getJournalMap(state).get('entries') || [];
+  return getJournalArray(state).toArray();
 };
 
 // Pure settings operations
@@ -188,7 +188,7 @@ export const onCharacterChange = (state, callback) => {
 };
 
 export const onJournalChange = (state, callback) => {
-  getJournalMap(state).observe(callback);
+  getJournalArray(state).observe(callback);
 };
 
 export const onSettingsChange = (state, callback) => {

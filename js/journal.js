@@ -55,14 +55,10 @@ export const initJournalPage = async (stateParam = null) => {
     
     // Set up reactive updates with explicit state tracking BEFORE initial render
     onJournalChange(state, () => {
-      console.log('=== Journal observer fired ===');
-      const currentEntries = getEntries(state);
-      console.log('Observer - current entries count:', currentEntries.length);
-      console.log('Observer - current entries:', currentEntries);
       console.log('Journal change detected, re-rendering...');
       renderJournalPage(state);
     });
-    
+
     onCharacterChange(state, () => {
       console.log('Character change detected, re-rendering character info...');
       renderCharacterInfo(state);
@@ -87,26 +83,16 @@ export const renderJournalPage = (stateParam = null) => {
     const state = stateParam || getYjsState();
     const entries = getEntries(state);
     
-    console.log('=== renderJournalPage called ===');
     console.log('Rendering journal page with', entries.length, 'entries');
-    console.log('Entries to render:', entries);
     
     // Render entries - use module-level element if available, otherwise find it
     const entriesElement = entriesContainer || document.getElementById('entries-container');
-    console.log('Entries container element:', entriesElement);
     
     if (entriesElement) {
-      console.log('Calling renderEntries...');
       renderEntries(entriesElement, entries, {
         onEdit: handleEditEntry,
         onDelete: handleDeleteEntry
       });
-      
-      // Check what actually got rendered
-      console.log('Container after rendering:', entriesElement.innerHTML.length, 'chars');
-      console.log('Container children count:', entriesElement.children.length);
-    } else {
-      console.log('No entries element found!');
     }
     
     // Render character info
@@ -150,20 +136,11 @@ export const handleAddEntry = (entryData, stateParam = null) => {
   try {
     const state = stateParam || getYjsState();
     
-    console.log('=== handleAddEntry called ===');
-    console.log('Entry data:', entryData);
-    console.log('Current state:', state);
-    
     // Validate entry
     if (!isValidEntry(entryData)) {
-      console.log('Invalid entry data');
       showNotification('Please fill in both title and content', 'warning');
       return;
     }
-    
-    // Check existing entries before adding
-    const entriesBefore = getEntries(state);
-    console.log('Entries before add:', entriesBefore.length, entriesBefore);
     
     // Create new entry
     const newEntry = {
@@ -173,18 +150,8 @@ export const handleAddEntry = (entryData, stateParam = null) => {
       timestamp: Date.now()
     };
     
-    console.log('Adding new entry:', newEntry);
-    
     // Add to Y.js
     addEntry(state, newEntry);
-    
-    // Check entries after adding
-    const entriesAfter = getEntries(state);
-    console.log('Entries after add:', entriesAfter.length, entriesAfter);
-    
-    // Check the raw Y.js map
-    const rawMapData = state.journalMap.get('entries');
-    console.log('Raw Y.js map data:', rawMapData);
     
     // Clear form
     clearEntryForm();
@@ -193,7 +160,6 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     
     // Force re-render to ensure entry appears immediately
     // This helps in case the Y.js observer doesn't fire immediately
-    console.log('Forcing re-render...');
     setTimeout(() => {
       renderJournalPage(state);
     }, 50);
