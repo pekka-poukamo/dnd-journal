@@ -331,14 +331,7 @@ const handleRegeneratePrompt = async (stateParam = null) => {
 
 
 
-// Pure function to get current form data
-const getCurrentFormData = () => {
-  const form = entryFormContainer?.querySelector('form');
-  if (!form) return null;
-  
-  const data = getFormData(form);
-  return Object.keys(data).length > 0 ? data : null;
-};
+
 
 // Initialize the journal page when the script loads
 document.addEventListener('DOMContentLoaded', () => {

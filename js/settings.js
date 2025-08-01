@@ -190,13 +190,7 @@ export const testConnection = async (stateParam = null) => {
 
 
 
-// Pure function to get current settings form data
-const getSettingsFormData = () => {
-  if (!settingsFormElement) return null;
-  
-  const formData = getFormData(settingsFormElement);
-  return Object.keys(formData).length > 0 ? formData : null;
-};
+
 
 // Initialize when DOM is ready (only in browser environment)
 if (typeof document !== 'undefined') {

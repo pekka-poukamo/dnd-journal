@@ -230,11 +230,5 @@ if (typeof document !== 'undefined') {
 
 
 
-// Pure function to get current character form data
-const getCharacterFormData = () => {
-  if (!characterFormElement) return null;
-  
-  const formData = getFormData(characterFormElement);
-  return Object.keys(formData).length > 0 ? formData : null;
-};
+
 
