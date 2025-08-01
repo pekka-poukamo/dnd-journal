@@ -1,7 +1,7 @@
 # D&D Journal
 
-![Test Suite](https://github.com/pekka-poukamo/dnd-journal/workflows/Test%20Suite/badge.svg)
-![Coverage](https://github.com/pekka-poukamo/dnd-journal/workflows/Coverage/badge.svg)
+![Tests](https://github.com/pekka-poukamo/dnd-journal/workflows/Tests/badge.svg)
+![Coverage Report](https://github.com/pekka-poukamo/dnd-journal/workflows/Coverage%20Report/badge.svg)
 
 A simple D&D journal built with vanilla JavaScript.
 
