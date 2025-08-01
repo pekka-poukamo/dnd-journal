@@ -8,7 +8,7 @@ import {
   onCharacterChange
 } from './yjs.js';
 
-import { createPageInitializer } from './cache-utils.js';
+import { saveNavigationCache } from './navigation-cache.js';
 
 import {
   renderCharacterForm,
@@ -25,53 +25,51 @@ import { summarize } from './summarization.js';
 // State management
 let characterFormElement = null;
 
-// Create character page initializer using shared pattern
-const initCharacterPageImpl = createPageInitializer('character', {
-  getDOMElements: () => {
+// Initialize Character page
+export const initCharacterPage = async (stateParam = null) => {
+  try {
+    // Get DOM elements
     characterFormElement = document.getElementById('character-form');
     const summariesContainer = document.getElementById('summaries-container');
     
-    return {
-      isValid: !!characterFormElement,
+    if (!characterFormElement) {
+      console.warn('Character form not found');
+      return;
+    }
+    
+    // Show cached content immediately
+    renderCachedCharacterContent({
       characterFormElement,
-      summariesContainer,
-      formElement: characterFormElement
-    };
-  },
-  
-  renderCachedContent: (elements) => {
-    renderCachedCharacterContent(elements);
-  },
-  
-  initializeYjs: async () => {
-    await initYjs();
-    return getYjsState();
-  },
-  
-  setupObservers: (state, withCacheSaving) => {
-    onCharacterChange(state, withCacheSaving(() => {
+      summariesContainer
+    });
+    
+    // Initialize Yjs in background
+    const state = stateParam || (await initYjs(), getYjsState());
+    
+    // Set up reactive updates
+    onCharacterChange(state, () => {
       renderCharacterPage(state);
       updateSummariesDisplay(state);
-    }));
-  },
-  
-  renderFreshContent: (state) => {
+    });
+    
+    // Replace cached content with fresh data
     renderCharacterPage(state);
-  },
-  
-  setupFormHandlers: () => {
+    
+    // Set up form handling
     setupFormHandlers();
-  },
-  
-  setupAdditional: (state) => {
+    
+    // Update summaries
     updateSummariesDisplay(state);
-  },
-  
-  getFormData: getCharacterFormData
-});
-
-// Export the enhanced initializer
-export const initCharacterPage = initCharacterPageImpl;
+    
+    // Save cache on page unload
+    window.addEventListener('beforeunload', () => {
+      saveNavigationCache(state);
+    });
+    
+  } catch (error) {
+    console.error('Failed to initialize character page:', error);
+  }
+};
 
 // Render character page
 export const renderCharacterPage = (stateParam = null) => {

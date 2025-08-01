@@ -15,7 +15,7 @@ import {
   renderCachedSettingsContent
 } from './settings-views.js';
 
-import { createPageInitializer } from './cache-utils.js';
+import { saveNavigationCache } from './navigation-cache.js';
 
 import { isAPIAvailable } from './openai-wrapper.js';
 
@@ -23,48 +23,47 @@ import { isAPIAvailable } from './openai-wrapper.js';
 let settingsFormElement = null;
 let connectionStatusElement = null;
 
-// Create settings page initializer using shared pattern
-const initSettingsPageImpl = createPageInitializer('settings', {
-  getDOMElements: () => {
+// Initialize Settings page
+export const initSettingsPage = async (stateParam = null) => {
+  try {
+    // Get DOM elements
     settingsFormElement = document.getElementById('settings-form');
     connectionStatusElement = document.getElementById('connection-status');
     
-    return {
-      isValid: !!settingsFormElement,
+    if (!settingsFormElement) {
+      console.warn('Settings form not found');
+      return;
+    }
+    
+    // Show cached content immediately
+    renderCachedSettingsContent({
       settingsFormElement,
-      connectionStatusElement,
-      formElement: settingsFormElement
-    };
-  },
-  
-  renderCachedContent: (elements) => {
-    renderCachedSettingsContent(elements);
-  },
-  
-  initializeYjs: async () => {
-    await initYjs();
-    return getYjsState();
-  },
-  
-  setupObservers: (state, withCacheSaving) => {
-    onSettingsChange(state, withCacheSaving(() => {
+      connectionStatusElement
+    });
+    
+    // Initialize Yjs in background
+    const state = stateParam || (await initYjs(), getYjsState());
+    
+    // Set up reactive updates
+    onSettingsChange(state, () => {
       renderSettingsPage();
-    }));
-  },
-  
-  renderFreshContent: () => {
+    });
+    
+    // Replace cached content with fresh data
     renderSettingsPage();
-  },
-  
-  setupFormHandlers: () => {
+    
+    // Set up form handling
     setupFormHandlers();
-  },
-  
-  getFormData: getSettingsFormData
-});
-
-// Export the enhanced initializer
-export const initSettingsPage = initSettingsPageImpl;
+    
+    // Save cache on page unload
+    window.addEventListener('beforeunload', () => {
+      saveNavigationCache(state);
+    });
+    
+  } catch (error) {
+    console.error('Failed to initialize settings page:', error);
+  }
+};
 
 // Render settings page
 export const renderSettingsPage = (stateParam = null) => {

@@ -11,7 +11,7 @@ import {
   onJournalChange
 } from './yjs.js';
 
-import { createPageInitializer } from './cache-utils.js';
+import { saveNavigationCache } from './navigation-cache.js';
 
 import {
   renderCharacterSummary,
@@ -37,66 +37,62 @@ let currentState = null;
 let aiPromptText = null;
 let regenerateBtn = null;
 
-// Create journal page initializer using shared pattern
-const initJournalPageImpl = createPageInitializer('journal', {
-  getDOMElements: () => {
+// Initialize Journal page
+export const initJournalPage = async (stateParam = null) => {
+  try {
+    // Get DOM elements
     entriesContainer = document.getElementById('entries-container');
     characterInfoContainer = document.getElementById('character-info-container');
     entryFormContainer = document.getElementById('entry-form-container');
     aiPromptText = document.getElementById('ai-prompt-text');
     regenerateBtn = document.getElementById('regenerate-prompt-btn');
     
-    return {
-      isValid: !!(entriesContainer && entryFormContainer),
+    if (!entriesContainer || !entryFormContainer) {
+      console.warn('Required journal containers not found');
+      return;
+    }
+    
+    // Show cached content immediately (eliminates blank page)
+    renderCachedJournalContent({
       entriesContainer,
       characterInfoContainer,
-      entryFormContainer,
-      aiPromptText,
-      regenerateBtn,
-      formElement: entryFormContainer
-    };
-  },
-  
-  renderCachedContent: (elements) => {
-    renderCachedJournalContent(elements);
-    renderCachedEntryForm(elements.entryFormContainer);
-  },
-  
-  initializeYjs: async () => {
-    const state = await initYjs();
+      aiPromptText
+    });
+    renderCachedEntryForm(entryFormContainer);
+    
+    // Initialize Yjs in background
+    const state = stateParam || (await initYjs());
     currentState = state;
-    return state;
-  },
-  
-  setupObservers: (state, withCacheSaving) => {
-    onJournalChange(state, withCacheSaving(() => {
+    
+    // Set up reactive updates
+    onJournalChange(state, () => {
       renderJournalPage(state);
       renderAIPromptWithLogic(state);
-    }));
+    });
 
-    onCharacterChange(state, withCacheSaving(() => {
+    onCharacterChange(state, () => {
       renderCharacterInfo(state);
       renderAIPromptWithLogic(state);
-    }));
-  },
-  
-  renderFreshContent: (state) => {
+    });
+    
+    // Replace cached content with fresh Yjs data
     renderJournalPage(state);
-  },
-  
-  setupFormHandlers: () => {
+    
+    // Set up form handling
     setupEntryForm();
-  },
-  
-  setupAdditional: (state) => {
+    
+    // Set up AI prompt
     setupAIPrompt(state);
-  },
-  
-  getFormData: getCurrentFormData
-});
-
-// Export the enhanced initializer
-export const initJournalPage = initJournalPageImpl;
+    
+    // Save cache on page unload
+    window.addEventListener('beforeunload', () => {
+      saveNavigationCache(state);
+    });
+    
+  } catch (error) {
+    console.error('Failed to initialize journal page:', error);
+  }
+};
 
 // Render journal page
 export const renderJournalPage = (stateParam = null) => {
