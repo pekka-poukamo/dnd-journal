@@ -21,7 +21,6 @@ import { summarize } from './summarization.js';
 
 // State management
 let characterFormElement = null;
-let loadingIndicator = null;
 
 // Initialize Character page
 export const initCharacterPage = async (stateParam = null) => {
@@ -46,17 +45,11 @@ export const initCharacterPage = async (stateParam = null) => {
       notes: ''
     });
     
-    // Show data loading indicator
-    showDataLoadingIndicator();
-    
     // Initialize YJS and wait for data to be loaded from IndexedDB
     const state = stateParam || (await initYjs(), getYjsState());
     
     // Render with actual data once available
     renderCharacterPage(state);
-    
-    // Hide data loading indicator
-    hideDataLoadingIndicator();
     
     // Set up reactive updates
     onCharacterChange(state, () => {
@@ -199,66 +192,7 @@ const generateSummary = async (field) => {
   }
 };
 
-// Show data loading indicator (smaller, less intrusive)
-const showDataLoadingIndicator = () => {
-  if (loadingIndicator) return; // Already showing
-  
-  loadingIndicator = document.createElement('div');
-  loadingIndicator.className = 'data-loading-indicator';
-  loadingIndicator.innerHTML = `
-    <div class="loading-spinner"></div>
-    <span>Loading data...</span>
-  `;
-  loadingIndicator.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 8px 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    font-size: 12px;
-    color: #666;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  `;
-  
-  const spinner = loadingIndicator.querySelector('.loading-spinner');
-  spinner.style.cssText = `
-    width: 12px;
-    height: 12px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid #666;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  `;
-  
-  // Add animation keyframes if not already present
-  if (!document.querySelector('#loading-spinner-styles')) {
-    const style = document.createElement('style');
-    style.id = 'loading-spinner-styles';
-    style.textContent = `
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-  
-  document.body.appendChild(loadingIndicator);
-};
 
-// Hide data loading indicator
-const hideDataLoadingIndicator = () => {
-  if (loadingIndicator) {
-    document.body.removeChild(loadingIndicator);
-    loadingIndicator = null;
-  }
-};
 
 // Update summaries display
 export const updateSummariesDisplay = (stateParam = null) => {
