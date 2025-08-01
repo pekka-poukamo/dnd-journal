@@ -22,21 +22,24 @@ export const resetYjs = () => {
   isInitialized = false;
 };
 
-// Initialize Y.js and wait for IndexedDB to fully load (call once per page)
+// Initialize Y.js with non-blocking persistence (optimized for performance)
 export const initYjs = async () => {
   if (isInitialized) return getYjsState(); // Already initialized
   
   // Create document
   ydoc = new Y.Doc();
   
-  // Set up persistence and wait for it to load
+  // Set up persistence but don't block initialization
   const persistence = new IndexeddbPersistence('dnd-journal', ydoc);
   
-  // Wait for IndexedDB to fully load before proceeding
-  // This prevents the 2-3 second delay when accessing data
-  await new Promise((resolve, reject) => {
+  // Mark as initialized immediately to allow app to start
+  isInitialized = true;
+  
+  // Set up persistence loading in background (non-blocking)
+  const persistencePromise = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
-      reject(new Error('IndexedDB persistence initialization timed out after 10 seconds'));
+      console.warn('IndexedDB persistence initialization timed out after 10 seconds, continuing anyway');
+      resolve(); // Don't reject, just continue
     }, 10000); // 10 second timeout
     
     // Handle test environment where IndexedDB might not work properly
@@ -55,10 +58,12 @@ export const initYjs = async () => {
     });
   });
   
-  setupSyncFromSettings(); // Run after persistence is loaded
-  
-  // Mark as initialized
-  isInitialized = true;
+  // Set up sync from settings after persistence loads (in background)
+  persistencePromise.then(() => {
+    setupSyncFromSettings();
+  }).catch(error => {
+    console.warn('Failed to complete persistence setup:', error);
+  });
   
   return getYjsState();
 };

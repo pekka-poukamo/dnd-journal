@@ -11,7 +11,7 @@ import {
   onJournalChange
 } from './yjs.js';
 
-import { saveNavigationCache } from './navigation-cache.js';
+import { saveNavigationCache, getCachedJournalEntries, preWarmCache, isCacheRecentAndValid } from './navigation-cache.js';
 
 import {
   renderCharacterSummary,
@@ -36,7 +36,7 @@ let currentState = null;
 let aiPromptText = null;
 let regenerateBtn = null;
 
-// Initialize Journal page
+// Initialize Journal page with optimized loading strategy
 export const initJournalPage = async (stateParam = null) => {
   try {
     // Get DOM elements
@@ -51,18 +51,35 @@ export const initJournalPage = async (stateParam = null) => {
       return;
     }
     
-    // Show cached content immediately (eliminates blank page)
-    renderCachedJournalContent({
-      entriesContainer,
-      characterInfoContainer,
-      aiPromptText
-    });
+    // Only show cached content if it's recent and valid (performance optimization)
+    if (isCacheRecentAndValid()) {
+      renderCachedJournalContent({
+        entriesContainer,
+        characterInfoContainer,
+        aiPromptText
+      });
+    }
     
-    // Initialize Yjs in background
+    // Set up form handling early (improves responsiveness)
+    setupEntryForm();
+    
+    // Initialize Yjs asynchronously (non-blocking)
     const state = stateParam || (await initYjs());
     currentState = state;
     
-    // Set up reactive updates
+    // Check if we have real data different from cache
+    const entries = getEntries(state);
+    const cachedEntries = getCachedJournalEntries();
+    
+    // Only re-render if we have different or new data
+    if (!areEntriesEquivalent(entries, cachedEntries)) {
+      renderJournalPage(state);
+    }
+    
+    // Pre-warm cache with fresh data for next load (performance optimization)
+    preWarmCache(state);
+    
+    // Set up reactive updates for future changes
     onJournalChange(state, () => {
       renderJournalPage(state);
       renderAIPromptWithLogic(state);
@@ -73,13 +90,7 @@ export const initJournalPage = async (stateParam = null) => {
       renderAIPromptWithLogic(state);
     });
     
-    // Replace cached content with fresh Yjs data
-    renderJournalPage(state);
-    
-    // Set up form handling
-    setupEntryForm();
-    
-    // Set up AI prompt
+    // Set up AI prompt (can be async)
     setupAIPrompt(state);
     
     // Save cache on page unload
@@ -329,8 +340,25 @@ const handleRegeneratePrompt = async (stateParam = null) => {
   await renderAIPromptWithLogic(state);
 };
 
-
-
+// Helper function to check if entries are equivalent (avoid unnecessary re-renders)
+const areEntriesEquivalent = (entries1, entries2) => {
+  if (entries1.length !== entries2.length) return false;
+  
+  // Simple comparison - if lengths match and basic properties are same, consider equivalent
+  for (let i = 0; i < entries1.length; i++) {
+    const entry1 = entries1[i];
+    const entry2 = entries2[i];
+    
+    if (entry1.id !== entry2.id || 
+        entry1.title !== entry2.title || 
+        entry1.content !== entry2.content ||
+        entry1.timestamp !== entry2.timestamp) {
+      return false;
+    }
+  }
+  
+  return true;
+};
 
 
 // Initialize the journal page when the script loads
