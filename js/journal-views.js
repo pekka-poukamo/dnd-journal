@@ -170,6 +170,12 @@ export const renderCharacterSummary = (container, character) => {
   
   container.innerHTML = '';
   
+  // Defensive check for character object
+  if (!character || typeof character !== 'object') {
+    container.appendChild(createEmptyState('No character information yet.'));
+    return;
+  }
+  
   if (!character.name && !character.race && !character.class) {
     container.appendChild(createEmptyState('No character information yet.'));
     return;
@@ -186,7 +192,7 @@ export const renderCharacterSummary = (container, character) => {
   
   fields.forEach(field => {
     const value = character[field.key];
-    if (value) {
+    if (value && value.trim && value.trim()) {
       const fieldDiv = document.createElement('div');
       fieldDiv.className = 'character-field';
       
@@ -211,7 +217,8 @@ export const renderEntries = (container, entries, options = {}) => {
   
   container.innerHTML = '';
   
-  if (entries.length === 0) {
+  // Defensive check for entries array
+  if (!entries || !Array.isArray(entries) || entries.length === 0) {
     container.appendChild(createEmptyState('No journal entries yet. Start writing your adventure!'));
     return;
   }
@@ -219,8 +226,10 @@ export const renderEntries = (container, entries, options = {}) => {
   const sortedEntries = sortEntriesByDate(entries);
   
   sortedEntries.forEach(entry => {
-    const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
-    container.appendChild(entryElement);
+    if (entry && entry.id) {
+      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
+      container.appendChild(entryElement);
+    }
   });
 };
 

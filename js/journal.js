@@ -29,7 +29,7 @@ let entryFormContainer = null;
 // Initialize Journal page
 export const initJournalPage = async (stateParam = null) => {
   try {
-    const state = stateParam || (await initYjs(), getYjsState());
+    const state = stateParam || await initYjs();
     
     // Get DOM elements
     entriesContainer = document.getElementById('entries-container');
@@ -41,10 +41,7 @@ export const initJournalPage = async (stateParam = null) => {
       return;
     }
     
-    // Render initial state
-    renderJournalPage(state);
-    
-    // Set up reactive updates
+    // Set up reactive updates first
     onJournalChange(state, () => {
       renderJournalPage(state);
     });
@@ -55,6 +52,14 @@ export const initJournalPage = async (stateParam = null) => {
     
     // Set up form
     setupEntryForm();
+    
+    // Render initial state immediately
+    renderJournalPage(state);
+    
+    // Also render again after a delay to catch any data that loads asynchronously
+    setTimeout(() => {
+      renderJournalPage(state);
+    }, 100);
     
   } catch (error) {
     console.error('Failed to initialize journal page:', error);
@@ -228,7 +233,9 @@ const clearEntryForm = () => {
   }
 };
 
-// Initialize the journal page when the script loads
-document.addEventListener('DOMContentLoaded', () => {
-  initJournalPage();
-});
+// Initialize the journal page when the script loads (only in browser)
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initJournalPage();
+  });
+}
