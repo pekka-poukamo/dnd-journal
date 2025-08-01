@@ -3,9 +3,10 @@ import { expect } from 'chai';
 import { JSDOM } from 'jsdom';
 
 import * as YjsModule from '../js/yjs.js';
-import * as Storytelling from '../js/storytelling.js';
+import { generateQuestions } from '../js/ai.js';
+import { hasContext, getContextData } from '../js/context.js';
 
-describe('Simple Storytelling Module', function() {
+describe('AI and Context Functions', function() {
   let state;
 
   beforeEach(async function() {
@@ -29,7 +30,7 @@ describe('Simple Storytelling Module', function() {
       const character = { name: 'Test Character' };
       const entries = [];
       
-      const result = await Storytelling.generateQuestions(character, entries);
+      const result = await generateQuestions(character, entries);
       expect(result).to.be.null;
     });
 
@@ -41,7 +42,7 @@ describe('Simple Storytelling Module', function() {
       const entries = [];
       
       // Since this will likely fail due to no real API, we test that it doesn't throw
-      expect(() => Storytelling.generateQuestions(character, entries)).to.not.throw();
+      expect(() => generateQuestions(character, entries)).to.not.throw();
     });
 
     it('should generate questions with full character data', function() {
@@ -64,7 +65,7 @@ describe('Simple Storytelling Module', function() {
         }
       ];
       
-      expect(() => Storytelling.generateQuestions(character, entries)).to.not.throw();
+      expect(() => generateQuestions(character, entries)).to.not.throw();
     });
 
     it('should include recent journal entries in context', function() {
@@ -95,7 +96,7 @@ describe('Simple Storytelling Module', function() {
         }
       ];
       
-      expect(() => Storytelling.generateQuestions(character, entries)).to.not.throw();
+      expect(() => generateQuestions(character, entries)).to.not.throw();
     });
 
     it('should handle unnamed character', function() {
@@ -115,7 +116,7 @@ describe('Simple Storytelling Module', function() {
         }
       ];
       
-      expect(() => Storytelling.generateQuestions(character, entries)).to.not.throw();
+      expect(() => generateQuestions(character, entries)).to.not.throw();
     });
 
     it('should handle API errors gracefully', function() {
@@ -126,16 +127,16 @@ describe('Simple Storytelling Module', function() {
       const entries = [];
       
       // Should not throw even with invalid API key
-      expect(() => Storytelling.generateQuestions(character, entries)).to.not.throw();
+      expect(() => generateQuestions(character, entries)).to.not.throw();
     });
   });
 
-  describe('hasGoodContext', function() {
+  describe('hasContext', function() {
     it('should return false with no data', function() {
       const character = {};
       const entries = [];
       
-      const result = Storytelling.hasGoodContext(character, entries);
+      const result = hasContext(character, entries);
       expect(result).to.be.false;
     });
 
@@ -143,7 +144,7 @@ describe('Simple Storytelling Module', function() {
       const character = { name: 'Aragorn' };
       const entries = [];
       
-      const result = Storytelling.hasGoodContext(character, entries);
+      const result = hasContext(character, entries);
       expect(result).to.be.true;
     });
 
@@ -151,7 +152,7 @@ describe('Simple Storytelling Module', function() {
       const character = { backstory: 'A ranger from the North' };
       const entries = [];
       
-      const result = Storytelling.hasGoodContext(character, entries);
+      const result = hasContext(character, entries);
       expect(result).to.be.true;
     });
 
@@ -165,12 +166,12 @@ describe('Simple Storytelling Module', function() {
         }
       ];
       
-      const result = Storytelling.hasGoodContext(character, entries);
+      const result = hasContext(character, entries);
       expect(result).to.be.true;
     });
   });
 
-  describe('getCharacterContext', function() {
+  describe('getContextData', function() {
     it('should return character and entries data', function() {
       const character = {
         name: 'Gandalf',
@@ -186,7 +187,7 @@ describe('Simple Storytelling Module', function() {
         }
       ];
       
-      const context = Storytelling.getCharacterContext(character, entries);
+      const context = getContextData(character, entries);
       
       expect(context).to.have.property('character');
       expect(context).to.have.property('entries');
@@ -198,7 +199,7 @@ describe('Simple Storytelling Module', function() {
       const character = {};
       const entries = [];
       
-      const context = Storytelling.getCharacterContext(character, entries);
+      const context = getContextData(character, entries);
       
       expect(context).to.have.property('character');
       expect(context).to.have.property('entries');

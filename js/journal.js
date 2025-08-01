@@ -25,7 +25,8 @@ import {
 
 import { generateId, isValidEntry, formatDate, getFormData } from './utils.js';
 
-import { generateQuestions, hasGoodContext } from './storytelling.js';
+import { generateQuestions } from './ai.js';
+import { hasContext as hasGoodContext } from './context.js';
 import { clearSummary } from './summarization.js';
 import { isAIEnabled } from './ai.js';
 

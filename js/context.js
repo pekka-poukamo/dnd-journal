@@ -94,11 +94,16 @@ export const hasContext = (character = null, entries = null) => {
 };
 
 // Get character and entries data (utility function)
-export const getContextData = () => {
-  const state = getYjsState();
+export const getContextData = (character = null, entries = null) => {
+  if (!character || !entries) {
+    const state = getYjsState();
+    character = character || getCharacterData(state);
+    entries = entries || getEntries(state);
+  }
+  
   return {
-    character: getCharacterData(state),
-    entries: getEntries(state),
-    hasContent: hasContext()
+    character,
+    entries,
+    hasContent: hasContext(character, entries)
   };
 };
