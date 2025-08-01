@@ -64,6 +64,8 @@ export const summarize = async (summaryKey, content) => {
       prompt = PROMPTS.summarization.entry(content);
     } else if (summaryKey.startsWith('character:')) {
       prompt = PROMPTS.summarization.character(content);
+    } else if (summaryKey.startsWith('journal:meta-summary')) {
+      prompt = PROMPTS.summarization.metaSummary(content);
     } else {
       prompt = `Summarize this content concisely:\n\n${content}`;
     }

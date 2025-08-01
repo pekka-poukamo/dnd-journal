@@ -12,7 +12,7 @@ Present exactly 4 questions as a simple numbered list without headings:
 3. How recent events might change their path or reveal something new about them
 4. An unobvious, surprising question that explores an unconventional perspective, hidden motivation, or unexpected character truth
 
-Make questions specific to the character's situation and recent adventures. Focus on narrative depth and emotional truth.`,
+Make questions specific to the character's situation and complete adventure history. Focus on narrative depth and emotional truth.`,
     
     user: (context) => `${context}
 
@@ -28,8 +28,8 @@ ${text}`,
 
 ${text}`,
     
-    metaSummary: (summaries) => `Combine these D&D adventure summaries into one cohesive summary of approximately 200 words:
+    metaSummary: (summaryText) => `Create a comprehensive overview of this D&D character's complete adventure history in approximately 200 words. Capture the major story arcs, character growth, recurring themes, and significant relationships or events that define their journey:
 
-${summaries.join('\n\n')}`
+${summaryText}`
   }
 };
