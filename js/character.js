@@ -7,6 +7,7 @@ import {
   getSummary,
   onCharacterChange
 } from './yjs.js';
+import { clearSummary } from './summarization.js';
 
 import { saveNavigationCache } from './navigation-cache.js';
 
@@ -20,7 +21,7 @@ import {
 
 import { getFormData } from './utils.js';
 
-import { isAPIAvailable } from './openai-wrapper.js';
+import { isAIEnabled } from './ai.js';
 import { summarize } from './summarization.js';
 
 // State management
@@ -139,6 +140,11 @@ const saveCharacterField = (field, value) => {
     const state = getYjsState();
     const trimmedValue = value.trim();
     setCharacter(state, field, trimmedValue);
+    
+    // Clear cache when character fields that get summarized change
+    if (field === 'backstory' || field === 'notes') {
+      clearSummary(`character:${field}`);
+    }
   } catch (error) {
     console.error(`Failed to save character ${field}:`, error);
   }
@@ -181,14 +187,14 @@ const generateSummary = async (field) => {
       return;
     }
     
-    if (!isAPIAvailable()) {
+    if (!isAIEnabled()) {
       showNotification('AI not available for summary generation', 'warning');
       return;
     }
     
     showNotification('Generating summary...', 'info');
     
-    const summary = await summarize(content, 'character');
+    const summary = await summarize('character:backstory', content);
     showNotification('Summary generated!', 'success');
     
     updateSummariesDisplay(state);
@@ -210,7 +216,7 @@ export const updateSummariesDisplay = (stateParam = null) => {
     
     renderSummaries(backstorySummary, notesSummary);
     
-    const available = isAPIAvailable();
+    const available = isAIEnabled();
     toggleGenerateButton(available);
   } catch (error) {
     console.error('Failed to update summaries display:', error);

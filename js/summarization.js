@@ -1,53 +1,87 @@
-// Simple Summarization - Pure Functional Y.js Integration
-import { getYjsState, setSummary, getSummary } from './yjs.js';
-import { createUserPromptFunction, isAPIAvailable } from './openai-wrapper.js';
+// Summarization - Simple AI summarization with caching
+import { getYjsState, setSummary, getSummary, getSetting } from './yjs.js';
+import { PROMPTS } from './prompts.js';
 
-// Simple summarize function - stores result in Y.js
-export const summarize = (state, summaryKey, content) => {
-  // Check if we already have a summary for this key
+// Check if AI is available
+const isAIEnabled = () => {
+  const state = getYjsState();
+  const apiKey = getSetting(state, 'openai-api-key', '');
+  const enabled = getSetting(state, 'ai-enabled', false);
+  return Boolean(enabled && apiKey);
+};
+
+// Simple AI call function
+const callAI = async (prompt) => {
+  const state = getYjsState();
+  const apiKey = getSetting(state, 'openai-api-key', '');
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 200,
+      temperature: 0.3
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content.trim();
+};
+
+// Summarize content with caching
+export const summarize = async (summaryKey, content) => {
+  const state = getYjsState();
+  
+  // Check cache first
   const existingSummary = getSummary(state, summaryKey);
   if (existingSummary) {
     return existingSummary;
   }
   
-  // Validate content before attempting to create new summary
+  // Validate content
   if (!content || content.trim() === '') {
     throw new Error('Content is required for summarization');
   }
   
-  // For new summaries that require API calls, return a Promise
-  return createNewSummary(state, summaryKey, content);
-};
-
-// Helper function for creating new summaries (async)
-const createNewSummary = async (state, summaryKey, content) => {
-  // Check if API is available for new summaries
-  if (!isAPIAvailable()) {
-    throw new Error('API not available');
+  // Check if AI is available
+  if (!isAIEnabled()) {
+    throw new Error('AI not available - check settings');
   }
   
   try {
-    // Create a simple summarization prompt
-    const prompt = `Please provide a concise summary of the following content:\n\n${content}`;
-    
-    // Call OpenAI
-    const callAI = createUserPromptFunction();
-    const result = await callAI(prompt, {
-      maxTokens: 150,
-      temperature: 0.3
-    });
-    
-    // callOpenAI already returns the trimmed content directly
-    if (result && typeof result === 'string') {
-      // Store in Y.js
-      setSummary(state, summaryKey, result);
-      return result;
+    // Determine prompt type and generate summary
+    let prompt;
+    if (summaryKey.startsWith('entry:')) {
+      prompt = PROMPTS.summarization.entry(content);
+    } else if (summaryKey.startsWith('character:')) {
+      prompt = PROMPTS.summarization.character(content);
+    } else {
+      prompt = `Summarize this content concisely:\n\n${content}`;
     }
     
-    throw new Error('No summary generated');
+    const summary = await callAI(prompt);
+    
+    // Cache the result
+    setSummary(state, summaryKey, summary);
+    return summary;
     
   } catch (error) {
-    console.error('Summarization error:', error);
+    console.error('Summarization failed:', error);
     throw error;
   }
+};
+
+// Clear cache for specific key
+export const clearSummary = (summaryKey) => {
+  const state = getYjsState();
+  state.summariesMap.delete(summaryKey);
 };

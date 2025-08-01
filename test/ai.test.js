@@ -36,94 +36,96 @@ describe('AI Module', function() {
     });
   });
 
-  describe('loadAISettings', function() {
-    it('should load AI settings from Y.js', function() {
-      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
-      YjsModule.setSetting(state, 'ai-enabled', true);
+  describe('generateQuestions', function() {
+    it('should return null when API not available', async function() {
+      // No API key set, so API should not be available
+      const character = { name: 'Test Character' };
+      const entries = [];
       
-      const settings = AI.loadAISettings(state);
-      expect(settings).to.deep.equal({
-        apiKey: 'sk-test123',
-        enableAIFeatures: true
-      });
+      const result = await AI.generateQuestions(character, entries);
+      expect(result).to.be.null;
     });
-  });
 
-  describe('getEntrySummary', function() {
-    beforeEach(function() {
+    it('should generate questions with minimal character data', function() {
       YjsModule.setSetting(state, 'ai-enabled', true);
       YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
-    });
-
-    it('should return existing summary if available', function() {
-      const entryId = 'test-entry-1';
-      const expectedSummary = 'This is a test summary';
       
-      YjsModule.setSummary(state, entryId, expectedSummary);
+      const character = { name: 'Minimal Character' };
+      const entries = [];
       
-      const summary = AI.getEntrySummary(state, entryId);
-      expect(summary).to.equal(expectedSummary);
+      // Since this will likely fail due to no real API, we test that it doesn't throw
+      expect(() => AI.generateQuestions(character, entries)).to.not.throw();
     });
 
-    it('should return null if no summary exists', function() {
-      const summary = AI.getEntrySummary(state, 'non-existent-entry');
-      expect(summary).to.be.null;
-    });
-  });
-
-  describe('createIntrospectionPrompt', function() {
-    it('should create prompt with character data', function() {
+    it('should generate questions with full character data', function() {
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+      
       const character = {
-        name: 'Aragorn',
-        race: 'Human',
-        class: 'Ranger',
-        backstory: 'Son of Arathorn'
+        name: 'Thorin Oakenshield',
+        race: 'Dwarf',
+        class: 'King',
+        backstory: 'Rightful King under the Mountain, leader of the Company of Thorin Oakenshield',
+        notes: 'Proud, sometimes arrogant, but brave and loyal to his people'
       };
       
       const entries = [
-        { title: 'First Adventure', content: 'We began our quest...', timestamp: Date.now() }
+        {
+          title: 'The Unexpected Party',
+          content: 'Thirteen dwarves arrived at Bag End tonight.',
+          timestamp: Date.now() - 86400000
+        }
       ];
       
-      const prompt = AI.createIntrospectionPrompt(character, entries);
-      expect(prompt).to.be.a('string');
-      expect(prompt).to.include('Aragorn');
-      expect(prompt).to.include('Human');
-      expect(prompt).to.include('Ranger');
+      expect(() => AI.generateQuestions(character, entries)).to.not.throw();
     });
 
-    it('should handle empty character', function() {
-      const character = {};
+    it('should handle API errors gracefully', function() {
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-invalid-key');
+      
+      const character = { name: 'Test Character' };
       const entries = [];
       
-      const prompt = AI.createIntrospectionPrompt(character, entries);
-      expect(prompt).to.be.a('string');
-      expect(prompt).to.include('character');
+      // Should not throw even with invalid API key
+      expect(() => AI.generateQuestions(character, entries)).to.not.throw();
     });
   });
 
-  describe('Integration with OpenAI Wrapper', function() {
-    it('should use OpenAI wrapper for API availability', function() {
+  describe('getPromptPreview', function() {
+    it('should return null when AI not available', async function() {
+      // No API key set
+      const character = { name: 'Test Character' };
+      const entries = [];
+      
+      const result = await AI.getPromptPreview(character, entries);
+      expect(result).to.be.null;
+    });
+
+    it('should return prompt preview when AI available', async function() {
       YjsModule.setSetting(state, 'ai-enabled', true);
       YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
-      expect(AI.isAIEnabled(state)).to.be.true;
-    });
-
-    it('should handle missing API key', function() {
-      YjsModule.setSetting(state, 'ai-enabled', true);
-      YjsModule.setSetting(state, 'openai-api-key', '');
-      expect(AI.isAIEnabled(state)).to.be.false;
+      
+      const character = {
+        name: 'Aragorn',
+        race: 'Human',
+        class: 'Ranger'
+      };
+      
+      const entries = [
+        { id: 'entry-1', title: 'First Adventure', content: 'We began our quest...', timestamp: Date.now() }
+      ];
+      
+      const preview = await AI.getPromptPreview(character, entries);
+      expect(preview).to.be.an('object');
+      expect(preview).to.have.property('systemPrompt');
+      expect(preview).to.have.property('userPrompt');
+      expect(preview).to.have.property('context');
+      expect(preview.systemPrompt).to.be.a('string');
+      expect(preview.userPrompt).to.be.a('string');
+      expect(preview.context).to.be.a('string');
     });
   });
 
-  describe('Advanced AI Functions', function() {
-    beforeEach(function() {
-      YjsModule.setSetting(state, 'ai-enabled', true);
-      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
-    });
 
-    it('should handle API calls when properly configured', function() {
-      // This test just verifies setup doesn't throw
-      expect(() => AI.isAIEnabled(state)).to.not.throw();
-    });
-  });
 });

@@ -18,7 +18,7 @@ import { getFormData } from './utils.js';
 
 import { saveNavigationCache } from './navigation-cache.js';
 
-import { isAPIAvailable } from './openai-wrapper.js';
+import { isAIEnabled } from './ai.js';
 
 // State management
 let settingsFormElement = null;
@@ -157,7 +157,7 @@ export const testAPIKey = async (stateParam = null) => {
       return;
     }
     
-    const available = isAPIAvailable();
+    const available = isAIEnabled();
     if (available) {
       showNotification('API key is valid!', 'success');
     } else {
