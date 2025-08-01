@@ -113,6 +113,7 @@ const setupFormHandlers = () => {
   // Summary generation buttons
   const generateBackstoryBtn = document.getElementById('generate-backstory-summary');
   const generateNotesBtn = document.getElementById('generate-notes-summary');
+  const generateSummariesBtn = document.getElementById('generate-summaries');
   const refreshSummariesBtn = document.getElementById('refresh-summaries');
   
   if (generateBackstoryBtn) {
@@ -124,6 +125,12 @@ const setupFormHandlers = () => {
   if (generateNotesBtn) {
     generateNotesBtn.addEventListener('click', () => {
       generateSummary('notes');
+    });
+  }
+  
+  if (generateSummariesBtn) {
+    generateSummariesBtn.addEventListener('click', () => {
+      generateAllSummaries();
     });
   }
   
@@ -194,7 +201,7 @@ const generateSummary = async (field) => {
     
     showNotification('Generating summary...', 'info');
     
-    const summary = await summarize('character:backstory', content);
+    const summary = await summarize(`character:${field}`, content);
     showNotification('Summary generated!', 'success');
     
     updateSummariesDisplay(state);
@@ -205,19 +212,57 @@ const generateSummary = async (field) => {
   }
 };
 
+// Generate summaries for all character fields that have content
+const generateAllSummaries = async () => {
+  try {
+    const state = getYjsState();
+    const character = getCharacterData(state);
+    
+    if (!isAIEnabled()) {
+      showNotification('AI not available for summary generation', 'warning');
+      return;
+    }
+    
+    const fieldsToSummarize = ['backstory', 'notes'].filter(field => 
+      character[field] && character[field].trim().length > 0
+    );
+    
+    if (fieldsToSummarize.length === 0) {
+      showNotification('No content available to summarize', 'warning');
+      return;
+    }
+    
+    showNotification('Generating summaries...', 'info');
+    
+    // Generate summaries for each field with content
+    for (const field of fieldsToSummarize) {
+      await generateSummary(field);
+    }
+    
+    showNotification('All summaries generated!', 'success');
+    
+  } catch (error) {
+    console.error('Failed to generate summaries:', error);
+    showNotification('Failed to generate summaries', 'error');
+  }
+};
+
 
 
 // Update summaries display
 export const updateSummariesDisplay = (stateParam = null) => {
   try {
     const state = stateParam || getYjsState();
-    const backstorySummary = getSummary(state, 'character-backstory');
-    const notesSummary = getSummary(state, 'character-notes');
+    const character = getCharacterData(state);
+    const backstorySummary = getSummary(state, 'character:backstory');
+    const notesSummary = getSummary(state, 'character:notes');
     
     renderSummaries(backstorySummary, notesSummary);
     
     const available = isAIEnabled();
-    toggleGenerateButton(available);
+    const hasContent = (character.backstory && character.backstory.trim().length > 0) || 
+                      (character.notes && character.notes.trim().length > 0);
+    toggleGenerateButton(available, hasContent);
   } catch (error) {
     console.error('Failed to update summaries display:', error);
   }
