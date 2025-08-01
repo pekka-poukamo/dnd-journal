@@ -16,7 +16,12 @@ import {
   renderEntries,
   createEntryForm,
   createEntryEditForm,
-  showNotification
+  showNotification,
+  showAIPromptAPINotAvailable,
+  showAIPromptNoContext,
+  showAIPromptLoading,
+  showAIPromptQuestions,
+  showAIPromptError
 } from './journal-views.js';
 
 import { generateId, isValidEntry, formatDate } from './utils.js';
@@ -268,29 +273,29 @@ const renderAIPrompt = async (stateParam = null) => {
     
     // Check API availability first
     if (!isAPIAvailable()) {
-      showAPINotAvailableState();
+      showAIPromptAPINotAvailable(aiPromptText, regenerateBtn);
       return;
     }
     
     // Check if we have good context for generating questions
     if (!hasGoodContext(character, entries)) {
-      showNoContextState();
+      showAIPromptNoContext(aiPromptText, regenerateBtn);
       return;
     }
     
     // Show loading and generate questions
-    showLoadingState();
+    showAIPromptLoading(aiPromptText, regenerateBtn);
     const questions = await generateQuestions(character, entries);
     
     if (questions) {
-      showQuestionsState(questions);
+      showAIPromptQuestions(aiPromptText, questions, regenerateBtn);
     } else {
-      showErrorState();
+      showAIPromptError(aiPromptText, regenerateBtn);
     }
     
   } catch (error) {
     console.error('Failed to render AI prompt:', error);
-    showErrorState();
+    showAIPromptError(aiPromptText, regenerateBtn);
   }
 };
 
@@ -300,70 +305,7 @@ const handleRegeneratePrompt = async (stateParam = null) => {
   await renderAIPrompt(state);
 };
 
-// Show API not available state
-const showAPINotAvailableState = () => {
-  if (!aiPromptText) return;
-  
-  aiPromptText.className = 'ai-prompt__empty-state';
-  aiPromptText.textContent = 'AI features require an API key to be configured in Settings.';
-  
-  // Disable regenerate button
-  if (regenerateBtn) {
-    regenerateBtn.disabled = true;
-  }
-};
 
-// Show no context state
-const showNoContextState = () => {
-  if (!aiPromptText) return;
-  
-  aiPromptText.className = 'ai-prompt__empty-state';
-  aiPromptText.textContent = 'Add some character details or journal entries to get personalized reflection questions.';
-  
-  // Disable regenerate button
-  if (regenerateBtn) {
-    regenerateBtn.disabled = true;
-  }
-};
-
-// Show loading state
-const showLoadingState = () => {
-  if (!aiPromptText) return;
-  
-  aiPromptText.className = 'ai-prompt__text loading';
-  aiPromptText.textContent = 'Generating your personalized reflection questions...';
-  
-  // Disable regenerate button while loading
-  if (regenerateBtn) {
-    regenerateBtn.disabled = true;
-  }
-};
-
-// Show questions state
-const showQuestionsState = (questions) => {
-  if (!aiPromptText) return;
-  
-  aiPromptText.className = 'ai-prompt__text';
-  aiPromptText.textContent = questions;
-  
-  // Enable regenerate button
-  if (regenerateBtn) {
-    regenerateBtn.disabled = false;
-  }
-};
-
-// Show error state
-const showErrorState = () => {
-  if (!aiPromptText) return;
-  
-  aiPromptText.className = 'ai-prompt__error-state';
-  aiPromptText.textContent = 'Unable to generate reflection questions. Please try again.';
-  
-  // Enable regenerate button to allow retry
-  if (regenerateBtn) {
-    regenerateBtn.disabled = false;
-  }
-};
 
 // Initialize the journal page when the script loads
 document.addEventListener('DOMContentLoaded', () => {

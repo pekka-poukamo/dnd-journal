@@ -261,3 +261,72 @@ export const clearForm = (form) => {
     }
   });
 };
+
+// =============================================================================
+// AI PROMPT RENDERING FUNCTIONS
+// =============================================================================
+
+// Show API not available state
+export const showAIPromptAPINotAvailable = (aiPromptElement, regenerateBtn = null) => {
+  if (!aiPromptElement) return;
+  
+  aiPromptElement.className = 'ai-prompt__empty-state';
+  aiPromptElement.textContent = 'AI features require an API key to be configured in Settings.';
+  
+  // Disable regenerate button
+  if (regenerateBtn) {
+    regenerateBtn.disabled = true;
+  }
+};
+
+// Show no context state
+export const showAIPromptNoContext = (aiPromptElement, regenerateBtn = null) => {
+  if (!aiPromptElement) return;
+  
+  aiPromptElement.className = 'ai-prompt__empty-state';
+  aiPromptElement.textContent = 'Add some character details or journal entries to get personalized reflection questions.';
+  
+  // Disable regenerate button
+  if (regenerateBtn) {
+    regenerateBtn.disabled = true;
+  }
+};
+
+// Show loading state
+export const showAIPromptLoading = (aiPromptElement, regenerateBtn = null) => {
+  if (!aiPromptElement) return;
+  
+  aiPromptElement.className = 'ai-prompt__text loading';
+  aiPromptElement.textContent = 'Generating your personalized reflection questions...';
+  
+  // Disable regenerate button while loading
+  if (regenerateBtn) {
+    regenerateBtn.disabled = true;
+  }
+};
+
+// Show questions state
+export const showAIPromptQuestions = (aiPromptElement, questions, regenerateBtn = null) => {
+  if (!aiPromptElement) return;
+  
+  aiPromptElement.className = 'ai-prompt__text';
+  aiPromptElement.textContent = questions;
+  
+  // Enable regenerate button
+  if (regenerateBtn) {
+    regenerateBtn.disabled = false;
+  }
+};
+
+// Show error state
+export const showAIPromptError = (aiPromptElement, regenerateBtn = null) => {
+  if (!aiPromptElement) return;
+  
+  aiPromptElement.className = 'ai-prompt__error-state';
+  aiPromptElement.textContent = 'Unable to generate reflection questions. Please try again.';
+  
+  // Enable regenerate button to allow retry
+  if (regenerateBtn) {
+    regenerateBtn.disabled = false;
+  }
+};
