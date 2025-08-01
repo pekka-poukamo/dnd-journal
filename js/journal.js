@@ -71,8 +71,8 @@ export const initJournalPage = async (stateParam = null) => {
     const entries = getEntries(state);
     const cachedEntries = getCachedJournalEntries();
     
-    // Only re-render if we have different or new data
-    if (!areEntriesEquivalent(entries, cachedEntries)) {
+    // Always render at least once, or if data is different from cache
+    if (!areEntriesEquivalent(entries, cachedEntries) || entries.length > 0 || cachedEntries.length === 0) {
       renderJournalPage(state);
     }
     
