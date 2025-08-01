@@ -30,18 +30,8 @@ let currentState = null;
 // Initialize Journal page
 export const initJournalPage = async (stateParam = null) => {
   try {
-    let state;
-    if (stateParam) {
-      state = stateParam;
-      currentState = state;
-    } else {
-      // Initialize Y.js and wait for it to be ready
-      state = await initYjs();
-      currentState = state;
-      
-      // Wait a bit more to ensure IndexedDB has fully loaded existing data
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
+    const state = stateParam || (await initYjs());
+    currentState = state;
     
     // Get DOM elements
     entriesContainer = document.getElementById('entries-container');
