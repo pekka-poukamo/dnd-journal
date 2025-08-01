@@ -87,3 +87,9 @@ export const clearSummary = (summaryKey) => {
   const state = getYjsState();
   state.summariesMap.delete(summaryKey);
 };
+
+// Clear all summaries
+export const clearAllSummaries = () => {
+  const state = getYjsState();
+  state.summariesMap.clear();
+};
