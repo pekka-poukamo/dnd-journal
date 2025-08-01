@@ -358,30 +358,7 @@ describe('Journal Views Module', function() {
       `;
     });
 
-    it('should extract form data correctly', function() {
-      // Skip this test in JSDOM environment where FormData doesn't work
-      this.skip();
-    });
 
-    it('should handle checkbox inputs', function() {
-      // Skip this test in JSDOM environment where FormData doesn't work
-      this.skip();
-    });
-
-    it('should handle radio inputs', function() {
-      // Skip this test in JSDOM environment where FormData doesn't work
-      this.skip();
-    });
-
-    it('should handle empty form', function() {
-      // Skip this test in JSDOM environment where FormData doesn't work
-      this.skip();
-    });
-
-    it('should handle form with unchecked inputs', function() {
-      // Skip this test in JSDOM environment where FormData doesn't work
-      this.skip();
-    });
 
     it('should handle error gracefully when FormData fails', function() {
       const form = document.getElementById('test-form') || document.createElement('form');
