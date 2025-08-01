@@ -24,7 +24,7 @@ Please create 4 introspective questions that would help this player discover com
 
 ${text}`,
     
-    character: (text) => `Summarize the following content. Preserve brevity for short content, or condense longer descriptions to around 50 words:
+    character: (text) => `Summarize the following content. Preserve brevity for short content, or condense longer descriptions to around 200 words:
 
 ${text}`,
     
