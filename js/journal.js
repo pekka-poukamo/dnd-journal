@@ -227,3 +227,8 @@ const clearEntryForm = () => {
     form.reset();
   }
 };
+
+// Initialize the journal page when the script loads
+document.addEventListener('DOMContentLoaded', () => {
+  initJournalPage();
+});

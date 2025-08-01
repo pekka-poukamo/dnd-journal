@@ -30,14 +30,8 @@
         "yjs": "./node_modules/yjs/dist/yjs.mjs",
         "y-websocket": "./node_modules/y-websocket/src/y-websocket.js",
         "y-indexeddb": "./node_modules/y-indexeddb/src/y-indexeddb.js",
-        "js-tiktoken": "./node_modules/js-tiktoken/dist/index.js",
-        "js-tiktoken/ranks/cl100k_base": "./node_modules/js-tiktoken/dist/ranks/cl100k_base.js",
-        "y-protocols/sync": "./node_modules/y-protocols/sync.js",
-        "y-protocols/auth": "./node_modules/y-protocols/auth.js",
-        "y-protocols/awareness": "./node_modules/y-protocols/awareness.js",
         "lib0/observable": "./node_modules/lib0/observable.js",
         "lib0/array": "./node_modules/lib0/array.js",
-        "lib0/math": "./node_modules/lib0/math.js",
         "lib0/map": "./node_modules/lib0/map.js",
         "lib0/encoding": "./node_modules/lib0/encoding.js",
         "lib0/decoding": "./node_modules/lib0/decoding.js",
@@ -57,7 +51,11 @@
         "lib0/indexeddb": "./node_modules/lib0/indexeddb.js",
         "lib0/broadcastchannel": "./node_modules/lib0/broadcastchannel.js",
         "lib0/url": "./node_modules/lib0/url.js",
-        "lib0/webcrypto": "./node_modules/lib0/webcrypto.js"
+        "lib0/webcrypto": "./node_modules/lib0/webcrypto.js",
+        "lib0/math": "./node_modules/lib0/math.js",
+        "y-protocols/sync": "./node_modules/y-protocols/sync.js",
+        "y-protocols/auth": "./node_modules/y-protocols/auth.js",
+        "y-protocols/awareness": "./node_modules/y-protocols/awareness.js"
       }
     }
     </script>
@@ -101,7 +99,7 @@
             <!-- Character Summary Section -->
             <section id="character-summary" class="character-summary character-summary--minimal">
                 <h2>Character</h2>
-                <div class="character-info-container">
+                <div id="character-info-container" class="character-info-container">
                     <!-- Character info will be rendered here by views.js -->
                 </div>
             </section>
@@ -109,25 +107,15 @@
             <!-- New Entry Section -->
             <section class="entry-section">
                 <h2>Add Entry</h2>
-                <form id="entry-form" class="entry-form">
-                    <div class="form-group">
-                        <label for="entry-title" class="form-label">Title</label>
-                        <input type="text" id="entry-title" name="title" class="form-input" placeholder="What happened?" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="entry-content" class="form-label">Notes</label>
-                        <textarea id="entry-content" name="content" class="form-textarea" rows="4" placeholder="Write your notes here..." required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">Add Entry</button>
-                    </div>
-                </form>
+                <div id="entry-form-container">
+                    <!-- Entry form will be rendered here by journal.js -->
+                </div>
             </section>
             
             <!-- Journal Entries -->
             <section class="entries-section">
                 <h2>Journal Entries</h2>
-                <div id="entries-list" class="entries-list"></div>
+                <div id="entries-container" class="entries-list"></div>
             </section>
         </div>
     </main>

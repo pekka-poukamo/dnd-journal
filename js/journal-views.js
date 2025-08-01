@@ -2,7 +2,7 @@
 import { parseMarkdown, formatDate, sortEntriesByDate } from './utils.js';
 
 // Create journal entry form
-export const createEntryForm = () => {
+export const createEntryForm = (options = {}) => {
   const form = document.createElement('form');
   form.id = 'entry-form';
   form.className = 'entry-form';
@@ -20,6 +20,21 @@ export const createEntryForm = () => {
       <button type="submit" class="btn btn-primary">Add Entry</button>
     </div>
   `;
+  
+  // Set up form submission
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(form);
+    const entryData = {
+      title: formData.get('title'),
+      content: formData.get('content')
+    };
+    
+    if (options.onSubmit) {
+      options.onSubmit(entryData);
+    }
+  });
   
   return form;
 };
@@ -76,7 +91,7 @@ export const createEntryElement = (entry, onEdit, onDelete) => {
 };
 
 // Create edit form for an entry
-export const createEntryEditForm = (entry, onSave, onCancel) => {
+export const createEntryEditForm = (entry, options = {}) => {
   const form = document.createElement('form');
   form.className = 'entry-edit-form';
   
@@ -113,17 +128,23 @@ export const createEntryEditForm = (entry, onSave, onCancel) => {
   const cancelButton = document.createElement('button');
   cancelButton.type = 'button';
   cancelButton.textContent = 'Cancel';
-  cancelButton.onclick = onCancel;
+  cancelButton.onclick = () => {
+    if (options.onCancel) {
+      options.onCancel();
+    }
+  };
   
   actionsDiv.appendChild(saveButton);
   actionsDiv.appendChild(cancelButton);
   
   form.onsubmit = (e) => {
     e.preventDefault();
-    onSave({
-      title: titleInput.value.trim(),
-      content: contentTextarea.value.trim()
-    });
+    if (options.onSave) {
+      options.onSave({
+        title: titleInput.value.trim(),
+        content: contentTextarea.value.trim()
+      });
+    }
   };
   
   form.appendChild(titleDiv);
@@ -185,7 +206,7 @@ export const renderCharacterSummary = (container, character) => {
 };
 
 // Render journal entries list
-export const renderEntries = (container, entries, onEdit, onDelete) => {
+export const renderEntries = (container, entries, options = {}) => {
   if (!container) return;
   
   container.innerHTML = '';
@@ -198,7 +219,7 @@ export const renderEntries = (container, entries, onEdit, onDelete) => {
   const sortedEntries = sortEntriesByDate(entries);
   
   sortedEntries.forEach(entry => {
-    const entryElement = createEntryElement(entry, onEdit, onDelete);
+    const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
     container.appendChild(entryElement);
   });
 };
