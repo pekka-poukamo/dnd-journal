@@ -34,6 +34,14 @@ export const renderSettingsForm = (formOrSettings, settings = null) => {
     aiEnabledCheckbox.checked = settingsData['ai-enabled'] === 'true' || settingsData['ai-enabled'] === true;
   }
   
+  // Update show AI prompt button state
+  const showPromptButton = document.getElementById('show-ai-prompt');
+  if (showPromptButton) {
+    const hasApiKey = settingsData['openai-api-key'] && settingsData['openai-api-key'].trim().length > 0;
+    const aiEnabled = settingsData['ai-enabled'] === 'true' || settingsData['ai-enabled'] === true;
+    showPromptButton.disabled = !hasApiKey || !aiEnabled;
+  }
+  
   // Sync server setting - try different ID patterns and key names
   const syncServerInput = form ? 
     form.querySelector('[name="sync-server-url"]') : 
