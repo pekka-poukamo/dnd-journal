@@ -26,7 +26,8 @@ import {
 import { generateId, isValidEntry, formatDate, getFormData } from './utils.js';
 
 import { generateQuestions, hasGoodContext } from './storytelling.js';
-import { isAPIAvailable } from './openai-wrapper.js';
+import { clearSummary } from './summarization.js';
+import { isAIEnabled } from './ai.js';
 
 // State management
 let entriesContainer = null;
@@ -237,6 +238,10 @@ export const saveEntryEdit = (entryId, entryData, stateParam = null) => {
     }
 
     updateEntry(state, entryId, trimmedData);
+    
+    // Clear cache when entry content changes
+    clearSummary(`entry:${entryId}`);
+    
     showNotification('Entry updated successfully!', 'success');
     
   } catch (error) {
@@ -252,6 +257,10 @@ export const handleDeleteEntry = (entryId, stateParam = null) => {
     
     if (confirm('Are you sure you want to delete this entry?')) {
       deleteEntry(state, entryId);
+      
+      // Clear cache when entry is deleted
+      clearSummary(`entry:${entryId}`);
+      
       showNotification('Entry deleted successfully!', 'success');
     }
     
@@ -296,7 +305,7 @@ const renderAIPromptWithLogic = async (stateParam = null) => {
     const entries = getEntries(state);
     
     // Check API availability first
-    if (!isAPIAvailable()) {
+    if (!isAIEnabled()) {
       renderAIPrompt(aiPromptText, { type: 'api-not-available' }, regenerateBtn);
       return;
     }
