@@ -23,6 +23,7 @@ import { isAIEnabled } from './ai.js';
 // State management
 let settingsFormElement = null;
 let connectionStatusElement = null;
+let handlersSetup = false;
 
 // Initialize Settings page
 export const initSettingsPage = async (stateParam = null) => {
@@ -42,19 +43,21 @@ export const initSettingsPage = async (stateParam = null) => {
       connectionStatusElement
     });
     
-    // Set up form handling early (improves responsiveness)
-    setupFormHandlers();
-    
     // Initialize Yjs asynchronously (non-blocking)
     const state = stateParam || (await initYjs(), getYjsState());
     
     // Set up reactive updates
     onSettingsChange(state, () => {
       renderSettingsPage();
+      // Re-setup form handlers after rendering to ensure buttons exist
+      setupFormHandlers();
     });
     
     // Replace cached content with fresh data
     renderSettingsPage();
+    
+    // Set up form handling after initial render (ensures DOM elements exist)
+    setupFormHandlers();
     
     // Save cache on page unload
     window.addEventListener('beforeunload', () => {
@@ -94,27 +97,32 @@ export const renderSettingsPage = (stateParam = null) => {
 
 // Set up form event handlers
 const setupFormHandlers = () => {
-  if (!settingsFormElement) return;
+  const formElement = settingsFormElement || document.getElementById('settings-form');
+  if (!formElement) return;
   
-  settingsFormElement.addEventListener('submit', (e) => {
-    e.preventDefault();
-    saveSettings();
-  });
-  
-  // Test API key button
-  const testApiButton = document.getElementById('test-api-key');
-  if (testApiButton) {
-    testApiButton.addEventListener('click', () => {
-      testAPIKey();
+  // Only set up global handlers once
+  if (!handlersSetup) {
+    // Form submit handler
+    formElement.addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveSettings();
     });
-  }
-  
-  // Test connection button
-  const testConnectionButton = document.getElementById('test-connection');
-  if (testConnectionButton) {
-    testConnectionButton.addEventListener('click', () => {
-      testConnection();
+    
+    // Use simple event delegation on document for button clicks
+    // This ensures buttons work regardless of when they're added to DOM
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'test-api-key') {
+        e.preventDefault();
+        testAPIKey();
+      }
+      
+      if (e.target && e.target.id === 'test-connection') {
+        e.preventDefault();
+        testConnection();
+      }
     });
+    
+    handlersSetup = true;
   }
 };
 
