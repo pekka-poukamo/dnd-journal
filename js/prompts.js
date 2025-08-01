@@ -20,15 +20,15 @@ Please create 4 introspective questions that would help this player discover com
   },
   
   summarization: {
-    entry: (text) => `Extract the key events, decisions, and character developments from the following content. Keep it concise and preserve the original brevity if the content is already short. If the content is substantial, condense to around 100 words:
+    entry: (text) => `Summarize the following content. Keep it concise and preserve the original brevity if the content is already short. If the content is substantial, condense to around 100 words:
 
 ${text}`,
     
-    character: (text) => `Extract the essential information from the following character details. Preserve brevity for short content, or condense longer descriptions to around 50 words:
+    character: (text) => `Summarize the following content. Preserve brevity for short content, or condense longer descriptions to around 50 words:
 
 ${text}`,
     
-    metaSummary: (summaryText) => `Provide a comprehensive overview capturing the major story arcs, character growth, recurring themes, and significant relationships or events. Aim for around 300 words:
+    metaSummary: (summaryText) => `Provide a comprehensive summary of the following content. Aim for around 300 words:
 
 ${summaryText}`
   }
