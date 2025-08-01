@@ -511,4 +511,178 @@ describe('Journal Views Module', function() {
       expect(form.querySelector('select[name="select"]').value).to.equal('');
     });
   });
+
+  describe('AI Prompt Rendering Functions', function() {
+    let testElement, testButton;
+
+    beforeEach(function() {
+      // Create test DOM elements
+      testElement = document.createElement('p');
+      testButton = document.createElement('button');
+      document.body.appendChild(testElement);
+      document.body.appendChild(testButton);
+    });
+
+    afterEach(function() {
+      // Clean up test elements
+      if (testElement.parentNode) {
+        testElement.parentNode.removeChild(testElement);
+      }
+      if (testButton.parentNode) {
+        testButton.parentNode.removeChild(testButton);
+      }
+    });
+
+    describe('renderAIPrompt', function() {
+      it('should render API not available state', function() {
+        const aiPromptState = { type: 'api-not-available' };
+        
+        JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__empty-state');
+        expect(testElement.textContent).to.equal('AI features require an API key to be configured in Settings.');
+        expect(testButton.disabled).to.be.true;
+      });
+
+      it('should render no context state', function() {
+        const aiPromptState = { type: 'no-context' };
+        
+        JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__empty-state');
+        expect(testElement.textContent).to.equal('Add some character details or journal entries to get personalized reflection questions.');
+        expect(testButton.disabled).to.be.true;
+      });
+
+      it('should render loading state', function() {
+        const aiPromptState = { type: 'loading' };
+        
+        JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__text loading');
+        expect(testElement.textContent).to.equal('Generating your personalized reflection questions...');
+        expect(testButton.disabled).to.be.true;
+      });
+
+      it('should render questions state', function() {
+        const questions = 'Test reflection questions for your character.';
+        const aiPromptState = { type: 'questions', questions };
+        
+        JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__text');
+        expect(testElement.textContent).to.equal(questions);
+        expect(testButton.disabled).to.be.false;
+      });
+
+      it('should render error state', function() {
+        const aiPromptState = { type: 'error' };
+        
+        JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__error-state');
+        expect(testElement.textContent).to.equal('Unable to generate reflection questions. Please try again.');
+        expect(testButton.disabled).to.be.false;
+      });
+
+      it('should render default error state for unknown type', function() {
+        const aiPromptState = { type: 'unknown-type' };
+        
+        JournalViews.renderAIPrompt(testElement, aiPromptState, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__error-state');
+        expect(testElement.textContent).to.equal('Unable to generate reflection questions. Please try again.');
+        expect(testButton.disabled).to.be.false;
+      });
+
+      it('should handle missing element gracefully', function() {
+        const aiPromptState = { type: 'loading' };
+        
+        expect(() => JournalViews.renderAIPrompt(null, aiPromptState, testButton)).to.not.throw();
+      });
+
+      it('should handle missing button gracefully', function() {
+        const aiPromptState = { type: 'loading' };
+        
+        expect(() => JournalViews.renderAIPrompt(testElement, aiPromptState, null)).to.not.throw();
+        expect(testElement.className).to.equal('ai-prompt__text loading');
+      });
+    });
+
+    describe('showAIPromptAPINotAvailable', function() {
+      it('should set correct class and text', function() {
+        JournalViews.showAIPromptAPINotAvailable(testElement, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__empty-state');
+        expect(testElement.textContent).to.equal('AI features require an API key to be configured in Settings.');
+        expect(testButton.disabled).to.be.true;
+      });
+
+      it('should handle missing element', function() {
+        expect(() => JournalViews.showAIPromptAPINotAvailable(null, testButton)).to.not.throw();
+      });
+
+      it('should handle missing button', function() {
+        expect(() => JournalViews.showAIPromptAPINotAvailable(testElement, null)).to.not.throw();
+      });
+    });
+
+    describe('showAIPromptNoContext', function() {
+      it('should set correct class and text', function() {
+        JournalViews.showAIPromptNoContext(testElement, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__empty-state');
+        expect(testElement.textContent).to.equal('Add some character details or journal entries to get personalized reflection questions.');
+        expect(testButton.disabled).to.be.true;
+      });
+
+      it('should handle missing element', function() {
+        expect(() => JournalViews.showAIPromptNoContext(null, testButton)).to.not.throw();
+      });
+    });
+
+    describe('showAIPromptLoading', function() {
+      it('should set correct class and text', function() {
+        JournalViews.showAIPromptLoading(testElement, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__text loading');
+        expect(testElement.textContent).to.equal('Generating your personalized reflection questions...');
+        expect(testButton.disabled).to.be.true;
+      });
+
+      it('should handle missing element', function() {
+        expect(() => JournalViews.showAIPromptLoading(null, testButton)).to.not.throw();
+      });
+    });
+
+    describe('showAIPromptQuestions', function() {
+      it('should set correct class and text', function() {
+        const questions = 'Sample questions for testing';
+        
+        JournalViews.showAIPromptQuestions(testElement, questions, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__text');
+        expect(testElement.textContent).to.equal(questions);
+        expect(testButton.disabled).to.be.false;
+      });
+
+      it('should handle missing element', function() {
+        expect(() => JournalViews.showAIPromptQuestions(null, 'questions', testButton)).to.not.throw();
+      });
+    });
+
+    describe('showAIPromptError', function() {
+      it('should set correct class and text', function() {
+        JournalViews.showAIPromptError(testElement, testButton);
+        
+        expect(testElement.className).to.equal('ai-prompt__error-state');
+        expect(testElement.textContent).to.equal('Unable to generate reflection questions. Please try again.');
+        expect(testButton.disabled).to.be.false;
+      });
+
+      it('should handle missing element', function() {
+        expect(() => JournalViews.showAIPromptError(null, testButton)).to.not.throw();
+      });
+    });
+  });
 });

@@ -16,16 +16,22 @@ import {
   renderEntries,
   createEntryForm,
   createEntryEditForm,
-  showNotification
+  showNotification,
+  renderAIPrompt
 } from './journal-views.js';
 
 import { generateId, isValidEntry, formatDate } from './utils.js';
+
+import { generateQuestions, hasGoodContext } from './storytelling.js';
+import { isAPIAvailable } from './openai-wrapper.js';
 
 // State management
 let entriesContainer = null;
 let characterInfoContainer = null;
 let entryFormContainer = null;
 let currentState = null;
+let aiPromptText = null;
+let regenerateBtn = null;
 
 // Initialize Journal page
 export const initJournalPage = async (stateParam = null) => {
@@ -37,6 +43,8 @@ export const initJournalPage = async (stateParam = null) => {
     entriesContainer = document.getElementById('entries-container');
     characterInfoContainer = document.getElementById('character-info-container');
     entryFormContainer = document.getElementById('entry-form-container');
+    aiPromptText = document.getElementById('ai-prompt-text');
+    regenerateBtn = document.getElementById('regenerate-prompt-btn');
     
     if (!entriesContainer || !entryFormContainer) {
       console.warn('Required journal containers not found');
@@ -46,10 +54,12 @@ export const initJournalPage = async (stateParam = null) => {
     // Set up reactive updates with explicit state tracking BEFORE initial render
     onJournalChange(state, () => {
       renderJournalPage(state);
+      renderAIPromptWithLogic(state);
     });
 
     onCharacterChange(state, () => {
       renderCharacterInfo(state);
+      renderAIPromptWithLogic(state);
     });
     
     // Render initial state AFTER observers are set up
@@ -58,7 +68,8 @@ export const initJournalPage = async (stateParam = null) => {
     // Set up form
     setupEntryForm();
     
-
+    // Set up AI prompt
+    setupAIPrompt(state);
     
   } catch (error) {
     console.error('Failed to initialize journal page:', error);
@@ -70,8 +81,6 @@ export const renderJournalPage = (stateParam = null) => {
   try {
     const state = stateParam || getYjsState();
     const entries = getEntries(state);
-    
-
     
     // Render entries - use module-level element if available, otherwise find it
     const entriesElement = entriesContainer || document.getElementById('entries-container');
@@ -125,26 +134,33 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     const state = stateParam || getYjsState();
     
     // Validate entry
-    if (!isValidEntry(entryData)) {
+    if (!entryData || !isValidEntry(entryData)) {
       showNotification('Please fill in both title and content', 'warning');
       return;
     }
-    
-    // Create new entry
-    const newEntry = {
+
+    // Trim whitespace
+    const trimmedData = {
+      title: entryData.title?.trim(),
+      content: entryData.content?.trim()
+    };
+
+    if (!trimmedData.title || !trimmedData.content) {
+      showNotification('Please fill in both title and content', 'warning');
+      return;
+    }
+
+    // Create entry with ID and timestamp
+    const entry = {
       id: generateId(),
-      title: entryData.title.trim(),
-      content: entryData.content.trim(),
+      title: trimmedData.title,
+      content: trimmedData.content,
       timestamp: Date.now()
     };
-    
-    // Add to Y.js
-    addEntry(state, newEntry);
-    
-    // Clear form
+
+    addEntry(state, entry);
     clearEntryForm();
-    
-    showNotification('Entry added!', 'success');
+    showNotification('Entry added successfully!', 'success');
     
   } catch (error) {
     console.error('Failed to add entry:', error);
@@ -153,9 +169,9 @@ export const handleAddEntry = (entryData, stateParam = null) => {
 };
 
 // Handle editing entry
-export const handleEditEntry = (entryId) => {
+export const handleEditEntry = (entryId, stateParam = null) => {
   try {
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     const entries = getEntries(state);
     const entry = entries.find(e => e.id === entryId);
     
@@ -164,21 +180,18 @@ export const handleEditEntry = (entryId) => {
       return;
     }
     
+    // Find the entry element
+    const entryElement = document.querySelector(`[data-entry-id="${entryId}"]`);
+    if (!entryElement) return;
+    
     // Create edit form
     const editForm = createEntryEditForm(entry, {
-      onSave: (updatedData) => {
-        saveEntryEdit(entryId, updatedData);
-      },
-      onCancel: () => {
-        renderJournalPage(); // Re-render to remove edit form
-      }
+      onSave: (updatedData) => saveEntryEdit(entryId, updatedData, state),
+      onCancel: () => renderJournalPage(state)
     });
     
     // Replace entry with edit form
-    const entryElement = document.querySelector(`[data-entry-id="${entryId}"]`);
-    if (entryElement && entryElement.parentNode) {
-      entryElement.parentNode.replaceChild(editForm, entryElement);
-    }
+    entryElement.replaceWith(editForm);
     
   } catch (error) {
     console.error('Failed to edit entry:', error);
@@ -187,23 +200,28 @@ export const handleEditEntry = (entryId) => {
 };
 
 // Save entry edit
-export const saveEntryEdit = (entryId, updatedData) => {
+export const saveEntryEdit = (entryId, entryData, stateParam = null) => {
   try {
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     
-    // Validate updated data
-    if (!isValidEntry(updatedData)) {
+    if (!entryData || !isValidEntry(entryData)) {
       showNotification('Please fill in both title and content', 'warning');
       return;
     }
-    
-    // Update entry
-    updateEntry(state, entryId, {
-      title: updatedData.title.trim(),
-      content: updatedData.content.trim()
-    });
-    
-    showNotification('Entry updated!', 'success');
+
+    // Trim whitespace
+    const trimmedData = {
+      title: entryData.title?.trim(),
+      content: entryData.content?.trim()
+    };
+
+    if (!trimmedData.title || !trimmedData.content) {
+      showNotification('Please fill in both title and content', 'warning');
+      return;
+    }
+
+    updateEntry(state, entryId, trimmedData);
+    showNotification('Entry updated successfully!', 'success');
     
   } catch (error) {
     console.error('Failed to save entry edit:', error);
@@ -212,13 +230,13 @@ export const saveEntryEdit = (entryId, updatedData) => {
 };
 
 // Handle deleting entry
-export const handleDeleteEntry = (entryId) => {
+export const handleDeleteEntry = (entryId, stateParam = null) => {
   try {
-    const state = getYjsState();
+    const state = stateParam || getYjsState();
     
     if (confirm('Are you sure you want to delete this entry?')) {
       deleteEntry(state, entryId);
-      showNotification('Entry deleted', 'success');
+      showNotification('Entry deleted successfully!', 'success');
     }
     
   } catch (error) {
@@ -235,9 +253,67 @@ export const clearEntryForm = () => {
   }
 };
 
+// =============================================================================
+// AI PROMPT FUNCTIONALITY
+// =============================================================================
+
+// Set up AI prompt section
+const setupAIPrompt = (state) => {
+  if (!aiPromptText) return;
+  
+  // Set up regenerate button if available
+  if (regenerateBtn) {
+    regenerateBtn.addEventListener('click', () => handleRegeneratePrompt(state));
+  }
+  
+  // Initial render
+  renderAIPromptWithLogic(state);
+};
+
+// Render AI prompt with business logic - determines state and calls pure view function
+const renderAIPromptWithLogic = async (stateParam = null) => {
+  if (!aiPromptText) return;
+  
+  try {
+    const state = stateParam || getYjsState();
+    const character = getCharacterData(state);
+    const entries = getEntries(state);
+    
+    // Check API availability first
+    if (!isAPIAvailable()) {
+      renderAIPrompt(aiPromptText, { type: 'api-not-available' }, regenerateBtn);
+      return;
+    }
+    
+    // Check if we have good context for generating questions
+    if (!hasGoodContext(character, entries)) {
+      renderAIPrompt(aiPromptText, { type: 'no-context' }, regenerateBtn);
+      return;
+    }
+    
+    // Show loading and generate questions
+    renderAIPrompt(aiPromptText, { type: 'loading' }, regenerateBtn);
+    const questions = await generateQuestions(character, entries);
+    
+    if (questions) {
+      renderAIPrompt(aiPromptText, { type: 'questions', questions }, regenerateBtn);
+    } else {
+      renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
+    }
+    
+  } catch (error) {
+    console.error('Failed to render AI prompt:', error);
+    renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
+  }
+};
+
+// Handle regenerate button click
+const handleRegeneratePrompt = async (stateParam = null) => {
+  const state = stateParam || getYjsState();
+  await renderAIPromptWithLogic(state);
+};
+
 // Initialize the journal page when the script loads
-if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => {
-    initJournalPage();
-  });
-}
+document.addEventListener('DOMContentLoaded', () => {
+  initJournalPage();
+});

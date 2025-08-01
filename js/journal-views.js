@@ -261,3 +261,99 @@ export const clearForm = (form) => {
     }
   });
 };
+
+// =============================================================================
+// AI PROMPT RENDERING FUNCTIONS
+// =============================================================================
+
+// Render AI prompt based on provided state data - pure function
+export const renderAIPrompt = (aiPromptElement, aiPromptState, regenerateBtn = null) => {
+  if (!aiPromptElement) return;
+  
+  const { type, message, questions } = aiPromptState;
+  
+  switch (type) {
+    case 'api-not-available':
+      showAIPromptAPINotAvailable(aiPromptElement, regenerateBtn);
+      break;
+    case 'no-context':
+      showAIPromptNoContext(aiPromptElement, regenerateBtn);
+      break;
+    case 'loading':
+      showAIPromptLoading(aiPromptElement, regenerateBtn);
+      break;
+    case 'questions':
+      showAIPromptQuestions(aiPromptElement, questions, regenerateBtn);
+      break;
+    case 'error':
+      showAIPromptError(aiPromptElement, regenerateBtn);
+      break;
+    default:
+      showAIPromptError(aiPromptElement, regenerateBtn);
+  }
+};
+
+// Show API not available state
+export const showAIPromptAPINotAvailable = (aiPromptElement, regenerateBtn = null) => {
+  if (!aiPromptElement) return;
+  
+  aiPromptElement.className = 'ai-prompt__empty-state';
+  aiPromptElement.textContent = 'AI features require an API key to be configured in Settings.';
+  
+  // Disable regenerate button
+  if (regenerateBtn) {
+    regenerateBtn.disabled = true;
+  }
+};
+
+// Show no context state
+export const showAIPromptNoContext = (aiPromptElement, regenerateBtn = null) => {
+  if (!aiPromptElement) return;
+  
+  aiPromptElement.className = 'ai-prompt__empty-state';
+  aiPromptElement.textContent = 'Add some character details or journal entries to get personalized reflection questions.';
+  
+  // Disable regenerate button
+  if (regenerateBtn) {
+    regenerateBtn.disabled = true;
+  }
+};
+
+// Show loading state
+export const showAIPromptLoading = (aiPromptElement, regenerateBtn = null) => {
+  if (!aiPromptElement) return;
+  
+  aiPromptElement.className = 'ai-prompt__text loading';
+  aiPromptElement.textContent = 'Generating your personalized reflection questions...';
+  
+  // Disable regenerate button while loading
+  if (regenerateBtn) {
+    regenerateBtn.disabled = true;
+  }
+};
+
+// Show questions state
+export const showAIPromptQuestions = (aiPromptElement, questions, regenerateBtn = null) => {
+  if (!aiPromptElement) return;
+  
+  aiPromptElement.className = 'ai-prompt__text';
+  aiPromptElement.textContent = questions;
+  
+  // Enable regenerate button
+  if (regenerateBtn) {
+    regenerateBtn.disabled = false;
+  }
+};
+
+// Show error state
+export const showAIPromptError = (aiPromptElement, regenerateBtn = null) => {
+  if (!aiPromptElement) return;
+  
+  aiPromptElement.className = 'ai-prompt__error-state';
+  aiPromptElement.textContent = 'Unable to generate reflection questions. Please try again.';
+  
+  // Enable regenerate button to allow retry
+  if (regenerateBtn) {
+    regenerateBtn.disabled = false;
+  }
+};
