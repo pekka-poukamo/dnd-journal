@@ -25,7 +25,7 @@ describe('Simple Y.js Module', function() {
   describe('initYjs', function() {
     it('should initialize Y.js document and maps', function() {
       expect(YjsModule.getCharacterMap(state)).to.not.be.null;
-      expect(YjsModule.getJournalMap(state)).to.not.be.null;
+      expect(YjsModule.getJournalArray(state)).to.not.be.null;
       expect(YjsModule.getSettingsMap(state)).to.not.be.null;
       expect(YjsModule.getSummariesMap(state)).to.not.be.null;
     });
