@@ -25,11 +25,13 @@ import { generateId, isValidEntry, formatDate } from './utils.js';
 let entriesContainer = null;
 let characterInfoContainer = null;
 let entryFormContainer = null;
+let currentState = null;
 
 // Initialize Journal page
 export const initJournalPage = async (stateParam = null) => {
   try {
-    const state = stateParam || (await initYjs(), getYjsState());
+    const state = stateParam || (await initYjs());
+    currentState = state;
     
     // Get DOM elements
     entriesContainer = document.getElementById('entries-container');
@@ -41,20 +43,22 @@ export const initJournalPage = async (stateParam = null) => {
       return;
     }
     
-    // Render initial state
-    renderJournalPage(state);
-    
-    // Set up reactive updates
+    // Set up reactive updates with explicit state tracking BEFORE initial render
     onJournalChange(state, () => {
       renderJournalPage(state);
     });
-    
+
     onCharacterChange(state, () => {
       renderCharacterInfo(state);
     });
     
+    // Render initial state AFTER observers are set up
+    renderJournalPage(state);
+    
     // Set up form
     setupEntryForm();
+    
+
     
   } catch (error) {
     console.error('Failed to initialize journal page:', error);
@@ -67,8 +71,11 @@ export const renderJournalPage = (stateParam = null) => {
     const state = stateParam || getYjsState();
     const entries = getEntries(state);
     
+
+    
     // Render entries - use module-level element if available, otherwise find it
     const entriesElement = entriesContainer || document.getElementById('entries-container');
+    
     if (entriesElement) {
       renderEntries(entriesElement, entries, {
         onEdit: handleEditEntry,
@@ -229,6 +236,8 @@ export const clearEntryForm = () => {
 };
 
 // Initialize the journal page when the script loads
-document.addEventListener('DOMContentLoaded', () => {
-  initJournalPage();
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initJournalPage();
+  });
+}
