@@ -19,7 +19,7 @@ import { getFormData } from './utils.js';
 
 import { saveNavigationCache } from './navigation-cache.js';
 
-import { isAIEnabled, getPromptPreview } from './ai.js';
+import { isAIEnabled, getPromptPreview, buildMessages } from './ai.js';
 
 // State management
 let settingsFormElement = null;
@@ -250,10 +250,11 @@ export const showCurrentAIPrompt = async () => {
       return;
     }
     
-    // Get prompt preview
+    // Get prompt preview using same logic as AI module
     const promptPreview = await getPromptPreview();
+    const messages = promptPreview ? buildMessages(promptPreview.systemPrompt, promptPreview.userPrompt) : null;
     
-    renderAIPromptPreview(aiEnabled, promptPreview);
+    renderAIPromptPreview(aiEnabled, messages);
     showNotification('Current AI prompts displayed', 'success');
   } catch (error) {
     console.error('Failed to show AI prompt:', error);

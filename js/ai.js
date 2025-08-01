@@ -13,17 +13,22 @@ export const isAIEnabled = () => {
   return Boolean(enabled && apiKey);
 };
 
-// Simple AI call function
-const callAI = async (systemPrompt, userPrompt) => {
-  const state = getYjsState();
-  const apiKey = getSetting(state, 'openai-api-key', '');
-  
-  const messages = systemPrompt 
+// Build messages array for OpenAI API
+export const buildMessages = (systemPrompt, userPrompt) => {
+  return systemPrompt 
     ? [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ]
     : [{ role: 'user', content: userPrompt }];
+};
+
+// Simple AI call function
+const callAI = async (systemPrompt, userPrompt) => {
+  const state = getYjsState();
+  const apiKey = getSetting(state, 'openai-api-key', '');
+  
+  const messages = buildMessages(systemPrompt, userPrompt);
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',

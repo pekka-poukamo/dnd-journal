@@ -4,7 +4,6 @@ import {
   getCachedSettings,
   getFormDataForPage
 } from './navigation-cache.js';
-import { PROMPTS } from './prompts.js';
 
 // Render settings form with current data
 export const renderSettingsForm = (formOrSettings, settings = null) => {
@@ -98,7 +97,7 @@ export const setTestConnectionLoading = (isLoading) => {
 };
 
 // Render AI prompt preview
-export const renderAIPromptPreview = (aiEnabled, promptPreview = null) => {
+export const renderAIPromptPreview = (aiEnabled, messages = null) => {
   const promptPreviewElement = document.getElementById('ai-prompt-preview');
   const promptContentElement = document.getElementById('ai-prompt-content');
   
@@ -114,36 +113,23 @@ export const renderAIPromptPreview = (aiEnabled, promptPreview = null) => {
         <p>Please configure your OpenAI API key and enable AI features to view prompts.</p>
       </div>
     `;
-  } else if (!promptPreview) {
+  } else if (!messages) {
     promptContentElement.innerHTML = `
       <div class="system-prompt">
         <p><strong>No context available.</strong></p>
-        <p>Add some journal entries and character information to see a full prompt preview with context.</p>
-      </div>
-      
-      <div class="user-prompt">
-        <h4>Available Prompt Templates</h4>
-        <p><strong>Storytelling System:</strong></p>
-        <div>${PROMPTS.storytelling.system}</div>
-        <br>
-        <p><strong>Summarization Templates:</strong></p>
-        <div>• Journal Entry: ${PROMPTS.summarization.entry('[YOUR_ENTRY_TEXT]')}</div>
-        <div>• Character Info: ${PROMPTS.summarization.character('[YOUR_CHARACTER_TEXT]')}</div>
+        <p>Add some journal entries and character information to see prompts.</p>
       </div>
     `;
   } else {
-    // Show just the final prompt
-    promptContentElement.innerHTML = `
-      <div class="system-prompt">
-        <h4>System Prompt</h4>
-        <div>${promptPreview.systemPrompt}</div>
+    // Show the exact messages sent to OpenAI
+    const content = messages.map(msg => `
+      <div class="${msg.role === 'system' ? 'system-prompt' : 'user-prompt'}">
+        <h4>${msg.role === 'system' ? 'System' : 'User'}</h4>
+        <div>${msg.content}</div>
       </div>
-      
-      <div class="user-prompt">
-        <h4>User Prompt</h4>
-        <div>${promptPreview.userPrompt}</div>
-      </div>
-    `;
+    `).join('');
+    
+    promptContentElement.innerHTML = content;
   }
   
   promptPreviewElement.style.display = 'block';
