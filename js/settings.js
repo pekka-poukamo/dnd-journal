@@ -131,11 +131,17 @@ const setupFormHandlers = () => {
   
   const showAIPromptButton = document.getElementById('show-ai-prompt');
   if (showAIPromptButton && !showAIPromptButton.hasAttribute('data-handler-attached')) {
+    console.log('Attaching click handler to show AI prompt button');
     showAIPromptButton.addEventListener('click', (e) => {
+      console.log('Show AI prompt button clicked!');
       e.preventDefault();
       showCurrentAIPrompt();
     });
     showAIPromptButton.setAttribute('data-handler-attached', 'true');
+  } else if (showAIPromptButton) {
+    console.log('Show AI prompt button found but handler already attached');
+  } else {
+    console.log('Show AI prompt button not found');
   }
 };
 
@@ -241,21 +247,63 @@ export const testConnection = async (stateParam = null) => {
 
 // Show current AI prompt
 export const showCurrentAIPrompt = async () => {
+  console.log('=== showCurrentAIPrompt called ===');
   try {
     const aiEnabled = isAIEnabled();
+    console.log('AI enabled:', aiEnabled);
     
     if (!aiEnabled) {
+      console.log('AI not enabled, showing disabled message');
       renderAIPromptPreview(aiEnabled, null);
       showNotification('AI features not enabled', 'info');
       return;
     }
     
-    // Get prompt preview using same logic as AI module
-    const promptPreview = await getPromptPreview();
-    const messages = promptPreview ? buildMessages(promptPreview.systemPrompt, promptPreview.userPrompt) : null;
+    console.log('Getting prompt preview...');
     
-    renderAIPromptPreview(aiEnabled, messages);
+    // Get prompt preview using same logic as AI module
+    let promptPreview = null;
+    try {
+      promptPreview = await getPromptPreview();
+      console.log('Prompt preview result:', promptPreview);
+    } catch (previewError) {
+      console.error('Error getting prompt preview:', previewError);
+      // Continue with null preview to show something useful
+    }
+    
+    let messages = null;
+    if (promptPreview) {
+      try {
+        messages = buildMessages(promptPreview.systemPrompt, promptPreview.userPrompt);
+        console.log('Built messages:', messages);
+      } catch (messageError) {
+        console.error('Error building messages:', messageError);
+      }
+    }
+    
+    console.log('Rendering AI prompt preview...');
+    try {
+      renderAIPromptPreview(aiEnabled, messages);
+      console.log('Preview rendered successfully');
+    } catch (renderError) {
+      console.error('Error rendering preview:', renderError);
+      // Show basic preview as fallback
+      const promptPreviewElement = document.getElementById('ai-prompt-preview');
+      const promptContentElement = document.getElementById('ai-prompt-content');
+      if (promptPreviewElement && promptContentElement) {
+        promptContentElement.innerHTML = `
+          <div class="system-prompt">
+            <p><strong>Preview Error</strong></p>
+            <p>There was an error displaying the AI prompt preview. Check console for details.</p>
+          </div>
+        `;
+        promptPreviewElement.style.display = 'block';
+      }
+    }
+    
+    console.log('Showing success notification...');
     showNotification('Current AI prompts displayed', 'success');
+    console.log('=== showCurrentAIPrompt completed ===');
   } catch (error) {
     console.error('Failed to show AI prompt:', error);
     showNotification('Error displaying AI prompts', 'error');
