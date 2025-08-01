@@ -11,15 +11,15 @@ import {
   renderSettingsForm,
   renderConnectionStatus,
   showNotification,
-  renderCachedSettingsContent
+  renderCachedSettingsContent,
+  renderAIPromptPreview
 } from './settings-views.js';
 
 import { getFormData } from './utils.js';
 
 import { saveNavigationCache } from './navigation-cache.js';
 
-import { isAIEnabled, getPromptPreview } from './ai.js';
-import { PROMPTS } from './prompts.js';
+import { isAIEnabled } from './ai.js';
 
 // State management
 let settingsFormElement = null;
@@ -242,46 +242,14 @@ export const testConnection = async (stateParam = null) => {
 // Show current AI prompt
 export const showCurrentAIPrompt = async () => {
   try {
-    const promptPreviewElement = document.getElementById('ai-prompt-preview');
-    const promptContentElement = document.getElementById('ai-prompt-content');
+    const aiEnabled = isAIEnabled();
+    renderAIPromptPreview(aiEnabled);
     
-    if (!promptPreviewElement || !promptContentElement) {
-      showNotification('Prompt preview elements not found', 'error');
-      return;
+    if (aiEnabled) {
+      showNotification('Current AI prompts displayed', 'success');
+    } else {
+      showNotification('AI features not enabled', 'info');
     }
-    
-    if (!isAIEnabled()) {
-      promptContentElement.innerHTML = `
-        <div class="prompt-section">
-          <p><strong>AI features are not enabled.</strong></p>
-          <p>Please configure your OpenAI API key and enable AI features to view prompts.</p>
-        </div>
-      `;
-      promptPreviewElement.style.display = 'block';
-      return;
-    }
-    
-    // Show the current prompts used by the system
-    const promptContent = `
-      <div class="system-prompt">
-        <h4>Storytelling System Prompt</h4>
-        <div>${PROMPTS.storytelling.system}</div>
-      </div>
-      
-      <div class="user-prompt">
-        <h4>Summarization Prompts</h4>
-        <p><strong>Journal Entry:</strong></p>
-        <div>Summarize this D&D journal entry in approximately 100 words, capturing the key events, decisions, and character developments: [YOUR_ENTRY_TEXT]</div>
-        <br>
-        <p><strong>Character Information:</strong></p>
-        <div>Summarize this D&D character information in approximately 50 words: [YOUR_CHARACTER_TEXT]</div>
-      </div>
-    `;
-    
-    promptContentElement.innerHTML = promptContent;
-    promptPreviewElement.style.display = 'block';
-    
-    showNotification('Current AI prompts displayed', 'success');
   } catch (error) {
     console.error('Failed to show AI prompt:', error);
     showNotification('Error displaying AI prompts', 'error');

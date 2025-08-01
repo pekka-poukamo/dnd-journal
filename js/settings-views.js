@@ -4,6 +4,7 @@ import {
   getCachedSettings,
   getFormDataForPage
 } from './navigation-cache.js';
+import { PROMPTS } from './prompts.js';
 
 // Render settings form with current data
 export const renderSettingsForm = (formOrSettings, settings = null) => {
@@ -94,6 +95,45 @@ export const setTestConnectionLoading = (isLoading) => {
     testBtn.disabled = isLoading;
     testBtn.textContent = isLoading ? 'Testing...' : 'Test Connection';
   }
+};
+
+// Render AI prompt preview
+export const renderAIPromptPreview = (aiEnabled) => {
+  const promptPreviewElement = document.getElementById('ai-prompt-preview');
+  const promptContentElement = document.getElementById('ai-prompt-content');
+  
+  if (!promptPreviewElement || !promptContentElement) {
+    console.warn('AI prompt preview elements not found');
+    return;
+  }
+  
+  if (!aiEnabled) {
+    promptContentElement.innerHTML = `
+      <div class="system-prompt">
+        <p><strong>AI features are not enabled.</strong></p>
+        <p>Please configure your OpenAI API key and enable AI features to view prompts.</p>
+      </div>
+    `;
+  } else {
+    // Show the current prompts used by the system
+    promptContentElement.innerHTML = `
+      <div class="system-prompt">
+        <h4>Storytelling System Prompt</h4>
+        <div>${PROMPTS.storytelling.system}</div>
+      </div>
+      
+      <div class="user-prompt">
+        <h4>Summarization Prompts</h4>
+        <p><strong>Journal Entry:</strong></p>
+        <div>Summarize this D&D journal entry in approximately 100 words, capturing the key events, decisions, and character developments: [YOUR_ENTRY_TEXT]</div>
+        <br>
+        <p><strong>Character Information:</strong></p>
+        <div>Summarize this D&D character information in approximately 50 words: [YOUR_CHARACTER_TEXT]</div>
+      </div>
+    `;
+  }
+  
+  promptPreviewElement.style.display = 'block';
 };
 
 // Pure function to render cached settings content immediately
