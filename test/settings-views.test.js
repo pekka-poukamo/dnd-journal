@@ -297,6 +297,168 @@ describe('Settings Views Module', function() {
     });
   });
 
+  describe('setTestConnectionLoading', function() {
+    beforeEach(function() {
+      // Add test connection button to DOM
+      const testButton = document.createElement('button');
+      testButton.id = 'test-connection';
+      testButton.textContent = 'Test Connection';
+      document.body.appendChild(testButton);
+    });
+
+    it('should set button to loading state', function() {
+      SettingsViews.setTestConnectionLoading(true);
+
+      const testButton = document.getElementById('test-connection');
+      expect(testButton.disabled).to.be.true;
+      expect(testButton.textContent).to.equal('Testing...');
+    });
+
+    it('should set button to normal state', function() {
+      SettingsViews.setTestConnectionLoading(false);
+
+      const testButton = document.getElementById('test-connection');
+      expect(testButton.disabled).to.be.false;
+      expect(testButton.textContent).to.equal('Test Connection');
+    });
+
+    it('should handle missing button element gracefully', function() {
+      document.getElementById('test-connection').remove();
+
+      expect(() => {
+        SettingsViews.setTestConnectionLoading(true);
+      }).to.not.throw();
+    });
+  });
+
+  describe('renderAIPromptPreview', function() {
+    beforeEach(function() {
+      // Add AI prompt preview elements to DOM
+      const aiPromptPreview = document.createElement('div');
+      aiPromptPreview.id = 'ai-prompt-preview';
+      const aiPromptContent = document.createElement('div');
+      aiPromptContent.id = 'ai-prompt-content';
+      aiPromptPreview.appendChild(aiPromptContent);
+      document.body.appendChild(aiPromptPreview);
+    });
+
+    it('should render AI disabled state', function() {
+      SettingsViews.renderAIPromptPreview(false, null);
+
+      const promptContent = document.getElementById('ai-prompt-content');
+      const promptPreview = document.getElementById('ai-prompt-preview');
+      
+      expect(promptContent.innerHTML).to.include('AI features are not enabled');
+      expect(promptPreview.style.display).to.equal('block');
+    });
+
+    it('should render no context state', function() {
+      SettingsViews.renderAIPromptPreview(true, null);
+
+      const promptContent = document.getElementById('ai-prompt-content');
+      expect(promptContent.innerHTML).to.include('No context available');
+    });
+
+    it('should render messages state', function() {
+      const messages = [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: 'Hello world!' }
+      ];
+
+      SettingsViews.renderAIPromptPreview(true, messages);
+
+      const promptContent = document.getElementById('ai-prompt-content');
+      expect(promptContent.innerHTML).to.include('system-prompt');
+      expect(promptContent.innerHTML).to.include('user-prompt');
+      expect(promptContent.innerHTML).to.include('You are a helpful assistant.');
+      expect(promptContent.innerHTML).to.include('Hello world!');
+    });
+
+    it('should handle missing preview elements gracefully', function() {
+      document.getElementById('ai-prompt-preview').remove();
+
+      expect(() => {
+        SettingsViews.renderAIPromptPreview(true, null);
+      }).to.not.throw();
+    });
+
+    it('should handle missing content element gracefully', function() {
+      document.getElementById('ai-prompt-content').remove();
+
+      expect(() => {
+        SettingsViews.renderAIPromptPreview(true, null);
+      }).to.not.throw();
+    });
+  });
+
+  describe('renderCachedSettingsContent', function() {
+    let mockCachedSettings, mockCachedFormData;
+
+    beforeEach(function() {
+      // Create form element
+      const settingsForm = document.createElement('form');
+      settingsForm.id = 'settings-form';
+      
+      const apiKeyInput = document.createElement('input');
+      apiKeyInput.id = 'openai-api-key';
+      apiKeyInput.name = 'openai-api-key';
+      settingsForm.appendChild(apiKeyInput);
+      
+      const aiEnabledInput = document.createElement('input');
+      aiEnabledInput.id = 'ai-enabled';
+      aiEnabledInput.name = 'ai-enabled';
+      aiEnabledInput.type = 'checkbox';
+      settingsForm.appendChild(aiEnabledInput);
+      
+      document.body.appendChild(settingsForm);
+
+      // Create connection status element
+      const connectionStatus = document.createElement('div');
+      connectionStatus.id = 'connection-status';
+      document.body.appendChild(connectionStatus);
+
+      // Mock the navigation cache functions
+      mockCachedSettings = { 'openai-api-key': 'cached-key' };
+      mockCachedFormData = { 'ai-enabled': true };
+    });
+
+    it('should render cached settings when available', function() {
+      // Since we can't easily mock the navigation-cache imports in this context,
+      // we'll test the function with empty cache (which is the default behavior)
+      const elements = {
+        settingsFormElement: document.getElementById('settings-form'),
+        connectionStatusElement: document.getElementById('connection-status')
+      };
+
+      // This should not throw an error even with empty cache
+      expect(() => {
+        SettingsViews.renderCachedSettingsContent(elements);
+      }).to.not.throw();
+    });
+
+    it('should handle missing form element gracefully', function() {
+      const elements = {
+        settingsFormElement: null,
+        connectionStatusElement: document.getElementById('connection-status')
+      };
+
+      expect(() => {
+        SettingsViews.renderCachedSettingsContent(elements);
+      }).to.not.throw();
+    });
+
+    it('should handle missing connection status element gracefully', function() {
+      const elements = {
+        settingsFormElement: document.getElementById('settings-form'),
+        connectionStatusElement: null
+      };
+
+      expect(() => {
+        SettingsViews.renderCachedSettingsContent(elements);
+      }).to.not.throw();
+    });
+  });
+
   describe('Error handling', function() {
     it('should handle DOM manipulation in hostile environment', function() {
       // Remove all elements

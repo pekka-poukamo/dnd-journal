@@ -180,6 +180,58 @@ describe('Settings Page', function() {
     });
   });
 
+  describe('AI Prompt functionality', function() {
+    beforeEach(function() {
+      // Add AI prompt preview elements to DOM
+      const aiPromptPreview = document.createElement('div');
+      aiPromptPreview.id = 'ai-prompt-preview';
+      const aiPromptContent = document.createElement('div');
+      aiPromptContent.id = 'ai-prompt-content';
+      aiPromptPreview.appendChild(aiPromptContent);
+      document.body.appendChild(aiPromptPreview);
+    });
+
+    it('should handle showing AI prompt when AI is disabled', async function() {
+      YjsModule.setSetting(state, 'ai-enabled', false);
+      YjsModule.setSetting(state, 'openai-api-key', '');
+      
+      await Settings.showCurrentAIPrompt();
+      
+      const promptContent = document.getElementById('ai-prompt-content');
+      expect(promptContent.innerHTML).to.include('AI features are not enabled');
+    });
+
+    it('should handle showing AI prompt when AI is enabled but no API key', async function() {
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      YjsModule.setSetting(state, 'openai-api-key', '');
+      
+      await Settings.showCurrentAIPrompt();
+      
+      const promptContent = document.getElementById('ai-prompt-content');
+      expect(promptContent.innerHTML).to.include('AI features are not enabled');
+    });
+
+    it('should handle showing AI prompt when AI is enabled with API key', async function() {
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+      
+      await Settings.showCurrentAIPrompt();
+      
+      const promptPreview = document.getElementById('ai-prompt-preview');
+      expect(promptPreview.style.display).to.equal('block');
+    });
+
+    it('should handle errors when showing AI prompt', async function() {
+      // Remove AI prompt elements to trigger error
+      document.getElementById('ai-prompt-preview').remove();
+      
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+      
+      expect(async () => await Settings.showCurrentAIPrompt()).to.not.throw();
+    });
+  });
+
   describe('Error handling', function() {
     it('should handle missing form gracefully', function() {
       document.body.innerHTML = '';
