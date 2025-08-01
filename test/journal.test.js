@@ -19,7 +19,6 @@ describe('Journal Page', function() {
           <div id="character-info-container"></div>
           <div id="entry-form-container">
             <form id="entry-form">
-              <input id="entry-title" />
               <textarea id="entry-content"></textarea>
               <button type="submit">Add Entry</button>
             </form>
@@ -129,7 +128,6 @@ describe('Journal Page', function() {
   describe('handleAddEntry', function() {
     it('should add valid entry successfully', function() {
       const entryData = {
-        title: 'New Adventure',
         content: 'Today we started our journey...'
       };
       
@@ -137,7 +135,6 @@ describe('Journal Page', function() {
       
       const entries = YjsModule.getEntries(state);
       entries.should.have.length(1);
-      entries[0].title.should.equal('New Adventure');
       entries[0].content.should.equal('Today we started our journey...');
       entries[0].should.have.property('id');
       entries[0].should.have.property('timestamp');
@@ -145,21 +142,18 @@ describe('Journal Page', function() {
 
     it('should trim whitespace from entry data', function() {
       const entryData = {
-        title: '  Spaced Title  ',
         content: '  Spaced content  '
       };
       
       Journal.handleAddEntry(entryData, state);
       
       const entries = YjsModule.getEntries(state);
-      entries[0].title.should.equal('Spaced Title');
       entries[0].content.should.equal('Spaced content');
     });
 
-    it('should reject entry with empty title', function() {
+    it('should reject entry with empty content', function() {
       const entryData = {
-        title: '',
-        content: 'Some content'
+        content: ''
       };
       
       Journal.handleAddEntry(entryData, state);
@@ -168,10 +162,9 @@ describe('Journal Page', function() {
       entries.should.have.length(0);
     });
 
-    it('should reject entry with empty content', function() {
+    it('should reject entry with whitespace-only content', function() {
       const entryData = {
-        title: 'Some title',
-        content: ''
+        content: '   '
       };
       
       Journal.handleAddEntry(entryData, state);
@@ -182,7 +175,7 @@ describe('Journal Page', function() {
 
     it('should handle errors gracefully', function() {
       expect(() => {
-        Journal.handleAddEntry({ title: 'Test', content: 'Content' }, null);
+        Journal.handleAddEntry({ content: 'Content' }, null);
       }).to.not.throw();
     });
   });
@@ -240,14 +233,12 @@ describe('Journal Page', function() {
       YjsModule.addEntry(state, entry);
       
       const updates = {
-        title: 'Updated Title',
         content: 'Updated content'
       };
       
       YjsModule.updateEntry(state, 'test-entry-1', updates);
       
       const entries = YjsModule.getEntries(state);
-      expect(entries[0].title).to.equal('Updated Title');
       expect(entries[0].content).to.equal('Updated content');
     });
 
@@ -428,7 +419,6 @@ describe('Journal Page', function() {
         Journal.initJournalPage(state);
         
         const validData = {
-          title: 'Updated Title',
           content: 'Updated content'
         };
         
@@ -436,7 +426,6 @@ describe('Journal Page', function() {
         
         const entries = YjsModule.getEntries(state);
         const updatedEntry = entries.find(e => e.id === 'test-entry-1');
-        updatedEntry.title.should.equal('Updated Title');
         updatedEntry.content.should.equal('Updated content');
       });
 
@@ -444,8 +433,7 @@ describe('Journal Page', function() {
         Journal.initJournalPage(state);
         
         const invalidData = {
-          title: '', // Empty title
-          content: 'Some content'
+          content: '' // Empty content
         };
         
         // Should not update entry
@@ -460,7 +448,6 @@ describe('Journal Page', function() {
         Journal.initJournalPage(state);
         
         const dataWithSpaces = {
-          title: '  Trimmed Title  ',
           content: '  Trimmed Content  '
         };
         
@@ -468,12 +455,11 @@ describe('Journal Page', function() {
         
         const entries = YjsModule.getEntries(state);
         const updatedEntry = entries.find(e => e.id === 'test-entry-1');
-        updatedEntry.title.should.equal('Trimmed Title');
         updatedEntry.content.should.equal('Trimmed Content');
       });
 
       it('should handle errors gracefully', function() {
-        expect(() => Journal.saveEntryEdit('test-entry-1', { title: 'Test', content: 'Test' })).to.not.throw();
+        expect(() => Journal.saveEntryEdit('test-entry-1', { content: 'Test' })).to.not.throw();
       });
     });
 
@@ -520,11 +506,9 @@ describe('Journal Page', function() {
         Journal.initJournalPage(state);
         
         const form = document.getElementById('entry-form');
-        const titleInput = document.getElementById('entry-title');
         const contentTextarea = document.getElementById('entry-content');
         
         // Set some values
-        titleInput.value = 'Test Title';
         contentTextarea.value = 'Test Content';
         
         Journal.clearEntryForm();

@@ -3,6 +3,7 @@
 
 import { getYjsState, getCharacterData, getEntries, getSummary } from './yjs.js';
 import { summarize } from './summarization.js';
+import { formatDate } from './utils.js';
 
 // Build context string for AI from character and entries
 export const buildContext = async (character = null, entries = null, options = {}) => {
@@ -119,7 +120,8 @@ const buildFullJournalHistory = async (entries, config) => {
       }
       
       const finalContent = entrySummary || entry.content;
-      entrySummaries.push(`${entry.title}: ${finalContent}`);
+      const entryLabel = formatDate(entry.timestamp);
+      entrySummaries.push(`${entryLabel}: ${finalContent}`);
     }
     
     // Create meta-summary from all entry summaries
@@ -167,10 +169,12 @@ const buildEntriesSection = async (entries, config, sectionTitle = 'Adventures')
         }
       }
       
-      entriesInfo += `\n- ${entry.title}: ${entrySummary}`;
+      const entryLabel = formatDate(entry.timestamp);
+      entriesInfo += `\n- ${entryLabel}: ${entrySummary}`;
     } else {
       // Content is short enough or summaries disabled - include full content
-      entriesInfo += `\n- ${entry.title}: ${entry.content}`;
+      const entryLabel = formatDate(entry.timestamp);
+      entriesInfo += `\n- ${entryLabel}: ${entry.content}`;
     }
   }
   

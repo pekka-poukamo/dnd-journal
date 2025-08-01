@@ -46,7 +46,7 @@ export const debounce = (fn, delay) => {
 
 // Pure function to validate entry data
 export const isValidEntry = (entryData) => 
-  entryData.title.trim().length > 0 && entryData.content.trim().length > 0;
+  !!(entryData && entryData.content != null && entryData.content.trim().length > 0);
 
 // Pure function to create initial journal state
 export const createInitialJournalState = () => ({

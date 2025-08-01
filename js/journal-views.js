@@ -16,12 +16,8 @@ export const createEntryForm = (options = {}) => {
   
   form.innerHTML = `
     <div class="form-group">
-      <label for="entry-title" class="form-label">Title</label>
-      <input type="text" id="entry-title" name="title" class="form-input" placeholder="What happened?" required>
-    </div>
-    <div class="form-group">
       <label for="entry-content" class="form-label">Notes</label>
-      <textarea id="entry-content" name="content" class="form-textarea" rows="4" placeholder="Write your notes here..." required></textarea>
+      <textarea id="entry-content" name="content" class="form-textarea" rows="4" placeholder="Write your journal entry here..." required></textarea>
     </div>
     <div class="form-group">
       <button type="submit" class="btn btn-primary">Add Entry</button>
@@ -34,7 +30,6 @@ export const createEntryForm = (options = {}) => {
     
     const formData = new FormData(form);
     const entryData = {
-      title: formData.get('title'),
       content: formData.get('content')
     };
     
@@ -54,10 +49,6 @@ export const createEntryElement = (entry, onEdit, onDelete) => {
   
   const header = document.createElement('header');
   header.className = 'entry-header';
-  
-  const title = document.createElement('h2');
-  title.className = 'entry-title';
-  title.textContent = entry.title;
   
   const meta = document.createElement('div');
   meta.className = 'entry-meta';
@@ -84,7 +75,6 @@ export const createEntryElement = (entry, onEdit, onDelete) => {
   meta.appendChild(timestamp);
   meta.appendChild(actions);
   
-  header.appendChild(title);
   header.appendChild(meta);
   
   // Create summary section with collapsible full content
@@ -224,18 +214,6 @@ export const createEntryEditForm = (entry, options = {}) => {
   const form = document.createElement('form');
   form.className = 'entry-edit-form';
   
-  const titleDiv = document.createElement('div');
-  titleDiv.className = 'form-field';
-  const titleLabel = document.createElement('label');
-  titleLabel.textContent = 'Title';
-  const titleInput = document.createElement('input');
-  titleInput.type = 'text';
-  titleInput.value = entry.title;
-  titleInput.required = true;
-  
-  titleDiv.appendChild(titleLabel);
-  titleDiv.appendChild(titleInput);
-  
   const contentDiv = document.createElement('div');
   contentDiv.className = 'form-field';
   const contentLabel = document.createElement('label');
@@ -270,13 +248,11 @@ export const createEntryEditForm = (entry, options = {}) => {
     e.preventDefault();
     if (options.onSave) {
       options.onSave({
-        title: titleInput.value.trim(),
         content: contentTextarea.value.trim()
       });
     }
   };
   
-  form.appendChild(titleDiv);
   form.appendChild(contentDiv);
   form.appendChild(actionsDiv);
   
@@ -390,12 +366,6 @@ export const renderEntries = (container, entries, options = {}) => {
 
 // Helper function to update existing entry element (performance optimization)
 const updateEntryElement = (element, entry, onEdit, onDelete) => {
-  // Update title
-  const titleElement = element.querySelector('.entry-title');
-  if (titleElement && titleElement.textContent !== entry.title) {
-    titleElement.textContent = entry.title;
-  }
-  
   // Update summary section - recreate if content changed
   const summarySection = element.querySelector('.entry-summary-section');
   if (summarySection) {

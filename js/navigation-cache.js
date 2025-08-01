@@ -68,7 +68,6 @@ const getEntriesForCache = (yjsState) => {
     // Cache only essential display data
     return entries.map(entry => ({
       id: entry.id,
-      title: entry.title || 'Untitled Entry',
       content: entry.content || '',
       timestamp: entry.timestamp || Date.now(),
       formattedDate: formatDate(entry.timestamp || Date.now())

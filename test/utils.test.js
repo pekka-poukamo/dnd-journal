@@ -124,21 +124,21 @@ describe('Utils Module', function() {
   });
 
   describe('isValidEntry', function() {
-    it('should validate complete entries', function() {
+    it('should validate entries with content', function() {
       const validEntry = {
-        title: 'Test Entry',
         content: 'This is test content'
       };
       
       expect(Utils.isValidEntry(validEntry)).to.be.true;
     });
 
-    it('should reject entries with empty title or content', function() {
+    it('should reject entries with empty content', function() {
       const invalidEntries = [
-        { title: '', content: 'Content' },
-        { title: 'Title', content: '' },
-        { title: '   ', content: 'Content' },
-        { title: 'Title', content: '   ' }
+        { content: '' },
+        { content: '   ' },
+        {},
+        null,
+        undefined
       ];
       
       invalidEntries.forEach(entry => {
@@ -148,7 +148,6 @@ describe('Utils Module', function() {
 
     it('should handle entries with valid whitespace-trimmed content', function() {
       const validEntry = {
-        title: '  Valid Title  ',
         content: '  Valid content  '
       };
       
@@ -184,9 +183,9 @@ describe('Utils Module', function() {
   describe('sortEntriesByDate', function() {
     it('should sort entries by date (newest first)', function() {
       const entries = [
-        { id: '1', title: 'Old', timestamp: 1000 },
-        { id: '2', title: 'New', timestamp: 2000 },
-        { id: '3', title: 'Middle', timestamp: 1500 }
+        { id: '1', content: 'Old content', timestamp: 1000 },
+        { id: '2', content: 'New content', timestamp: 2000 },
+        { id: '3', content: 'Middle content', timestamp: 1500 }
       ];
       
       const sorted = Utils.sortEntriesByDate(entries);

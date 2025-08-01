@@ -384,12 +384,7 @@ section {
   border-color: var(--color-border);
 }
 
-.entry-title {
-  color: var(--color-text);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-thin);
-  margin-bottom: var(--space-sm);
-}
+/* .entry-title removed - journal entries no longer have titles */
 
 .entry-date {
   color: var(--color-text-muted);

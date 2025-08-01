@@ -17,13 +17,8 @@ describe('Journal Views Module', function() {
       expect(form.className).to.equal('entry-form');
       
       // Check form contains required fields
-      const titleInput = form.querySelector('#entry-title');
       const contentTextarea = form.querySelector('#entry-content');
       const submitButton = form.querySelector('button[type="submit"]');
-      
-      expect(titleInput).to.exist;
-      expect(titleInput.name).to.equal('title');
-      expect(titleInput.required).to.be.true;
       
       expect(contentTextarea).to.exist;
       expect(contentTextarea.name).to.equal('content');
@@ -36,11 +31,7 @@ describe('Journal Views Module', function() {
     it('should create form with proper labels', function() {
       const form = JournalViews.createEntryForm();
       
-      const titleLabel = form.querySelector('label[for="entry-title"]');
       const contentLabel = form.querySelector('label[for="entry-content"]');
-      
-      expect(titleLabel).to.exist;
-      expect(titleLabel.textContent).to.equal('Title');
       
       expect(contentLabel).to.exist;
       expect(contentLabel.textContent).to.equal('Notes');
@@ -49,18 +40,15 @@ describe('Journal Views Module', function() {
     it('should create form with placeholders', function() {
       const form = JournalViews.createEntryForm();
       
-      const titleInput = form.querySelector('#entry-title');
       const contentTextarea = form.querySelector('#entry-content');
       
-      expect(titleInput.placeholder).to.equal('What happened?');
-      expect(contentTextarea.placeholder).to.equal('Write your notes here...');
+      expect(contentTextarea.placeholder).to.equal('Write your journal entry here...');
     });
   });
 
   describe('createEntryElement', function() {
     const mockEntry = {
       id: 'test-entry-123',
-      title: 'Test Adventure',
       content: 'Today we fought a dragon and won!',
       timestamp: 1640995200000 // Jan 1, 2022
     };
@@ -76,13 +64,7 @@ describe('Journal Views Module', function() {
       expect(element.dataset.entryId).to.equal('test-entry-123');
     });
 
-    it('should display entry title correctly', function() {
-      const element = JournalViews.createEntryElement(mockEntry, () => {}, () => {});
-      
-      const title = element.querySelector('.entry-title');
-      expect(title).to.exist;
-      expect(title.textContent).to.equal('Test Adventure');
-    });
+    // Title functionality removed - entries no longer display titles
 
     it('should format and display timestamp', function() {
       const element = JournalViews.createEntryElement(mockEntry, () => {}, () => {});
@@ -271,7 +253,6 @@ describe('Journal Views Module', function() {
   describe('createEntryEditForm', function() {
     const mockEntry = {
       id: 'edit-test',
-      title: 'Original Title',
       content: 'Original content'
     };
 
@@ -281,10 +262,8 @@ describe('Journal Views Module', function() {
       expect(form.tagName).to.equal('FORM');
       expect(form.className).to.include('entry-edit-form');
       
-      const titleInput = form.querySelector('input[type="text"]');
       const contentTextarea = form.querySelector('textarea');
       
-      expect(titleInput.value).to.equal('Original Title');
       expect(contentTextarea.value).to.equal('Original content');
     });
 

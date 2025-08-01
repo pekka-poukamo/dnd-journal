@@ -164,25 +164,23 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     
     // Validate entry
     if (!entryData || !isValidEntry(entryData)) {
-      showNotification('Please fill in both title and content', 'warning');
+      showNotification('Please fill in content', 'warning');
       return;
     }
 
     // Trim whitespace
     const trimmedData = {
-      title: entryData.title?.trim(),
       content: entryData.content?.trim()
     };
 
-    if (!trimmedData.title || !trimmedData.content) {
-      showNotification('Please fill in both title and content', 'warning');
+    if (!trimmedData.content) {
+      showNotification('Please fill in content', 'warning');
       return;
     }
 
     // Create entry with ID and timestamp
     const entry = {
       id: generateId(),
-      title: trimmedData.title,
       content: trimmedData.content,
       timestamp: Date.now()
     };
@@ -234,18 +232,17 @@ export const saveEntryEdit = (entryId, entryData, stateParam = null) => {
     const state = stateParam || getYjsState();
     
     if (!entryData || !isValidEntry(entryData)) {
-      showNotification('Please fill in both title and content', 'warning');
+      showNotification('Please fill in content', 'warning');
       return;
     }
 
     // Trim whitespace
     const trimmedData = {
-      title: entryData.title?.trim(),
       content: entryData.content?.trim()
     };
 
-    if (!trimmedData.title || !trimmedData.content) {
-      showNotification('Please fill in both title and content', 'warning');
+    if (!trimmedData.content) {
+      showNotification('Please fill in content', 'warning');
       return;
     }
 
@@ -360,7 +357,6 @@ const areEntriesEquivalent = (entries1, entries2) => {
     const entry2 = entries2[i];
     
     if (entry1.id !== entry2.id || 
-        entry1.title !== entry2.title || 
         entry1.content !== entry2.content ||
         entry1.timestamp !== entry2.timestamp) {
       return false;

@@ -123,7 +123,6 @@ describe('Context Module', function() {
       const entries = [
         {
           id: 'entry-1',
-          title: 'An Adventure',
           content: 'I went on an unexpected journey',
           timestamp: Date.now()
         }
@@ -135,7 +134,7 @@ describe('Context Module', function() {
       expect(context).to.include('Bilbo');
       expect(context).to.include('Hobbit');
       expect(context).to.include('Burglar');
-      expect(context).to.include('An Adventure');
+      expect(context).to.include('I went on an unexpected journey');
     });
 
     it('should handle character with no name', async function() {

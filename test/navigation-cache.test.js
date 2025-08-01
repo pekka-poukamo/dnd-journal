@@ -119,7 +119,7 @@ describe('Navigation Cache', () => {
       const loaded = loadNavigationCache();
       expect(loaded).to.not.be.null;
       expect(loaded.journalEntries).to.have.length(2);
-      expect(loaded.journalEntries[0].title).to.equal('Entry 1');
+      expect(loaded.journalEntries[0].content).to.equal('Content 1');
       expect(loaded.formData).to.deep.equal(formData);
     });
     
@@ -199,7 +199,7 @@ describe('Navigation Cache', () => {
       
       expect(entries).to.have.length(1);
       expect(entries[0].id).to.equal('1');
-      expect(entries[0].title).to.equal('Test Entry');
+      expect(entries[0].content).to.equal('Test Content');
       expect(entries[0].formattedDate).to.be.a('string');
     });
     
