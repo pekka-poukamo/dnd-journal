@@ -60,10 +60,10 @@ export const renderSummaries = (backstorySummary, notesSummary) => {
 };
 
 // Show/hide generate summaries button
-export const toggleGenerateButton = (isAPIAvailable) => {
+export const toggleGenerateButton = (isAPIAvailable, hasContent = false) => {
   const generateBtn = document.getElementById('generate-summaries');
   if (generateBtn) {
-    generateBtn.style.display = isAPIAvailable ? 'inline-block' : 'none';
+    generateBtn.style.display = (isAPIAvailable && hasContent) ? 'inline-block' : 'none';
   }
 };
 
