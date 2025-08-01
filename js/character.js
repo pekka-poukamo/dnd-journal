@@ -46,17 +46,17 @@ export const initCharacterPage = async (stateParam = null) => {
       notes: ''
     });
     
-    // Show loading indicator
-    showLoadingIndicator();
+    // Show data loading indicator
+    showDataLoadingIndicator();
     
-    // Initialize YJS and load data in background
+    // Initialize YJS and wait for data to be loaded from IndexedDB
     const state = stateParam || (await initYjs(), getYjsState());
     
     // Render with actual data once available
     renderCharacterPage(state);
     
-    // Hide loading indicator
-    hideLoadingIndicator();
+    // Hide data loading indicator
+    hideDataLoadingIndicator();
     
     // Set up reactive updates
     onCharacterChange(state, () => {
@@ -199,37 +199,37 @@ const generateSummary = async (field) => {
   }
 };
 
-// Show loading indicator
-const showLoadingIndicator = () => {
+// Show data loading indicator (smaller, less intrusive)
+const showDataLoadingIndicator = () => {
   if (loadingIndicator) return; // Already showing
   
   loadingIndicator = document.createElement('div');
-  loadingIndicator.className = 'loading-indicator';
+  loadingIndicator.className = 'data-loading-indicator';
   loadingIndicator.innerHTML = `
     <div class="loading-spinner"></div>
-    <span>Loading character data...</span>
+    <span>Loading data...</span>
   `;
   loadingIndicator.style.cssText = `
     position: fixed;
-    top: 80px;
+    top: 20px;
     right: 20px;
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid #ddd;
     border-radius: 4px;
-    padding: 12px 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 8px 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     z-index: 1000;
-    font-size: 14px;
+    font-size: 12px;
     color: #666;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   `;
   
   const spinner = loadingIndicator.querySelector('.loading-spinner');
   spinner.style.cssText = `
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     border: 2px solid #f3f3f3;
     border-top: 2px solid #666;
     border-radius: 50%;
@@ -252,8 +252,8 @@ const showLoadingIndicator = () => {
   document.body.appendChild(loadingIndicator);
 };
 
-// Hide loading indicator
-const hideLoadingIndicator = () => {
+// Hide data loading indicator
+const hideDataLoadingIndicator = () => {
   if (loadingIndicator) {
     document.body.removeChild(loadingIndicator);
     loadingIndicator = null;
