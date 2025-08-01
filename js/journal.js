@@ -17,17 +17,10 @@ import {
   createEntryForm,
   createEntryEditForm,
   showNotification,
-  showAIPromptAPINotAvailable,
-  showAIPromptNoContext,
-  showAIPromptLoading,
-  showAIPromptQuestions,
-  showAIPromptError
+  renderAIPrompt
 } from './journal-views.js';
 
 import { generateId, isValidEntry, formatDate } from './utils.js';
-
-import { generateQuestions, hasGoodContext } from './storytelling.js';
-import { isAPIAvailable } from './openai-wrapper.js';
 
 // State management
 let entriesContainer = null;
@@ -59,12 +52,12 @@ export const initJournalPage = async (stateParam = null) => {
     // Set up reactive updates
     onJournalChange(state, () => {
       renderJournalPage(state);
-      renderAIPrompt(state);
+      renderAIPrompt(aiPromptText, regenerateBtn, state);
     });
     
     onCharacterChange(state, () => {
       renderCharacterInfo(state);
-      renderAIPrompt(state);
+      renderAIPrompt(aiPromptText, regenerateBtn, state);
     });
     
     // Set up form
@@ -259,50 +252,13 @@ const setupAIPrompt = (state) => {
   }
   
   // Initial render
-  renderAIPrompt(state);
-};
-
-// Render AI prompt based on current state
-const renderAIPrompt = async (stateParam = null) => {
-  if (!aiPromptText) return;
-  
-  try {
-    const state = stateParam || getYjsState();
-    const character = getCharacterData(state);
-    const entries = getEntries(state);
-    
-    // Check API availability first
-    if (!isAPIAvailable()) {
-      showAIPromptAPINotAvailable(aiPromptText, regenerateBtn);
-      return;
-    }
-    
-    // Check if we have good context for generating questions
-    if (!hasGoodContext(character, entries)) {
-      showAIPromptNoContext(aiPromptText, regenerateBtn);
-      return;
-    }
-    
-    // Show loading and generate questions
-    showAIPromptLoading(aiPromptText, regenerateBtn);
-    const questions = await generateQuestions(character, entries);
-    
-    if (questions) {
-      showAIPromptQuestions(aiPromptText, questions, regenerateBtn);
-    } else {
-      showAIPromptError(aiPromptText, regenerateBtn);
-    }
-    
-  } catch (error) {
-    console.error('Failed to render AI prompt:', error);
-    showAIPromptError(aiPromptText, regenerateBtn);
-  }
+  renderAIPrompt(aiPromptText, regenerateBtn, state);
 };
 
 // Handle regenerate button click
 const handleRegeneratePrompt = async (stateParam = null) => {
   const state = stateParam || getYjsState();
-  await renderAIPrompt(state);
+  await renderAIPrompt(aiPromptText, regenerateBtn, state);
 };
 
 

@@ -1,5 +1,8 @@
 // Journal Views - Pure Rendering Functions for Journal Page
 import { parseMarkdown, formatDate, sortEntriesByDate } from './utils.js';
+import { generateQuestions, hasGoodContext } from './storytelling.js';
+import { isAPIAvailable } from './openai-wrapper.js';
+import { getCharacterData, getEntries } from './yjs.js';
 
 // Create journal entry form
 export const createEntryForm = (options = {}) => {
@@ -265,6 +268,42 @@ export const clearForm = (form) => {
 // =============================================================================
 // AI PROMPT RENDERING FUNCTIONS
 // =============================================================================
+
+// Main AI prompt render function - pure function based on state
+export const renderAIPrompt = async (aiPromptElement, regenerateBtn = null, state) => {
+  if (!aiPromptElement) return;
+  
+  try {
+    const character = getCharacterData(state);
+    const entries = getEntries(state);
+    
+    // Check API availability first
+    if (!isAPIAvailable()) {
+      showAIPromptAPINotAvailable(aiPromptElement, regenerateBtn);
+      return;
+    }
+    
+    // Check if we have good context for generating questions
+    if (!hasGoodContext(character, entries)) {
+      showAIPromptNoContext(aiPromptElement, regenerateBtn);
+      return;
+    }
+    
+    // Show loading and generate questions
+    showAIPromptLoading(aiPromptElement, regenerateBtn);
+    const questions = await generateQuestions(character, entries);
+    
+    if (questions) {
+      showAIPromptQuestions(aiPromptElement, questions, regenerateBtn);
+    } else {
+      showAIPromptError(aiPromptElement, regenerateBtn);
+    }
+    
+  } catch (error) {
+    console.error('Failed to render AI prompt:', error);
+    showAIPromptError(aiPromptElement, regenerateBtn);
+  }
+};
 
 // Show API not available state
 export const showAIPromptAPINotAvailable = (aiPromptElement, regenerateBtn = null) => {
