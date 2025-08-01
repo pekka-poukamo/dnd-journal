@@ -1,4 +1,9 @@
 // Character Views - Pure Rendering Functions for Character Page
+import { getFormData } from './utils.js';
+import {
+  getCachedCharacterData,
+  getFormDataForPage
+} from './navigation-cache.js';
 
 // Render character form with current data
 export const renderCharacterForm = (form, character) => {
@@ -78,33 +83,32 @@ export const showNotification = (message, type = 'info') => {
   }, 3000);
 };
 
-// Get form data from any form
-export const getFormData = (form) => {
-  // Try FormData first, fallback to manual extraction for test environments
-  try {
-    const formData = new FormData(form);
-    const data = {};
-    for (const [key, value] of formData.entries()) {
-      data[key] = value;
+
+
+// Pure function to render cached character content immediately
+export const renderCachedCharacterContent = (elements) => {
+  const { characterFormElement, summariesContainer } = elements;
+  
+  const cachedCharacter = getCachedCharacterData();
+  const cachedFormData = getFormDataForPage('character');
+  
+  if (Object.keys(cachedCharacter).length > 0 || Object.keys(cachedFormData).length > 0) {
+    // Merge cached character data with form data
+    const displayData = { ...cachedCharacter, ...cachedFormData };
+    
+    // Render form with cached data
+    if (characterFormElement) {
+      renderCharacterForm(characterFormElement, displayData, {
+        onSave: () => {}, // Disabled during cache phase
+        onGenerate: () => {} // Disabled during cache phase
+      });
+      
+
     }
-    // If FormData worked but no entries were found, fall back to manual method
-    if (Object.keys(data).length === 0) {
-      throw new Error('FormData returned empty, falling back to manual method');
+    
+    // Show loading indicator for summaries
+    if (summariesContainer) {
+      summariesContainer.innerHTML = '<p>Loading AI summaries...</p>';
     }
-    return data;
-  } catch (error) {
-    // Fallback: manually extract form data for test environments where FormData might not work
-    const data = {};
-    const elements = form.querySelectorAll('input, textarea, select');
-    elements.forEach(element => {
-      if (element.name) {
-        if (element.type === 'checkbox') {
-          data[element.name] = element.checked;
-        } else {
-          data[element.name] = element.value || '';
-        }
-      }
-    });
-    return data;
   }
 };

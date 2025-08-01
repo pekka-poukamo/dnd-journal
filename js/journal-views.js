@@ -1,5 +1,10 @@
 // Journal Views - Pure Rendering Functions for Journal Page
-import { parseMarkdown, formatDate, sortEntriesByDate } from './utils.js';
+import { parseMarkdown, formatDate, sortEntriesByDate, getFormData } from './utils.js';
+import {
+  getCachedJournalEntries,
+  getCachedCharacterData,
+  getFormDataForPage
+} from './navigation-cache.js';
 
 // Create journal entry form
 export const createEntryForm = (options = {}) => {
@@ -240,15 +245,7 @@ export const showNotification = (message, type = 'info') => {
   }, 3000);
 };
 
-// Get form data from any form
-export const getFormData = (form) => {
-  const formData = new FormData(form);
-  const data = {};
-  for (const [key, value] of formData.entries()) {
-    data[key] = value;
-  }
-  return data;
-};
+
 
 // Clear form inputs
 export const clearForm = (form) => {
@@ -357,3 +354,30 @@ export const showAIPromptError = (aiPromptElement, regenerateBtn = null) => {
     regenerateBtn.disabled = false;
   }
 };
+
+// Pure function to render cached content immediately (eliminates blank page)
+export const renderCachedJournalContent = (elements) => {
+  const { entriesContainer, characterInfoContainer, aiPromptText } = elements;
+  
+  // Render cached journal entries
+  const cachedEntries = getCachedJournalEntries();
+  if (cachedEntries.length > 0 && entriesContainer) {
+    renderEntries(entriesContainer, cachedEntries, {
+      onEdit: () => {}, // Disabled during cache phase
+      onDelete: () => {}, // Disabled during cache phase
+      onSave: () => {}  // Disabled during cache phase
+    });
+  }
+  
+  // Render cached character info
+  const cachedCharacter = getCachedCharacterData();
+  if (Object.keys(cachedCharacter).length > 0 && characterInfoContainer) {
+    renderCharacterSummary(characterInfoContainer, cachedCharacter);
+  }
+  
+  // Show loading indicator for real-time content
+  if (aiPromptText) {
+    aiPromptText.textContent = 'Loading writing prompt...';
+  }
+};
+

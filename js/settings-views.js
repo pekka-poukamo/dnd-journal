@@ -1,4 +1,9 @@
 // Settings Views - Pure Rendering Functions for Settings Page
+import { getFormData } from './utils.js';
+import {
+  getCachedSettings,
+  getFormDataForPage
+} from './navigation-cache.js';
 
 // Render settings form with current data
 export const renderSettingsForm = (formOrSettings, settings = null) => {
@@ -72,36 +77,7 @@ export const showNotification = (message, type = 'info') => {
   }, 3000);
 };
 
-// Get form data from any form
-export const getFormData = (form) => {
-  // Try FormData first, fallback to manual extraction for test environments
-  try {
-    const formData = new FormData(form);
-    const data = {};
-    for (const [key, value] of formData.entries()) {
-      data[key] = value;
-    }
-    // If FormData worked but no entries were found, fall back to manual method
-    if (Object.keys(data).length === 0) {
-      throw new Error('FormData returned empty, falling back to manual method');
-    }
-    return data;
-  } catch (error) {
-    // Fallback: manually extract form data for test environments where FormData might not work
-    const data = {};
-    const elements = form.querySelectorAll('input, textarea, select');
-    elements.forEach(element => {
-      if (element.name) {
-        if (element.type === 'checkbox') {
-          data[element.name] = element.checked;
-        } else {
-          data[element.name] = element.value || '';
-        }
-      }
-    });
-    return data;
-  }
-};
+
 
 // Show/hide loading indicator for test connection
 export const setTestConnectionLoading = (isLoading) => {
@@ -109,5 +85,33 @@ export const setTestConnectionLoading = (isLoading) => {
   if (testBtn) {
     testBtn.disabled = isLoading;
     testBtn.textContent = isLoading ? 'Testing...' : 'Test Connection';
+  }
+};
+
+// Pure function to render cached settings content immediately
+export const renderCachedSettingsContent = (elements) => {
+  const { settingsFormElement, connectionStatusElement } = elements;
+  
+  const cachedSettings = getCachedSettings();
+  const cachedFormData = getFormDataForPage('settings');
+  
+  if (Object.keys(cachedSettings).length > 0 || Object.keys(cachedFormData).length > 0) {
+    // Merge cached settings with form data
+    const displayData = { ...cachedSettings, ...cachedFormData };
+    
+    // Render form with cached data
+    if (settingsFormElement) {
+      renderSettingsForm(settingsFormElement, displayData, {
+        onSave: () => {}, // Disabled during cache phase
+        onClear: () => {} // Disabled during cache phase
+      });
+      
+
+    }
+    
+    // Show loading indicator for connection status
+    if (connectionStatusElement) {
+      connectionStatusElement.innerHTML = '<p>Checking connection status...</p>';
+    }
   }
 };

@@ -8,13 +8,17 @@ import {
   onCharacterChange
 } from './yjs.js';
 
+import { saveNavigationCache } from './navigation-cache.js';
+
 import {
   renderCharacterForm,
   renderSummaries,
   toggleGenerateButton,
-  getFormData,
-  showNotification
+  showNotification,
+  renderCachedCharacterContent
 } from './character-views.js';
+
+import { getFormData } from './utils.js';
 
 import { isAPIAvailable } from './openai-wrapper.js';
 import { summarize } from './summarization.js';
@@ -25,18 +29,23 @@ let characterFormElement = null;
 // Initialize Character page
 export const initCharacterPage = async (stateParam = null) => {
   try {
-    const state = stateParam || (await initYjs(), getYjsState());
-    
     // Get DOM elements
     characterFormElement = document.getElementById('character-form');
+    const summariesContainer = document.getElementById('summaries-container');
     
     if (!characterFormElement) {
       console.warn('Character form not found');
       return;
     }
     
-    // Render initial state
-    renderCharacterPage(state);
+    // Show cached content immediately
+    renderCachedCharacterContent({
+      characterFormElement,
+      summariesContainer
+    });
+    
+    // Initialize Yjs in background
+    const state = stateParam || (await initYjs(), getYjsState());
     
     // Set up reactive updates
     onCharacterChange(state, () => {
@@ -44,11 +53,19 @@ export const initCharacterPage = async (stateParam = null) => {
       updateSummariesDisplay(state);
     });
     
+    // Replace cached content with fresh data
+    renderCharacterPage(state);
+    
     // Set up form handling
     setupFormHandlers();
     
-    // Initial summaries update
+    // Update summaries
     updateSummariesDisplay(state);
+    
+    // Save cache on page unload
+    window.addEventListener('beforeunload', () => {
+      saveNavigationCache(state);
+    });
     
   } catch (error) {
     console.error('Failed to initialize character page:', error);
@@ -210,4 +227,8 @@ if (typeof document !== 'undefined') {
     });
   });
 }
+
+
+
+
 

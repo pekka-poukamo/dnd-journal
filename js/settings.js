@@ -11,8 +11,12 @@ import {
   renderSettingsForm,
   renderConnectionStatus,
   showNotification,
-  getFormData
+  renderCachedSettingsContent
 } from './settings-views.js';
+
+import { getFormData } from './utils.js';
+
+import { saveNavigationCache } from './navigation-cache.js';
 
 import { isAPIAvailable } from './openai-wrapper.js';
 
@@ -23,8 +27,6 @@ let connectionStatusElement = null;
 // Initialize Settings page
 export const initSettingsPage = async (stateParam = null) => {
   try {
-    const state = stateParam || (await initYjs(), getYjsState());
-    
     // Get DOM elements
     settingsFormElement = document.getElementById('settings-form');
     connectionStatusElement = document.getElementById('connection-status');
@@ -34,16 +36,30 @@ export const initSettingsPage = async (stateParam = null) => {
       return;
     }
     
-    // Render initial state
-    renderSettingsPage();
+    // Show cached content immediately
+    renderCachedSettingsContent({
+      settingsFormElement,
+      connectionStatusElement
+    });
+    
+    // Initialize Yjs in background
+    const state = stateParam || (await initYjs(), getYjsState());
     
     // Set up reactive updates
     onSettingsChange(state, () => {
       renderSettingsPage();
     });
     
+    // Replace cached content with fresh data
+    renderSettingsPage();
+    
     // Set up form handling
     setupFormHandlers();
+    
+    // Save cache on page unload
+    window.addEventListener('beforeunload', () => {
+      saveNavigationCache(state);
+    });
     
   } catch (error) {
     console.error('Failed to initialize settings page:', error);
@@ -171,6 +187,10 @@ export const testConnection = async (stateParam = null) => {
     showNotification('Error testing connection', 'error');
   }
 };
+
+
+
+
 
 // Initialize when DOM is ready (only in browser environment)
 if (typeof document !== 'undefined') {

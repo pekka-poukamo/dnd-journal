@@ -11,16 +11,19 @@ import {
   onJournalChange
 } from './yjs.js';
 
+import { saveNavigationCache } from './navigation-cache.js';
+
 import {
   renderCharacterSummary,
   renderEntries,
   createEntryForm,
   createEntryEditForm,
   showNotification,
-  renderAIPrompt
+  renderAIPrompt,
+  renderCachedJournalContent
 } from './journal-views.js';
 
-import { generateId, isValidEntry, formatDate } from './utils.js';
+import { generateId, isValidEntry, formatDate, getFormData } from './utils.js';
 
 import { generateQuestions, hasGoodContext } from './storytelling.js';
 import { isAPIAvailable } from './openai-wrapper.js';
@@ -36,9 +39,6 @@ let regenerateBtn = null;
 // Initialize Journal page
 export const initJournalPage = async (stateParam = null) => {
   try {
-    const state = stateParam || (await initYjs());
-    currentState = state;
-    
     // Get DOM elements
     entriesContainer = document.getElementById('entries-container');
     characterInfoContainer = document.getElementById('character-info-container');
@@ -51,7 +51,18 @@ export const initJournalPage = async (stateParam = null) => {
       return;
     }
     
-    // Set up reactive updates with explicit state tracking BEFORE initial render
+    // Show cached content immediately (eliminates blank page)
+    renderCachedJournalContent({
+      entriesContainer,
+      characterInfoContainer,
+      aiPromptText
+    });
+    
+    // Initialize Yjs in background
+    const state = stateParam || (await initYjs());
+    currentState = state;
+    
+    // Set up reactive updates
     onJournalChange(state, () => {
       renderJournalPage(state);
       renderAIPromptWithLogic(state);
@@ -62,14 +73,19 @@ export const initJournalPage = async (stateParam = null) => {
       renderAIPromptWithLogic(state);
     });
     
-    // Render initial state AFTER observers are set up
+    // Replace cached content with fresh Yjs data
     renderJournalPage(state);
     
-    // Set up form
+    // Set up form handling
     setupEntryForm();
     
     // Set up AI prompt
     setupAIPrompt(state);
+    
+    // Save cache on page unload
+    window.addEventListener('beforeunload', () => {
+      saveNavigationCache(state);
+    });
     
   } catch (error) {
     console.error('Failed to initialize journal page:', error);
@@ -312,6 +328,10 @@ const handleRegeneratePrompt = async (stateParam = null) => {
   const state = stateParam || getYjsState();
   await renderAIPromptWithLogic(state);
 };
+
+
+
+
 
 // Initialize the journal page when the script loads
 document.addEventListener('DOMContentLoaded', () => {
