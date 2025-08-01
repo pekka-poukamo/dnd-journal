@@ -25,7 +25,9 @@ let characterFormElement = null;
 // Initialize Character page
 export const initCharacterPage = async (stateParam = null) => {
   try {
-    // Get DOM elements first
+    const state = stateParam || (await initYjs(), getYjsState());
+    
+    // Get DOM elements
     characterFormElement = document.getElementById('character-form');
     
     if (!characterFormElement) {
@@ -33,22 +35,7 @@ export const initCharacterPage = async (stateParam = null) => {
       return;
     }
     
-    // Set up form handling immediately
-    setupFormHandlers();
-    
-    // Render empty form immediately for fast initial render
-    renderCharacterForm(characterFormElement, {
-      name: '',
-      race: '',
-      class: '',
-      backstory: '',
-      notes: ''
-    });
-    
-    // Initialize YJS and wait for data to be loaded from IndexedDB
-    const state = stateParam || (await initYjs(), getYjsState());
-    
-    // Render with actual data once available
+    // Render initial state
     renderCharacterPage(state);
     
     // Set up reactive updates
@@ -56,6 +43,9 @@ export const initCharacterPage = async (stateParam = null) => {
       renderCharacterPage(state);
       updateSummariesDisplay(state);
     });
+    
+    // Set up form handling
+    setupFormHandlers();
     
     // Initial summaries update
     updateSummariesDisplay(state);
