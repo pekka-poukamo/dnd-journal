@@ -11,14 +11,15 @@ import {
   renderSettingsForm,
   renderConnectionStatus,
   showNotification,
-  renderCachedSettingsContent
+  renderCachedSettingsContent,
+  renderAIPromptPreview
 } from './settings-views.js';
 
 import { getFormData } from './utils.js';
 
 import { saveNavigationCache } from './navigation-cache.js';
 
-import { isAIEnabled } from './ai.js';
+import { isAIEnabled, getPromptPreview, buildMessages } from './ai.js';
 
 // State management
 let settingsFormElement = null;
@@ -127,6 +128,15 @@ const setupFormHandlers = () => {
     });
     testConnectionButton.setAttribute('data-handler-attached', 'true');
   }
+  
+  const showAIPromptButton = document.getElementById('show-ai-prompt');
+  if (showAIPromptButton && !showAIPromptButton.hasAttribute('data-handler-attached')) {
+    showAIPromptButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      showCurrentAIPrompt();
+    });
+    showAIPromptButton.setAttribute('data-handler-attached', 'true');
+  }
 };
 
 // Save settings to Y.js
@@ -226,6 +236,29 @@ export const testConnection = async (stateParam = null) => {
   } catch (error) {
     console.error('Failed to test connection:', error);
     showNotification('Error testing connection', 'error');
+  }
+};
+
+// Show current AI prompt
+export const showCurrentAIPrompt = async () => {
+  try {
+    const aiEnabled = isAIEnabled();
+    
+    if (!aiEnabled) {
+      renderAIPromptPreview(aiEnabled, null);
+      showNotification('AI features not enabled', 'info');
+      return;
+    }
+    
+    // Get prompt preview using same logic as AI module
+    const promptPreview = await getPromptPreview();
+    const messages = promptPreview ? buildMessages(promptPreview.systemPrompt, promptPreview.userPrompt) : null;
+    
+    renderAIPromptPreview(aiEnabled, messages);
+    showNotification('Current AI prompts displayed', 'success');
+  } catch (error) {
+    console.error('Failed to show AI prompt:', error);
+    showNotification('Error displaying AI prompts', 'error');
   }
 };
 

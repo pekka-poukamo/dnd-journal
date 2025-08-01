@@ -34,6 +34,14 @@ export const renderSettingsForm = (formOrSettings, settings = null) => {
     aiEnabledCheckbox.checked = settingsData['ai-enabled'] === 'true' || settingsData['ai-enabled'] === true;
   }
   
+  // Update show AI prompt button state
+  const showPromptButton = document.getElementById('show-ai-prompt');
+  if (showPromptButton) {
+    const hasApiKey = settingsData['openai-api-key'] && settingsData['openai-api-key'].trim().length > 0;
+    const aiEnabled = settingsData['ai-enabled'] === 'true' || settingsData['ai-enabled'] === true;
+    showPromptButton.disabled = !hasApiKey || !aiEnabled;
+  }
+  
   // Sync server setting - try different ID patterns and key names
   const syncServerInput = form ? 
     form.querySelector('[name="sync-server-url"]') : 
@@ -86,6 +94,45 @@ export const setTestConnectionLoading = (isLoading) => {
     testBtn.disabled = isLoading;
     testBtn.textContent = isLoading ? 'Testing...' : 'Test Connection';
   }
+};
+
+// Render AI prompt preview
+export const renderAIPromptPreview = (aiEnabled, messages = null) => {
+  const promptPreviewElement = document.getElementById('ai-prompt-preview');
+  const promptContentElement = document.getElementById('ai-prompt-content');
+  
+  if (!promptPreviewElement || !promptContentElement) {
+    console.warn('AI prompt preview elements not found');
+    return;
+  }
+  
+  if (!aiEnabled) {
+    promptContentElement.innerHTML = `
+      <div class="system-prompt">
+        <p><strong>AI features are not enabled.</strong></p>
+        <p>Please configure your OpenAI API key and enable AI features to view prompts.</p>
+      </div>
+    `;
+  } else if (!messages) {
+    promptContentElement.innerHTML = `
+      <div class="system-prompt">
+        <p><strong>No context available.</strong></p>
+        <p>Add some journal entries and character information to see prompts.</p>
+      </div>
+    `;
+  } else {
+    // Show the exact messages sent to OpenAI
+    const content = messages.map(msg => `
+      <div class="${msg.role === 'system' ? 'system-prompt' : 'user-prompt'}">
+        <h4>${msg.role === 'system' ? 'System' : 'User'}</h4>
+        <div>${msg.content}</div>
+      </div>
+    `).join('');
+    
+    promptContentElement.innerHTML = content;
+  }
+  
+  promptPreviewElement.style.display = 'block';
 };
 
 // Pure function to render cached settings content immediately
