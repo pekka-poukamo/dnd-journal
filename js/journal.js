@@ -20,8 +20,7 @@ import {
   createEntryEditForm,
   showNotification,
   renderAIPrompt,
-  renderCachedJournalContent,
-  renderCachedEntryForm
+  renderCachedJournalContent
 } from './journal-views.js';
 
 import { generateId, isValidEntry, formatDate, getFormData } from './utils.js';
@@ -58,7 +57,6 @@ export const initJournalPage = async (stateParam = null) => {
       characterInfoContainer,
       aiPromptText
     });
-    renderCachedEntryForm(entryFormContainer);
     
     // Initialize Yjs in background
     const state = stateParam || (await initYjs());

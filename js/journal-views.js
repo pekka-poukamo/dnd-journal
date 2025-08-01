@@ -381,33 +381,3 @@ export const renderCachedJournalContent = (elements) => {
   }
 };
 
-// Pure function to render cached entry form with preserved data
-export const renderCachedEntryForm = (container) => {
-  if (!container) return;
-  
-  // Get cached form data
-  const cachedFormData = getFormDataForPage('journal');
-  
-  // Create form with cached data
-  const form = createEntryForm({
-    onSubmit: () => {}, // Will be replaced when Yjs loads
-    onCancel: () => {}
-  });
-  
-  // Fill form with cached data
-  if (Object.keys(cachedFormData).length > 0) {
-    const titleInput = form.querySelector('#entry-title');
-    const contentTextarea = form.querySelector('#entry-content');
-    
-    if (titleInput && cachedFormData.title) {
-      titleInput.value = cachedFormData.title;
-    }
-    
-    if (contentTextarea && cachedFormData.content) {
-      contentTextarea.value = cachedFormData.content;
-    }
-  }
-  
-  container.innerHTML = '';
-  container.appendChild(form);
-};
