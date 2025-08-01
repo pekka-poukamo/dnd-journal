@@ -101,7 +101,7 @@
             <!-- Character Summary Section -->
             <section id="character-summary" class="character-summary character-summary--minimal">
                 <h2>Character</h2>
-                <div class="character-info-container">
+                <div id="character-info-container" class="character-info-container">
                     <!-- Character info will be rendered here by views.js -->
                 </div>
             </section>
@@ -109,25 +109,15 @@
             <!-- New Entry Section -->
             <section class="entry-section">
                 <h2>Add Entry</h2>
-                <form id="entry-form" class="entry-form">
-                    <div class="form-group">
-                        <label for="entry-title" class="form-label">Title</label>
-                        <input type="text" id="entry-title" name="title" class="form-input" placeholder="What happened?" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="entry-content" class="form-label">Notes</label>
-                        <textarea id="entry-content" name="content" class="form-textarea" rows="4" placeholder="Write your notes here..." required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">Add Entry</button>
-                    </div>
-                </form>
+                <div id="entry-form-container">
+                    <!-- Entry form will be rendered here by journal.js -->
+                </div>
             </section>
             
             <!-- Journal Entries -->
             <section class="entries-section">
                 <h2>Journal Entries</h2>
-                <div id="entries-list" class="entries-list"></div>
+                <div id="entries-container" class="entries-list"></div>
             </section>
         </div>
     </main>
