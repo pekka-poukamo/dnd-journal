@@ -20,10 +20,10 @@ export const renderSettingsForm = (formOrSettings, settings = null) => {
     settingsData = settings;
   }
   
-  // API Key setting - try form-based access first, then try different ID patterns
+  // API Key setting - try form-based access first, then fallback to document query
   const apiKeyInput = form ? 
     form.querySelector('[name="openai-api-key"]') : 
-    (document.getElementById('openai-api-key') || document.getElementById('api-key'));
+    document.getElementById('openai-api-key');
   if (apiKeyInput) {
     apiKeyInput.value = settingsData['openai-api-key'] || '';
   }

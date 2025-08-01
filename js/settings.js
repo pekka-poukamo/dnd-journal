@@ -138,11 +138,10 @@ export const saveSettings = (stateParam = null) => {
     setSetting(state, 'ai-enabled', aiEnabled);
     setSetting(state, 'sync-server-url', syncServerUrl);
     
-    // Temporarily disable notifications for testing
-    // showNotification('Settings saved successfully!', 'success');
+    showNotification('Settings saved successfully!', 'success');
   } catch (error) {
     console.error('Failed to save settings:', error);
-    // showNotification('Failed to save settings', 'error');
+    showNotification('Failed to save settings', 'error');
   }
 };
 
@@ -157,15 +156,46 @@ export const testAPIKey = async (stateParam = null) => {
       return;
     }
     
-    const available = isAIEnabled();
-    if (available) {
+    if (!apiKey.startsWith('sk-')) {
+      showNotification('API key should start with "sk-"', 'warning');
+      return;
+    }
+    
+    // Show testing message
+    showNotification('Testing API key...', 'info');
+    
+    // Test the API key with a simple request to OpenAI
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: 'Hello' }],
+        max_tokens: 5
+      })
+    });
+    
+    if (response.ok) {
       showNotification('API key is valid!', 'success');
+    } else if (response.status === 401) {
+      showNotification('API key is invalid or unauthorized', 'error');
+    } else if (response.status === 429) {
+      showNotification('API key is valid but rate limited', 'warning');
     } else {
-      showNotification('API key appears to be invalid', 'error');
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+      showNotification(`API key test failed: ${errorMessage}`, 'error');
     }
   } catch (error) {
     console.error('Failed to test API key:', error);
-    showNotification('Error testing API key', 'error');
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      showNotification('Network error: Could not connect to OpenAI API', 'error');
+    } else {
+      showNotification('Error testing API key', 'error');
+    }
   }
 };
 
