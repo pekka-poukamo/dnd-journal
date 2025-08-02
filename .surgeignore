@@ -1,2 +1,14 @@
-!node_modules/
+node_modules/
 server/
+test/
+docs/
+.git/
+.github/
+backup/
+package-lock.json
+package.json
+.c8rc.json
+.gitignore
+README.md
+STYLE_GUIDE.md
+test_sync.html
