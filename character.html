@@ -24,6 +24,34 @@
     <link rel="stylesheet" href="css/components/character-form.css">
     <link rel="stylesheet" href="css/components/sync-status.css">
     
+    <!-- Module Preloads for Performance -->
+    <!-- Core application modules for character page -->
+    <link rel="modulepreload" href="js/character.js">
+    <link rel="modulepreload" href="js/yjs.js">
+    <link rel="modulepreload" href="js/character-views.js">
+    <link rel="modulepreload" href="js/utils.js">
+    <link rel="modulepreload" href="js/navigation-cache.js">
+    
+    <!-- Secondary modules -->
+    <link rel="modulepreload" href="js/ai.js">
+    <link rel="modulepreload" href="js/summarization.js">
+    
+    <!-- YJS and lib0 dependencies from node_modules -->
+    <link rel="modulepreload" href="./node_modules/yjs/dist/yjs.mjs">
+    <link rel="modulepreload" href="./node_modules/y-websocket/src/y-websocket.js">
+    <link rel="modulepreload" href="./node_modules/y-indexeddb/src/y-indexeddb.js">
+    <link rel="modulepreload" href="./node_modules/y-protocols/sync.js">
+    <link rel="modulepreload" href="./node_modules/y-protocols/awareness.js">
+    <link rel="modulepreload" href="./node_modules/lib0/observable.js">
+    <link rel="modulepreload" href="./node_modules/lib0/array.js">
+    <link rel="modulepreload" href="./node_modules/lib0/map.js">
+    <link rel="modulepreload" href="./node_modules/lib0/encoding.js">
+    <link rel="modulepreload" href="./node_modules/lib0/decoding.js">
+    <link rel="modulepreload" href="./node_modules/lib0/random.js">
+    <link rel="modulepreload" href="./node_modules/lib0/environment.js">
+    <link rel="modulepreload" href="./node_modules/lib0/indexeddb.js">
+    <link rel="modulepreload" href="./node_modules/lib0/broadcastchannel.js">
+    
     <!-- Import Map for YJS modules -->
     <script type="importmap">
     {
