@@ -62,6 +62,12 @@
       }
     }
     </script>
+    
+    <!-- Preload critical modules for faster loading -->
+    <link rel="modulepreload" href="./node_modules/yjs/dist/yjs.mjs">
+    <link rel="modulepreload" href="./js/yjs.js">
+    <link rel="modulepreload" href="./js/settings.js">
+    <link rel="modulepreload" href="./js/navigation-cache.js">
 
 </head>
 <body>
@@ -230,8 +236,8 @@
                 </div>
             </form>
         </div>
-    </main>
+        </main>
 
-      <script type="module" src="js/settings.js"></script>
+    <script type="module" src="js/settings.js"></script>
 </body>
 </html>
