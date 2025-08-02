@@ -1,23 +1,2 @@
-# This file is not used anymore with the new production deployment strategy
-# The deploy script creates a clean deployment directory with only necessary files
-# Keeping this file for reference or manual deployments with 'surge .'
-
-node_modules/
+!node_modules/
 server/
-test/
-docs/
-.git/
-.github/
-backup/
-package-lock.json
-package.json
-.c8rc.json
-.gitignore
-README.md
-STYLE_GUIDE.md
-test_sync.html
-*.test.js
-scripts/
-deploy/
-*.production.html
-*.production.js
