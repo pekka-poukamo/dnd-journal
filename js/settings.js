@@ -293,11 +293,13 @@ export const clearAllSummariesHandler = () => {
 
 
 
-// Initialize immediately since script loads after DOM (only in browser environment)
+// Initialize when DOM is ready (only in browser environment)
 if (typeof document !== 'undefined') {
-  import('./yjs.js').then(YjsModule => {
-    YjsModule.initYjs().then(state => {
-      initSettingsPage(state);
+  document.addEventListener('DOMContentLoaded', () => {
+    import('./yjs.js').then(YjsModule => {
+      YjsModule.initYjs().then(state => {
+        initSettingsPage(state);
+      });
     });
   });
 }
