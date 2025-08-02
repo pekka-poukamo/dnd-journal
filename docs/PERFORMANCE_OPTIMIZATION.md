@@ -6,28 +6,22 @@ This document outlines performance optimizations implemented to reduce the 1-2 s
 
 ## Root Causes Identified
 
-1. **Module Fragmentation**: 22+ individual lib0 modules in import map causing sequential HTTP requests
+1. **Large Node Modules Payload**: 85MB node_modules includes server-only dependencies  
 2. **No Module Preloading**: Critical modules loaded on-demand instead of preemptively
-3. **External Font Dependencies**: Google Fonts CDN violating local-first principle (ADR-0014)
-4. **Large Unminified Dependencies**: 293KB yjs.mjs + many lib0 modules without minification
+3. **No HTTP Compression**: Large JavaScript files transferred uncompressed
+4. **Server Dependencies in Client**: y-leveldb (5.4MB) and leveldown (2.2MB) not needed in browser
 
 ## Optimizations Implemented
 
-### 1. Simplified Import Map
-**Before**: 22+ individual module mappings
-```javascript
-"lib0/observable": "./node_modules/lib0/observable.js",
-"lib0/array": "./node_modules/lib0/array.js",
-// ... 20 more individual mappings
-```
+### 1. Deployment Size Reduction
+**Before**: 85MB deployment including all dev dependencies and server modules
+**After**: 4.9MB optimized deployment with only client-side essentials
 
-**After**: Simplified path mapping
-```javascript
-"lib0/": "./node_modules/lib0/",
-"y-protocols/": "./node_modules/y-protocols/"
-```
-
-**Impact**: Reduces import map complexity and allows ES module resolution to handle dependencies naturally.
+**Implementation**: `deploy.sh` script that:
+- Copies only client-needed modules (yjs, lib0, y-protocols, y-indexeddb)  
+- Excludes server-only dependencies (y-leveldb, leveldown)
+- Removes documentation, tests, examples, source maps
+- **Result**: 94% size reduction (85MB → 4.9MB)
 
 ### 2. Module Preloading
 Added `<link rel="modulepreload">` for critical modules:
