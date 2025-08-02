@@ -1,0 +1,58 @@
+/* Local-first font stack (ADR-0014 compliant) */
+/* Replaces Google Fonts with optimized system font stacks */
+
+:root {
+  /* Primary serif font stack - optimized for readability */
+  --font-serif: 
+    'Bitter', 
+    'Georgia', 
+    'Times New Roman', 
+    'Droid Serif',
+    serif;
+    
+  /* Secondary serif font stack for body text */
+  --font-body: 
+    'Lora',
+    'Georgia',
+    'Palatino',
+    'Times',
+    serif;
+    
+  /* System font stack fallback */
+  --font-system: 
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+}
+
+/* Load local fonts if available, fallback to system fonts */
+@font-face {
+  font-family: 'Bitter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap; /* Improves performance */
+  src: url('../fonts/bitter-regular.woff2') format('woff2'),
+       url('../fonts/bitter-regular.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal; 
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/lora-regular.woff2') format('woff2'),
+       url('../fonts/lora-regular.woff') format('woff');
+}
+
+/* Performance optimization: use system fonts when custom fonts fail */
+@media (prefers-reduced-data: reduce) {
+  :root {
+    --font-serif: var(--font-system);
+    --font-body: var(--font-system);
+  }
+}
