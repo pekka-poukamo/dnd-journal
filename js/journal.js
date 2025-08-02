@@ -368,6 +368,12 @@ const areEntriesEquivalent = (entries1, entries2) => {
 
 
 // Initialize the journal page when the script loads
-document.addEventListener('DOMContentLoaded', () => {
+// Module scripts load after HTML parsing, so DOMContentLoaded might have already fired
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initJournalPage();
+  });
+} else {
+  // DOM is already ready
   initJournalPage();
-});
+}
