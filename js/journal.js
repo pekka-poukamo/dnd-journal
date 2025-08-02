@@ -367,7 +367,5 @@ const areEntriesEquivalent = (entries1, entries2) => {
 };
 
 
-// Initialize the journal page when the script loads
-document.addEventListener('DOMContentLoaded', () => {
-  initJournalPage();
-});
+// Initialize immediately since script loads after DOM
+initJournalPage();

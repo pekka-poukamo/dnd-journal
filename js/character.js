@@ -268,13 +268,11 @@ export const updateSummariesDisplay = (stateParam = null) => {
   }
 };
 
-// Initialize when DOM is ready (only in browser environment)
+// Initialize immediately since script loads after DOM (only in browser environment)
 if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => {
-    import('./yjs.js').then(YjsModule => {
-      YjsModule.initYjs().then(state => {
-        initCharacterPage(state);
-      });
+  import('./yjs.js').then(YjsModule => {
+    YjsModule.initYjs().then(state => {
+      initCharacterPage(state);
     });
   });
 }
