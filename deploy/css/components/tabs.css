@@ -1,0 +1,106 @@
+/* Tabbed Navigation Component - Nordic Minimalism */
+
+.tabs {
+  background: var(--color-surface);
+  border-bottom: var(--border-width) solid var(--color-border);
+  padding: var(--space-lg) 0;
+}
+
+.tabs__container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+.tabs__title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-thin);
+  color: var(--color-text);
+}
+
+.tabs__nav {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.tabs__tab {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-light);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 2px solid transparent;
+  transition: var(--transition);
+  position: relative;
+}
+
+.tabs__tab:hover {
+  color: var(--color-accent);
+  background-color: var(--color-gray-50);
+}
+
+.tabs__tab--active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
+}
+
+.tabs__tab--active:hover {
+  background-color: transparent;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .tabs__container {
+    flex-direction: column;
+    gap: var(--space-md);
+    text-align: center;
+    padding: 0 var(--space-md);
+  }
+  
+  .tabs__title {
+    font-size: var(--font-size-lg);
+  }
+  
+  .tabs__nav {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .tabs__tab {
+    flex: 1;
+    text-align: center;
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .tabs__nav {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .tabs__tab {
+    width: 100%;
+    border-bottom: var(--border-width) solid var(--color-border);
+    border-radius: 0;
+  }
+  
+  .tabs__tab:last-child {
+    border-bottom: none;
+  }
+  
+  .tabs__tab--active {
+    border-bottom-color: var(--color-accent);
+    background-color: var(--color-gray-50);
+  }
+}

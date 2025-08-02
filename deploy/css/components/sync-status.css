@@ -1,0 +1,46 @@
+/* Simple Sync Status - Minimal Implementation */
+
+.sync-status {
+  display: block;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.sync-connected {
+  background-color: #d1fae5; /* Light green */
+  color: #047857; /* Dark green */
+  border: 1px solid #34d399;
+}
+
+.sync-disconnected {
+  background-color: #fee2e2; /* Light red */
+  color: #dc2626; /* Dark red */
+  border: 1px solid #f87171;
+}
+
+.sync-local-only {
+  background-color: #f3f4f6; /* Light gray */
+  color: #374151; /* Dark gray */
+  border: 1px solid #d1d5db;
+}
+
+.sync-connecting {
+  background-color: #fef3c7; /* Light amber */
+  color: #d97706; /* Dark amber */
+  border: 1px solid #fbbf24;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
