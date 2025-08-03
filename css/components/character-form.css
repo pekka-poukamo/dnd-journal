@@ -52,9 +52,7 @@
 /* Character Summaries Section */
 .character-summaries {
   background: var(--color-surface);
-  border: var(--border-width) solid var(--color-border);
   border-radius: var(--border-radius);
-  border-left: 2px solid var(--color-primary);
 }
 
 .summary-placeholder {
@@ -65,12 +63,12 @@
 }
 
 .summary-item {
-  padding: var(--space-lg);
-  border-bottom: var(--border-width) solid var(--color-border-light);
+  margin-bottom: var(--space-xl);
 }
 
-.summary-item:last-child {
-  border-bottom: none;
+.summary-item h3 {
+  margin-bottom: var(--space-sm);
+
 }
 
 .summary-header {
@@ -120,18 +118,6 @@
   font-style: italic;
 }
 
-.summary-actions {
-  padding: var(--space-md) var(--space-lg);
-  border-top: var(--border-width) solid var(--color-border-light);
-  display: flex;
-  gap: var(--space-sm);
-  justify-content: flex-end;
-}
-
-.summary-actions .btn {
-  padding: var(--space-xs) var(--space-md);
-  font-size: var(--font-size-sm);
-}
 
 /* Form field styling within character form */
 .character-form .form-group {

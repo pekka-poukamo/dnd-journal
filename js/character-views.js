@@ -41,7 +41,7 @@ export const renderSummaries = (backstorySummary, notesSummary) => {
   if (backstorySummary) {
     summariesHTML += `
       <div class="summary-item">
-        <h3>Backstory Summary</h3>
+        <h3>Backstory</h3>
         <p>${backstorySummary}</p>
       </div>
     `;
@@ -50,7 +50,7 @@ export const renderSummaries = (backstorySummary, notesSummary) => {
   if (notesSummary) {
     summariesHTML += `
       <div class="summary-item">
-        <h3>Notes Summary</h3>
+        <h3>Notes</h3>
         <p>${notesSummary}</p>
       </div>
     `;
