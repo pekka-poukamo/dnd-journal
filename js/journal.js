@@ -8,8 +8,7 @@ import {
   updateEntry,
   deleteEntry,
   onCharacterChange,
-  onJournalChange,
-  clearAIQuestionsCache
+  onJournalChange
 } from './yjs.js';
 
 import { saveNavigationCache, getCachedJournalEntries, preWarmCache, isCacheRecentAndValid } from './navigation-cache.js';
@@ -26,7 +25,7 @@ import {
 
 import { generateId, isValidEntry, formatDate, getFormData } from './utils.js';
 
-import { generateQuestions } from './ai.js';
+import { generateQuestions, clearQuestionsCache } from './ai.js';
 import { hasContext as hasGoodContext } from './context.js';
 import { clearSummary } from './summarization.js';
 import { isAIEnabled } from './ai.js';
@@ -187,7 +186,7 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     };
 
     addEntry(state, entry);
-    clearAIQuestionsCache(state); // Clear AI questions cache when journal data changes
+    clearQuestionsCache(); // Clear AI questions cache when journal data changes
     clearEntryForm();
     showNotification('Entry added successfully!', 'success');
     
@@ -346,7 +345,22 @@ const renderAIPromptWithLogic = async (stateParam = null) => {
 // Handle regenerate button click
 const handleRegeneratePrompt = async (stateParam = null) => {
   const state = stateParam || getYjsState();
-  await renderAIPromptWithLogic(state);
+  const character = getCharacterData(state);
+  const entries = getEntries(state);
+  
+  // Force regeneration when user clicks regenerate
+  if (isAIEnabled() && hasGoodContext(character, entries)) {
+    renderAIPrompt(aiPromptText, { type: 'loading' }, regenerateBtn);
+    const questions = await generateQuestions(character, entries, true); // Force regenerate
+    
+    if (questions) {
+      renderAIPrompt(aiPromptText, { type: 'questions', questions }, regenerateBtn);
+    } else {
+      renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
+    }
+  } else {
+    await renderAIPromptWithLogic(state);
+  }
 };
 
 // Helper function to check if entries are equivalent (avoid unnecessary re-renders)

@@ -1,14 +1,19 @@
 // AI - Simple AI integration for D&D Journal
 // Radically simple: one file, direct API calls, no abstractions
 
-import { 
-  getYjsState, 
-  getSetting, 
-  getCachedAIQuestions, 
-  setCachedAIQuestions 
-} from './yjs.js';
+import { getYjsState, getSetting } from './yjs.js';
 import { PROMPTS } from './prompts.js';
 import { buildContext, hasContext } from './context.js';
+
+// Simple cache: just remember the last questions and context
+let lastQuestions = null;
+let lastContextHash = null;
+
+// Clear the simple cache
+export const clearQuestionsCache = () => {
+  lastQuestions = null;
+  lastContextHash = null;
+};
 
 // Check if AI is available
 export const isAIEnabled = () => {
@@ -58,22 +63,29 @@ const callAI = async (systemPrompt, userPrompt) => {
   return data.choices[0]?.message?.content?.trim();
 };
 
-// Generate storytelling questions with caching
-export const generateQuestions = async (character = null, entries = null) => {
+// Simple hash of the data that affects questions
+const getContextHash = (character, entries) => {
+  const data = {
+    character: character ? JSON.stringify(character) : '',
+    entries: entries ? entries.map(e => e.content + e.timestamp).join('') : ''
+  };
+  return JSON.stringify(data);
+};
+
+// Generate storytelling questions with simple caching
+export const generateQuestions = async (character = null, entries = null, forceRegenerate = false) => {
   if (!isAIEnabled() || !hasContext(character, entries)) {
     return null;
   }
 
   try {
-    const state = getYjsState();
-    
-    // Check cache first
-    const cachedQuestions = getCachedAIQuestions(state, character, entries);
-    if (cachedQuestions) {
-      return cachedQuestions;
+    // Check if we can use cached questions
+    const currentHash = getContextHash(character, entries);
+    if (!forceRegenerate && lastQuestions && lastContextHash === currentHash) {
+      return lastQuestions;
     }
 
-    // Generate new questions if not cached
+    // Generate new questions
     const context = await buildContext(character, entries, { 
       ensureFullHistory: true,
       maxCharacterLength: 800, // Allow more character detail for better questions
@@ -82,9 +94,10 @@ export const generateQuestions = async (character = null, entries = null) => {
     const userPrompt = PROMPTS.storytelling.user(context);
     const questions = await callAI(PROMPTS.storytelling.system, userPrompt);
     
-    // Cache the generated questions
+    // Cache the result
     if (questions) {
-      setCachedAIQuestions(state, character, entries, questions);
+      lastQuestions = questions;
+      lastContextHash = currentHash;
     }
     
     return questions;

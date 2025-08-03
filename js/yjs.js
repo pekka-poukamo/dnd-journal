@@ -79,7 +79,6 @@ export const getYjsState = () => {
     journalArray: ydoc.getArray('journal-entries'),
     settingsMap: ydoc.getMap('settings'),
     summariesMap: ydoc.getMap('summaries'),
-    aiQuestionsCache: ydoc.getMap('ai-questions-cache'),
     ydoc
   };
 };
@@ -217,60 +216,4 @@ export const onSettingsChange = (state, callback) => {
 
 export const onSummariesChange = (state, callback) => {
   getSummariesMap(state).observe(callback);
-};
-
-// =============================================================================
-// AI QUESTIONS CACHE FUNCTIONS (ADR-0016 compliant caching)
-// =============================================================================
-
-// Generate cache key for AI questions based on character and journal data
-export const generateAIQuestionsCacheKey = (character, entries) => {
-  // Create a deterministic key based on data that affects question generation
-  const characterHash = character ? {
-    name: character.name || '',
-    race: character.race || '',
-    class: character.class || '',
-    backstory: character.backstory || '',
-    notes: character.notes || ''
-  } : {};
-  
-  const entriesHash = entries ? entries.map(entry => ({
-    id: entry.id,
-    content: entry.content,
-    timestamp: entry.timestamp
-  })) : [];
-  
-  // Create simple hash of the relevant data
-  const dataString = JSON.stringify({ character: characterHash, entries: entriesHash });
-  return `questions:${btoa(dataString).substring(0, 32)}`; // Use base64 hash, truncated
-};
-
-// Get cached AI questions if available and valid
-export const getCachedAIQuestions = (state, character, entries) => {
-  const cacheKey = generateAIQuestionsCacheKey(character, entries);
-  const cached = state.aiQuestionsCache.get(cacheKey);
-  
-  if (cached && cached.questions && cached.timestamp) {
-    // Check if cache is still fresh (valid for 1 hour)
-    const oneHour = 60 * 60 * 1000;
-    if (Date.now() - cached.timestamp < oneHour) {
-      return cached.questions;
-    }
-  }
-  
-  return null;
-};
-
-// Set cached AI questions
-export const setCachedAIQuestions = (state, character, entries, questions) => {
-  const cacheKey = generateAIQuestionsCacheKey(character, entries);
-  state.aiQuestionsCache.set(cacheKey, {
-    questions,
-    timestamp: Date.now()
-  });
-};
-
-// Clear AI questions cache (called when input data changes)
-export const clearAIQuestionsCache = (state) => {
-  state.aiQuestionsCache.clear();
 };
