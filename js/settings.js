@@ -135,6 +135,12 @@ const setupFormHandlers = () => {
     });
     clearSummariesButton.setAttribute('data-handler-attached', 'true');
   }
+  
+  const refreshAppButton = document.getElementById('refresh-app');
+  if (refreshAppButton && !refreshAppButton.hasAttribute('data-handler-attached')) {
+    refreshAppButton.addEventListener('click', () => window.location.reload());
+    refreshAppButton.setAttribute('data-handler-attached', 'true');
+  }
 
   // Form handler setup (can return early if form not found)
   const formElement = settingsFormElement || document.getElementById('settings-form');
@@ -337,6 +343,8 @@ export const clearAllSummariesHandler = () => {
     showNotification('Error clearing summaries', 'error');
   }
 };
+
+
 
 
 
