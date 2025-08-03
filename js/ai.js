@@ -43,7 +43,7 @@ const callAI = async (systemPrompt, userPrompt) => {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1',
       messages,
       max_tokens: 1200,
       temperature: 0.8

@@ -205,7 +205,7 @@ export const testAPIKey = async (stateParam = null) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1',
         messages: [{ role: 'user', content: 'Hello' }],
         max_tokens: 5
       })
