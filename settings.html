@@ -35,6 +35,7 @@
     <!-- Secondary modules -->
     <link rel="modulepreload" href="js/ai.js">
     <link rel="modulepreload" href="js/summarization.js">
+    <link rel="modulepreload" href="js/version.js">
     
     <!-- YJS and lib0 dependencies from node_modules -->
     <link rel="modulepreload" href="./node_modules/yjs/dist/yjs.mjs">
@@ -256,8 +257,14 @@
                 </div>
             </form>
         </div>
-    </main>
+        </main>
 
-      <script type="module" src="js/settings.js"></script>
+    <footer class="app-footer">
+        <div class="footer-content">
+            <!-- Version info will be added here by version-display.js -->
+        </div>
+    </footer>
+
+    <script type="module" src="js/settings.js"></script>
 </body>
 </html>

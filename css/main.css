@@ -766,3 +766,31 @@ section {
     opacity: 0;
   }
 }
+
+/* Footer Styles */
+.app-footer {
+  margin-top: var(--space-2xl);
+  padding: var(--space-lg);
+  border-top: 1px solid var(--color-border-light);
+  background-color: var(--color-gray-50);
+  text-align: center;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Version Display */
+.version-info {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  cursor: help;
+}
+
+.version-info:hover {
+  color: var(--color-text-secondary);
+}
