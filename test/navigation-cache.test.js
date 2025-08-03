@@ -10,6 +10,7 @@ import {
   getCachedCharacterData,
   getCachedSettings,
   getCachedFormData,
+  getCachedSessionQuestions,
   saveCurrentFormData,
   getFormDataForPage,
   getCacheAge,
@@ -108,6 +109,9 @@ describe('Navigation Cache', () => {
             const data = { 'sync-server-url': 'ws://localhost:1234', 'theme': 'dark' };
             return data[key];
           }
+        },
+        questionsMap: {
+          get: (key) => key === 'current' ? "1. What drives your character?\n2. What challenges do they face?" : null
         }
       };
       
@@ -124,7 +128,10 @@ describe('Navigation Cache', () => {
     });
     
     it('should include version and timestamp in cache', () => {
-      const mockYjsState = { journalArray: { toArray: () => [] } };
+      const mockYjsState = { 
+        journalArray: { toArray: () => [] },
+        questionsMap: { get: () => null }
+      };
       saveNavigationCache(mockYjsState);
       
       const cacheKey = 'dnd-journal-navigation-cache';
@@ -139,7 +146,10 @@ describe('Navigation Cache', () => {
   
   describe('Cache Validation', () => {
     it('should reject expired cache data', (done) => {
-      const mockYjsState = { journalArray: { toArray: () => [] } };
+      const mockYjsState = { 
+        journalArray: { toArray: () => [] },
+        questionsMap: { get: () => null }
+      };
       saveNavigationCache(mockYjsState);
       
       // Manually modify timestamp to simulate expired cache
@@ -158,7 +168,10 @@ describe('Navigation Cache', () => {
     });
     
     it('should reject incompatible cache versions', () => {
-      const mockYjsState = { journalArray: { toArray: () => [] } };
+      const mockYjsState = { 
+        journalArray: { toArray: () => [] },
+        questionsMap: { get: () => null }
+      };
       saveNavigationCache(mockYjsState);
       
       // Manually modify version
@@ -232,6 +245,33 @@ describe('Navigation Cache', () => {
       
       expect(cached['sync-server-url']).to.equal('ws://test:1234');
       expect(cached['theme']).to.equal('light');
+    });
+    
+    it('should extract session questions correctly', () => {
+      const sessionQuestions = "1. What motivates your character?\n2. What are they afraid of?";
+      const mockYjsState = {
+        questionsMap: {
+          get: (key) => key === 'current' ? sessionQuestions : null
+        }
+      };
+      
+      saveNavigationCache(mockYjsState);
+      const cached = getCachedSessionQuestions();
+      
+      expect(cached).to.equal(sessionQuestions);
+    });
+    
+    it('should handle missing session questions', () => {
+      const mockYjsState = {
+        questionsMap: {
+          get: () => null
+        }
+      };
+      
+      saveNavigationCache(mockYjsState);
+      const cached = getCachedSessionQuestions();
+      
+      expect(cached).to.be.null;
     });
   });
   
