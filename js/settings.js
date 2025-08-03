@@ -182,7 +182,15 @@ export const saveSettings = (stateParam = null) => {
 export const testAPIKey = async (stateParam = null) => {
   try {
     const state = stateParam || getYjsState();
-    const apiKey = getSetting(state, 'openai-api-key', '');
+    let apiKey = getSetting(state, 'openai-api-key', '');
+    
+    // If no saved API key, check current form value
+    if (!apiKey) {
+      const apiKeyInput = document.getElementById('openai-api-key');
+      if (apiKeyInput && apiKeyInput.value.trim()) {
+        apiKey = apiKeyInput.value.trim();
+      }
+    }
     
     if (!apiKey) {
       showNotification('Please enter an API key first', 'warning');
@@ -236,15 +244,71 @@ export const testAPIKey = async (stateParam = null) => {
 export const testConnection = async (stateParam = null) => {
   try {
     const state = stateParam || getYjsState();
-    const syncServerUrl = getSetting(state, 'sync-server-url', '');
+    let syncServerUrl = getSetting(state, 'sync-server-url', '');
+    
+    // If no saved URL, check current form value
+    if (!syncServerUrl) {
+      const syncServerInput = document.getElementById('sync-server-url');
+      if (syncServerInput && syncServerInput.value.trim()) {
+        syncServerUrl = syncServerInput.value.trim();
+      }
+    }
     
     if (!syncServerUrl) {
       showNotification('Please enter a sync server URL first', 'warning');
       return;
     }
     
-    // TODO: Implement actual connection test
-    showNotification('Connection test not implemented yet', 'info');
+    // Validate URL format
+    if (!syncServerUrl.startsWith('ws://') && !syncServerUrl.startsWith('wss://')) {
+      showNotification('Sync server URL must start with ws:// or wss://', 'warning');
+      return;
+    }
+    
+    // Show testing message
+    showNotification('Testing connection...', 'info');
+    
+    // Test WebSocket connection
+    try {
+      const ws = new WebSocket(syncServerUrl);
+      
+      const testPromise = new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          ws.close();
+          reject(new Error('Connection timeout'));
+        }, 5000); // 5 second timeout
+        
+        ws.onopen = () => {
+          clearTimeout(timeout);
+          ws.close();
+          resolve('Connected successfully');
+        };
+        
+        ws.onerror = (error) => {
+          clearTimeout(timeout);
+          reject(new Error('Connection failed'));
+        };
+        
+        ws.onclose = (event) => {
+          clearTimeout(timeout);
+          if (event.wasClean) {
+            resolve('Connection test completed');
+          } else {
+            reject(new Error('Connection closed unexpectedly'));
+          }
+        };
+      });
+      
+      const result = await testPromise;
+      showNotification('Sync server connection successful!', 'success');
+    } catch (testError) {
+      console.warn('Connection test failed:', testError);
+      if (testError.message.includes('timeout')) {
+        showNotification('Connection test timed out - server may be unreachable', 'warning');
+      } else {
+        showNotification('Failed to connect to sync server', 'error');
+      }
+    }
   } catch (error) {
     console.error('Failed to test connection:', error);
     showNotification('Error testing connection', 'error');
