@@ -86,6 +86,13 @@
   text-align: center;
 }
 
+/* PWA Refresh Section */
+.pwa-refresh-section {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: var(--border-width) solid var(--color-border-light);
+}
+
 .btn-large {
   padding: var(--space-md) var(--space-xl);
   font-size: var(--font-size-lg);
