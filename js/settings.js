@@ -349,17 +349,19 @@ if (typeof document !== 'undefined') {
       YjsModule.initYjs().then(state => {
         initSettingsPage(state);
         
-        // Initialize version display in footer
+        // Initialize version display in footer (only if footer exists)
         const footerContent = document.querySelector('.footer-content');
-        import('./version.js').then(versionModule => {
-          const versionInfo = versionModule.VERSION_INFO;
-          const versionText = versionInfo.commit === 'dev' ? 'Development' : `v${versionInfo.runNumber} (${versionInfo.shortCommit})`;
-          const versionElement = document.createElement('div');
-          versionElement.className = 'version-info';
-          versionElement.textContent = versionText;
-          versionElement.title = `Deployed: ${versionInfo.timestamp}\nCommit: ${versionInfo.commit}\nBranch: ${versionInfo.ref}`;
-          footerContent.appendChild(versionElement);
-        });
+        if (footerContent) {
+          import('./version.js').then(versionModule => {
+            const versionInfo = versionModule.VERSION_INFO;
+            const versionText = versionInfo.commit === 'dev' ? 'Development' : `v${versionInfo.runNumber} (${versionInfo.shortCommit})`;
+            const versionElement = document.createElement('div');
+            versionElement.className = 'version-info';
+            versionElement.textContent = versionText;
+            versionElement.title = `Deployed: ${versionInfo.timestamp}\nCommit: ${versionInfo.commit}\nBranch: ${versionInfo.ref}`;
+            footerContent.appendChild(versionElement);
+          });
+        }
       });
     });
   });
