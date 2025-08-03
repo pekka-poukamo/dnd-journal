@@ -1,7 +1,13 @@
 // AI - Simple AI integration for D&D Journal
 // Radically simple: one file, direct API calls, no abstractions
 
-import { getYjsState, getSetting } from './yjs.js';
+import { 
+  getYjsState, 
+  getSetting, 
+  getSessionQuestions, 
+  setSessionQuestions, 
+  clearSessionQuestions 
+} from './yjs.js';
 import { PROMPTS } from './prompts.js';
 import { buildContext, hasContext } from './context.js';
 
@@ -53,20 +59,38 @@ const callAI = async (systemPrompt, userPrompt) => {
   return data.choices[0]?.message?.content?.trim();
 };
 
-// Generate storytelling questions
-export const generateQuestions = async (character = null, entries = null) => {
+// Generate storytelling questions (uses Yjs for sync)
+export const generateQuestions = async (character = null, entries = null, forceRegenerate = false) => {
   if (!isAIEnabled() || !hasContext(character, entries)) {
     return null;
   }
 
   try {
+    const state = getYjsState();
+    
+    // Return existing questions unless forced to regenerate
+    if (!forceRegenerate) {
+      const existingQuestions = getSessionQuestions(state);
+      if (existingQuestions) {
+        return existingQuestions;
+      }
+    }
+
+    // Generate new questions
     const context = await buildContext(character, entries, { 
       ensureFullHistory: true,
       maxCharacterLength: 800, // Allow more character detail for better questions
       maxEntryLength: 400 // Allow more entry detail for better questions
     });
     const userPrompt = PROMPTS.storytelling.user(context);
-    return await callAI(PROMPTS.storytelling.system, userPrompt);
+    const questions = await callAI(PROMPTS.storytelling.system, userPrompt);
+    
+    // Store in Yjs for sync
+    if (questions) {
+      setSessionQuestions(state, questions);
+    }
+    
+    return questions;
   } catch (error) {
     console.error('Failed to generate questions:', error);
     return null;

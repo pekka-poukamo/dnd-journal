@@ -8,7 +8,8 @@ import {
   updateEntry,
   deleteEntry,
   onCharacterChange,
-  onJournalChange
+  onJournalChange,
+  clearSessionQuestions
 } from './yjs.js';
 
 import { saveNavigationCache, getCachedJournalEntries, preWarmCache, isCacheRecentAndValid } from './navigation-cache.js';
@@ -185,6 +186,7 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     };
 
     addEntry(state, entry);
+    clearSessionQuestions(state); // Clear questions when journal data changes
     clearEntryForm();
     showNotification('Entry added successfully!', 'success');
     
@@ -249,6 +251,7 @@ export const saveEntryEdit = (entryId, entryData, stateParam = null) => {
     
     // Clear cache when entry content changes
     clearSummary(`entry:${entryId}`);
+    clearSessionQuestions(state); // Clear questions when journal data changes
     
     showNotification('Entry updated successfully!', 'success');
     
@@ -268,6 +271,7 @@ export const handleDeleteEntry = (entryId, stateParam = null) => {
       
       // Clear cache when entry is deleted
       clearSummary(`entry:${entryId}`);
+      clearSessionQuestions(state); // Clear questions when journal data changes
       
       showNotification('Entry deleted successfully!', 'success');
     }
@@ -343,7 +347,22 @@ const renderAIPromptWithLogic = async (stateParam = null) => {
 // Handle regenerate button click
 const handleRegeneratePrompt = async (stateParam = null) => {
   const state = stateParam || getYjsState();
-  await renderAIPromptWithLogic(state);
+  const character = getCharacterData(state);
+  const entries = getEntries(state);
+  
+  // Force regeneration when user clicks regenerate
+  if (isAIEnabled() && hasGoodContext(character, entries)) {
+    renderAIPrompt(aiPromptText, { type: 'loading' }, regenerateBtn);
+    const questions = await generateQuestions(character, entries, true); // Force regenerate
+    
+    if (questions) {
+      renderAIPrompt(aiPromptText, { type: 'questions', questions }, regenerateBtn);
+    } else {
+      renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
+    }
+  } else {
+    await renderAIPromptWithLogic(state);
+  }
 };
 
 // Helper function to check if entries are equivalent (avoid unnecessary re-renders)
