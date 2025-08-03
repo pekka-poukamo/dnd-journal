@@ -49,7 +49,7 @@ export const initCharacterPage = async (stateParam = null) => {
     setupFormHandlers();
     
     // Initialize Yjs asynchronously (non-blocking)
-    const state = stateParam || (await initYjs(), getYjsState());
+    const state = stateParam || await initYjs();
     
     // Set up reactive updates
     onCharacterChange(state, () => {
