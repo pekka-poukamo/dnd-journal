@@ -338,4 +338,56 @@ describe('Utils Module', function() {
       expect(html).to.include('<strong>3. </strong>What drives them forward?');
     });
   });
+
+  describe('showNotification', function() {
+    afterEach(function() {
+      // Clean up notifications after each test
+      const notifications = document.querySelectorAll('.notification');
+      notifications.forEach(n => n.remove());
+    });
+
+    it('should create and display toast notification', function() {
+      Utils.showNotification('Test toast message');
+
+      const notification = document.querySelector('.notification');
+      expect(notification).to.exist;
+      expect(notification.textContent).to.equal('Test toast message');
+      expect(notification.className).to.include('notification--info'); // default type
+    });
+
+    it('should support different notification types', function() {
+      Utils.showNotification('Success message', 'success');
+
+      const notification = document.querySelector('.notification');
+      expect(notification).to.exist;
+      expect(notification.className).to.include('notification--success');
+    });
+
+    it('should auto-remove notification after custom duration', function(done) {
+      this.timeout(3000);
+      
+      Utils.showNotification('Quick message', 'info', 500); // 500ms duration
+
+      const notification = document.querySelector('.notification');
+      expect(notification).to.exist;
+
+      setTimeout(() => {
+        try {
+          const removedNotification = document.querySelector('.notification');
+          expect(removedNotification).to.not.exist;
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 600); // Check after 600ms
+    });
+
+    it('should handle empty message gracefully', function() {
+      Utils.showNotification('');
+
+      const notification = document.querySelector('.notification');
+      expect(notification).to.exist;
+      expect(notification.textContent).to.equal('');
+    });
+  });
 });

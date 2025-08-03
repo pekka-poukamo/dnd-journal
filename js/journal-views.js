@@ -1,5 +1,5 @@
 // Journal Views - Pure Rendering Functions for Journal Page
-import { parseMarkdown, formatDate, sortEntriesByDate, getFormData, formatAIPromptText } from './utils.js';
+import { parseMarkdown, formatDate, sortEntriesByDate, getFormData, formatAIPromptText, showNotification } from './utils.js';
 import {
   getCachedJournalEntries,
   getCachedCharacterData,
@@ -391,21 +391,7 @@ const updateEntryElement = (element, entry, onEdit, onDelete) => {
   if (deleteButton) deleteButton.onclick = () => onDelete(entry.id);
 };
 
-// Show notification message
-export const showNotification = (message, type = 'info') => {
-  const notification = document.createElement('div');
-  notification.className = `notification notification--${type}`;
-  notification.textContent = message;
-  
-  document.body.appendChild(notification);
-  
-  // Auto-remove after 3 seconds
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.parentNode.removeChild(notification);
-    }
-  }, 3000);
-};
+// showNotification function moved to utils.js for shared use across all view modules
 
 
 

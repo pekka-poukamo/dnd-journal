@@ -10,12 +10,11 @@ import {
 import {
   renderSettingsForm,
   renderConnectionStatus,
-  showNotification,
   renderCachedSettingsContent,
   renderAIPromptPreview
 } from './settings-views.js';
 
-import { getFormData } from './utils.js';
+import { getFormData, showNotification } from './utils.js';
 
 import { saveNavigationCache } from './navigation-cache.js';
 

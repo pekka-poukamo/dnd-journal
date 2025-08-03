@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { JSDOM } from 'jsdom';
 import * as SettingsViews from '../js/settings-views.js';
+import { showNotification } from '../js/utils.js';
 
 describe('Settings Views Module', function() {
   beforeEach(function() {
@@ -209,7 +210,7 @@ describe('Settings Views Module', function() {
     });
 
     it('should create and display notification', function() {
-      SettingsViews.showNotification('Test message');
+      showNotification('Test message');
 
       const notification = document.querySelector('.notification');
       expect(notification).to.exist;
@@ -218,7 +219,7 @@ describe('Settings Views Module', function() {
     });
 
     it('should create notification with custom type', function() {
-      SettingsViews.showNotification('Error message', 'error');
+      showNotification('Error message', 'error');
 
       const notification = document.querySelector('.notification');
       expect(notification).to.exist;
@@ -227,7 +228,7 @@ describe('Settings Views Module', function() {
     });
 
     it('should create notification with success type', function() {
-      SettingsViews.showNotification('Success message', 'success');
+      showNotification('Success message', 'success');
 
       const notification = document.querySelector('.notification');
       expect(notification).to.exist;
@@ -235,7 +236,7 @@ describe('Settings Views Module', function() {
     });
 
     it('should create notification with warning type', function() {
-      SettingsViews.showNotification('Warning message', 'warning');
+      showNotification('Warning message', 'warning');
 
       const notification = document.querySelector('.notification');
       expect(notification).to.exist;
@@ -245,7 +246,7 @@ describe('Settings Views Module', function() {
     it('should append notification to body', function() {
       const initialChildren = document.body.children.length;
       
-      SettingsViews.showNotification('Test message');
+      showNotification('Test message');
 
       expect(document.body.children.length).to.equal(initialChildren + 1);
       
@@ -254,23 +255,29 @@ describe('Settings Views Module', function() {
     });
 
     it('should auto-remove notification after timeout', function(done) {
-      SettingsViews.showNotification('Temporary message');
+      this.timeout(5000); // Increase timeout for this test
+      
+      showNotification('Temporary message', 'info', 1000); // Use shorter duration for faster test
 
       const notification = document.querySelector('.notification');
       expect(notification).to.exist;
 
       // Check that it gets removed after the timeout
       setTimeout(() => {
-        const removedNotification = document.querySelector('.notification');
-        expect(removedNotification).to.not.exist;
-        done();
-      }, 3100); // Slightly longer than the 3000ms timeout
+        try {
+          const removedNotification = document.querySelector('.notification');
+          expect(removedNotification).to.not.exist;
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 1400); // Slightly longer than the 1000ms timeout
     });
 
     it('should handle multiple notifications', function() {
-      SettingsViews.showNotification('First message', 'info');
-      SettingsViews.showNotification('Second message', 'error');
-      SettingsViews.showNotification('Third message', 'success');
+      showNotification('First message', 'info');
+      showNotification('Second message', 'error');
+      showNotification('Third message', 'success');
 
       const notifications = document.querySelectorAll('.notification');
       expect(notifications).to.have.length(3);
@@ -281,7 +288,7 @@ describe('Settings Views Module', function() {
     });
 
     it('should handle empty message', function() {
-      SettingsViews.showNotification('');
+      showNotification('');
 
       const notification = document.querySelector('.notification');
       expect(notification).to.exist;
@@ -289,7 +296,7 @@ describe('Settings Views Module', function() {
     });
 
     it('should handle null message', function() {
-      SettingsViews.showNotification(null);
+      showNotification(null);
 
       const notification = document.querySelector('.notification');
       expect(notification).to.exist;
@@ -473,7 +480,7 @@ describe('Settings Views Module', function() {
       }).to.not.throw();
 
       expect(() => {
-        SettingsViews.showNotification('test');
+        showNotification('test');
       }).to.not.throw();
     });
 
