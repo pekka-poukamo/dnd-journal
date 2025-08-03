@@ -3,68 +3,30 @@
 .ai-prompt {
   background: var(--color-gray-50);
   border: var(--border-width) solid var(--color-border);
-  border-radius: var(--border-radius);
-  margin-bottom: var(--space-xl);
-  transition: var(--transition);
+  margin-left: calc(-1*var(--space-lg));
+  margin-right: calc(-1*var(--space-lg));
+  padding: 0 var(--space-lg);
 }
 
+@media (max-width: 40rem) {
+  .ai-prompt {
+    border-left: 0;
+    border-right: 0;
+  }
+}
+
+
 .ai-prompt__header {
-  padding: var(--space-lg);
+  padding: var(--space-md) 0;
   border-bottom: var(--border-width) solid var(--color-border-light);
+  margin-bottom: var(--space-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.ai-prompt__title {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-thin);
-  color: var(--color-text);
-  letter-spacing: -0.02em;
-}
-
-.ai-prompt__regenerate-btn {
-  padding: var(--space-sm) var(--space-md);
-  font-family: var(--font-heading);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-light);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--border-radius);
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.ai-prompt__regenerate-btn:hover {
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-}
-
-.ai-prompt__content {
-  padding: var(--space-lg);
-}
-
-.ai-prompt__text {
-  font-family: var(--font-body);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-normal);
-  color: var(--color-text-secondary);
-  margin: 0;
-}
-
-/* Formatted text elements within AI prompt */
-.ai-prompt__text strong {
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text);
-}
-
-.ai-prompt__text br {
-  line-height: var(--line-height-normal);
+.ai-prompt__header h2 {
+  margin-bottom: 0;
 }
 
 /* Loading state */
@@ -79,15 +41,6 @@
   font-style: italic;
   text-align: center;
   margin: 0;
-}
-
-.ai-prompt__empty-state strong {
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-muted);
-}
-
-.ai-prompt__empty-state br {
-  line-height: var(--line-height-normal);
 }
 
 /* Error state */

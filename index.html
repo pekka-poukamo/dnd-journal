@@ -94,7 +94,6 @@
 <body>
     <header class="tabs">
         <div class="tabs__container">
-            <h1 class="tabs__title">D&D Journal</h1>
             <nav class="tabs__nav">
                 <a href="/" class="tabs__tab tabs__tab--active">Journal</a>
                 <a href="/character.html" class="tabs__tab">Character</a>
@@ -111,6 +110,12 @@
 
     <main>
         <div class="container-narrow">
+
+             <!-- Character Summary Section -->
+            <section id="character-summary" class="character-summary character-summary--minimal">
+                <!-- Character info will be rendered here by views.js -->
+            </section>
+            
             <!-- AI Introspection Prompt Section -->
             <section class="ai-prompt" id="ai-prompt-section">
                 <div class="ai-prompt__header">
@@ -126,13 +131,6 @@
                 </div>
             </section>
 
-            <!-- Character Summary Section -->
-            <section id="character-summary" class="character-summary character-summary--minimal">
-                <h2>Character</h2>
-                <div id="character-info-container" class="character-info-container">
-                    <!-- Character info will be rendered here by views.js -->
-                </div>
-            </section>
             
             <!-- New Entry Section -->
             <section class="entry-section">
