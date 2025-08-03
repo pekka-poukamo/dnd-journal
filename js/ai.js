@@ -1,19 +1,15 @@
 // AI - Simple AI integration for D&D Journal
 // Radically simple: one file, direct API calls, no abstractions
 
-import { getYjsState, getSetting } from './yjs.js';
+import { 
+  getYjsState, 
+  getSetting, 
+  getSessionQuestions, 
+  setSessionQuestions, 
+  clearSessionQuestions 
+} from './yjs.js';
 import { PROMPTS } from './prompts.js';
 import { buildContext, hasContext } from './context.js';
-
-// Simple cache: just remember the last questions and context
-let lastQuestions = null;
-let lastContextHash = null;
-
-// Clear the simple cache
-export const clearQuestionsCache = () => {
-  lastQuestions = null;
-  lastContextHash = null;
-};
 
 // Check if AI is available
 export const isAIEnabled = () => {
@@ -63,26 +59,21 @@ const callAI = async (systemPrompt, userPrompt) => {
   return data.choices[0]?.message?.content?.trim();
 };
 
-// Simple hash of the data that affects questions
-const getContextHash = (character, entries) => {
-  const data = {
-    character: character ? JSON.stringify(character) : '',
-    entries: entries ? entries.map(e => e.content + e.timestamp).join('') : ''
-  };
-  return JSON.stringify(data);
-};
-
-// Generate storytelling questions with simple caching
+// Generate storytelling questions (uses Yjs for sync)
 export const generateQuestions = async (character = null, entries = null, forceRegenerate = false) => {
   if (!isAIEnabled() || !hasContext(character, entries)) {
     return null;
   }
 
   try {
-    // Check if we can use cached questions
-    const currentHash = getContextHash(character, entries);
-    if (!forceRegenerate && lastQuestions && lastContextHash === currentHash) {
-      return lastQuestions;
+    const state = getYjsState();
+    
+    // Return existing questions unless forced to regenerate
+    if (!forceRegenerate) {
+      const existingQuestions = getSessionQuestions(state);
+      if (existingQuestions) {
+        return existingQuestions;
+      }
     }
 
     // Generate new questions
@@ -94,10 +85,9 @@ export const generateQuestions = async (character = null, entries = null, forceR
     const userPrompt = PROMPTS.storytelling.user(context);
     const questions = await callAI(PROMPTS.storytelling.system, userPrompt);
     
-    // Cache the result
+    // Store in Yjs for sync
     if (questions) {
-      lastQuestions = questions;
-      lastContextHash = currentHash;
+      setSessionQuestions(state, questions);
     }
     
     return questions;

@@ -5,7 +5,8 @@ import {
   getCharacterData,
   setCharacter,
   getSummary,
-  onCharacterChange
+  onCharacterChange,
+  clearSessionQuestions
 } from './yjs.js';
 import { clearSummary } from './summarization.js';
 
@@ -152,6 +153,9 @@ const saveCharacterField = (field, value) => {
     if (field === 'backstory' || field === 'notes') {
       clearSummary(`character:${field}`);
     }
+    
+    // Clear session questions when character data changes
+    clearSessionQuestions(state);
   } catch (error) {
     console.error(`Failed to save character ${field}:`, error);
   }
@@ -174,6 +178,9 @@ export const saveCharacterData = (stateParam = null) => {
     Object.entries(formData).forEach(([field, value]) => {
       setCharacter(state, field, value.trim());
     });
+    
+    // Clear session questions when character data changes
+    clearSessionQuestions(state);
     
     showNotification('Character saved!', 'success');
   } catch (error) {

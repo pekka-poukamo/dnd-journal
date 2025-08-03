@@ -8,7 +8,8 @@ import {
   updateEntry,
   deleteEntry,
   onCharacterChange,
-  onJournalChange
+  onJournalChange,
+  clearSessionQuestions
 } from './yjs.js';
 
 import { saveNavigationCache, getCachedJournalEntries, preWarmCache, isCacheRecentAndValid } from './navigation-cache.js';
@@ -25,7 +26,7 @@ import {
 
 import { generateId, isValidEntry, formatDate, getFormData } from './utils.js';
 
-import { generateQuestions, clearQuestionsCache } from './ai.js';
+import { generateQuestions } from './ai.js';
 import { hasContext as hasGoodContext } from './context.js';
 import { clearSummary } from './summarization.js';
 import { isAIEnabled } from './ai.js';
@@ -186,7 +187,7 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     };
 
     addEntry(state, entry);
-    clearQuestionsCache(); // Clear AI questions cache when journal data changes
+    clearSessionQuestions(state); // Clear questions when journal data changes
     clearEntryForm();
     showNotification('Entry added successfully!', 'success');
     
@@ -251,6 +252,7 @@ export const saveEntryEdit = (entryId, entryData, stateParam = null) => {
     
     // Clear cache when entry content changes
     clearSummary(`entry:${entryId}`);
+    clearSessionQuestions(state); // Clear questions when journal data changes
     
     showNotification('Entry updated successfully!', 'success');
     
@@ -270,6 +272,7 @@ export const handleDeleteEntry = (entryId, stateParam = null) => {
       
       // Clear cache when entry is deleted
       clearSummary(`entry:${entryId}`);
+      clearSessionQuestions(state); // Clear questions when journal data changes
       
       showNotification('Entry deleted successfully!', 'success');
     }

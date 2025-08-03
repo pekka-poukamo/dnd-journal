@@ -79,6 +79,7 @@ export const getYjsState = () => {
     journalArray: ydoc.getArray('journal-entries'),
     settingsMap: ydoc.getMap('settings'),
     summariesMap: ydoc.getMap('summaries'),
+    questionsMap: ydoc.getMap('session-questions'),
     ydoc
   };
 };
@@ -216,4 +217,23 @@ export const onSettingsChange = (state, callback) => {
 
 export const onSummariesChange = (state, callback) => {
   getSummariesMap(state).observe(callback);
+};
+
+// =============================================================================
+// SESSION QUESTIONS FUNCTIONS (Radically Simple)
+// =============================================================================
+
+// Get current session questions
+export const getSessionQuestions = (state) => {
+  return state.questionsMap.get('current') || null;
+};
+
+// Set current session questions  
+export const setSessionQuestions = (state, questions) => {
+  state.questionsMap.set('current', questions);
+};
+
+// Clear session questions
+export const clearSessionQuestions = (state) => {
+  state.questionsMap.delete('current');
 };
