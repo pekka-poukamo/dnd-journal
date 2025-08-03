@@ -280,27 +280,10 @@ if (typeof document !== 'undefined') {
     import('./yjs.js').then(YjsModule => {
       YjsModule.initYjs().then(state => {
         initCharacterPage(state);
-        
-        // Initialize version display in footer
-        const footerContent = document.querySelector('.footer-content');
-        import('./version-display.js').then(versionModule => {
-          versionModule.appendVersionToElement(footerContent);
-        });
       });
     });
   });
 }
 
-// Initialize the character page
-document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    await initCharacterPage();
-    
-    // Initialize version display in footer
-    const footerContent = document.querySelector('.footer-content');
-    appendVersionToElement(footerContent);
-  } catch (error) {
-    console.error('Failed to initialize character page:', error);
-  }
-});
+
 
