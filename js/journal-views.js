@@ -17,7 +17,7 @@ export const createEntryForm = (options = {}) => {
   
   form.innerHTML = `
     <div class="form-group">
-      <label for="entry-content" class="form-label">Notes</label>
+      <label for="entry-content">Notes</label>
       <textarea id="entry-content" name="content" class="form-textarea" rows="4" placeholder="Write your journal entry here..." required></textarea>
     </div>
     <div class="form-group">
@@ -281,34 +281,18 @@ export const renderCharacterSummary = (container, character) => {
     return;
   }
   
-  const characterDiv = document.createElement('div');
-  characterDiv.className = 'character-info';
+  const characterInfo = document.createElement('div');
+  characterInfo.className = 'character-info';
   
-  const fields = [
-    { key: 'name', label: 'Name' },
-    { key: 'race', label: 'Race' },
-    { key: 'class', label: 'Class' }
-  ];
+  const heading = document.createElement('h2')
+  heading.textContent = character.name
+  characterInfo.appendChild(heading)
+
+  const subheading = document.createElement('h5')
+  subheading.textContent = character.race + ' • ' + character.class
+  characterInfo.appendChild(subheading)
   
-  fields.forEach(field => {
-    const value = character[field.key];
-    if (value) {
-      const fieldDiv = document.createElement('div');
-      fieldDiv.className = 'character-field';
-      
-      const label = document.createElement('strong');
-      label.textContent = `${field.label}: `;
-      
-      const content = document.createElement('span');
-      content.textContent = value;
-      
-      fieldDiv.appendChild(label);
-      fieldDiv.appendChild(content);
-      characterDiv.appendChild(fieldDiv);
-    }
-  });
-  
-  container.appendChild(characterDiv);
+  container.appendChild(characterInfo);
 };
 
 // Render journal entries list with intelligent DOM updates (performance optimized)

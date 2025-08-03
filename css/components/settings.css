@@ -1,36 +1,3 @@
-/* Settings Component - Nordic Minimalism */
-
-/* Settings Container Layout */
-.settings-container {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 0 var(--space-md);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .settings-container {
-    padding: 0 var(--space-sm);
-  }
-  
-  .settings-section {
-    padding: var(--space-lg);
-  }
-  
-  .btn-large {
-    width: 100%;
-    min-width: auto;
-  }
-}
-
-/* Settings Section Grouping */
-.settings-section {
-  background: var(--color-surface);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--border-radius);
-  padding: var(--space-xl);
-  margin-bottom: var(--space-xl);
-}
 
 /* Settings Subsections */
 .settings-subsection {
@@ -45,29 +12,16 @@
   border-bottom: none;
 }
 
-.settings-subsection-title {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text);
-  margin-bottom: var(--space-md);
-  padding-bottom: var(--space-xs);
-  border-bottom: 2px solid var(--color-accent);
-  display: inline-block;
-}
-
 .settings-section-header {
-  margin-bottom: var(--space-lg);
-  padding-bottom: var(--space-md);
+  margin-bottom: var(--space-md);
+  padding: var(--space-lg) 0 var(--space-md);
   border-bottom: var(--border-width) solid var(--color-border-light);
+  border-top: 1px solid var(--color-border);
 }
 
 .settings-section-header h2 {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-light);
-  color: var(--color-text);
   margin-bottom: var(--space-xs);
+  font-weight: 350;
 }
 
 .settings-section-description {
@@ -296,6 +250,7 @@
   background: #dc3545;
   color: white;
   border: var(--border-width) solid #dc3545;
+  font-weight: var(--font-weight-medium);
 }
 
 .btn-danger:hover {
@@ -325,12 +280,6 @@
   color: white;
 }
 
-/* Settings section separation - deprecated, replaced with new structure */
-.settings-section-actions {
-  margin-top: var(--space-lg);
-  padding-top: var(--space-md);
-  border-top: var(--border-width) solid var(--color-border-light);
-}
 
 /* Test result styles for sync */
 .test-success {

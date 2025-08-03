@@ -141,7 +141,7 @@ export const renderCharacterInfo = (stateParam = null) => {
     const character = getCharacterData(state);
     
     // Use module-level element if available, otherwise find it
-    const charInfoElement = characterInfoContainer || document.getElementById('character-info-container');
+    const charInfoElement = characterInfoContainer || document.getElementById('character-summary');
     if (!charInfoElement) return;
     
     renderCharacterSummary(charInfoElement, character);
