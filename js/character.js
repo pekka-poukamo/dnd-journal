@@ -15,11 +15,10 @@ import {
   renderCharacterForm,
   renderSummaries,
   toggleGenerateButton,
-  showNotification,
   renderCachedCharacterContent
 } from './character-views.js';
 
-import { getFormData } from './utils.js';
+import { getFormData, showNotification } from './utils.js';
 
 import { isAIEnabled } from './ai.js';
 import { summarize } from './summarization.js';

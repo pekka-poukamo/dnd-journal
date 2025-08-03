@@ -155,3 +155,47 @@ export const getFormData = (form) => {
     return data;
   }
 };
+
+// Pure function to show toast notifications
+export const showNotification = (message, type = 'info', duration = 3000) => {
+  const notification = document.createElement('div');
+  notification.className = `notification notification--${type}`;
+  notification.textContent = message || '';
+  
+  // Add to body with proper positioning
+  document.body.appendChild(notification);
+  
+  // Stack notifications by adjusting bottom position
+  const existingNotifications = document.querySelectorAll('.notification');
+  if (existingNotifications.length > 1) {
+    let totalOffset = 0;
+    // Calculate offset based on existing notifications (excluding the current one)
+    Array.from(existingNotifications).slice(0, -1).forEach(existing => {
+      totalOffset += existing.offsetHeight + 12; // 12px gap between notifications
+    });
+    notification.style.bottom = `calc(var(--space-xl) + ${totalOffset}px)`;
+  }
+  
+  // Auto-remove after specified duration
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.style.animation = 'slideOutToRight 0.3s ease-in forwards';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+          // Reposition remaining notifications
+          repositionNotifications();
+        }
+      }, 300);
+    }
+  }, duration);
+};
+
+// Helper function to reposition remaining notifications after one is removed
+const repositionNotifications = () => {
+  const notifications = document.querySelectorAll('.notification');
+  notifications.forEach((notification, index) => {
+    const offset = index * (notification.offsetHeight + 12);
+    notification.style.bottom = `calc(var(--space-xl) + ${offset}px)`;
+  });
+};

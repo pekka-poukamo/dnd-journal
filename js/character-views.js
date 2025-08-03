@@ -1,5 +1,5 @@
 // Character Views - Pure Rendering Functions for Character Page
-import { getFormData } from './utils.js';
+import { getFormData, showNotification } from './utils.js';
 import {
   getCachedCharacterData,
   getFormDataForPage
@@ -67,21 +67,7 @@ export const toggleGenerateButton = (isAPIAvailable, hasContent = false) => {
   }
 };
 
-// Show notification message
-export const showNotification = (message, type = 'info') => {
-  const notification = document.createElement('div');
-  notification.className = `notification notification--${type}`;
-  notification.textContent = message;
-  
-  document.body.appendChild(notification);
-  
-  // Auto-remove after 3 seconds
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.parentNode.removeChild(notification);
-    }
-  }, 3000);
-};
+// showNotification function moved to utils.js for shared use across all view modules
 
 
 

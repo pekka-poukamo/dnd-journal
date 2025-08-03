@@ -18,12 +18,11 @@ import {
   renderEntries,
   createEntryForm,
   createEntryEditForm,
-  showNotification,
   renderAIPrompt,
   renderCachedJournalContent
 } from './journal-views.js';
 
-import { generateId, isValidEntry, formatDate, getFormData } from './utils.js';
+import { generateId, isValidEntry, formatDate, getFormData, showNotification } from './utils.js';
 
 import { generateQuestions } from './ai.js';
 import { hasContext as hasGoodContext } from './context.js';
