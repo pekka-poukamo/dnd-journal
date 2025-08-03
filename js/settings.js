@@ -14,7 +14,7 @@ import {
   renderAIPromptPreview
 } from './settings-views.js';
 
-import { getFormData, showNotification, isStandaloneMode } from './utils.js';
+import { getFormData, showNotification } from './utils.js';
 
 import { saveNavigationCache } from './navigation-cache.js';
 
@@ -60,9 +60,6 @@ export const initSettingsPage = async (stateParam = null) => {
     
     // Set up form handling after initial render (ensures DOM elements exist)
     setupFormHandlers();
-    
-    // Set up PWA refresh button visibility and handling
-    setupPWARefreshButton();
     
     // Save cache on page unload
     window.addEventListener('beforeunload', () => {
@@ -141,10 +138,7 @@ const setupFormHandlers = () => {
   
   const refreshAppButton = document.getElementById('refresh-app');
   if (refreshAppButton && !refreshAppButton.hasAttribute('data-handler-attached')) {
-    refreshAppButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      refreshApp();
-    });
+    refreshAppButton.addEventListener('click', () => window.location.reload());
     refreshAppButton.setAttribute('data-handler-attached', 'true');
   }
 
@@ -350,33 +344,7 @@ export const clearAllSummariesHandler = () => {
   }
 };
 
-// Set up PWA refresh button visibility and handling
-const setupPWARefreshButton = () => {
-  try {
-    const refreshSection = document.getElementById('pwa-refresh-section');
-    if (refreshSection) {
-      // Show refresh button only in standalone mode (PWA)
-      if (isStandaloneMode()) {
-        refreshSection.style.display = 'block';
-      } else {
-        refreshSection.style.display = 'none';
-      }
-    }
-  } catch (error) {
-    console.error('Failed to setup PWA refresh button:', error);
-  }
-};
 
-// Refresh app functionality
-export const refreshApp = () => {
-  try {
-    // Reload the current page to refresh the app
-    window.location.reload();
-  } catch (error) {
-    console.error('Failed to refresh app:', error);
-    showNotification('Error refreshing app', 'error');
-  }
-};
 
 
 

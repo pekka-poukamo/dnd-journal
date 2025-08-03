@@ -86,11 +86,16 @@
   text-align: center;
 }
 
-/* PWA Refresh Section */
-.pwa-refresh-section {
-  margin-top: var(--space-lg);
-  padding-top: var(--space-lg);
-  border-top: var(--border-width) solid var(--color-border-light);
+/* PWA Refresh Button */
+[data-pwa-only] {
+  margin-top: var(--space-md);
+}
+
+/* Show PWA-only elements in standalone mode */
+@media (display-mode: standalone) {
+  [data-pwa-only] {
+    display: inline-block !important;
+  }
 }
 
 .btn-large {

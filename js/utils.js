@@ -214,8 +214,4 @@ const repositionNotifications = () => {
   });
 };
 
-// Pure function to check if app is in PWA standalone mode
-export const isStandaloneMode = () => {
-  // Check if running in standalone display mode (PWA)
-  return window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
-};
+

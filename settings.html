@@ -257,12 +257,9 @@
                     <p class="form-help">Saves both sync and AI configuration settings</p>
                     
                     <!-- PWA Refresh Button - Only visible in standalone mode -->
-                    <div id="pwa-refresh-section" class="pwa-refresh-section" style="display: none;">
-                        <button id="refresh-app" type="button" class="btn btn-secondary">
-                            Refresh App
-                        </button>
-                        <p class="form-help">Refresh the app to ensure you have the latest version</p>
-                    </div>
+                    <button id="refresh-app" type="button" class="btn btn-secondary" style="display: none;" data-pwa-only>
+                        Refresh App
+                    </button>
                 </div>
             </form>
         </div>
