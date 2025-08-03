@@ -17,6 +17,7 @@ export const createEntryForm = (options = {}) => {
   
   form.innerHTML = `
     <div class="form-group">
+      <label for="entry-content">Notes</label>
       <textarea id="entry-content" name="content" class="form-textarea" rows="4" placeholder="Write your journal entry here..." required></textarea>
     </div>
     <div class="form-group">
@@ -280,13 +281,18 @@ export const renderCharacterSummary = (container, character) => {
     return;
   }
   
+  const characterInfo = document.createElement('div');
+  characterInfo.className = 'character-info';
+  
   const heading = document.createElement('h2')
   heading.textContent = character.name
-  container.appendChild(heading)
+  characterInfo.appendChild(heading)
 
   const subheading = document.createElement('h5')
   subheading.textContent = character.race + ' • ' + character.class
-  container.appendChild(subheading)
+  characterInfo.appendChild(subheading)
+  
+  container.appendChild(characterInfo);
 };
 
 // Render journal entries list with intelligent DOM updates (performance optimized)
