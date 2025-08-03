@@ -1,7 +1,12 @@
 // AI - Simple AI integration for D&D Journal
 // Radically simple: one file, direct API calls, no abstractions
 
-import { getYjsState, getSetting } from './yjs.js';
+import { 
+  getYjsState, 
+  getSetting, 
+  getCachedAIQuestions, 
+  setCachedAIQuestions 
+} from './yjs.js';
 import { PROMPTS } from './prompts.js';
 import { buildContext, hasContext } from './context.js';
 
@@ -53,20 +58,36 @@ const callAI = async (systemPrompt, userPrompt) => {
   return data.choices[0]?.message?.content?.trim();
 };
 
-// Generate storytelling questions
+// Generate storytelling questions with caching
 export const generateQuestions = async (character = null, entries = null) => {
   if (!isAIEnabled() || !hasContext(character, entries)) {
     return null;
   }
 
   try {
+    const state = getYjsState();
+    
+    // Check cache first
+    const cachedQuestions = getCachedAIQuestions(state, character, entries);
+    if (cachedQuestions) {
+      return cachedQuestions;
+    }
+
+    // Generate new questions if not cached
     const context = await buildContext(character, entries, { 
       ensureFullHistory: true,
       maxCharacterLength: 800, // Allow more character detail for better questions
       maxEntryLength: 400 // Allow more entry detail for better questions
     });
     const userPrompt = PROMPTS.storytelling.user(context);
-    return await callAI(PROMPTS.storytelling.system, userPrompt);
+    const questions = await callAI(PROMPTS.storytelling.system, userPrompt);
+    
+    // Cache the generated questions
+    if (questions) {
+      setCachedAIQuestions(state, character, entries, questions);
+    }
+    
+    return questions;
   } catch (error) {
     console.error('Failed to generate questions:', error);
     return null;

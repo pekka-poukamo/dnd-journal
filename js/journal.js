@@ -8,7 +8,8 @@ import {
   updateEntry,
   deleteEntry,
   onCharacterChange,
-  onJournalChange
+  onJournalChange,
+  clearAIQuestionsCache
 } from './yjs.js';
 
 import { saveNavigationCache, getCachedJournalEntries, preWarmCache, isCacheRecentAndValid } from './navigation-cache.js';
@@ -186,6 +187,7 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     };
 
     addEntry(state, entry);
+    clearAIQuestionsCache(state); // Clear AI questions cache when journal data changes
     clearEntryForm();
     showNotification('Entry added successfully!', 'success');
     
