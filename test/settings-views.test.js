@@ -255,17 +255,23 @@ describe('Settings Views Module', function() {
     });
 
     it('should auto-remove notification after timeout', function(done) {
-      showNotification('Temporary message');
+      this.timeout(5000); // Increase timeout for this test
+      
+      showNotification('Temporary message', 'info', 1000); // Use shorter duration for faster test
 
       const notification = document.querySelector('.notification');
       expect(notification).to.exist;
 
       // Check that it gets removed after the timeout
       setTimeout(() => {
-        const removedNotification = document.querySelector('.notification');
-        expect(removedNotification).to.not.exist;
-        done();
-      }, 3100); // Slightly longer than the 3000ms timeout
+        try {
+          const removedNotification = document.querySelector('.notification');
+          expect(removedNotification).to.not.exist;
+          done();
+        } catch (error) {
+          done(error);
+        }
+      }, 1400); // Slightly longer than the 1000ms timeout
     });
 
     it('should handle multiple notifications', function() {
