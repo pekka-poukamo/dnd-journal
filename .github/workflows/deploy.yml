@@ -23,6 +23,17 @@ jobs:
       - name: Run tests
         run: npm run test:client
       
+      - name: Generate version info
+        run: |
+          echo "// Auto-generated version info - DO NOT EDIT" > js/version.js
+          echo "export const VERSION_INFO = {" >> js/version.js
+          echo "  commit: '${{ github.sha }}'," >> js/version.js
+          echo "  shortCommit: '${GITHUB_SHA:0:7}'," >> js/version.js
+          echo "  runNumber: '${{ github.run_number }}'," >> js/version.js
+          echo "  timestamp: '$(date -u +"%Y-%m-%d %H:%M:%S UTC")'," >> js/version.js
+          echo "  ref: '${{ github.ref_name }}'" >> js/version.js
+          echo "};" >> js/version.js
+      
       - name: Deploy to Surge
         run: npm run deploy
         env:

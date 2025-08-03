@@ -348,6 +348,12 @@ if (typeof document !== 'undefined') {
     import('./yjs.js').then(YjsModule => {
       YjsModule.initYjs().then(state => {
         initSettingsPage(state);
+        
+        // Initialize version display in footer
+        const footerContent = document.querySelector('.footer-content');
+        import('./version-display.js').then(versionModule => {
+          versionModule.appendVersionToElement(footerContent);
+        });
       });
     });
   });

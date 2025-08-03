@@ -25,6 +25,7 @@ import {
 } from './journal-views.js';
 
 import { generateId, isValidEntry, formatDate, getFormData, showNotification } from './utils.js';
+import { appendVersionToElement } from './version-display.js';
 
 import { generateQuestions } from './ai.js';
 import { hasContext as hasGoodContext } from './context.js';
@@ -108,6 +109,10 @@ export const initJournalPage = async (stateParam = null) => {
   } catch (error) {
     console.error('Failed to initialize journal page:', error);
   }
+  
+  // Initialize version display in footer
+  const footerContent = document.querySelector('.footer-content');
+  appendVersionToElement(footerContent);
 };
 
 // Render journal page
