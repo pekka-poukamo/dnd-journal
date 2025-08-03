@@ -181,16 +181,9 @@ export const saveSettings = (stateParam = null) => {
 // Test API key
 export const testAPIKey = async (stateParam = null) => {
   try {
-    const state = stateParam || getYjsState();
-    let apiKey = getSetting(state, 'openai-api-key', '');
-    
-    // If no saved API key, check current form value
-    if (!apiKey) {
-      const apiKeyInput = document.getElementById('openai-api-key');
-      if (apiKeyInput && apiKeyInput.value.trim()) {
-        apiKey = apiKeyInput.value.trim();
-      }
-    }
+    // Always use current form value for testing
+    const apiKeyInput = document.getElementById('openai-api-key');
+    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
     
     if (!apiKey) {
       showNotification('Please enter an API key first', 'warning');
@@ -243,16 +236,9 @@ export const testAPIKey = async (stateParam = null) => {
 // Test connection
 export const testConnection = async (stateParam = null) => {
   try {
-    const state = stateParam || getYjsState();
-    let syncServerUrl = getSetting(state, 'sync-server-url', '');
-    
-    // If no saved URL, check current form value
-    if (!syncServerUrl) {
-      const syncServerInput = document.getElementById('sync-server-url');
-      if (syncServerInput && syncServerInput.value.trim()) {
-        syncServerUrl = syncServerInput.value.trim();
-      }
-    }
+    // Always use current form value for testing
+    const syncServerInput = document.getElementById('sync-server-url');
+    const syncServerUrl = syncServerInput ? syncServerInput.value.trim() : '';
     
     if (!syncServerUrl) {
       showNotification('Please enter a sync server URL first', 'warning');
