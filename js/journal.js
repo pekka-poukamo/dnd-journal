@@ -9,6 +9,7 @@ import {
   deleteEntry,
   onCharacterChange,
   onJournalChange,
+  onQuestionsChange,
   clearSessionQuestions
 } from './yjs.js';
 
@@ -89,6 +90,10 @@ export const initJournalPage = async (stateParam = null) => {
 
     onCharacterChange(state, () => {
       renderCharacterInfo(state);
+      renderAIPromptWithLogic(state);
+    });
+
+    onQuestionsChange(state, () => {
       renderAIPromptWithLogic(state);
     });
     

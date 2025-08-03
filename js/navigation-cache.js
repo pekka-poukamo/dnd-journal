@@ -53,6 +53,9 @@ const createCacheData = (yjsState, formData = {}) => ({
     // Settings for immediate display
     settings: getSettingsForCache(yjsState),
     
+    // Session questions for immediate display
+    sessionQuestions: getSessionQuestionsForCache(yjsState),
+    
     // Form data preservation
     formData: formData
   }
@@ -120,6 +123,19 @@ const getSettingsForCache = (yjsState) => {
   } catch (error) {
     console.warn('Failed to extract settings for cache:', error);
     return {};
+  }
+};
+
+// Pure function to extract session questions for cache
+const getSessionQuestionsForCache = (yjsState) => {
+  try {
+    if (!yjsState || !yjsState.questionsMap) return null;
+    
+    const questionsMap = yjsState.questionsMap;
+    return questionsMap.get('current') || null;
+  } catch (error) {
+    console.warn('Failed to extract session questions for cache:', error);
+    return null;
   }
 };
 
@@ -200,6 +216,11 @@ export const getCachedFormData = () => {
   return cache?.formData || {};
 };
 
+export const getCachedSessionQuestions = () => {
+  const cache = loadNavigationCache();
+  return cache?.sessionQuestions || null;
+};
+
 // Pure function to save current form data
 export const saveCurrentFormData = (pageType, formData) => {
   if (!isCacheAvailable()) {
@@ -219,7 +240,8 @@ export const saveCurrentFormData = (pageType, formData) => {
     const yjsState = {
       journalArray: { toArray: () => existingCache.journalEntries || [] },
       characterMap: { get: (key) => existingCache.characterData?.[key] },
-      settingsMap: { get: (key) => existingCache.settings?.[key] }
+      settingsMap: { get: (key) => existingCache.settings?.[key] },
+      questionsMap: { get: (key) => key === 'current' ? existingCache.sessionQuestions : null }
     };
     return saveNavigationCache(yjsState, updatedFormData);
   } else {
@@ -227,7 +249,8 @@ export const saveCurrentFormData = (pageType, formData) => {
     const yjsState = {
       journalArray: { toArray: () => [] },
       characterMap: { get: () => undefined },
-      settingsMap: { get: () => undefined }
+      settingsMap: { get: () => undefined },
+      questionsMap: { get: () => null }
     };
     return saveNavigationCache(yjsState, updatedFormData);
   }
@@ -270,7 +293,8 @@ export const getCacheInfo = () => {
     entriesCount: cache?.journalEntries?.length || 0,
     hasCharacterData: Object.keys(cache?.characterData || {}).length > 0,
     hasSettings: Object.keys(cache?.settings || {}).length > 0,
-    hasFormData: Object.keys(cache?.formData || {}).length > 0
+    hasFormData: Object.keys(cache?.formData || {}).length > 0,
+    hasSessionQuestions: cache?.sessionQuestions !== null && cache?.sessionQuestions !== undefined
   };
 };
 
@@ -300,6 +324,7 @@ export const isCacheRecentAndValid = () => {
   
   return isRecent && cache.data && (
     cache.data.journalEntries?.length > 0 || 
-    Object.keys(cache.data.characterData || {}).length > 0
+    Object.keys(cache.data.characterData || {}).length > 0 ||
+    cache.data.sessionQuestions !== null
   );
 };

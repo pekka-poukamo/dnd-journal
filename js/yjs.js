@@ -219,6 +219,10 @@ export const onSummariesChange = (state, callback) => {
   getSummariesMap(state).observe(callback);
 };
 
+export const onQuestionsChange = (state, callback) => {
+  state.questionsMap.observe(callback);
+};
+
 // =============================================================================
 // SESSION QUESTIONS FUNCTIONS (Radically Simple)
 // =============================================================================

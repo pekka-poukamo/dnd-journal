@@ -3,6 +3,7 @@ import { parseMarkdown, formatDate, sortEntriesByDate, getFormData, formatAIProm
 import {
   getCachedJournalEntries,
   getCachedCharacterData,
+  getCachedSessionQuestions,
   getFormDataForPage
 } from './navigation-cache.js';
 import { summarize } from './summarization.js';
@@ -523,9 +524,14 @@ export const renderCachedJournalContent = (elements) => {
     renderCharacterSummary(characterInfoContainer, cachedCharacter);
   }
   
-  // Show loading indicator for real-time content
+  // Show cached session questions if available, otherwise loading indicator
   if (aiPromptText) {
-    aiPromptText.innerHTML = formatAIPromptText('Loading writing prompt...');
+    const cachedQuestions = getCachedSessionQuestions();
+    if (cachedQuestions) {
+      showAIPromptQuestions(aiPromptText, cachedQuestions);
+    } else {
+      aiPromptText.innerHTML = formatAIPromptText('Loading writing prompt...');
+    }
   }
 };
 
