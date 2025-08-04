@@ -21,7 +21,9 @@ Please create 3 introspective questions that would help this player discover com
   },
   
   summarization: {
-    entry: (text) => `Create a comprehensive summary of this D&D journal entry. Your summary should be rich and detailed, preserving key narrative elements, character interactions, plot developments, and emotional moments. Aim for 200-400 words depending on the source content's complexity.
+    entry: (text) => `Create a comprehensive summary of this D&D journal entry. Your summary should be rich and detailed, preserving key narrative elements, character interactions, plot developments, and emotional moments. 
+
+**IMPORTANT**: Maximum 400 words. Do not make the summary longer than the original content - if the original is shorter than 400 words, keep your summary shorter as well.
 
 Include:
 - Key events and plot developments
@@ -37,7 +39,9 @@ Maintain the narrative voice and preserve the storytelling quality of the origin
 Source content:
 ${text}`,
     
-    character: (text) => `Create a detailed character summary that captures the full depth and complexity of this character information. Your summary should be comprehensive yet engaging, preserving personality, motivations, relationships, and key background elements. Aim for 300-500 words.
+    character: (text) => `Create a detailed character summary that captures the full depth and complexity of this character information. Your summary should be comprehensive yet engaging, preserving personality, motivations, relationships, and key background elements.
+
+**IMPORTANT**: Maximum 500 words. Do not make the summary longer than the original content - if the original is shorter than 500 words, keep your summary shorter as well.
 
 Include:
 - Core personality traits and defining characteristics
@@ -54,7 +58,9 @@ Write in a way that brings the character to life for someone who hasn't met them
 Source content:
 ${text}`,
     
-    metaSummary: (summaryText) => `Create a comprehensive adventure chronicle that weaves together these individual summaries into a cohesive narrative. This should read like a rich campaign summary that captures the epic scope of the character's journey. Aim for 500-750 words.
+    metaSummary: (summaryText) => `Create a comprehensive adventure chronicle that weaves together these individual summaries into a cohesive narrative. This should read like a rich campaign summary that captures the epic scope of the character's journey.
+
+**IMPORTANT**: Maximum 750 words. Do not make the chronicle longer than the combined source summaries - if the source material is shorter than 750 words, keep your chronicle shorter as well.
 
 Structure your chronicle to include:
 - Overarching story arcs and how they developed
