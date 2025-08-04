@@ -71,81 +71,77 @@ const buildCharacterSection = async (fieldName, content, config) => {
   if (getWordCount(content) > config.characterWords) {
     const summaryKey = `character:${fieldName}`;
     
-    try {
-      const summary = await summarize(summaryKey, content, config.characterWords);
-      return `\n${capitalizedName} (Summary): ${summary}`;
-    } catch (error) {
-      console.warn(`Failed to generate ${fieldName} summary:`, error);
-      // Fallback to full content rather than truncating
-      return `\n${capitalizedName}: ${content}`;
-    }
+    return summarize(summaryKey, content, config.characterWords)
+      .then(summary => `\n${capitalizedName} (Summary): ${summary}`)
+      .catch(error => {
+        console.warn(`Failed to generate ${fieldName} summary:`, error);
+        return `\n${capitalizedName}: ${content}`;
+      });
   } else {
     // Content is short enough to include directly
-    return `\n${capitalizedName}: ${content}`;
+    return Promise.resolve(`\n${capitalizedName}: ${content}`);
   }
 };
 
 // Create entries info section with intelligent summarization
 const createEntriesInfo = async (entries, config, sectionTitle = 'Adventures') => {
-  let entriesInfo = `\n\n${sectionTitle}:`;
-  
-  for (const entry of entries) {
+  const entryPromises = entries.map(entry => {
     const entryLabel = formatDate(entry.timestamp);
     
     if (getWordCount(entry.content) > config.entryWords) {
       const entryKey = `entry:${entry.id}`;
       
-      try {
-        const entrySummary = await summarize(entryKey, entry.content, config.entryWords);
-        entriesInfo += `\n- ${entryLabel}: ${entrySummary}`;
-      } catch (error) {
-        console.warn(`Failed to generate summary for entry ${entry.id}:`, error);
-        entriesInfo += `\n- ${entryLabel}: ${entry.content}`; // Use full content if summarization fails
-      }
+      return summarize(entryKey, entry.content, config.entryWords)
+        .then(entrySummary => `\n- ${entryLabel}: ${entrySummary}`)
+        .catch(error => {
+          console.warn(`Failed to generate summary for entry ${entry.id}:`, error);
+          return `\n- ${entryLabel}: ${entry.content}`;
+        });
     } else {
       // Content is short enough - include full content
-      entriesInfo += `\n- ${entryLabel}: ${entry.content}`;
+      return Promise.resolve(`\n- ${entryLabel}: ${entry.content}`);
     }
-  }
+  });
   
-  return entriesInfo;
+  return Promise.all(entryPromises)
+    .then(entryInfos => `\n\n${sectionTitle}:` + entryInfos.join(''));
 };
 
 // Create meta-summary from all entries
 const createMetaSummary = async (entries, config) => {
   const metaSummaryKey = 'journal:meta-summary';
   
-  try {
-    // Generate individual entry summaries for all entries
-    const entrySummaries = [];
+  // Generate individual entry summaries for all entries
+  const entrySummaryPromises = entries.map(entry => {
+    const entryLabel = formatDate(entry.timestamp);
     
-    for (const entry of entries) {
-      const entryLabel = formatDate(entry.timestamp);
+    if (getWordCount(entry.content) > config.entryWords) {
+      const entryKey = `entry:${entry.id}`;
       
-      if (getWordCount(entry.content) > config.entryWords) {
-        const entryKey = `entry:${entry.id}`;
-        try {
-          const entrySummary = await summarize(entryKey, entry.content, config.entryWords);
-          entrySummaries.push(`${entryLabel}: ${entrySummary}`);
-        } catch (error) {
+      return summarize(entryKey, entry.content, config.entryWords)
+        .then(entrySummary => `${entryLabel}: ${entrySummary}`)
+        .catch(error => {
           console.warn(`Failed to generate summary for entry ${entry.id}:`, error);
-          entrySummaries.push(`${entryLabel}: ${entry.content}`); // Use full content if summarization fails
-        }
-      } else {
-        entrySummaries.push(`${entryLabel}: ${entry.content}`);
-      }
+          return `${entryLabel}: ${entry.content}`;
+        });
+    } else {
+      return Promise.resolve(`${entryLabel}: ${entry.content}`);
     }
-    
-    // Create meta-summary from all entry summaries
-    if (entrySummaries.length > 0) {
-      const summaryText = entrySummaries.join('\n\n');
-      return await summarize(metaSummaryKey, summaryText, config.metaWords);
-    }
-  } catch (error) {
-    console.warn('Failed to generate meta-summary:', error);
-  }
+  });
   
-  return '';
+  return Promise.all(entrySummaryPromises)
+    .then(entrySummaries => {
+      if (entrySummaries.length === 0) {
+        return '';
+      }
+      
+      const summaryText = entrySummaries.join('\n\n');
+      return summarize(metaSummaryKey, summaryText, config.metaWords);
+    })
+    .catch(error => {
+      console.warn('Failed to generate meta-summary:', error);
+      return '';
+    });
 };
 
 // Check if we have enough context for meaningful AI generation
