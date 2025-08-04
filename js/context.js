@@ -3,7 +3,7 @@
 
 import { getYjsState, getCharacterData, getEntries, getSummary } from './yjs.js';
 import { summarize } from './summarization.js';
-import { formatDate } from './utils.js';
+import { formatDate, getWordCount } from './utils.js';
 
 // Build context string for AI from character and entries
 export const buildContext = async (character = null, entries = null) => {
@@ -14,14 +14,11 @@ export const buildContext = async (character = null, entries = null) => {
     entries = entries || getEntries(state);
   }
   
-  // Simple centralized config - threshold equals summary length for logical consistency
+  // Simple centralized config - single word count parameters
   const config = {
-    characterWords: 300,    // Character summary length
-    entryWords: 200,        // Entry summary length  
-    metaWords: 500,         // Meta-summary length
-    // Convert word limits to character thresholds (avg ~5 chars per word)
-    characterThreshold: 300 * 5,  // ~1500 chars
-    entryThreshold: 200 * 5       // ~1000 chars
+    characterWords: 300,    // Character summary word count and threshold
+    entryWords: 200,        // Entry summary word count and threshold
+    metaWords: 500          // Meta-summary word count
   };
   
   // Build character context
@@ -60,7 +57,7 @@ const buildCharacterSection = async (fieldName, content, config) => {
   const capitalizedName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
   
   // Check if content is too long for direct inclusion
-  if (content.length > config.characterThreshold) {
+  if (getWordCount(content) > config.characterWords) {
     const state = getYjsState();
     const summaryKey = `character:${fieldName}`;
     let summary = getSummary(state, summaryKey);
@@ -99,7 +96,7 @@ const buildFullJournalHistory = async (entries, config) => {
       const entryKey = `entry:${entry.id}`;
       let entrySummary = getSummary(state, entryKey);
       
-      if (!entrySummary && entry.content.length > config.entryThreshold) {
+      if (!entrySummary && getWordCount(entry.content) > config.entryWords) {
         try {
           entrySummary = await summarize(entryKey, entry.content, config.entryWords);
         } catch (error) {
@@ -144,7 +141,7 @@ const buildEntriesSection = async (entries, config, sectionTitle = 'Adventures')
   let entriesInfo = `\n\n${sectionTitle}:`;
   
   for (const entry of entries) {
-    if (entry.content.length > config.entryThreshold) {
+    if (getWordCount(entry.content) > config.entryWords) {
       const state = getYjsState();
       const entryKey = `entry:${entry.id}`;
       let entrySummary = getSummary(state, entryKey);
