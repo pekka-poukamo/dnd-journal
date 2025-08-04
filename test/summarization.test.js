@@ -5,7 +5,7 @@ import { JSDOM } from 'jsdom';
 import * as YjsModule from '../js/yjs.js';
 import * as Summarization from '../js/summarization.js';
 
-describe('Simple Summarization Module', function() {
+describe('Enhanced Summarization Module', function() {
   let state;
 
   beforeEach(async function() {
@@ -77,7 +77,7 @@ describe('Simple Summarization Module', function() {
       YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
       
       const summaryKey = 'new-summary';
-      const content = 'This is a long piece of content that needs to be summarized. It contains many details about various topics and should be condensed into something more manageable.';
+      const content = 'This is a long piece of content that needs to be summarized with rich detail. It contains many details about various topics and should be condensed into a comprehensive, detailed summary that preserves important narrative elements and context.';
       
       // Mock successful API call
       const originalFetch = global.fetch;
@@ -86,7 +86,7 @@ describe('Simple Summarization Module', function() {
         json: async () => ({
           choices: [{
             message: {
-              content: 'This is a generated summary'
+              content: 'This is a comprehensive, detailed summary that preserves key narrative elements, character interactions, and important plot developments. The enhanced summarization system now generates much richer content that maintains the storytelling quality and provides extensive context for future AI interactions.'
             }
           }]
         })

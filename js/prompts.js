@@ -21,15 +21,15 @@ Please create 3 introspective questions that would help this player discover com
   },
   
   summarization: {
-    entry: (text) => `Summarize the following content. Keep it concise and preserve the original brevity if the content is already short. If the content is substantial, condense to around 100 words:
+    entry: (text, maxWords = 400) => `Summarize this D&D journal entry. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
 
 ${text}`,
     
-    character: (text) => `Summarize the following content. Preserve brevity for short content, or condense longer descriptions to around 200 words:
+    character: (text, maxWords = 500) => `Summarize this character information. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
 
 ${text}`,
     
-    metaSummary: (summaryText) => `Provide a comprehensive summary of the following content. Aim for around 300 words:
+    metaSummary: (summaryText, maxWords = 750) => `Create a comprehensive adventure chronicle from these summaries. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
 
 ${summaryText}`
   }

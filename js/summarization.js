@@ -24,7 +24,7 @@ const callAI = async (prompt) => {
     body: JSON.stringify({
       model: 'gpt-4.1',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 200,
+      max_tokens: 1000,
       temperature: 0.3
     })
   });
@@ -38,7 +38,7 @@ const callAI = async (prompt) => {
 };
 
 // Summarize content with caching
-export const summarize = async (summaryKey, content) => {
+export const summarize = async (summaryKey, content, maxWords = null) => {
   const state = getYjsState();
   
   // Check cache first
@@ -58,14 +58,14 @@ export const summarize = async (summaryKey, content) => {
   }
   
   try {
-    // Determine prompt type and generate summary
+    // Generate prompt with appropriate word count
     let prompt;
     if (summaryKey.startsWith('entry:')) {
-      prompt = PROMPTS.summarization.entry(content);
+      prompt = PROMPTS.summarization.entry(content, maxWords || 400);
     } else if (summaryKey.startsWith('character:')) {
-      prompt = PROMPTS.summarization.character(content);
+      prompt = PROMPTS.summarization.character(content, maxWords || 500);
     } else if (summaryKey.startsWith('journal:meta-summary')) {
-      prompt = PROMPTS.summarization.metaSummary(content);
+      prompt = PROMPTS.summarization.metaSummary(content, maxWords || 750);
     } else {
       prompt = `Summarize this content concisely:\n\n${content}`;
     }
