@@ -37,13 +37,17 @@ export const buildContext = async (character = null, entries = null) => {
     characterInfo += await buildCharacterSection('notes', character.notes, config);
   }
   
-  // Build entries context
+  // Build entries context - simple and clear
   let entriesInfo = '';
   if (entries && entries.length > 0) {
+    // Create meta-summary for large histories, then add recent entries
     if (entries.length > 10) {
-      entriesInfo = await buildFullJournalHistory(entries, config);
+      const metaSummary = await createMetaSummary(entries, config);
+      const recentEntries = await createEntriesInfo(entries.slice(-5), config, 'Recent Detailed Adventures');
+      entriesInfo = `\n\nAdventure History (Complete): ${metaSummary}${recentEntries}`;
     } else {
-      entriesInfo = await buildEntriesSection(entries, config);
+      // Just list all entries for smaller histories
+      entriesInfo = await createEntriesInfo(entries, config);
     }
   } else {
     entriesInfo = '\n\nNo journal entries yet. This character is just beginning their adventure.';
@@ -80,8 +84,39 @@ const buildCharacterSection = async (fieldName, content, config) => {
   }
 };
 
-// Build comprehensive journal history for large adventure logs
-const buildFullJournalHistory = async (entries, config) => {
+// Create entries info section with intelligent summarization
+const createEntriesInfo = async (entries, config, sectionTitle = 'Adventures') => {
+  let entriesInfo = `\n\n${sectionTitle}:`;
+  
+  for (const entry of entries) {
+    if (getWordCount(entry.content) > config.entryWords) {
+      const state = getYjsState();
+      const entryKey = `entry:${entry.id}`;
+      let entrySummary = getSummary(state, entryKey);
+      
+      if (!entrySummary) {
+        try {
+          entrySummary = await summarize(entryKey, entry.content, config.entryWords);
+        } catch (error) {
+          console.warn(`Failed to generate summary for entry ${entry.id}:`, error);
+          entrySummary = entry.content; // Use full content if summarization fails
+        }
+      }
+      
+      const entryLabel = formatDate(entry.timestamp);
+      entriesInfo += `\n- ${entryLabel}: ${entrySummary}`;
+    } else {
+      // Content is short enough - include full content
+      const entryLabel = formatDate(entry.timestamp);
+      entriesInfo += `\n- ${entryLabel}: ${entry.content}`;
+    }
+  }
+  
+  return entriesInfo;
+};
+
+// Create meta-summary from all entries
+const createMetaSummary = async (entries, config) => {
   const state = getYjsState();
   const metaSummaryKey = 'journal:meta-summary';
   
@@ -124,47 +159,7 @@ const buildFullJournalHistory = async (entries, config) => {
     }
   }
   
-  if (metaSummary) {
-    // Include both meta-summary and recent detailed entries
-    const recentEntries = entries.slice(-5);
-          const recentSection = await buildEntriesSection(recentEntries, config, 'Recent Detailed Adventures');
-    
-    return `\n\nAdventure History (Complete): ${metaSummary}${recentSection}`;
-  } else {
-    // Fallback to normal entry listing
-    return await buildEntriesSection(entries, config);
-  }
-};
-
-// Build entries section with intelligent summarization
-const buildEntriesSection = async (entries, config, sectionTitle = 'Adventures') => {
-  let entriesInfo = `\n\n${sectionTitle}:`;
-  
-  for (const entry of entries) {
-    if (getWordCount(entry.content) > config.entryWords) {
-      const state = getYjsState();
-      const entryKey = `entry:${entry.id}`;
-      let entrySummary = getSummary(state, entryKey);
-      
-      if (!entrySummary) {
-        try {
-          entrySummary = await summarize(entryKey, entry.content, config.entryWords);
-        } catch (error) {
-          console.warn(`Failed to generate summary for entry ${entry.id}:`, error);
-          entrySummary = entry.content; // Use full content if summarization fails
-        }
-      }
-      
-      const entryLabel = formatDate(entry.timestamp);
-      entriesInfo += `\n- ${entryLabel}: ${entrySummary}`;
-    } else {
-      // Content is short enough - include full content
-      const entryLabel = formatDate(entry.timestamp);
-      entriesInfo += `\n- ${entryLabel}: ${entry.content}`;
-    }
-  }
-  
-  return entriesInfo;
+  return metaSummary || '';
 };
 
 // Check if we have enough context for meaningful AI generation
