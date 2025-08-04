@@ -6,7 +6,7 @@ import { summarize } from './summarization.js';
 import { formatDate } from './utils.js';
 
 // Build context string for AI from character and entries
-export const buildContext = async (character = null, entries = null, options = {}) => {
+export const buildContext = async (character = null, entries = null) => {
   // Use provided data or fall back to Y.js state
   if (!character || !entries) {
     const state = getYjsState();
@@ -14,14 +14,9 @@ export const buildContext = async (character = null, entries = null, options = {
     entries = entries || getEntries(state);
   }
   
-  const defaults = {
-    maxEntries: null, // null means include all entries
-    maxCharacterLength: 2500, // Increased 5x from 500 to allow much more detail
-    maxEntryLength: 1500, // Increased 5x from 300 to allow much more detail
-    useSummaries: true,
-    ensureFullHistory: true // New option to ensure complete context
-  };
-  const config = { ...defaults, ...options };
+  // Simple thresholds - no configuration needed
+  const CHARACTER_SUMMARY_THRESHOLD = 3000;
+  const ENTRY_SUMMARY_THRESHOLD = 2000;
   
   // Build character context
   const characterName = character?.name || 'unnamed adventurer';
@@ -30,29 +25,25 @@ export const buildContext = async (character = null, entries = null, options = {
   if (character?.race) characterInfo += ` (${character.race})`;
   if (character?.class) characterInfo += ` - ${character.class}`;
   
-  // Add backstory (ALWAYS include full content, use summary if too long)
+  // Add backstory (use summary if too long)
   if (character?.backstory) {
-    characterInfo += await buildCharacterSection('backstory', character.backstory, config);
+    characterInfo += await buildCharacterSection('backstory', character.backstory, CHARACTER_SUMMARY_THRESHOLD);
   }
   
-  // Add notes (ALWAYS include full content, use summary if too long)
+  // Add notes (use summary if too long)
   if (character?.notes) {
-    characterInfo += await buildCharacterSection('notes', character.notes, config);
+    characterInfo += await buildCharacterSection('notes', character.notes, CHARACTER_SUMMARY_THRESHOLD);
   }
   
-  // Build entries context - include ALL entries if ensureFullHistory is true
+  // Build entries context - include ALL entries with intelligent summarization
   let entriesInfo = '';
   if (entries && entries.length > 0) {
-    const targetEntries = config.ensureFullHistory || !config.maxEntries 
-      ? entries 
-      : entries.slice(-config.maxEntries);
-    
-    if (config.ensureFullHistory && entries.length > 10) {
+    if (entries.length > 10) {
       // For large histories, create a comprehensive summary
-      entriesInfo = await buildFullJournalHistory(entries, config);
+      entriesInfo = await buildFullJournalHistory(entries, ENTRY_SUMMARY_THRESHOLD);
     } else {
       // Normal entry listing for smaller histories
-      entriesInfo = await buildEntriesSection(targetEntries, config);
+      entriesInfo = await buildEntriesSection(entries, ENTRY_SUMMARY_THRESHOLD);
     }
   } else {
     entriesInfo = '\n\nNo journal entries yet. This character is just beginning their adventure.';
@@ -62,16 +53,11 @@ export const buildContext = async (character = null, entries = null, options = {
 };
 
 // Build character section (backstory or notes) with intelligent summarization
-const buildCharacterSection = async (fieldName, content, config) => {
+const buildCharacterSection = async (fieldName, content, threshold) => {
   const capitalizedName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
   
-  if (!config.useSummaries) {
-    // If summaries disabled, still don't truncate - include full content
-    return `\n${capitalizedName}: ${content}`;
-  }
-  
   // Check if content is too long for direct inclusion
-  if (content.length > config.maxCharacterLength) {
+  if (content.length > threshold) {
     const state = getYjsState();
     const summaryKey = `character:${fieldName}`;
     let summary = getSummary(state, summaryKey);
@@ -95,14 +81,14 @@ const buildCharacterSection = async (fieldName, content, config) => {
 };
 
 // Build comprehensive journal history for large adventure logs
-const buildFullJournalHistory = async (entries, config) => {
+const buildFullJournalHistory = async (entries, entryThreshold) => {
   const state = getYjsState();
   const metaSummaryKey = 'journal:meta-summary';
   
   // Try to get existing meta-summary
   let metaSummary = getSummary(state, metaSummaryKey);
   
-  if (!metaSummary && config.useSummaries) {
+  if (!metaSummary) {
     // Generate individual entry summaries for all entries
     const entrySummaries = [];
     
@@ -110,7 +96,7 @@ const buildFullJournalHistory = async (entries, config) => {
       const entryKey = `entry:${entry.id}`;
       let entrySummary = getSummary(state, entryKey);
       
-      if (!entrySummary && entry.content.length > config.maxEntryLength) {
+      if (!entrySummary && entry.content.length > entryThreshold) {
         try {
           entrySummary = await summarize(entryKey, entry.content);
         } catch (error) {
@@ -140,22 +126,22 @@ const buildFullJournalHistory = async (entries, config) => {
   
   if (metaSummary) {
     // Include both meta-summary and recent detailed entries
-    const recentEntries = entries.slice(-5); // Increased from 3 to 5 for richer recent context
-    const recentSection = await buildEntriesSection(recentEntries, config, 'Recent Detailed Adventures');
+    const recentEntries = entries.slice(-5);
+    const recentSection = await buildEntriesSection(recentEntries, entryThreshold, 'Recent Detailed Adventures');
     
     return `\n\nAdventure History (Complete): ${metaSummary}${recentSection}`;
   } else {
     // Fallback to normal entry listing
-    return await buildEntriesSection(entries, config);
+    return await buildEntriesSection(entries, entryThreshold);
   }
 };
 
 // Build entries section with intelligent summarization
-const buildEntriesSection = async (entries, config, sectionTitle = 'Adventures') => {
+const buildEntriesSection = async (entries, entryThreshold, sectionTitle = 'Adventures') => {
   let entriesInfo = `\n\n${sectionTitle}:`;
   
   for (const entry of entries) {
-    if (config.useSummaries && entry.content.length > config.maxEntryLength) {
+    if (entry.content.length > entryThreshold) {
       const state = getYjsState();
       const entryKey = `entry:${entry.id}`;
       let entrySummary = getSummary(state, entryKey);
@@ -172,7 +158,7 @@ const buildEntriesSection = async (entries, config, sectionTitle = 'Adventures')
       const entryLabel = formatDate(entry.timestamp);
       entriesInfo += `\n- ${entryLabel}: ${entrySummary}`;
     } else {
-      // Content is short enough or summaries disabled - include full content
+      // Content is short enough - include full content
       const entryLabel = formatDate(entry.timestamp);
       entriesInfo += `\n- ${entryLabel}: ${entry.content}`;
     }

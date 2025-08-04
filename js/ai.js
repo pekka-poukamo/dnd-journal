@@ -77,11 +77,7 @@ export const generateQuestions = async (character = null, entries = null, forceR
     }
 
     // Generate new questions
-    const context = await buildContext(character, entries, { 
-      ensureFullHistory: true,
-      maxCharacterLength: 4000, // Increased significantly to allow rich character detail
-      maxEntryLength: 2000 // Increased significantly to allow rich entry detail
-    });
+    const context = await buildContext(character, entries);
     const userPrompt = PROMPTS.storytelling.user(context);
     const questions = await callAI(PROMPTS.storytelling.system, userPrompt);
     
@@ -104,11 +100,7 @@ export const getPromptPreview = async (character = null, entries = null) => {
   }
 
   try {
-    const context = await buildContext(character, entries, { 
-      ensureFullHistory: true,
-      maxCharacterLength: 4000,
-      maxEntryLength: 2000
-    });
+    const context = await buildContext(character, entries);
     const userPrompt = PROMPTS.storytelling.user(context);
     
     return {
