@@ -21,16 +21,54 @@ Please create 3 introspective questions that would help this player discover com
   },
   
   summarization: {
-    entry: (text) => `Summarize the following content. Keep it concise and preserve the original brevity if the content is already short. If the content is substantial, condense to around 100 words:
+    entry: (text) => `Create a comprehensive summary of this D&D journal entry. Your summary should be rich and detailed, preserving key narrative elements, character interactions, plot developments, and emotional moments. Aim for 200-400 words depending on the source content's complexity.
 
+Include:
+- Key events and plot developments
+- Character interactions and dialogue highlights
+- Important decisions made and their consequences
+- Memorable moments, discoveries, or revelations
+- Emotional beats and character growth
+- Setting details that establish atmosphere
+- Any lore, world-building, or campaign-relevant information
+
+Maintain the narrative voice and preserve the storytelling quality of the original entry. This summary will be used to provide context for future AI-generated story questions, so ensure it captures the essence and flavor of the adventure.
+
+Source content:
 ${text}`,
     
-    character: (text) => `Summarize the following content. Preserve brevity for short content, or condense longer descriptions to around 200 words:
+    character: (text) => `Create a detailed character summary that captures the full depth and complexity of this character information. Your summary should be comprehensive yet engaging, preserving personality, motivations, relationships, and key background elements. Aim for 300-500 words.
 
+Include:
+- Core personality traits and defining characteristics
+- Important relationships and connections to other characters
+- Key background events that shaped the character
+- Motivations, goals, fears, and internal conflicts
+- Skills, abilities, or notable accomplishments
+- Memorable quotes or defining moments
+- How the character has grown or changed
+- Any ongoing storylines or unresolved character arcs
+
+Write in a way that brings the character to life for someone who hasn't met them, preserving the unique voice and essence that makes this character memorable. This summary will help provide rich context for storytelling.
+
+Source content:
 ${text}`,
     
-    metaSummary: (summaryText) => `Provide a comprehensive summary of the following content. Aim for around 300 words:
+    metaSummary: (summaryText) => `Create a comprehensive adventure chronicle that weaves together these individual summaries into a cohesive narrative. This should read like a rich campaign summary that captures the epic scope of the character's journey. Aim for 500-750 words.
 
+Structure your chronicle to include:
+- Overarching story arcs and how they developed
+- Character growth and evolution throughout the adventures
+- Key relationships formed, lost, or transformed
+- Major conflicts, challenges, and how they were resolved
+- Important discoveries, revelations, or world-building elements
+- Recurring themes or patterns in the character's choices
+- Memorable moments that defined the campaign
+- Current status and ongoing storylines
+
+Write this as an engaging narrative that could serve as a campaign recap, preserving the epic feel and emotional weight of the character's journey. Focus on how individual adventures connect to create a larger, meaningful story.
+
+Individual adventure summaries:
 ${summaryText}`
   }
 };

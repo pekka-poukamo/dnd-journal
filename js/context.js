@@ -16,8 +16,8 @@ export const buildContext = async (character = null, entries = null, options = {
   
   const defaults = {
     maxEntries: null, // null means include all entries
-    maxCharacterLength: 500, // Increased threshold before summarizing
-    maxEntryLength: 300, // Increased threshold before summarizing
+    maxCharacterLength: 2500, // Increased 5x from 500 to allow much more detail
+    maxEntryLength: 1500, // Increased 5x from 300 to allow much more detail
     useSummaries: true,
     ensureFullHistory: true // New option to ensure complete context
   };
@@ -140,7 +140,7 @@ const buildFullJournalHistory = async (entries, config) => {
   
   if (metaSummary) {
     // Include both meta-summary and recent detailed entries
-    const recentEntries = entries.slice(-3);
+    const recentEntries = entries.slice(-5); // Increased from 3 to 5 for richer recent context
     const recentSection = await buildEntriesSection(recentEntries, config, 'Recent Detailed Adventures');
     
     return `\n\nAdventure History (Complete): ${metaSummary}${recentSection}`;
