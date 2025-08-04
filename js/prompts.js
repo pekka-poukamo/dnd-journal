@@ -21,60 +21,16 @@ Please create 3 introspective questions that would help this player discover com
   },
   
   summarization: {
-    entry: (text) => `Create a comprehensive summary of this D&D journal entry. Your summary should be rich and detailed, preserving key narrative elements, character interactions, plot developments, and emotional moments. 
+    entry: (text, maxWords = 400) => `Summarize this D&D journal entry. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
 
-**IMPORTANT**: Maximum 400 words. Do not make the summary longer than the original content - if the original is shorter than 400 words, keep your summary shorter as well.
-
-Include:
-- Key events and plot developments
-- Character interactions and dialogue highlights
-- Important decisions made and their consequences
-- Memorable moments, discoveries, or revelations
-- Emotional beats and character growth
-- Setting details that establish atmosphere
-- Any lore, world-building, or campaign-relevant information
-
-Maintain the narrative voice and preserve the storytelling quality of the original entry. This summary will be used to provide context for future AI-generated story questions, so ensure it captures the essence and flavor of the adventure.
-
-Source content:
 ${text}`,
     
-    character: (text) => `Create a detailed character summary that captures the full depth and complexity of this character information. Your summary should be comprehensive yet engaging, preserving personality, motivations, relationships, and key background elements.
+    character: (text, maxWords = 500) => `Summarize this character information. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
 
-**IMPORTANT**: Maximum 500 words. Do not make the summary longer than the original content - if the original is shorter than 500 words, keep your summary shorter as well.
-
-Include:
-- Core personality traits and defining characteristics
-- Important relationships and connections to other characters
-- Key background events that shaped the character
-- Motivations, goals, fears, and internal conflicts
-- Skills, abilities, or notable accomplishments
-- Memorable quotes or defining moments
-- How the character has grown or changed
-- Any ongoing storylines or unresolved character arcs
-
-Write in a way that brings the character to life for someone who hasn't met them, preserving the unique voice and essence that makes this character memorable. This summary will help provide rich context for storytelling.
-
-Source content:
 ${text}`,
     
-    metaSummary: (summaryText) => `Create a comprehensive adventure chronicle that weaves together these individual summaries into a cohesive narrative. This should read like a rich campaign summary that captures the epic scope of the character's journey.
+    metaSummary: (summaryText, maxWords = 750) => `Create a comprehensive adventure chronicle from these summaries. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
 
-**IMPORTANT**: Maximum 750 words. Do not make the chronicle longer than the combined source summaries - if the source material is shorter than 750 words, keep your chronicle shorter as well.
-
-Structure your chronicle to include:
-- Overarching story arcs and how they developed
-- Character growth and evolution throughout the adventures
-- Key relationships formed, lost, or transformed
-- Major conflicts, challenges, and how they were resolved
-- Important discoveries, revelations, or world-building elements
-- Recurring themes or patterns in the character's choices
-- Memorable moments that defined the campaign
-- Current status and ongoing storylines
-
-Write this as an engaging narrative that could serve as a campaign recap, preserving the epic feel and emotional weight of the character's journey. Focus on how individual adventures connect to create a larger, meaningful story.
-
-Individual adventure summaries:
 ${summaryText}`
   }
 };
