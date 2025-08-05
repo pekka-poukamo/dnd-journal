@@ -1,11 +1,22 @@
 import { expect } from 'chai';
 import './setup.js';
 import * as JournalViews from '../js/journal-views.js';
+import * as YjsModule from '../js/yjs.js';
 
 describe('Journal Views Module', function() {
-  beforeEach(function() {
+  let state;
+
+  beforeEach(async function() {
     // Set up a clean DOM environment for each test
     document.body.innerHTML = '<div id="test-container"></div>';
+    
+    // Reset and initialize Y.js
+    YjsModule.resetYjs();
+    state = await YjsModule.initYjs();
+  });
+
+  afterEach(function() {
+    YjsModule.resetYjs();
   });
 
   describe('createEntryForm', function() {
