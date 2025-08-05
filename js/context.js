@@ -15,9 +15,9 @@ export const buildContext = (character = null, entries = null) => {
   }
 
   const config = {
-    characterWords: 300,
-    entryWords: 200,
-    metaWords: 1000
+    characterWords: 800,
+    entryWords: 500,
+    metaWords: 2000
   };
 
   // Build character context string

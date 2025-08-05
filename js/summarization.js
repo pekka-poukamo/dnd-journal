@@ -24,7 +24,7 @@ const callAI = (prompt) => {
     body: JSON.stringify({
       model: 'gpt-4.1',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1000,
+      max_tokens: 2500,
       temperature: 0.3
     })
   })
@@ -60,11 +60,11 @@ export const summarize = (summaryKey, content, maxWords = null) => {
   // Generate prompt with appropriate word count
   let prompt;
   if (summaryKey.startsWith('entry:')) {
-    prompt = PROMPTS.summarization.entry(content, maxWords || 400);
+    prompt = PROMPTS.summarization.entry(content, maxWords || 800);
   } else if (summaryKey.startsWith('character:')) {
-    prompt = PROMPTS.summarization.character(content, maxWords || 500);
+    prompt = PROMPTS.summarization.character(content, maxWords || 1000);
   } else if (summaryKey.startsWith('journal:meta-summary')) {
-    prompt = PROMPTS.summarization.metaSummary(content, maxWords || 750);
+    prompt = PROMPTS.summarization.metaSummary(content, maxWords || 1500);
   } else {
     prompt = `Summarize this content concisely:\n\n${content}`;
   }
