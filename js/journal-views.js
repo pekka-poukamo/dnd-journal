@@ -7,7 +7,7 @@ import {
   getFormDataForPage
 } from './navigation-cache.js';
 import { summarize } from './summarization.js';
-import { getYjsState, getSummary } from './yjs.js';
+import { getYjsState } from './yjs.js';
 
 // Create journal entry form
 export const createEntryForm = (options = {}) => {
