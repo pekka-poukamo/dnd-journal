@@ -240,11 +240,8 @@ const generateAllSummaries = async () => {
     
     showNotification('Generating summaries...', 'info');
     
-    // Generate summaries for each field with content
-    await fieldsToSummarize.reduce(async (previousPromise, field) => {
-      await previousPromise;
-      await generateSummary(field);
-    }, Promise.resolve());
+    // Generate summaries for each field with content (in parallel)
+    await Promise.all(fieldsToSummarize.map(field => generateSummary(field)));
     
     showNotification('All summaries generated!', 'success');
     
