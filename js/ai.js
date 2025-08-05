@@ -30,13 +30,13 @@ export const buildMessages = (systemPrompt, userPrompt) => {
 };
 
 // Simple AI call function
-const callAI = async (systemPrompt, userPrompt) => {
+const callAI = (systemPrompt, userPrompt) => {
   const state = getYjsState();
   const apiKey = getSetting(state, 'openai-api-key', '');
   
   const messages = buildMessages(systemPrompt, userPrompt);
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  return fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -48,68 +48,75 @@ const callAI = async (systemPrompt, userPrompt) => {
       max_tokens: 1200,
       temperature: 0.8
     })
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || `HTTP ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data.choices[0]?.message?.content?.trim();
+  })
+  .then(response => {
+    if (!response.ok) {
+      return response.json()
+        .then(errorData => {
+          throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+        })
+        .catch(() => {
+          throw new Error(`HTTP ${response.status}`);
+        });
+    }
+    return response.json();
+  })
+  .then(data => data.choices[0]?.message?.content?.trim());
 };
 
 // Generate storytelling questions (uses Yjs for sync)
-export const generateQuestions = async (character = null, entries = null, forceRegenerate = false) => {
+export const generateQuestions = (character = null, entries = null, forceRegenerate = false) => {
   if (!isAIEnabled() || !hasContext(character, entries)) {
-    return null;
+    return Promise.resolve(null);
   }
 
-  try {
-    const state = getYjsState();
-    
-    // Return existing questions unless forced to regenerate
-    if (!forceRegenerate) {
-      const existingQuestions = getSessionQuestions(state);
-      if (existingQuestions) {
-        return existingQuestions;
+  const state = getYjsState();
+  
+  // Return existing questions unless forced to regenerate
+  if (!forceRegenerate) {
+    const existingQuestions = getSessionQuestions(state);
+    if (existingQuestions) {
+      return Promise.resolve(existingQuestions);
+    }
+  }
+
+  // Generate new questions - defer promise resolution by returning the chain
+  return buildContext(character, entries)
+    .then(context => {
+      const userPrompt = PROMPTS.storytelling.user(context);
+      return callAI(PROMPTS.storytelling.system, userPrompt);
+    })
+    .then(questions => {
+      // Store in Yjs for sync
+      if (questions) {
+        setSessionQuestions(state, questions);
       }
-    }
-
-    // Generate new questions
-    const context = await buildContext(character, entries);
-    const userPrompt = PROMPTS.storytelling.user(context);
-    const questions = await callAI(PROMPTS.storytelling.system, userPrompt);
-    
-    // Store in Yjs for sync
-    if (questions) {
-      setSessionQuestions(state, questions);
-    }
-    
-    return questions;
-  } catch (error) {
-    console.error('Failed to generate questions:', error);
-    return null;
-  }
+      return questions;
+    })
+    .catch(error => {
+      console.error('Failed to generate questions:', error);
+      return null;
+    });
 };
 
 // Get prompt preview (for debugging/display)
-export const getPromptPreview = async (character = null, entries = null) => {
+export const getPromptPreview = (character = null, entries = null) => {
   if (!isAIEnabled()) {
-    return null;
+    return Promise.resolve(null);
   }
 
-  try {
-    const context = await buildContext(character, entries);
-    const userPrompt = PROMPTS.storytelling.user(context);
-    
-    return {
-      systemPrompt: PROMPTS.storytelling.system,
-      userPrompt: userPrompt,
-      context: context
-    };
-  } catch (error) {
-    console.error('Failed to create prompt preview:', error);
-    return null;
-  }
+  return buildContext(character, entries)
+    .then(context => {
+      const userPrompt = PROMPTS.storytelling.user(context);
+      
+      return {
+        systemPrompt: PROMPTS.storytelling.system,
+        userPrompt: userPrompt,
+        context: context
+      };
+    })
+    .catch(error => {
+      console.error('Failed to create prompt preview:', error);
+      return null;
+    });
 };

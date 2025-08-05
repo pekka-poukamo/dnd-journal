@@ -6,7 +6,7 @@ import { summarize } from './summarization.js';
 import { formatDate, getWordCount } from './utils.js';
 
 // Build context string for AI from character and entries
-export const buildContext = async (character = null, entries = null) => {
+export const buildContext = (character = null, entries = null) => {
   // Use provided data or fall back to Y.js state
   if (!character || !entries) {
     const state = getYjsState();
@@ -53,18 +53,19 @@ export const buildContext = async (character = null, entries = null) => {
     entriesPromise = Promise.resolve('\n\nNo journal entries yet. This character is just beginning their adventure.');
   }
 
-  // Await all async work in parallel
-  const [characterSections, entriesInfo] = await Promise.all([
+  // Return promise that resolves all async work in parallel
+  return Promise.all([
     Promise.all(characterSectionPromises),
     entriesPromise
-  ]);
-
-  // Combine all context
-  return characterInfo + characterSections.join('') + entriesInfo;
+  ])
+  .then(([characterSections, entriesInfo]) => {
+    // Combine all context
+    return characterInfo + characterSections.join('') + entriesInfo;
+  });
 };
 
 // Build character section (backstory or notes) with intelligent summarization
-const buildCharacterSection = async (fieldName, content, config) => {
+const buildCharacterSection = (fieldName, content, config) => {
   const capitalizedName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
   
   // Check if content is too long for direct inclusion
@@ -84,7 +85,7 @@ const buildCharacterSection = async (fieldName, content, config) => {
 };
 
 // Create entries info section with intelligent summarization
-const createEntriesInfo = async (entries, config, sectionTitle = 'Adventures') => {
+const createEntriesInfo = (entries, config, sectionTitle = 'Adventures') => {
   const entryPromises = entries.map(entry => {
     const entryLabel = formatDate(entry.timestamp);
     
@@ -108,7 +109,7 @@ const createEntriesInfo = async (entries, config, sectionTitle = 'Adventures') =
 };
 
 // Create meta-summary from all entries
-const createMetaSummary = async (entries, config) => {
+const createMetaSummary = (entries, config) => {
   const metaSummaryKey = 'journal:meta-summary';
   
   // Generate individual entry summaries for all entries
