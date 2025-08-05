@@ -72,7 +72,7 @@ describe('Server', function() {
     let openCount = 0;
     const totalConnections = 3;
     
-    for (let i = 0; i < totalConnections; i++) {
+    Array.from({ length: totalConnections }, () => {
       const ws = new WebSocket(`ws://localhost:${TEST_PORT}`);
       connections.push(ws);
       
@@ -86,7 +86,7 @@ describe('Server', function() {
       });
       
       ws.on('error', done);
-    }
+    });
   });
 
   it('should persist data (basic file check)', function(done) {

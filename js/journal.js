@@ -380,18 +380,12 @@ const areEntriesEquivalent = (entries1, entries2) => {
   if (entries1.length !== entries2.length) return false;
   
   // Simple comparison - if lengths match and basic properties are same, consider equivalent
-  for (let i = 0; i < entries1.length; i++) {
-    const entry1 = entries1[i];
+  return entries1.every((entry1, i) => {
     const entry2 = entries2[i];
-    
-    if (entry1.id !== entry2.id || 
-        entry1.content !== entry2.content ||
-        entry1.timestamp !== entry2.timestamp) {
-      return false;
-    }
-  }
-  
-  return true;
+    return entry1.id === entry2.id && 
+           entry1.content === entry2.content &&
+           entry1.timestamp === entry2.timestamp;
+  });
 };
 
 

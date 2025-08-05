@@ -161,7 +161,8 @@ describe('Enhanced Summarization Module', function() {
         }
       ];
       
-      for (const testCase of testCases) {
+      await testCases.reduce(async (previousPromise, testCase) => {
+        await previousPromise;
         try {
           const result = await Summarization.summarize(testCase.key, testCase.content);
           // In test environment, this will likely throw due to no real API
@@ -170,7 +171,7 @@ describe('Enhanced Summarization Module', function() {
           // Expected in test environment
           expect(error).to.be.an('error');
         }
-      }
+      }, Promise.resolve());
     });
   });
 });
