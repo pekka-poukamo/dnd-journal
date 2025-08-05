@@ -93,43 +93,7 @@ const testLevelDB = async () => {
 // Run test after a short delay
 setTimeout(testLevelDB, 1000);
 
-// Monitor directory changes every 10 seconds when there are active connections
-const monitorDirectory = () => {
-  if (activeConnections.size > 0 || activeDocuments.size > 0) {
-    try {
-      console.log(`\n📂 Directory monitor check:`);
-      console.log(`   📁 Data directory exists: ${existsSync(DATA_DIR)}`);
-      
-      if (existsSync(DATA_DIR)) {
-        const files = readdirSync(DATA_DIR);
-        console.log(`   📋 Files in data directory: ${files.length > 0 ? files.join(', ') : 'EMPTY'}`);
-        
-        // Check subdirectories
-        files.forEach(file => {
-          const fullPath = resolve(DATA_DIR, file);
-          try {
-            const subFiles = readdirSync(fullPath);
-            console.log(`   📁 ${file}/ contains: ${subFiles.length > 0 ? subFiles.join(', ') : 'EMPTY'}`);
-          } catch (e) {
-            // Not a directory or can't read
-            console.log(`   📄 ${file} (file)`);
-          }
-        });
-      }
-      
-      // Also check current directory for any unexpected files
-      const currentFiles = readdirSync('./');
-      const dataRelatedFiles = currentFiles.filter(f => f.includes('data') || f.includes('leveldb') || f.includes('level') || f.includes('.db'));
-      if (dataRelatedFiles.length > 0) {
-        console.log(`   🔍 Data-related files in current dir: ${dataRelatedFiles.join(', ')}`);
-      }
-    } catch (error) {
-      console.error(`   ❌ Directory monitor error: ${error.message}`);
-    }
-  }
-};
 
-setInterval(monitorDirectory, 10000);
 
 const wss = new WebSocketServer({ port: PORT, host: HOST });
 
@@ -149,25 +113,14 @@ wss.on('connection', (ws, req) => {
   // Log connection count
   console.log(`📊 Active connections: ${activeConnections.size}`);
 
-  // Add WebSocket message debugging
+  // Monitor WebSocket sync activity
+  let messageCount = 0;
   ws.on('message', (message) => {
-    console.log(`📨 WebSocket message received [${connectionId}]:`, {
-      messageSize: message.length,
-      timestamp: new Date().toISOString(),
-      isBuffer: Buffer.isBuffer(message),
-      firstBytes: message.slice(0, 10)
-    });
+    messageCount++;
+    if (messageCount % 10 === 1) { // Log every 10th message to avoid spam
+      console.log(`📨 WebSocket sync active [${connectionId}]: ${messageCount} messages received`);
+    }
   });
-  
-  const originalSend = ws.send.bind(ws);
-  ws.send = function(data) {
-    console.log(`📤 WebSocket message sent [${connectionId}]:`, {
-      dataSize: data.length,
-      timestamp: new Date().toISOString(),
-      isBuffer: Buffer.isBuffer(data)
-    });
-    return originalSend(data);
-  };
 
   // Enhanced setupWSConnection with document tracking
   setupWSConnection(ws, req, {
