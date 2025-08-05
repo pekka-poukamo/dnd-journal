@@ -92,30 +92,9 @@ export const createEntrySummarySection = (entry) => {
   const summarySection = document.createElement('div');
   summarySection.className = 'entry-summary-section';
   
-  let existingSummary = null;
-  
-  // Try to get existing summary (handle case where Y.js isn't initialized)
-  try {
-    const state = getYjsState();
-    const summaryKey = `entry:${entry.id}`;
-    existingSummary = getSummary(state, summaryKey);
-  } catch (error) {
-    // Y.js not initialized - fall back to full content display
-    const fullContentDiv = document.createElement('div');
-    fullContentDiv.className = 'entry-content';
-    fullContentDiv.innerHTML = parseMarkdown(entry.content);
-    summarySection.appendChild(fullContentDiv);
-    return summarySection;
-  }
-  
-  if (existingSummary) {
-    // Show summary with collapsible full content
-    summarySection.appendChild(createSummaryDisplay(existingSummary, entry));
-  } else {
-    // Show full content by default if no summary, with async summary generation
-    summarySection.appendChild(createSummaryDisplay(null, entry));
-    generateSummaryAsync(entry, summarySection);
-  }
+  // Always start with full content display and let summarize() handle cache checking
+  summarySection.appendChild(createSummaryDisplay(null, entry));
+  generateSummaryAsync(entry, summarySection);
   
   return summarySection;
 };
