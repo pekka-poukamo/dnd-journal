@@ -241,9 +241,10 @@ const generateAllSummaries = async () => {
     showNotification('Generating summaries...', 'info');
     
     // Generate summaries for each field with content
-    for (const field of fieldsToSummarize) {
+    await fieldsToSummarize.reduce(async (previousPromise, field) => {
+      await previousPromise;
       await generateSummary(field);
-    }
+    }, Promise.resolve());
     
     showNotification('All summaries generated!', 'success');
     

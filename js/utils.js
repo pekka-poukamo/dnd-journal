@@ -129,10 +129,7 @@ export const getFormData = (form) => {
   // Try FormData first, fallback to manual extraction for test environments
   try {
     const formData = new FormData(form);
-    const data = {};
-    for (const [key, value] of formData.entries()) {
-      data[key] = value;
-    }
+    const data = Object.fromEntries(formData.entries());
     // If FormData worked but no entries were found, fall back to manual method
     if (Object.keys(data).length === 0) {
       throw new Error('FormData returned no entries');
