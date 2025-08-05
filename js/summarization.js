@@ -60,11 +60,11 @@ export const summarize = (summaryKey, content, maxWords = null) => {
   // Generate prompt with appropriate word count
   let prompt;
   if (summaryKey.startsWith('entry:')) {
-    prompt = PROMPTS.summarization.entry(content, maxWords || 800);
+    prompt = PROMPTS.summarization.entry(content, maxWords || 400);
   } else if (summaryKey.startsWith('character:')) {
-    prompt = PROMPTS.summarization.character(content, maxWords || 1000);
+    prompt = PROMPTS.summarization.character(content, maxWords || 500);
   } else if (summaryKey.startsWith('journal:meta-summary')) {
-    prompt = PROMPTS.summarization.metaSummary(content, maxWords || 1500);
+    prompt = PROMPTS.summarization.metaSummary(content, maxWords || 750);
   } else {
     prompt = `Summarize this content concisely:\n\n${content}`;
   }

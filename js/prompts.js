@@ -21,15 +21,15 @@ Please create 3 introspective questions that would help this player discover com
   },
   
   summarization: {
-    entry: (text, maxWords = 800) => `Summarize this D&D journal entry. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
+    entry: (text, maxWords = 400) => `Summarize this D&D journal entry. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
 
 ${text}`,
     
-    character: (text, maxWords = 1000) => `Summarize this character information. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
+    character: (text, maxWords = 500) => `Summarize this character information. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
 
 ${text}`,
     
-    metaSummary: (summaryText, maxWords = 1500) => `Create a comprehensive adventure chronicle from these summaries. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
+    metaSummary: (summaryText, maxWords = 750) => `Create a comprehensive adventure chronicle from these summaries. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
 
 ${summaryText}`
   }
