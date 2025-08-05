@@ -313,44 +313,46 @@ const setupAIPrompt = (state) => {
 };
 
 // Render AI prompt with business logic - determines state and calls pure view function
-const renderAIPromptWithLogic = async (stateParam = null) => {
-  if (!aiPromptText) return;
+const renderAIPromptWithLogic = (stateParam = null) => {
+  if (!aiPromptText) return Promise.resolve();
   
-  try {
-    const state = stateParam || getYjsState();
-    const character = getCharacterData(state);
-    const entries = getEntries(state);
-    
-    // Check API availability first
-    if (!isAIEnabled()) {
-      renderAIPrompt(aiPromptText, { type: 'api-not-available' }, regenerateBtn);
-      return;
-    }
-    
-    // Check if we have good context for generating questions
-    if (!hasGoodContext(character, entries)) {
-      renderAIPrompt(aiPromptText, { type: 'no-context' }, regenerateBtn);
-      return;
-    }
-    
-    // Show loading and generate questions
-    renderAIPrompt(aiPromptText, { type: 'loading' }, regenerateBtn);
-    const questions = await generateQuestions(character, entries);
-    
-    if (questions) {
-      renderAIPrompt(aiPromptText, { type: 'questions', questions }, regenerateBtn);
-    } else {
-      renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
-    }
-    
-  } catch (error) {
-    console.error('Failed to render AI prompt:', error);
-    renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
+  const state = stateParam || getYjsState();
+  const character = getCharacterData(state);
+  const entries = getEntries(state);
+  
+  // Check API availability first
+  if (!isAIEnabled()) {
+    renderAIPrompt(aiPromptText, { type: 'api-not-available' }, regenerateBtn);
+    return Promise.resolve();
   }
+  
+  // Check if we have good context for generating questions
+  if (!hasGoodContext(character, entries)) {
+    renderAIPrompt(aiPromptText, { type: 'no-context' }, regenerateBtn);
+    return Promise.resolve();
+  }
+  
+  // Show loading and generate questions
+  renderAIPrompt(aiPromptText, { type: 'loading' }, regenerateBtn);
+  
+  return generateQuestions(character, entries)
+    .then(questions => {
+      if (questions) {
+        renderAIPrompt(aiPromptText, { type: 'questions', questions }, regenerateBtn);
+      } else {
+        renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
+      }
+      return questions;
+    })
+    .catch(error => {
+      console.error('Failed to render AI prompt:', error);
+      renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
+      throw error;
+    });
 };
 
 // Handle regenerate button click
-const handleRegeneratePrompt = async (stateParam = null) => {
+const handleRegeneratePrompt = (stateParam = null) => {
   const state = stateParam || getYjsState();
   const character = getCharacterData(state);
   const entries = getEntries(state);
@@ -358,15 +360,18 @@ const handleRegeneratePrompt = async (stateParam = null) => {
   // Force regeneration when user clicks regenerate
   if (isAIEnabled() && hasGoodContext(character, entries)) {
     renderAIPrompt(aiPromptText, { type: 'loading' }, regenerateBtn);
-    const questions = await generateQuestions(character, entries, true); // Force regenerate
     
-    if (questions) {
-      renderAIPrompt(aiPromptText, { type: 'questions', questions }, regenerateBtn);
-    } else {
-      renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
-    }
+    return generateQuestions(character, entries, true) // Force regenerate
+      .then(questions => {
+        if (questions) {
+          renderAIPrompt(aiPromptText, { type: 'questions', questions }, regenerateBtn);
+        } else {
+          renderAIPrompt(aiPromptText, { type: 'error' }, regenerateBtn);
+        }
+        return questions;
+      });
   } else {
-    await renderAIPromptWithLogic(state);
+    return renderAIPromptWithLogic(state);
   }
 };
 

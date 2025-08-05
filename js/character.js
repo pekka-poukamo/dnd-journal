@@ -189,33 +189,34 @@ export const saveCharacterData = (stateParam = null) => {
 };
 
 // Generate summary for character field
-const generateSummary = async (field) => {
-  try {
-    const state = getYjsState();
-    const character = getCharacterData(state);
-    const content = character[field];
-    
-    if (!content || content.trim().length === 0) {
-      showNotification(`No ${field} content to summarize`, 'warning');
-      return;
-    }
-    
-    if (!isAIEnabled()) {
-      showNotification('AI not available for summary generation', 'warning');
-      return;
-    }
-    
-    showNotification('Generating summary...', 'info');
-    
-    const summary = await summarize(`character:${field}`, content);
-    showNotification('Summary generated!', 'success');
-    
-    updateSummariesDisplay(state);
-    
-  } catch (error) {
-    console.error('Failed to generate summary:', error);
-    showNotification('Failed to generate summary', 'error');
+const generateSummary = (field) => {
+  const state = getYjsState();
+  const character = getCharacterData(state);
+  const content = character[field];
+  
+  if (!content || content.trim().length === 0) {
+    showNotification(`No ${field} content to summarize`, 'warning');
+    return Promise.resolve();
   }
+  
+  if (!isAIEnabled()) {
+    showNotification('AI not available for summary generation', 'warning');
+    return Promise.resolve();
+  }
+  
+  showNotification('Generating summary...', 'info');
+  
+  return summarize(`character:${field}`, content)
+    .then(summary => {
+      showNotification('Summary generated!', 'success');
+      updateSummariesDisplay(state);
+      return summary;
+    })
+    .catch(error => {
+      console.error('Failed to generate summary:', error);
+      showNotification('Failed to generate summary', 'error');
+      throw error;
+    });
 };
 
 // Generate summaries for all character fields that have content
