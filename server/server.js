@@ -104,18 +104,12 @@ wss.on('error', (error) => {
   console.error('🚨 WebSocket server error:', error.message);
 });
 
-// Periodic status logging (every 30 seconds if there are active connections)
-const statusInterval = setInterval(() => {
-  if (activeConnections.size > 0 || activeDocuments.size > 0) {
-    console.log(`📊 Status - Connections: ${activeConnections.size}, Documents: ${activeDocuments.size}, Data dir: ${existsSync(DATA_DIR)}`);
-  }
-}, 30000);
+
 
 process.on('SIGINT', () => {
   console.log('\n👋 Server stopping...');
   console.log(`📊 Final stats - Connections: ${activeConnections.size}, Documents: ${activeDocuments.size}`);
   console.log(`📁 Data directory exists: ${existsSync(DATA_DIR)}`);
-  clearInterval(statusInterval);
   console.log('👋 Server stopped');
   process.exit(0);
 });
