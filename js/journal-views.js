@@ -191,23 +191,26 @@ const createCollapsibleFullContent = (entry) => {
 };
 
 // Generate summary asynchronously and update display
-const generateSummaryAsync = async (entry, summarySection) => {
-  try {
-    const summaryKey = `entry:${entry.id}`;
-    const summary = await summarize(summaryKey, entry.content);
-    
-    // Replace the content with summary display
-    const newDisplay = createSummaryDisplay(summary, entry);
-    summarySection.innerHTML = '';
-    summarySection.appendChild(newDisplay);
-  } catch (error) {
-    console.error('Failed to generate summary:', error);
-    // Remove loading indicator on error and keep full content
-    const loadingDiv = summarySection.querySelector('.entry-summary-loading');
-    if (loadingDiv) {
-      loadingDiv.remove();
-    }
-  }
+const generateSummaryAsync = (entry, summarySection) => {
+  const summaryKey = `entry:${entry.id}`;
+  
+  return summarize(summaryKey, entry.content)
+    .then(summary => {
+      // Replace the content with summary display
+      const newDisplay = createSummaryDisplay(summary, entry);
+      summarySection.innerHTML = '';
+      summarySection.appendChild(newDisplay);
+      return summary;
+    })
+    .catch(error => {
+      console.error('Failed to generate summary:', error);
+      // Remove loading indicator on error and keep full content
+      const loadingDiv = summarySection.querySelector('.entry-summary-loading');
+      if (loadingDiv) {
+        loadingDiv.remove();
+      }
+      throw error;
+    });
 };
 
 // Create edit form for an entry

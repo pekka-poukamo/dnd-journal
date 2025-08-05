@@ -184,39 +184,38 @@ export const saveSettings = (stateParam = null) => {
 };
 
 // Test API key
-export const testAPIKey = async (stateParam = null) => {
-  try {
-    // Always use current form value for testing
-    const apiKeyInput = document.getElementById('openai-api-key');
-    const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-    
-    if (!apiKey) {
-      showNotification('Please enter an API key first', 'warning');
-      return;
-    }
-    
-    if (!apiKey.startsWith('sk-')) {
-      showNotification('API key should start with "sk-"', 'warning');
-      return;
-    }
-    
-    // Show testing message
-    showNotification('Testing API key...', 'info');
-    
-    // Test the API key with a simple request to OpenAI
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-4.1',
-        messages: [{ role: 'user', content: 'Hello' }],
-        max_tokens: 5
-      })
-    });
-    
+export const testAPIKey = (stateParam = null) => {
+  // Always use current form value for testing
+  const apiKeyInput = document.getElementById('openai-api-key');
+  const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+  
+  if (!apiKey) {
+    showNotification('Please enter an API key first', 'warning');
+    return Promise.resolve();
+  }
+  
+  if (!apiKey.startsWith('sk-')) {
+    showNotification('API key should start with "sk-"', 'warning');
+    return Promise.resolve();
+  }
+  
+  // Show testing message
+  showNotification('Testing API key...', 'info');
+  
+  // Test the API key with a simple request to OpenAI
+  return fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4.1',
+      messages: [{ role: 'user', content: 'Hello' }],
+      max_tokens: 5
+    })
+  })
+  .then(response => {
     if (response.ok) {
       showNotification('API key is valid!', 'success');
     } else if (response.status === 401) {
@@ -224,86 +223,92 @@ export const testAPIKey = async (stateParam = null) => {
     } else if (response.status === 429) {
       showNotification('API key is valid but rate limited', 'warning');
     } else {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
-      showNotification(`API key test failed: ${errorMessage}`, 'error');
+      return response.json()
+        .then(errorData => {
+          const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+          showNotification(`API key test failed: ${errorMessage}`, 'error');
+        })
+        .catch(() => {
+          showNotification(`API key test failed: HTTP ${response.status}`, 'error');
+        });
     }
-  } catch (error) {
+  })
+  .catch(error => {
     console.error('Failed to test API key:', error);
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
       showNotification('Network error: Could not connect to OpenAI API', 'error');
     } else {
       showNotification('Error testing API key', 'error');
     }
-  }
+  });
 };
 
 // Test connection
-export const testConnection = async (stateParam = null) => {
-  try {
-    // Always use current form value for testing
-    const syncServerInput = document.getElementById('sync-server-url');
-    const syncServerUrl = syncServerInput ? syncServerInput.value.trim() : '';
+export const testConnection = (stateParam = null) => {
+  // Always use current form value for testing
+  const syncServerInput = document.getElementById('sync-server-url');
+  const syncServerUrl = syncServerInput ? syncServerInput.value.trim() : '';
+  
+  if (!syncServerUrl) {
+    showNotification('Please enter a sync server URL first', 'warning');
+    return Promise.resolve();
+  }
+  
+  // Validate URL format
+  if (!syncServerUrl.startsWith('ws://') && !syncServerUrl.startsWith('wss://')) {
+    showNotification('Sync server URL must start with ws:// or wss://', 'warning');
+    return Promise.resolve();
+  }
+  
+  // Show testing message
+  showNotification('Testing connection...', 'info');
+  
+  // Test WebSocket connection and return promise
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(syncServerUrl);
     
-    if (!syncServerUrl) {
-      showNotification('Please enter a sync server URL first', 'warning');
-      return;
-    }
+    const timeout = setTimeout(() => {
+      ws.close();
+      reject(new Error('Connection timeout'));
+    }, 5000); // 5 second timeout
     
-    // Validate URL format
-    if (!syncServerUrl.startsWith('ws://') && !syncServerUrl.startsWith('wss://')) {
-      showNotification('Sync server URL must start with ws:// or wss://', 'warning');
-      return;
-    }
+    ws.onopen = () => {
+      clearTimeout(timeout);
+      ws.close();
+      resolve('Connected successfully');
+    };
     
-    // Show testing message
-    showNotification('Testing connection...', 'info');
+    ws.onerror = (error) => {
+      clearTimeout(timeout);
+      reject(new Error('Connection failed'));
+    };
     
-    // Test WebSocket connection
-    try {
-      const ws = new WebSocket(syncServerUrl);
-      
-      const testPromise = new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          ws.close();
-          reject(new Error('Connection timeout'));
-        }, 5000); // 5 second timeout
-        
-        ws.onopen = () => {
-          clearTimeout(timeout);
-          ws.close();
-          resolve('Connected successfully');
-        };
-        
-        ws.onerror = (error) => {
-          clearTimeout(timeout);
-          reject(new Error('Connection failed'));
-        };
-        
-        ws.onclose = (event) => {
-          clearTimeout(timeout);
-          if (event.wasClean) {
-            resolve('Connection test completed');
-          } else {
-            reject(new Error('Connection closed unexpectedly'));
-          }
-        };
-      });
-      
-      const result = await testPromise;
-      showNotification('Sync server connection successful!', 'success');
-    } catch (testError) {
-      console.warn('Connection test failed:', testError);
-      if (testError.message.includes('timeout')) {
-        showNotification('Connection test timed out - server may be unreachable', 'warning');
+    ws.onclose = (event) => {
+      clearTimeout(timeout);
+      if (event.wasClean) {
+        resolve('Connection test completed');
       } else {
-        showNotification('Failed to connect to sync server', 'error');
+        reject(new Error('Connection closed unexpectedly'));
       }
+    };
+  })
+  .then(result => {
+    showNotification('Sync server connection successful!', 'success');
+    return result;
+  })
+  .catch(testError => {
+    console.warn('Connection test failed:', testError);
+    if (testError.message.includes('timeout')) {
+      showNotification('Connection test timed out - server may be unreachable', 'warning');
+    } else {
+      showNotification('Failed to connect to sync server', 'error');
     }
-  } catch (error) {
+    throw testError;
+  })
+  .catch(error => {
     console.error('Failed to test connection:', error);
     showNotification('Error testing connection', 'error');
-  }
+  });
 };
 
 // Show current AI prompt
