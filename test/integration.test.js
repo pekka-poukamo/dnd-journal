@@ -283,26 +283,25 @@ describe('Integration Tests', function() {
 
     it('should handle rapid data changes', function() {
       // Rapidly add multiple entries
-      const entries = [];
-      for (let i = 0; i < 10; i++) {
+      const entries = Array.from({ length: 10 }, (_, i) => {
         const entry = {
           id: generateId(),
           title: `Entry ${i}`,
           content: `Content for entry ${i}`,
           timestamp: Date.now() + i
         };
-        entries.push(entry);
         YjsModule.addEntry(state, entry);
-      }
+        return entry;
+      });
       
       // Verify all entries were added
       const storedEntries = YjsModule.getEntries(state);
       expect(storedEntries).to.have.length(10);
       
       // Rapidly update character data
-      for (let i = 0; i < 5; i++) {
+      Array.from({ length: 5 }, (_, i) => {
         YjsModule.setCharacter(state, 'name', `Character ${i}`);
-      }
+      });
       
       expect(YjsModule.getCharacter(state, 'name')).to.equal('Character 4');
     });
