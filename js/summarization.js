@@ -24,7 +24,7 @@ const callAI = (prompt) => {
     body: JSON.stringify({
       model: 'gpt-4.1',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1000,
+      max_tokens: 2500,
       temperature: 0.3
     })
   })

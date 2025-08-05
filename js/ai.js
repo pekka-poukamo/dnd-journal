@@ -45,7 +45,7 @@ const callAI = (systemPrompt, userPrompt) => {
     body: JSON.stringify({
       model: 'gpt-4.1',
       messages,
-      max_tokens: 1200,
+      max_tokens: 2500,
       temperature: 0.8
     })
   })
