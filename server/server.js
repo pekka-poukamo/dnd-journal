@@ -10,24 +10,74 @@
 import { WebSocketServer } from 'ws';
 import { setupWSConnection } from 'y-websocket/bin/utils';
 import { LeveldbPersistence } from 'y-leveldb';
+import { existsSync, readdirSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
+import { resolve } from 'path';
+import * as Y from 'yjs';
 
 const PORT = process.env.PORT || process.argv[2] || 1234;
 const HOST = process.env.HOST || process.argv[3] || '0.0.0.0';
 const DATA_DIR = process.env.DATA_DIR || './data';
 
-const wss = new WebSocketServer({ port: PORT, host: HOST });
-
+// Log startup information
 console.log(`🚀 D&D Journal Server: ws://${HOST}:${PORT}`);
 console.log(`💾 LevelDB: ${DATA_DIR}`);
+console.log(`📁 Data directory exists: ${existsSync(DATA_DIR)}`);
+console.log(`🕐 Server started at: ${new Date().toISOString()}`);
 
+// Simple startup check
+console.log(`📁 Data directory: ${existsSync(DATA_DIR) ? 'exists' : 'will be created on first document'}`);
+
+
+
+const wss = new WebSocketServer({ port: PORT, host: HOST });
+
+// Track active connections and documents
+const activeConnections = new Map();
+const activeDocuments = new Map();
+
+// Log WebSocket server events
 wss.on('connection', (ws, req) => {
+  const connectionId = Math.random().toString(36).substr(2, 9);
+  const clientIP = req.socket.remoteAddress;
+  const url = req.url;
+  
+  console.log(`🔗 New connection from ${clientIP}`);
+  activeConnections.set(connectionId, { ip: clientIP, url, connectedAt: new Date().toISOString() });
+
   setupWSConnection(ws, req, {
     getYDoc: (docName) => {
+      if (!activeDocuments.has(docName)) {
+        console.log(`📄 New document: "${docName}"`);
+        activeDocuments.set(docName, {
+          createdAt: new Date().toISOString(),
+          connections: new Set([connectionId])
+        });
+      }
+      activeDocuments.get(docName).connections.add(connectionId);
+      
       const persistence = new LeveldbPersistence(DATA_DIR + '/' + docName);
       return persistence.doc;
     }
   });
+
+  ws.on('close', () => {
+    activeConnections.delete(connectionId);
+    
+    // Remove connection from documents
+    for (const [docName, docInfo] of activeDocuments.entries()) {
+      if (docInfo.connections.has(connectionId)) {
+        docInfo.connections.delete(connectionId);
+      }
+    }
+  });
 });
+
+// Log server errors
+wss.on('error', (error) => {
+  console.error('🚨 WebSocket server error:', error.message);
+});
+
+
 
 process.on('SIGINT', () => {
   console.log('\n👋 Server stopped');
