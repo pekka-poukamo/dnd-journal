@@ -78,8 +78,11 @@ export const createEntryElement = (entry, onEdit, onDelete) => {
   deleteButton.textContent = 'Delete';
   deleteButton.onclick = () => onDelete(entry.id);
   
-  actions.appendChild(editButton);
-  actions.appendChild(deleteButton);
+  // Hide edit/delete for page-summary entries
+  if (entry.type !== 'page-summary') {
+    actions.appendChild(editButton);
+    actions.appendChild(deleteButton);
+  }
   
   meta.appendChild(timestamp);
   meta.appendChild(wordCountSpan);
@@ -88,12 +91,32 @@ export const createEntryElement = (entry, onEdit, onDelete) => {
   header.appendChild(meta);
   
   // Create summary section with collapsible full content
-  const summarySection = createEntrySummarySection(entry);
+  const summarySection = entry.type === 'page-summary'
+    ? createPageSummarySection(entry)
+    : createEntrySummarySection(entry);
   
   entryDiv.appendChild(header);
   entryDiv.appendChild(summarySection);
   
   return entryDiv;
+};
+
+// Render a page-summary entry distinctly
+const createPageSummarySection = (entry) => {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'entry-summary-section entry-summary-section--page-summary';
+  
+  const title = document.createElement('div');
+  title.className = 'page-summary__title';
+  title.textContent = 'Previous Page Summary';
+  wrapper.appendChild(title);
+  
+  const content = document.createElement('div');
+  content.className = 'page-summary__content';
+  content.innerHTML = parseMarkdown(entry.content || 'Generating…');
+  wrapper.appendChild(content);
+  
+  return wrapper;
 };
 
 // Create entry summary section with collapsible full content
@@ -309,6 +332,28 @@ export const renderEntries = (container, entries, options = {}) => {
   
   const sortedEntries = sortEntriesByDate(entries);
 
+  // Optional: render simple page dividers if seq is available
+  const withDividers = (list) => {
+    const frag = document.createDocumentFragment();
+    let lastPage = null;
+    list.forEach(entry => {
+      const seq = typeof entry.seq === 'number' ? entry.seq : null;
+      if (seq != null) {
+        const page = Math.floor(seq / 10);
+        if (page !== lastPage) {
+          const divider = document.createElement('div');
+          divider.className = 'page-divider';
+          divider.textContent = `Page ${page}`;
+          frag.appendChild(divider);
+          lastPage = page;
+        }
+      }
+      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
+      frag.appendChild(entryElement);
+    });
+    return frag;
+  };
+  
   // If many entries, reflect summarization logic:
   // - Show latest 5 entries individually (these are included directly in prompts)
   // - Group the rest under a collapsible section with the meta summary visible
@@ -327,10 +372,7 @@ export const renderEntries = (container, entries, options = {}) => {
     recentHeader.textContent = 'Recent Adventures';
     recentSection.appendChild(recentHeader);
 
-    recentEntries.forEach(entry => {
-      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
-      recentSection.appendChild(entryElement);
-    });
+    recentSection.appendChild(withDividers(recentEntries));
     fragment.appendChild(recentSection);
 
     // Section: Older Adventures (collapsible with meta summary)
@@ -384,10 +426,7 @@ export const renderEntries = (container, entries, options = {}) => {
     });
 
     // Populate older entries inside collapsible
-    olderEntries.forEach(entry => {
-      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
-      olderContentDiv.appendChild(entryElement);
-    });
+    olderContentDiv.appendChild(withDividers(olderEntries));
 
     collapsible.appendChild(toggleButton);
     collapsible.appendChild(olderContentDiv);
@@ -420,14 +459,11 @@ export const renderEntries = (container, entries, options = {}) => {
   
   sortedEntries.forEach(entry => {
     updatedIds.add(entry.id);
-    
     const existingElement = existingEntries.get(entry.id);
     if (existingElement) {
-      // Update existing element in place (more efficient than recreation)
       updateEntryElement(existingElement, entry, options.onEdit, options.onDelete);
       fragment.appendChild(existingElement);
     } else {
-      // Create new element only if it doesn't exist
       const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
       fragment.appendChild(entryElement);
     }
@@ -443,7 +479,28 @@ export const renderEntries = (container, entries, options = {}) => {
   
   // Clear container and append optimized fragment
   container.innerHTML = '';
-  container.appendChild(fragment);
+  // Add dividers for small lists as well
+  const finalFrag = document.createDocumentFragment();
+  let lastPageSmall = null;
+  Array.from(fragment.childNodes).forEach(node => {
+    if (node.nodeType === 1 && node.classList.contains('entry')) {
+      const id = node.getAttribute('data-entry-id');
+      const entry = sortedEntries.find(e => e.id === id);
+      const seq = entry && typeof entry.seq === 'number' ? entry.seq : null;
+      if (seq != null) {
+        const page = Math.floor(seq / 10);
+        if (page !== lastPageSmall) {
+          const divider = document.createElement('div');
+          divider.className = 'page-divider';
+          divider.textContent = `Page ${page}`;
+          finalFrag.appendChild(divider);
+          lastPageSmall = page;
+        }
+      }
+    }
+    finalFrag.appendChild(node);
+  });
+  container.appendChild(finalFrag);
 };
 
 // Ensure meta summary is available and render it into the provided element
@@ -499,7 +556,9 @@ const updateEntryElement = (element, entry, onEdit, onDelete) => {
   // Update summary section - recreate if content changed
   const summarySection = element.querySelector('.entry-summary-section');
   if (summarySection) {
-    const newSummarySection = createEntrySummarySection(entry);
+    const newSummarySection = entry.type === 'page-summary'
+      ? createPageSummarySection(entry)
+      : createEntrySummarySection(entry);
     summarySection.replaceWith(newSummarySection);
   }
   

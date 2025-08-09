@@ -5,6 +5,31 @@ import { getYjsState, getCharacterData, getEntries, getSummary } from './yjs.js'
 import { summarize } from './summarization.js';
 import { formatDate, getWordCount } from './utils.js';
 
+// Simple page math consistent with journal.js
+const PAGE_SIZE = 10;
+
+const getPageIndexForSeq = (seq) => Math.floor(seq / PAGE_SIZE);
+const getCurrentPageIndex = (entries) => {
+  if (!entries || entries.length === 0) return 0;
+  const maxSeq = entries.reduce((max, e, idx) => {
+    const s = typeof e.seq === 'number' ? e.seq : idx;
+    return s > max ? s : max;
+  }, -1);
+  return Math.max(0, getPageIndexForSeq(maxSeq));
+};
+const getEntriesForPage = (entries, pageIndex) => {
+  const start = pageIndex * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+  return entries.filter(e => {
+    const s = typeof e.seq === 'number' ? e.seq : entries.indexOf(e);
+    return s >= start && s < end;
+  }).sort((a, b) => {
+    const sa = typeof a.seq === 'number' ? a.seq : entries.indexOf(a);
+    const sb = typeof b.seq === 'number' ? b.seq : entries.indexOf(b);
+    return sa - sb;
+  });
+};
+
 // Build context string for AI from character and entries
 export const buildContext = (character = null, entries = null) => {
   // Use provided data or fall back to Y.js state
@@ -16,8 +41,7 @@ export const buildContext = (character = null, entries = null) => {
 
   const config = {
     characterWords: 300,
-    entryWords: 200,
-    metaWords: 1000
+    entryWords: 200
   };
 
   // Build character context string
@@ -35,22 +59,12 @@ export const buildContext = (character = null, entries = null) => {
     buildCharacterSection(field, content, config)
   );
 
-  // Prepare async entries context call
+  // Prepare async entries context call (page-aware, recursive via first entry)
   let entriesPromise;
   if (entries && entries.length > 0) {
-    if (entries.length > 10) {
-      // Parallel adventure summary (older entries only) and recent entries
-      const olderEntries = entries.slice(0, -5);
-      const recentEntriesOnly = entries.slice(-5);
-      entriesPromise = Promise.all([
-        createAdventureSummary(olderEntries, config),
-        createEntriesInfo(recentEntriesOnly, config, 'Recent Detailed Adventures')
-      ]).then(([adventureSummary, recentEntries]) =>
-        `\n\nAdventure Summary: ${adventureSummary}${recentEntries}`
-      );
-    } else {
-      entriesPromise = createEntriesInfo(entries, config);
-    }
+    const currentPage = getCurrentPageIndex(entries);
+    const pageEntries = getEntriesForPage(entries, currentPage);
+    entriesPromise = createEntriesInfo(pageEntries, config, 'Adventures');
   } else {
     entriesPromise = Promise.resolve('\n\nNo journal entries yet. This character is just beginning their adventure.');
   }
@@ -108,39 +122,7 @@ const createEntriesInfo = (entries, config, sectionTitle = 'Adventures') => {
     .then(entryInfos => `\n\n${sectionTitle}:` + entryInfos.join(''));
 };
 
-// Create adventure summary from older entries only
-const createAdventureSummary = (entries, config) => {
-  const adventureSummaryKey = 'journal:adventure-summary';
-  
-  // Generate individual entry summaries for all older entries
-  const entrySummaryPromises = entries.map(entry => {
-    if (getWordCount(entry.content) > config.entryWords) {
-      const entryKey = `entry:${entry.id}`;
-      return summarize(entryKey, entry.content, config.entryWords)
-        .then(entrySummary => `${entrySummary}`)
-        .catch(error => {
-          console.warn(`Failed to generate summary for entry ${entry.id}:`, error);
-          return `${entry.content}`;
-        });
-    } else {
-      return Promise.resolve(`${entry.content}`);
-    }
-  });
-  
-  return Promise.all(entrySummaryPromises)
-    .then(entrySummaries => {
-      if (entrySummaries.length === 0) {
-        return '';
-      }
-      
-      const summaryText = entrySummaries.join('\n\n');
-      return summarize(adventureSummaryKey, summaryText, config.metaWords);
-    })
-    .catch(error => {
-      console.warn('Failed to generate adventure summary:', error);
-      return '';
-    });
-};
+// Removed older adventure summary path in favor of page-aware context
 
 // Check if we have enough context for meaningful AI generation
 export const hasContext = (character = null, entries = null) => {
