@@ -346,7 +346,7 @@ export const renderEntries = (container, entries, options = {}) => {
 
     const metaSummaryTitle = document.createElement('div');
     metaSummaryTitle.className = 'meta-summary__title';
-    metaSummaryTitle.textContent = 'Campaign Chronicle (Meta Summary)';
+    metaSummaryTitle.textContent = 'Campaign Chronicle (Adventure Summary)';
     metaSummaryContainer.appendChild(metaSummaryTitle);
 
     const metaSummaryText = document.createElement('div');
@@ -449,7 +449,7 @@ export const renderEntries = (container, entries, options = {}) => {
 // Ensure meta summary is available and render it into the provided element
 const ensureAndRenderMetaSummary = (allEntries, targetElement) => {
   const state = getYjsState();
-  const existing = getStoredSummary(state, 'journal:meta-summary');
+  const existing = getStoredSummary(state, 'journal:adventure-summary') || getStoredSummary(state, 'journal:meta-summary');
   if (existing) {
     targetElement.innerHTML = parseMarkdown(existing);
     return;
@@ -459,19 +459,19 @@ const ensureAndRenderMetaSummary = (allEntries, targetElement) => {
   const config = { entryWords: 200, metaWords: 1000 };
 
   const entryPromises = allEntries.map(entry => {
-    const label = formatDate(entry.timestamp);
+    // Remove dates; include only content or summary
     if (getWordCount(entry.content) > config.entryWords) {
       const key = `entry:${entry.id}`;
       return summarize(key, entry.content, config.entryWords)
-        .then(s => `${label}: ${s}`)
-        .catch(() => `${label}: ${entry.content}`);
+        .then(s => `${s}`)
+        .catch(() => `${entry.content}`);
     }
-    return Promise.resolve(`${label}: ${entry.content}`);
+    return Promise.resolve(`${entry.content}`);
   });
 
   return Promise.all(entryPromises)
     .then(parts => parts.join('\n\n'))
-    .then(summaryText => summarize('journal:meta-summary', summaryText, config.metaWords))
+    .then(summaryText => summarize('journal:adventure-summary', summaryText, config.metaWords))
     .then(meta => {
       targetElement.innerHTML = parseMarkdown(meta || '');
       return meta;
@@ -487,10 +487,9 @@ const ensureAndRenderMetaSummary = (allEntries, targetElement) => {
 // Build a concise local-only meta summary (no AI). Keeps it readable and short.
 const buildLocalMetaSummary = (entries, maxWordsPerEntry = 50) => {
   const lines = entries.map(e => {
-    const dateLabel = formatDate(e.timestamp);
     const words = (e.content || '').trim().split(/\s+/).filter(Boolean);
     const snippet = words.slice(0, Math.max(1, maxWordsPerEntry)).join(' ');
-    return `- ${dateLabel}: ${snippet}${words.length > maxWordsPerEntry ? '…' : ''}`;
+    return `- ${snippet}${words.length > maxWordsPerEntry ? '…' : ''}`;
   });
   return `Unable to generate an online campaign chronicle. Local overview:\n\n${lines.join('\n')}`;
 };

@@ -39,12 +39,14 @@ export const buildContext = (character = null, entries = null) => {
   let entriesPromise;
   if (entries && entries.length > 0) {
     if (entries.length > 10) {
-      // Parallel meta-summary and recent entries
+      // Parallel adventure summary (older entries only) and recent entries
+      const olderEntries = entries.slice(0, -5);
+      const recentEntriesOnly = entries.slice(-5);
       entriesPromise = Promise.all([
-        createMetaSummary(entries, config),
-        createEntriesInfo(entries.slice(-5), config, 'Recent Detailed Adventures')
-      ]).then(([metaSummary, recentEntries]) =>
-        `\n\nAdventure History: ${metaSummary}${recentEntries}`
+        createAdventureSummary(olderEntries, config),
+        createEntriesInfo(recentEntriesOnly, config, 'Recent Detailed Adventures')
+      ]).then(([adventureSummary, recentEntries]) =>
+        `\n\nAdventure Summary: ${adventureSummary}${recentEntries}`
       );
     } else {
       entriesPromise = createEntriesInfo(entries, config);
@@ -87,20 +89,18 @@ const buildCharacterSection = (fieldName, content, config) => {
 // Create entries info section with intelligent summarization
 const createEntriesInfo = (entries, config, sectionTitle = 'Adventures') => {
   const entryPromises = entries.map(entry => {
-    const entryLabel = formatDate(entry.timestamp);
-    
+    // Remove dates; include only content or summary
     if (getWordCount(entry.content) > config.entryWords) {
       const entryKey = `entry:${entry.id}`;
-      
       return summarize(entryKey, entry.content, config.entryWords)
-        .then(entrySummary => `\n- ${entryLabel}: ${entrySummary}`)
+        .then(entrySummary => `\n- ${entrySummary}`)
         .catch(error => {
           console.warn(`Failed to generate summary for entry ${entry.id}:`, error);
-          return `\n- ${entryLabel}: ${entry.content}`;
+          return `\n- ${entry.content}`;
         });
     } else {
       // Content is short enough - include full content
-      return Promise.resolve(`\n- ${entryLabel}: ${entry.content}`);
+      return Promise.resolve(`\n- ${entry.content}`);
     }
   });
   
@@ -108,25 +108,22 @@ const createEntriesInfo = (entries, config, sectionTitle = 'Adventures') => {
     .then(entryInfos => `\n\n${sectionTitle}:` + entryInfos.join(''));
 };
 
-// Create meta-summary from all entries
-const createMetaSummary = (entries, config) => {
-  const metaSummaryKey = 'journal:meta-summary';
+// Create adventure summary from older entries only
+const createAdventureSummary = (entries, config) => {
+  const adventureSummaryKey = 'journal:adventure-summary';
   
-  // Generate individual entry summaries for all entries
+  // Generate individual entry summaries for all older entries
   const entrySummaryPromises = entries.map(entry => {
-    const entryLabel = formatDate(entry.timestamp);
-    
     if (getWordCount(entry.content) > config.entryWords) {
       const entryKey = `entry:${entry.id}`;
-      
       return summarize(entryKey, entry.content, config.entryWords)
-        .then(entrySummary => `${entryLabel}: ${entrySummary}`)
+        .then(entrySummary => `${entrySummary}`)
         .catch(error => {
           console.warn(`Failed to generate summary for entry ${entry.id}:`, error);
-          return `${entryLabel}: ${entry.content}`;
+          return `${entry.content}`;
         });
     } else {
-      return Promise.resolve(`${entryLabel}: ${entry.content}`);
+      return Promise.resolve(`${entry.content}`);
     }
   });
   
@@ -137,10 +134,10 @@ const createMetaSummary = (entries, config) => {
       }
       
       const summaryText = entrySummaries.join('\n\n');
-      return summarize(metaSummaryKey, summaryText, config.metaWords);
+      return summarize(adventureSummaryKey, summaryText, config.metaWords);
     })
     .catch(error => {
-      console.warn('Failed to generate meta-summary:', error);
+      console.warn('Failed to generate adventure summary:', error);
       return '';
     });
 };

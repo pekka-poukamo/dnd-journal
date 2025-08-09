@@ -29,7 +29,7 @@ ${text}`,
 
 ${text}`,
     
-    metaSummary: (summaryText, maxWords = 750) => `Create a comprehensive adventure chronicle from these summaries. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
+    adventureSummary: (summaryText, maxWords = 750) => `Create a comprehensive adventure summary from these entry summaries. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
 
 ${summaryText}`
   }
