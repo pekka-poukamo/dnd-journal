@@ -11,7 +11,8 @@ import {
   renderSettingsForm,
   renderConnectionStatus,
   renderCachedSettingsContent,
-  renderAIPromptPreview
+  renderAIPromptPreview,
+  updateShowAIPromptButtonState
 } from './settings-views.js';
 
 import { getFormData, showNotification } from './utils.js';
@@ -151,19 +152,11 @@ const setupFormHandlers = () => {
   const aiEnabledCheckbox = document.getElementById('ai-enabled');
 
   const updateShowPromptState = () => {
-    try {
-      // Read current values from inputs
-      const apiKey = (apiKeyInput && apiKeyInput.value ? apiKeyInput.value.trim() : '');
-      const aiEnabled = Boolean(aiEnabledCheckbox && aiEnabledCheckbox.checked);
-      // Delegate to view to update the button state
-      import('./settings-views.js').then(module => {
-        if (module && module.updateShowAIPromptButtonState) {
-          module.updateShowAIPromptButtonState(apiKey, aiEnabled);
-        }
-      });
-    } catch (err) {
-      // Non-fatal: ignore
-    }
+    // Read current values from inputs
+    const apiKey = (apiKeyInput && apiKeyInput.value ? apiKeyInput.value.trim() : '');
+    const aiEnabled = Boolean(aiEnabledCheckbox && aiEnabledCheckbox.checked);
+    // Update button state via view helper
+    updateShowAIPromptButtonState(apiKey, aiEnabled);
   };
 
   if (apiKeyInput && !apiKeyInput.hasAttribute('data-handler-attached')) {
