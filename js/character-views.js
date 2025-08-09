@@ -1,5 +1,6 @@
 // Character Views - Pure Rendering Functions for Character Page
 import { getFormData, showNotification } from './utils.js';
+import { getWordCount } from './utils.js';
 import {
   getCachedCharacterData,
   getFormDataForPage
@@ -23,7 +24,7 @@ export const renderCharacterForm = (form, character) => {
 };
 
 // Update summaries display
-export const renderSummaries = (backstorySummary, notesSummary) => {
+export const renderSummaries = (backstorySummary, notesSummary, originals = {}) => {
   const summariesContainer = document.getElementById('character-summaries') || document.getElementById('summaries-content');
   if (!summariesContainer) return;
   
@@ -39,18 +40,24 @@ export const renderSummaries = (backstorySummary, notesSummary) => {
   let summariesHTML = '';
   
   if (backstorySummary) {
+    const backstoryOriginal = originals.backstory || '';
+    const backstorySummaryCount = getWordCount(backstorySummary || '');
+    const backstoryOriginalCount = getWordCount(backstoryOriginal || '');
     summariesHTML += `
       <div class="summary-item">
-        <h3>Backstory</h3>
+        <h3>Backstory <span class="summary-word-count">${backstorySummaryCount} (${backstoryOriginalCount})</span></h3>
         <p>${backstorySummary}</p>
       </div>
     `;
   }
   
   if (notesSummary) {
+    const notesOriginal = originals.notes || '';
+    const notesSummaryCount = getWordCount(notesSummary || '');
+    const notesOriginalCount = getWordCount(notesOriginal || '');
     summariesHTML += `
       <div class="summary-item">
-        <h3>Notes</h3>
+        <h3>Notes <span class="summary-word-count">${notesSummaryCount} (${notesOriginalCount})</span></h3>
         <p>${notesSummary}</p>
       </div>
     `;

@@ -265,7 +265,7 @@ export const updateSummariesDisplay = (stateParam = null) => {
     const backstorySummary = getSummary(state, 'character:backstory');
     const notesSummary = getSummary(state, 'character:notes');
     
-    renderSummaries(backstorySummary, notesSummary);
+    renderSummaries(backstorySummary, notesSummary, { backstory: character.backstory || '', notes: character.notes || '' });
     
     const available = isAIEnabled();
     const hasContent = (character.backstory && character.backstory.trim().length > 0) || 
