@@ -48,39 +48,9 @@ export const debounce = (fn, delay) => {
 export const isValidEntry = (entryData) => 
   !!(entryData && entryData.content != null && entryData.content.trim().length > 0);
 
-// Pure function to create initial journal state
-export const createInitialJournalState = () => ({
-  character: {
-    name: '',
-    race: '',
-    class: '',
-    backstory: '',
-    notes: ''
-  },
-  entries: []
-});
-
-// Pure function to create initial settings state
-export const createInitialSettings = () => ({
-  apiKey: '',
-  enableAIFeatures: false
-});
-
 // Pure function to sort entries by date (newest first)
 export const sortEntriesByDate = (entries) => 
   [...entries].sort((a, b) => b.timestamp - a.timestamp);
-
-// Pure function to get form field IDs for character
-export const getCharacterFormFieldIds = () => [
-  'character-name', 
-  'character-race', 
-  'character-class',
-  'character-backstory', 
-  'character-notes'
-];
-
-// Pure function to convert field ID to property name for character forms
-export const getPropertyNameFromFieldId = (fieldId) => fieldId.replace('character-', '');
 
 // Simple markdown parser for basic formatting
 export const parseMarkdown = (text) => {

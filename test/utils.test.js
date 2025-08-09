@@ -155,31 +155,6 @@ describe('Utils Module', function() {
     });
   });
 
-  describe('createInitialJournalState', function() {
-    it('should create valid initial journal state', function() {
-      const state = Utils.createInitialJournalState();
-      
-      expect(state).to.have.property('character');
-      expect(state).to.have.property('entries');
-      expect(state.character).to.have.property('name', '');
-      expect(state.character).to.have.property('race', '');
-      expect(state.character).to.have.property('class', '');
-      expect(state.character).to.have.property('backstory', '');
-      expect(state.character).to.have.property('notes', '');
-      expect(state.entries).to.be.an('array');
-      expect(state.entries).to.have.length(0);
-    });
-  });
-
-  describe('createInitialSettings', function() {
-    it('should create valid initial settings', function() {
-      const settings = Utils.createInitialSettings();
-      
-      expect(settings).to.have.property('apiKey', '');
-      expect(settings).to.have.property('enableAIFeatures', false);
-    });
-  });
-
   describe('sortEntriesByDate', function() {
     it('should sort entries by date (newest first)', function() {
       const entries = [
@@ -205,28 +180,6 @@ describe('Utils Module', function() {
       Utils.sortEntriesByDate(entries);
       
       expect(entries).to.deep.equal(original);
-    });
-  });
-
-  describe('getCharacterFormFieldIds', function() {
-    it('should return correct form field IDs', function() {
-      const fieldIds = Utils.getCharacterFormFieldIds();
-      
-      expect(fieldIds).to.include('character-name');
-      expect(fieldIds).to.include('character-race');
-      expect(fieldIds).to.include('character-class');
-      expect(fieldIds).to.include('character-backstory');
-      expect(fieldIds).to.include('character-notes');
-    });
-  });
-
-  describe('getPropertyNameFromFieldId', function() {
-    it('should convert field ID to property name', function() {
-      expect(Utils.getPropertyNameFromFieldId('character-name')).to.equal('name');
-      expect(Utils.getPropertyNameFromFieldId('character-race')).to.equal('race');
-      expect(Utils.getPropertyNameFromFieldId('character-class')).to.equal('class');
-      expect(Utils.getPropertyNameFromFieldId('character-backstory')).to.equal('backstory');
-      expect(Utils.getPropertyNameFromFieldId('character-notes')).to.equal('notes');
     });
   });
 
