@@ -60,6 +60,77 @@ describe('UI Contracts - Real Pages', function() {
       expect(entries.length).to.be.greaterThan(0);
       expect(entries[0].content).to.equal('A brave new journey.');
     });
+
+    it('should disable regenerate button when AI not enabled and not throw on click', function() {
+      Journal.initJournalPage(YjsModule.getYjsState());
+      const btn = document.getElementById('regenerate-prompt-btn');
+      expect(btn).to.exist;
+      // When AI is not available, the view disables it
+      expect(btn.disabled).to.be.true;
+      expect(() => btn.click()).to.not.throw();
+    });
+
+    it('should support Edit and Delete buttons on entries', function() {
+      const state = YjsModule.getYjsState();
+      // Seed two entries
+      YjsModule.addEntry(state, { id: 'e1', content: 'First', timestamp: Date.now() - 1000 });
+      YjsModule.addEntry(state, { id: 'e2', content: 'Second', timestamp: Date.now() });
+
+      Journal.initJournalPage(state);
+
+      const entriesContainer = document.getElementById('entries-container');
+      const firstEntry = entriesContainer.querySelector('[data-entry-id="e2"]');
+      expect(firstEntry).to.exist;
+
+      // Click Edit
+      const editBtn = firstEntry.querySelector('.entry-actions button:first-child');
+      expect(editBtn).to.exist;
+      editBtn.click();
+      const editForm = entriesContainer.querySelector('.entry-edit-form');
+      expect(editForm).to.exist;
+
+      // Submit updated content
+      const textarea = editForm.querySelector('textarea');
+      textarea.value = 'Updated Second';
+      const submitEvt = new window.Event('submit', { bubbles: true, cancelable: true });
+      editForm.dispatchEvent(submitEvt);
+
+      // Verify update applied
+      const updated = YjsModule.getEntries(state).find(e => e.id === 'e2');
+      expect(updated.content).to.equal('Updated Second');
+
+      // Click Delete
+      const refreshedFirstEntry = entriesContainer.querySelector('[data-entry-id="e2"]');
+      const deleteBtn = refreshedFirstEntry.querySelector('.entry-actions button:last-child');
+      expect(deleteBtn).to.exist;
+      const originalConfirm = global.confirm;
+      global.confirm = () => true;
+      deleteBtn.click();
+      global.confirm = originalConfirm;
+
+      const remaining = YjsModule.getEntries(state);
+      expect(remaining.find(e => e.id === 'e2')).to.not.exist;
+    });
+
+    it('should generate AI prompt on regenerate click when AI enabled with context', async function() {
+      const state = YjsModule.getYjsState();
+      // Enable AI and add minimal context
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-abc123');
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      YjsModule.setCharacter(state, 'name', 'Aragorn');
+      YjsModule.addEntry(state, { id: 'cx', content: 'Travelled to Bree', timestamp: Date.now() });
+
+      Journal.initJournalPage(state);
+
+      const btn = document.getElementById('regenerate-prompt-btn');
+      expect(btn.disabled).to.be.false;
+      btn.click();
+
+      // Wait a tick for mocked fetch and rendering
+      await new Promise(r => setTimeout(r, 10));
+      const prompt = document.getElementById('ai-prompt-text');
+      expect(prompt.innerHTML).to.not.equal('');
+    });
   });
 
   describe('Character Page (character.html)', function() {
@@ -103,6 +174,46 @@ describe('UI Contracts - Real Pages', function() {
       expect(YjsModule.getCharacter(state, 'name')).to.equal('Eowyn');
       expect(YjsModule.getCharacter(state, 'race')).to.equal('Human');
       expect(YjsModule.getCharacter(state, 'class')).to.equal('Shieldmaiden');
+    });
+
+    it('should refresh summaries when clicking Refresh Summaries', function() {
+      const state = YjsModule.getYjsState();
+      // Seed a summary so refresh has visible effect
+      YjsModule.setSummary(state, 'character:backstory', 'A brief summary');
+
+      Character.initCharacterPage(state);
+
+      const refreshBtn = document.getElementById('refresh-summaries');
+      refreshBtn.click();
+
+      const summariesDiv = document.getElementById('summaries-content');
+      expect(summariesDiv.textContent).to.include('A brief summary');
+    });
+
+    it('should generate summaries when AI enabled and content present', async function() {
+      const state = YjsModule.getYjsState();
+      // Enable AI and provide content
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-abc123');
+      YjsModule.setSetting(state, 'ai-enabled', true);
+
+      Character.initCharacterPage(state);
+      // Fill backstory so generate has content
+      const backstory = document.getElementById('character-backstory');
+      backstory.value = 'Long backstory to summarize';
+
+      // Button visibility toggled by toggleGenerateButton during updateSummariesDisplay
+      Character.updateSummariesDisplay(state);
+      const generateBtn = document.getElementById('generate-summaries');
+      expect(generateBtn.style.display).to.equal('inline-block');
+
+      generateBtn.click();
+      // Wait a tick for mocked AI
+      await new Promise(r => setTimeout(r, 10));
+
+      const notification = document.querySelector('.notification');
+      expect(notification).to.exist;
+      const summariesDiv = document.getElementById('summaries-content');
+      expect(summariesDiv.innerHTML).to.include('summary-word-count');
     });
   });
 
@@ -162,6 +273,23 @@ describe('UI Contracts - Real Pages', function() {
       expect(notification).to.exist;
     });
 
+    it('should save settings when clicking Save All Settings', function() {
+      const state = YjsModule.getYjsState();
+      Settings.initSettingsPage(state);
+
+      const form = document.getElementById('settings-form');
+      document.getElementById('openai-api-key').value = 'sk-form-123';
+      document.getElementById('ai-enabled').checked = true;
+      document.getElementById('sync-server-url').value = 'ws://form-server:1234';
+
+      const submitEvent = new window.Event('submit', { bubbles: true, cancelable: true });
+      form.dispatchEvent(submitEvent);
+
+      expect(YjsModule.getSetting(state, 'openai-api-key')).to.equal('sk-form-123');
+      expect(YjsModule.getSetting(state, 'ai-enabled')).to.equal(true);
+      expect(YjsModule.getSetting(state, 'sync-server-url')).to.equal('ws://form-server:1234');
+    });
+
     it('should not show AI prompt when button is disabled (AI not enabled)', async function() {
       Settings.initSettingsPage(YjsModule.getYjsState());
       const btnShowPrompt = document.getElementById('show-ai-prompt');
@@ -191,6 +319,45 @@ describe('UI Contracts - Real Pages', function() {
       const content = document.getElementById('ai-prompt-content');
       expect(preview.style.display).to.equal('block');
       expect(content.innerHTML).to.satisfy((html) => html.includes('system-prompt') || html.includes('user-prompt'));
+    });
+
+    it('should clear all summaries after confirmation', function() {
+      const state = YjsModule.getYjsState();
+      YjsModule.setSummary(state, 'character:backstory', 'Will be cleared');
+
+      Settings.initSettingsPage(state);
+      const clearBtn = document.getElementById('clear-summaries');
+      const originalConfirm = global.confirm;
+      global.confirm = () => true;
+      clearBtn.click();
+      global.confirm = originalConfirm;
+
+      // Verify cleared and notification shown
+      expect(YjsModule.getSummary(state, 'character:backstory')).to.equal(null);
+      const notification = document.querySelector('.notification');
+      expect(notification).to.exist;
+    });
+
+    it('should call window.location.reload when clicking Refresh App', function() {
+      // Provide a stub for reload
+      const originalReload = (window.location && window.location.reload) || null;
+      window.location.reload = () => { window.__reloaded = true; };
+
+      Settings.initSettingsPage(YjsModule.getYjsState());
+
+      const refreshBtn = document.getElementById('refresh-app');
+      expect(refreshBtn).to.exist;
+      refreshBtn.click();
+
+      expect(window.__reloaded).to.equal(true);
+
+      // Cleanup
+      delete window.__reloaded;
+      if (originalReload) {
+        window.location.reload = originalReload;
+      } else {
+        delete window.location.reload;
+      }
     });
   });
 });
