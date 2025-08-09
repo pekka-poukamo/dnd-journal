@@ -9,6 +9,7 @@ import {
 import { summarize } from './summarization.js';
 import { getYjsState } from './yjs.js';
 import { getWordCount } from './utils.js';
+import { getSummary as getStoredSummary } from './yjs.js';
 
 // Create journal entry form
 export const createEntryForm = (options = {}) => {
@@ -307,6 +308,101 @@ export const renderEntries = (container, entries, options = {}) => {
   }
   
   const sortedEntries = sortEntriesByDate(entries);
+
+  // If many entries, reflect summarization logic:
+  // - Show latest 5 entries individually (these are included directly in prompts)
+  // - Group the rest under a collapsible section with the meta summary visible
+  if (sortedEntries.length > 10) {
+    // Recent detailed entries: latest 5
+    const recentEntries = sortedEntries.slice(0, 5);
+    // Older entries: the rest
+    const olderEntries = sortedEntries.slice(5);
+
+    const fragment = document.createDocumentFragment();
+
+    // Section: Recent Adventures
+    const recentSection = document.createElement('section');
+    recentSection.className = 'entries-section entries-section--recent';
+    const recentHeader = document.createElement('h3');
+    recentHeader.textContent = 'Recent Adventures';
+    recentSection.appendChild(recentHeader);
+
+    recentEntries.forEach(entry => {
+      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
+      recentSection.appendChild(entryElement);
+    });
+    fragment.appendChild(recentSection);
+
+    // Section: Older Adventures (collapsible with meta summary)
+    const olderSection = document.createElement('section');
+    olderSection.className = 'entries-section entries-section--older';
+
+    const olderHeader = document.createElement('h3');
+    olderHeader.textContent = 'Older Adventures';
+    olderSection.appendChild(olderHeader);
+
+    const metaSummaryContainer = document.createElement('div');
+    metaSummaryContainer.className = 'meta-summary-container';
+
+    const metaSummaryTitle = document.createElement('div');
+    metaSummaryTitle.className = 'meta-summary__title';
+    metaSummaryTitle.textContent = 'Campaign Chronicle (Meta Summary)';
+    metaSummaryContainer.appendChild(metaSummaryTitle);
+
+    const metaSummaryText = document.createElement('div');
+    metaSummaryText.className = 'meta-summary__text';
+    metaSummaryText.textContent = 'Generating overall summary...';
+    metaSummaryContainer.appendChild(metaSummaryText);
+
+    olderSection.appendChild(metaSummaryContainer);
+
+    // Collapsible list of older entries
+    const collapsible = document.createElement('div');
+    collapsible.className = 'entry-collapsible meta-summary-collapsible';
+
+    const toggleButton = document.createElement('button');
+    toggleButton.className = 'entry-summary__toggle';
+    toggleButton.type = 'button';
+    const toggleLabel = document.createElement('span');
+    toggleLabel.className = 'entry-summary__label';
+    toggleLabel.textContent = 'Show Older Entries';
+    const toggleIcon = document.createElement('span');
+    toggleIcon.className = 'entry-summary__icon';
+    toggleIcon.textContent = '▼';
+    toggleButton.appendChild(toggleLabel);
+    toggleButton.appendChild(toggleIcon);
+
+    const olderContentDiv = document.createElement('div');
+    olderContentDiv.className = 'entry-summary__content meta-summary__entries';
+    olderContentDiv.style.display = 'none';
+
+    toggleButton.addEventListener('click', () => {
+      const isExpanded = olderContentDiv.style.display !== 'none';
+      olderContentDiv.style.display = isExpanded ? 'none' : 'block';
+      toggleButton.classList.toggle('entry-summary__toggle--expanded', !isExpanded);
+      toggleLabel.textContent = isExpanded ? 'Show Older Entries' : 'Hide Older Entries';
+    });
+
+    // Populate older entries inside collapsible
+    olderEntries.forEach(entry => {
+      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
+      olderContentDiv.appendChild(entryElement);
+    });
+
+    collapsible.appendChild(toggleButton);
+    collapsible.appendChild(olderContentDiv);
+    olderSection.appendChild(collapsible);
+
+    fragment.appendChild(olderSection);
+
+    // Replace container content
+    container.innerHTML = '';
+    container.appendChild(fragment);
+
+    // After render, ensure meta summary is shown (use cached or generate)
+    ensureAndRenderMetaSummary(sortedEntries, metaSummaryText);
+    return;
+  }
   
   // Get existing entry elements for efficient updates
   const existingEntries = new Map();
@@ -348,6 +444,55 @@ export const renderEntries = (container, entries, options = {}) => {
   // Clear container and append optimized fragment
   container.innerHTML = '';
   container.appendChild(fragment);
+};
+
+// Ensure meta summary is available and render it into the provided element
+const ensureAndRenderMetaSummary = (allEntries, targetElement) => {
+  const state = getYjsState();
+  const existing = getStoredSummary(state, 'journal:meta-summary');
+  if (existing) {
+    targetElement.innerHTML = parseMarkdown(existing);
+    return;
+  }
+
+  // Build summary source text similar to context.js logic
+  const config = { entryWords: 200, metaWords: 1000 };
+
+  const entryPromises = allEntries.map(entry => {
+    const label = formatDate(entry.timestamp);
+    if (getWordCount(entry.content) > config.entryWords) {
+      const key = `entry:${entry.id}`;
+      return summarize(key, entry.content, config.entryWords)
+        .then(s => `${label}: ${s}`)
+        .catch(() => `${label}: ${entry.content}`);
+    }
+    return Promise.resolve(`${label}: ${entry.content}`);
+  });
+
+  return Promise.all(entryPromises)
+    .then(parts => parts.join('\n\n'))
+    .then(summaryText => summarize('journal:meta-summary', summaryText, config.metaWords))
+    .then(meta => {
+      targetElement.innerHTML = parseMarkdown(meta || '');
+      return meta;
+    })
+    .catch(() => {
+      // Local-first graceful fallback: concise overview without AI
+      const fallback = buildLocalMetaSummary(allEntries, 60);
+      targetElement.innerHTML = parseMarkdown(fallback);
+      return null;
+    });
+};
+
+// Build a concise local-only meta summary (no AI). Keeps it readable and short.
+const buildLocalMetaSummary = (entries, maxWordsPerEntry = 50) => {
+  const lines = entries.map(e => {
+    const dateLabel = formatDate(e.timestamp);
+    const words = (e.content || '').trim().split(/\s+/).filter(Boolean);
+    const snippet = words.slice(0, Math.max(1, maxWordsPerEntry)).join(' ');
+    return `- ${dateLabel}: ${snippet}${words.length > maxWordsPerEntry ? '…' : ''}`;
+  });
+  return `Unable to generate an online campaign chronicle. Local overview:\n\n${lines.join('\n')}`;
 };
 
 // Helper function to update existing entry element (performance optimization)
