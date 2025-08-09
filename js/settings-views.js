@@ -4,6 +4,7 @@ import {
   getCachedSettings,
   getFormDataForPage
 } from './navigation-cache.js';
+import { getWordCount } from './utils.js';
 
 // Render settings form with current data
 export const renderSettingsForm = (formOrSettings, settings = null) => {
@@ -138,45 +139,17 @@ export const renderAIPromptPreview = (aiEnabled, messages = null) => {
       </div>
     `;
   } else {
-    // Compute word counts for system and user prompts
+    // Compute word counts for system and user prompts synchronously
     const systemMsg = messages.find(m => m.role === 'system');
     const userMsg = messages.find(m => m.role === 'user');
-    let systemWords = 0;
-    let userWords = 0;
-    try {
-      // Lazy import to avoid circular deps in tests
-      // and keep this function pure w.r.t. state
-      // getWordCount is a pure function
-      // eslint-disable-next-line no-undef
-      
-    } catch (e) {}
 
-    // Use direct import since this is a module context
-    // Importing at top would be fine but keep footprint minimal
-    // Note: In browsers, static import is preferred. Here we keep compatibility.
-
-    // Fallback if dynamic import fails
-    const calculateCounts = (gwc) => {
-      const getWordCount = gwc || ((t) => (t || '').trim().split(/\s+/).filter(w => w.length > 0).length);
-      systemWords = getWordCount(systemMsg?.content || '');
-      userWords = getWordCount(userMsg?.content || '');
-    };
-
-    try {
-      // Attempt dynamic import
-      // This avoids adding a hard dependency cycle in some test runners
-      // and still uses the shared util when available
-      // @ts-ignore
-      import('./utils.js').then(mod => calculateCounts(mod.getWordCount)).catch(() => calculateCounts(null));
-    } catch (e) {
-      calculateCounts(null);
-    }
-
-    const totalWords = () => systemWords + userWords;
+    const systemWords = getWordCount(systemMsg?.content || '');
+    const userWords = getWordCount(userMsg?.content || '');
+    const totalWords = systemWords + userWords;
 
     // Show the exact messages sent to OpenAI with counts header
     const content = `
-      <div class="token-count">System: ${systemWords} • User: ${userWords} • Total: ${totalWords()} words</div>
+      <div class="token-count">System: ${systemWords} • User: ${userWords} • Total: ${totalWords} words</div>
       ${messages.map(msg => `
         <div class="${msg.role === 'system' ? 'system-prompt' : 'user-prompt'}">
           <h4>${msg.role === 'system' ? 'System' : 'User'}</h4>
