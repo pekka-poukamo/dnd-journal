@@ -90,7 +90,8 @@ export const renderSettingsPage = (stateParam = null) => {
     const statusElement = connectionStatusElement || document.getElementById('connection-status');
     if (statusElement) {
       const connected = false; // TODO: implement connection status check
-      renderConnectionStatus(statusElement, connected, settings['sync-server-url']);
+      // Fix call signature: first param is isConnected, second is serverUrl
+      renderConnectionStatus(connected, settings['sync-server-url']);
     }
   } catch (error) {
     console.error('Failed to render settings page:', error);
@@ -120,9 +121,9 @@ const setupFormHandlers = () => {
   
   const showAIPromptButton = document.getElementById('show-ai-prompt');
   if (showAIPromptButton && !showAIPromptButton.hasAttribute('data-handler-attached')) {
-    showAIPromptButton.addEventListener('click', (e) => {
+    showAIPromptButton.addEventListener('click', async (e) => {
       e.preventDefault();
-      showCurrentAIPrompt();
+      await showCurrentAIPrompt();
     });
     showAIPromptButton.setAttribute('data-handler-attached', 'true');
   }
@@ -142,11 +143,43 @@ const setupFormHandlers = () => {
     refreshAppButton.setAttribute('data-handler-attached', 'true');
   }
 
-  // Form handler setup (can return early if form not found)
+  // Live update Show AI Prompt button state based on current form inputs
   const formElement = settingsFormElement || document.getElementById('settings-form');
   if (!formElement) return;
-  
-  // Only set up form handler once
+
+  const apiKeyInput = document.getElementById('openai-api-key');
+  const aiEnabledCheckbox = document.getElementById('ai-enabled');
+
+  const updateShowPromptState = () => {
+    try {
+      // Read current values from inputs
+      const apiKey = (apiKeyInput && apiKeyInput.value ? apiKeyInput.value.trim() : '');
+      const aiEnabled = Boolean(aiEnabledCheckbox && aiEnabledCheckbox.checked);
+      // Delegate to view to update the button state
+      import('./settings-views.js').then(module => {
+        if (module && module.updateShowAIPromptButtonState) {
+          module.updateShowAIPromptButtonState(apiKey, aiEnabled);
+        }
+      });
+    } catch (err) {
+      // Non-fatal: ignore
+    }
+  };
+
+  if (apiKeyInput && !apiKeyInput.hasAttribute('data-handler-attached')) {
+    apiKeyInput.addEventListener('input', updateShowPromptState);
+    apiKeyInput.setAttribute('data-handler-attached', 'true');
+  }
+
+  if (aiEnabledCheckbox && !aiEnabledCheckbox.hasAttribute('data-handler-attached')) {
+    aiEnabledCheckbox.addEventListener('change', updateShowPromptState);
+    aiEnabledCheckbox.setAttribute('data-handler-attached', 'true');
+  }
+
+  // Initial update based on current form values
+  updateShowPromptState();
+
+  // Only set up form submit handler once
   if (!handlersSetup) {
     formElement.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -314,6 +347,13 @@ export const testConnection = (stateParam = null) => {
 // Show current AI prompt
 export const showCurrentAIPrompt = async () => {
   try {
+    // Ensure Yjs is initialized before accessing AI/state
+    try {
+      getYjsState();
+    } catch (e) {
+      await initYjs();
+    }
+
     const aiEnabled = isAIEnabled();
     
     if (!aiEnabled) {
