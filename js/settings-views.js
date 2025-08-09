@@ -1,5 +1,5 @@
 // Settings Views - Pure Rendering Functions for Settings Page
-import { getFormData, showNotification } from './utils.js';
+import { getFormData, showNotification, getWordCount } from './utils.js';
 import {
   getCachedSettings,
   getFormDataForPage
@@ -118,15 +118,20 @@ export const renderAIPromptPreview = (aiEnabled, messages = null) => {
       </div>
     `;
   } else {
-    // Show the exact messages sent to OpenAI
+    // Show the exact messages sent to OpenAI with word count summary
+    const totalWords = Array.isArray(messages)
+      ? messages.reduce((sum, msg) => sum + getWordCount(String(msg && msg.content ? msg.content : '')), 0)
+      : 0;
+
     const content = messages.map(msg => `
       <div class="${msg.role === 'system' ? 'system-prompt' : 'user-prompt'}">
         <h4>${msg.role === 'system' ? 'System' : 'User'}</h4>
         <div>${msg.content}</div>
       </div>
     `).join('');
-    
-    promptContentElement.innerHTML = content;
+
+    const header = `<div class="token-count">Word count: ${totalWords}</div>`;
+    promptContentElement.innerHTML = header + content;
   }
   
   promptPreviewElement.style.display = 'block';
