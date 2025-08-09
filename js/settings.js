@@ -142,17 +142,16 @@ const setupFormHandlers = () => {
     refreshAppButton.setAttribute('data-handler-attached', 'true');
   }
 
-  // Form handler setup (can return early if form not found)
+  // Form handler setup (ensure attached per current form instance)
   const formElement = settingsFormElement || document.getElementById('settings-form');
   if (!formElement) return;
-  
-  // Only set up form handler once
-  if (!handlersSetup) {
+
+  if (!formElement.hasAttribute('data-handler-attached')) {
     formElement.addEventListener('submit', (e) => {
       e.preventDefault();
       saveSettings();
     });
-    handlersSetup = true;
+    formElement.setAttribute('data-handler-attached', 'true');
   }
 };
 
@@ -321,6 +320,9 @@ export const showCurrentAIPrompt = async () => {
       showNotification('AI features not enabled', 'info');
       return;
     }
+    
+    // Show preview container immediately, then fill with messages
+    renderAIPromptPreview(aiEnabled, null);
     
     // Get prompt preview using same logic as AI module
     const promptPreview = await getPromptPreview();

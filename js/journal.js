@@ -332,6 +332,11 @@ const renderAIPromptWithLogic = (stateParam = null) => {
     return Promise.resolve();
   }
   
+  // When AI is enabled and context is good, ensure regenerate is enabled
+  if (regenerateBtn) {
+    regenerateBtn.disabled = false;
+  }
+  
   // Show loading and generate questions
   renderAIPrompt(aiPromptText, { type: 'loading' }, regenerateBtn);
   
@@ -360,6 +365,11 @@ const handleRegeneratePrompt = (stateParam = null) => {
   // Force regeneration when user clicks regenerate
   if (isAIEnabled() && hasGoodContext(character, entries)) {
     renderAIPrompt(aiPromptText, { type: 'loading' }, regenerateBtn);
+    
+    // Ensure button remains interactive for consecutive retries
+    if (regenerateBtn) {
+      regenerateBtn.disabled = false;
+    }
     
     return generateQuestions(character, entries, true) // Force regenerate
       .then(questions => {
