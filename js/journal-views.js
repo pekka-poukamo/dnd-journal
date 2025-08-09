@@ -8,6 +8,7 @@ import {
 } from './navigation-cache.js';
 import { summarize } from './summarization.js';
 import { getYjsState } from './yjs.js';
+import { getWordCount } from './utils.js';
 
 // Create journal entry form
 export const createEntryForm = (options = {}) => {
@@ -59,6 +60,12 @@ export const createEntryElement = (entry, onEdit, onDelete) => {
   timestamp.textContent = formatDate(entry.timestamp);
   timestamp.dateTime = new Date(entry.timestamp).toISOString();
   
+  // Word count placeholder (summaryCount (originalCount))
+  const wordCountSpan = document.createElement('span');
+  wordCountSpan.className = 'entry-word-count';
+  const originalCount = getWordCount(entry.content || '');
+  wordCountSpan.textContent = `(${originalCount})`;
+  
   const actions = document.createElement('div');
   actions.className = 'entry-actions';
   
@@ -74,6 +81,7 @@ export const createEntryElement = (entry, onEdit, onDelete) => {
   actions.appendChild(deleteButton);
   
   meta.appendChild(timestamp);
+  meta.appendChild(wordCountSpan);
   meta.appendChild(actions);
   
   header.appendChild(meta);
@@ -179,6 +187,17 @@ const generateSummaryAsync = (entry, summarySection) => {
       const newDisplay = createSummaryDisplay(summary, entry);
       summarySection.innerHTML = '';
       summarySection.appendChild(newDisplay);
+
+      // Update word count metadata now that summary is available
+      const entryElement = summarySection.closest('.entry');
+      if (entryElement) {
+        const wordCountEl = entryElement.querySelector('.entry-word-count');
+        if (wordCountEl) {
+          const summaryCount = getWordCount(summary || '');
+          const originalCount = getWordCount(entry.content || '');
+          wordCountEl.textContent = `${summaryCount} (${originalCount})`;
+        }
+      }
       return summary;
     })
     .catch(error => {
@@ -347,6 +366,16 @@ const updateEntryElement = (element, entry, onEdit, onDelete) => {
     if (timestampElement.textContent !== formattedDate) {
       timestampElement.textContent = formattedDate;
       timestampElement.dateTime = new Date(entry.timestamp).toISOString();
+    }
+  }
+
+  // Update initial word count to original only; summary will update asynchronously
+  const wordCountElement = element.querySelector('.entry-word-count');
+  if (wordCountElement) {
+    const originalCount = getWordCount(entry.content || '');
+    // If it already has a full "x (y)" keep it; otherwise set to (original)
+    if (!/\d+ \(\d+\)/.test(wordCountElement.textContent || '')) {
+      wordCountElement.textContent = `(${originalCount})`;
     }
   }
   
