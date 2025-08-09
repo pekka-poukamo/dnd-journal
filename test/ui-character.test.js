@@ -8,7 +8,7 @@ import path from 'path';
 import * as YjsModule from '../js/yjs.js';
 import * as Character from '../js/character.js';
 
-const workspaceRoot = '/workspace';
+const workspaceRoot = process.cwd();
 
 const loadHtmlIntoDom = (absoluteHtmlPath) => {
   const html = fs.readFileSync(absoluteHtmlPath, 'utf8');
