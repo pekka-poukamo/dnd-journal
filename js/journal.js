@@ -30,6 +30,10 @@ import { generateQuestions } from './ai.js';
 import { hasContext as hasGoodContext } from './context.js';
 import { clearSummary } from './summarization.js';
 import { isAIEnabled } from './ai.js';
+import { summarize } from './summarization.js';
+
+// Paging configuration (radically simple)
+const PAGE_SIZE = 10;
 
 // State management
 let entriesContainer = null;
@@ -184,8 +188,12 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     }
 
     // Create entry with ID and timestamp
+    const existing = getEntries(state);
+    const nextSeq = computeNextSeq(existing);
     const entry = {
       id: generateId(),
+      seq: nextSeq,
+      type: 'user',
       content: trimmedData.content,
       timestamp: Date.now()
     };
@@ -194,6 +202,13 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     clearSessionQuestions(state); // Clear questions when journal data changes
     clearEntryForm();
     showNotification('Entry added successfully!', 'success');
+    
+    // If this addition closed a page, insert a page-summary placeholder at the beginning of the new page
+    const afterAdd = getEntries(state);
+    if (didClosePage(afterAdd.length)) {
+      const closedPageIndex = Math.floor(afterAdd.length / PAGE_SIZE) - 1;
+      insertPageSummaryPlaceholderAndCompute(state, closedPageIndex);
+    }
     
   } catch (error) {
     console.error('Failed to add entry:', error);
@@ -272,13 +287,28 @@ export const handleDeleteEntry = (entryId, stateParam = null) => {
     const state = stateParam || getYjsState();
     
     if (confirm('Are you sure you want to delete this entry?')) {
-      deleteEntry(state, entryId);
-      
-      // Clear cache when entry is deleted
-      clearSummary(`entry:${entryId}`);
-      clearSessionQuestions(state); // Clear questions when journal data changes
-      
-      showNotification('Entry deleted successfully!', 'success');
+      // Soft-delete to preserve paging; keep seq stable
+      const entries = getEntries(state);
+      const target = entries.find(e => e.id === entryId);
+      if (target) {
+        const isLegacy = typeof target.seq !== 'number';
+        const pagingActive = entries.length >= PAGE_SIZE; // only enforce soft-delete when paging matters
+
+        if (isLegacy || !pagingActive) {
+          // Hard delete for legacy or before paging is active
+          deleteEntry(state, entryId);
+          clearSummary(`entry:${entryId}`);
+          clearSessionQuestions(state);
+          showNotification('Entry deleted successfully!', 'success');
+          return;
+        }
+
+        const placeholder = '[Deleted entry]';
+        updateEntry(state, entryId, { deleted: true, content: placeholder });
+        clearSummary(`entry:${entryId}`);
+        clearSessionQuestions(state); // Clear questions when journal data changes
+        showNotification('Entry deleted successfully!', 'success');
+      }
     }
     
   } catch (error) {
@@ -292,6 +322,94 @@ export const clearEntryForm = () => {
   const form = entryFormContainer?.querySelector('form');
   if (form) {
     form.reset();
+  }
+};
+
+// =============================================================================
+// PAGE-BASED SUMMARY HELPERS (pure calculations + orchestrators)
+// =============================================================================
+
+const computeNextSeq = (entries) => {
+  // If legacy entries without seq exist, derive next by max(seq) or length
+  const maxSeq = entries.reduce((max, e, idx) => {
+    const s = typeof e.seq === 'number' ? e.seq : idx; // fallback to index
+    return s > max ? s : max;
+  }, -1);
+  return maxSeq + 1;
+};
+
+const didClosePage = (totalCount) => {
+  // A page is considered closed when total entries is a multiple of PAGE_SIZE
+  return totalCount > 0 && totalCount % PAGE_SIZE === 0;
+};
+
+const getPageIndexForSeq = (seq) => Math.floor(seq / PAGE_SIZE);
+
+const getEntriesForPage = (entries, pageIndex) => {
+  const start = pageIndex * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+  return entries.filter(e => {
+    const s = typeof e.seq === 'number' ? e.seq : entries.indexOf(e);
+    return s >= start && s < end;
+  }).sort((a, b) => {
+    const sa = typeof a.seq === 'number' ? a.seq : entries.indexOf(a);
+    const sb = typeof b.seq === 'number' ? b.seq : entries.indexOf(b);
+    return sa - sb;
+  });
+};
+
+const buildLocalPageSummary = (pageEntries, maxWordsPerEntry = 60) => {
+  const lines = pageEntries.map(e => {
+    const text = (e.content || '').trim();
+    const words = text.split(/\s+/).filter(Boolean);
+    const snippet = words.slice(0, Math.max(1, maxWordsPerEntry)).join(' ');
+    return `- ${snippet}${words.length > maxWordsPerEntry ? '…' : ''}`;
+  });
+  return `Previous Page Summary (local):\n\n${lines.join('\n')}`;
+};
+
+const insertPageSummaryPlaceholderAndCompute = (state, closedPageIndex) => {
+  try {
+    const all = getEntries(state);
+    const placeholderSeq = (closedPageIndex + 1) * PAGE_SIZE; // first slot of next page
+    
+    // Idempotency: if a page-summary already exists at that seq, skip insertion
+    const exists = all.find(e => (typeof e.seq === 'number' ? e.seq : all.indexOf(e)) === placeholderSeq && e.type === 'page-summary');
+    let placeholderEntry = exists;
+    if (!exists) {
+      placeholderEntry = {
+        id: generateId(),
+        seq: placeholderSeq,
+        type: 'page-summary',
+        meta: { summarizedPage: closedPageIndex, ready: false },
+        content: `Previous Page Summary (Page ${closedPageIndex}) — generating…`,
+        timestamp: Date.now()
+      };
+      addEntry(state, placeholderEntry);
+    }
+    
+    // Build source text for the closed page p (include any summary entry at start of that page for recursion)
+    const pageEntries = getEntriesForPage(getEntries(state), closedPageIndex);
+    const source = pageEntries.map(e => (e.content || '')).join('\n\n');
+    const pageKey = `journal:page:${closedPageIndex}:summary`;
+    
+    const finalize = (text) => {
+      // Update cache and placeholder with final text
+      // Cache via summarize() or directly set via updateEntry content change
+      updateEntry(state, placeholderEntry.id, { content: text, meta: { summarizedPage: closedPageIndex, ready: true } });
+      showNotification(`Page ${closedPageIndex} summary ready`, 'success');
+    };
+    
+    // If AI is enabled, use remote summary with caching; otherwise use local fallback
+    if (isAIEnabled()) {
+      summarize(pageKey, source, 800)
+        .then(finalize)
+        .catch(() => finalize(buildLocalPageSummary(pageEntries)));
+    } else {
+      finalize(buildLocalPageSummary(pageEntries));
+    }
+  } catch (err) {
+    console.warn('Failed to insert/compute page summary:', err);
   }
 };
 
