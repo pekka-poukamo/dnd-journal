@@ -191,8 +191,11 @@ export const saveCharacterData = (stateParam = null) => {
 // Generate summary for character field
 const generateSummary = (field) => {
   const state = getYjsState();
+  // Prefer current form value over stored state
+  const form = document.getElementById('character-form');
+  const inputVal = form?.querySelector(`[name="${field}"]`)?.value;
   const character = getCharacterData(state);
-  const content = character[field];
+  const content = (typeof inputVal === 'string' ? inputVal : character[field]);
   
   if (!content || content.trim().length === 0) {
     showNotification(`No ${field} content to summarize`, 'warning');
@@ -229,9 +232,13 @@ const generateAllSummaries = () => {
     return Promise.resolve();
   }
   
-  const fieldsToSummarize = ['backstory', 'notes'].filter(field => 
-    character[field] && character[field].trim().length > 0
-  );
+  const form = document.getElementById('character-form');
+  const backstoryVal = form?.querySelector('[name="backstory"]')?.value ?? character.backstory;
+  const notesVal = form?.querySelector('[name="notes"]')?.value ?? character.notes;
+  
+  const fieldsToSummarize = [];
+  if (backstoryVal && backstoryVal.trim().length > 0) fieldsToSummarize.push('backstory');
+  if (notesVal && notesVal.trim().length > 0) fieldsToSummarize.push('notes');
   
   if (fieldsToSummarize.length === 0) {
     showNotification('No content available to summarize', 'warning');
@@ -240,7 +247,6 @@ const generateAllSummaries = () => {
   
   showNotification('Generating summaries...', 'info');
   
-  // Generate summaries for each field in parallel
   const summaryPromises = fieldsToSummarize.map(field => generateSummary(field));
   
   return Promise.all(summaryPromises)
@@ -268,8 +274,11 @@ export const updateSummariesDisplay = (stateParam = null) => {
     renderSummaries(backstorySummary, notesSummary, { backstory: character.backstory || '', notes: character.notes || '' });
     
     const available = isAIEnabled();
-    const hasContent = (character.backstory && character.backstory.trim().length > 0) || 
-                      (character.notes && character.notes.trim().length > 0);
+    // Consider current form values as well to reflect immediate user input
+    const form = document.getElementById('character-form');
+    const currentBackstory = form?.querySelector('[name="backstory"]')?.value || character.backstory || '';
+    const currentNotes = form?.querySelector('[name="notes"]')?.value || character.notes || '';
+    const hasContent = (currentBackstory.trim().length > 0) || (currentNotes.trim().length > 0);
     toggleGenerateButton(available, hasContent);
   } catch (error) {
     console.error('Failed to update summaries display:', error);
