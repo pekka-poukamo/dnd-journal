@@ -4,6 +4,7 @@ import {
   getCachedSettings,
   getFormDataForPage
 } from './navigation-cache.js';
+import { getWordCount } from './utils.js';
 
 // Render settings form with current data
 export const renderSettingsForm = (formOrSettings, settings = null) => {
@@ -63,6 +64,26 @@ export const renderSettingsForm = (formOrSettings, settings = null) => {
   }
 };
 
+// Pure helper to update Show AI Prompt button state based on live input values
+export const updateShowAIPromptButtonState = (apiKeyValue, aiEnabledValue) => {
+  const showPromptButton = document.getElementById('show-ai-prompt');
+  if (!showPromptButton) return;
+
+  const hasApiKey = Boolean(apiKeyValue && apiKeyValue.trim().length > 0);
+  const aiEnabled = Boolean(aiEnabledValue);
+  showPromptButton.disabled = !hasApiKey || !aiEnabled;
+
+  if (!hasApiKey && !aiEnabled) {
+    showPromptButton.title = 'Requires OpenAI API Key and AI Features to be enabled';
+  } else if (!hasApiKey) {
+    showPromptButton.title = 'Requires OpenAI API Key';
+  } else if (!aiEnabled) {
+    showPromptButton.title = 'Requires AI Features to be enabled';
+  } else {
+    showPromptButton.title = 'Show current AI prompt configuration';
+  }
+};
+
 // Update connection status display
 export const renderConnectionStatus = (isConnected, serverUrl) => {
   const statusElement = document.getElementById('connection-status');
@@ -118,13 +139,24 @@ export const renderAIPromptPreview = (aiEnabled, messages = null) => {
       </div>
     `;
   } else {
-    // Show the exact messages sent to OpenAI
-    const content = messages.map(msg => `
-      <div class="${msg.role === 'system' ? 'system-prompt' : 'user-prompt'}">
-        <h4>${msg.role === 'system' ? 'System' : 'User'}</h4>
-        <div>${msg.content}</div>
-      </div>
-    `).join('');
+    // Compute word counts for system and user prompts synchronously
+    const systemMsg = messages.find(m => m.role === 'system');
+    const userMsg = messages.find(m => m.role === 'user');
+
+    const systemWords = getWordCount(systemMsg?.content || '');
+    const userWords = getWordCount(userMsg?.content || '');
+    const totalWords = systemWords + userWords;
+
+    // Show the exact messages sent to OpenAI with counts header
+    const content = `
+      <div class="token-count">System: ${systemWords} • User: ${userWords} • Total: ${totalWords} words</div>
+      ${messages.map(msg => `
+        <div class="${msg.role === 'system' ? 'system-prompt' : 'user-prompt'}">
+          <h4>${msg.role === 'system' ? 'System' : 'User'}</h4>
+          <div>${msg.content}</div>
+        </div>
+      `).join('')}
+    `;
     
     promptContentElement.innerHTML = content;
   }
