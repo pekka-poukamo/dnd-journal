@@ -161,5 +161,36 @@ describe('UI Contracts - Real Pages', function() {
       const notification = document.querySelector('.notification');
       expect(notification).to.exist;
     });
+
+    it('should not show AI prompt when button is disabled (AI not enabled)', async function() {
+      Settings.initSettingsPage(YjsModule.getYjsState());
+      const btnShowPrompt = document.getElementById('show-ai-prompt');
+      expect(btnShowPrompt.disabled).to.be.true;
+
+      // Attempt click should do nothing visible
+      btnShowPrompt.click();
+      const preview = document.getElementById('ai-prompt-preview');
+      expect(preview.style.display || '').to.not.equal('block');
+    });
+
+    it('should show AI prompt on button click when AI is enabled and key saved', async function() {
+      // Save settings into Yjs so renderSettingsForm enables the button
+      const state = YjsModule.getYjsState();
+      YjsModule.setSetting(state, 'ai-enabled', true);
+      YjsModule.setSetting(state, 'openai-api-key', 'sk-abc123');
+
+      Settings.initSettingsPage(state);
+
+      const btnShowPrompt = document.getElementById('show-ai-prompt');
+      expect(btnShowPrompt.disabled).to.be.false;
+
+      // Click to trigger preview
+      btnShowPrompt.click();
+
+      const preview = document.getElementById('ai-prompt-preview');
+      const content = document.getElementById('ai-prompt-content');
+      expect(preview.style.display).to.equal('block');
+      expect(content.innerHTML).to.satisfy((html) => html.includes('system-prompt') || html.includes('user-prompt'));
+    });
   });
 });
