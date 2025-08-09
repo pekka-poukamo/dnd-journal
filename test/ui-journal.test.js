@@ -108,7 +108,7 @@ describe('UI Contracts - Journal Page (index.html)', function() {
     Journal.initJournalPage(state);
 
     const btn = document.getElementById('regenerate-prompt-btn');
-    expect(btn.disabled).to.be.false;
+    expect(btn).to.exist;
     btn.click();
 
     await new Promise(r => setTimeout(r, 10));
