@@ -476,7 +476,23 @@ const ensureAndRenderMetaSummary = (allEntries, targetElement) => {
       targetElement.innerHTML = parseMarkdown(meta || '');
       return meta;
     })
-    .catch(() => null);
+    .catch(() => {
+      // Local-first graceful fallback: concise overview without AI
+      const fallback = buildLocalMetaSummary(allEntries, 60);
+      targetElement.innerHTML = parseMarkdown(fallback);
+      return null;
+    });
+};
+
+// Build a concise local-only meta summary (no AI). Keeps it readable and short.
+const buildLocalMetaSummary = (entries, maxWordsPerEntry = 50) => {
+  const lines = entries.map(e => {
+    const dateLabel = formatDate(e.timestamp);
+    const words = (e.content || '').trim().split(/\s+/).filter(Boolean);
+    const snippet = words.slice(0, Math.max(1, maxWordsPerEntry)).join(' ');
+    return `- ${dateLabel}: ${snippet}${words.length > maxWordsPerEntry ? '…' : ''}`;
+  });
+  return `Unable to generate an online campaign chronicle. Local overview:\n\n${lines.join('\n')}`;
 };
 
 // Helper function to update existing entry element (performance optimization)
