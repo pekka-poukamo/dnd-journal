@@ -26,7 +26,7 @@ import {
   renderCachedJournalContent
 } from './journal-views.js';
 
-import { generateId, isValidEntry, formatDate, getFormData, showNotification } from './utils.js';
+import { generateId, isValidEntry, formatDate, getFormData, showNotification, PAGE_SIZE, computeNextSeq, didClosePage, getPageIndexForSeq, getEntriesForPage } from './utils.js';
 
 import { generateQuestions } from './ai.js';
 import { hasContext as hasGoodContext } from './context.js';
@@ -35,8 +35,7 @@ import { isAIEnabled } from './ai.js';
 import { summarize } from './summarization.js';
 import { onSettingsChange, getSetting } from './yjs.js';
 
-// Paging configuration (radically simple)
-const PAGE_SIZE = 10;
+// Paging configuration centralized in utils
 
 // State management
 let entriesContainer = null;
@@ -328,34 +327,7 @@ export const clearEntryForm = () => {
 // PAGE-BASED SUMMARY HELPERS (pure calculations + orchestrators)
 // =============================================================================
 
-const computeNextSeq = (entries) => {
-  // If legacy entries without seq exist, derive next by max(seq) or length
-  const maxSeq = entries.reduce((max, e, idx) => {
-    const s = typeof e.seq === 'number' ? e.seq : idx; // fallback to index
-    return s > max ? s : max;
-  }, -1);
-  return maxSeq + 1;
-};
-
-const didClosePage = (totalCount) => {
-  // A page is considered closed when total entries is a multiple of PAGE_SIZE
-  return totalCount > 0 && totalCount % PAGE_SIZE === 0;
-};
-
-const getPageIndexForSeq = (seq) => Math.floor(seq / PAGE_SIZE);
-
-const getEntriesForPage = (entries, pageIndex) => {
-  const start = pageIndex * PAGE_SIZE;
-  const end = start + PAGE_SIZE;
-  return entries.filter(e => {
-    const s = typeof e.seq === 'number' ? e.seq : entries.indexOf(e);
-    return s >= start && s < end;
-  }).sort((a, b) => {
-    const sa = typeof a.seq === 'number' ? a.seq : entries.indexOf(a);
-    const sb = typeof b.seq === 'number' ? b.seq : entries.indexOf(b);
-    return sa - sb;
-  });
-};
+// computeNextSeq, didClosePage, getPageIndexForSeq, getEntriesForPage imported from utils
 
 const buildLocalPageSummary = (pageEntries, maxWordsPerEntry = 60) => {
   const lines = pageEntries.map(e => {

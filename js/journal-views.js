@@ -8,7 +8,7 @@ import {
 } from './navigation-cache.js';
 import { summarize } from './summarization.js';
 import { getYjsState } from './yjs.js';
-import { getWordCount } from './utils.js';
+import { getWordCount, PAGE_SIZE } from './utils.js';
 import { getSummary as getStoredSummary } from './yjs.js';
 
 // Create journal entry form
@@ -339,7 +339,7 @@ export const renderEntries = (container, entries, options = {}) => {
     list.forEach(entry => {
       const seq = typeof entry.seq === 'number' ? entry.seq : null;
       if (seq != null) {
-        const page = Math.floor(seq / 10);
+        const page = Math.floor(seq / PAGE_SIZE);
         if (page !== lastPage) {
           const divider = document.createElement('div');
           divider.className = 'page-divider';
@@ -488,7 +488,7 @@ export const renderEntries = (container, entries, options = {}) => {
       const entry = sortedEntries.find(e => e.id === id);
       const seq = entry && typeof entry.seq === 'number' ? entry.seq : null;
       if (seq != null) {
-        const page = Math.floor(seq / 10);
+        const page = Math.floor(seq / PAGE_SIZE);
         if (page !== lastPageSmall) {
           const divider = document.createElement('div');
           divider.className = 'page-divider';

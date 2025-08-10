@@ -3,32 +3,7 @@
 
 import { getYjsState, getCharacterData, getEntries, getSummary } from './yjs.js';
 import { summarize } from './summarization.js';
-import { formatDate, getWordCount } from './utils.js';
-
-// Simple page math consistent with journal.js
-const PAGE_SIZE = 10;
-
-const getPageIndexForSeq = (seq) => Math.floor(seq / PAGE_SIZE);
-const getCurrentPageIndex = (entries) => {
-  if (!entries || entries.length === 0) return 0;
-  const maxSeq = entries.reduce((max, e, idx) => {
-    const s = typeof e.seq === 'number' ? e.seq : idx;
-    return s > max ? s : max;
-  }, -1);
-  return Math.max(0, getPageIndexForSeq(maxSeq));
-};
-const getEntriesForPage = (entries, pageIndex) => {
-  const start = pageIndex * PAGE_SIZE;
-  const end = start + PAGE_SIZE;
-  return entries.filter(e => {
-    const s = typeof e.seq === 'number' ? e.seq : entries.indexOf(e);
-    return s >= start && s < end;
-  }).sort((a, b) => {
-    const sa = typeof a.seq === 'number' ? a.seq : entries.indexOf(a);
-    const sb = typeof b.seq === 'number' ? b.seq : entries.indexOf(b);
-    return sa - sb;
-  });
-};
+import { formatDate, getWordCount, getCurrentPageIndex, getEntriesForPage } from './utils.js';
 
 // Build context string for AI from character and entries
 export const buildContext = (character = null, entries = null) => {
