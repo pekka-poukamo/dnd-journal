@@ -37,7 +37,8 @@ export const buildContext = (character = null, entries = null) => {
   // Prepare async entries context call (anchor-based)
   let entriesPromise;
   if (entries && entries.length > 0) {
-    entriesPromise = buildEntriesWithLatestAnchorSeq(entries, config);
+    const state = getYjsState();
+    entriesPromise = buildEntriesWithLatestAnchorSeq(state, entries, config);
   } else {
     entriesPromise = Promise.resolve('\n\nNo journal entries yet. This character is just beginning their adventure.');
   }
@@ -96,8 +97,7 @@ const createEntriesInfo = (entries, config, sectionTitle = 'Adventures') => {
 };
 
 // Anchor-based entries composition using anchor seq pointer
-const buildEntriesWithLatestAnchorSeq = (entries, config) => {
-  const state = getYjsState();
+const buildEntriesWithLatestAnchorSeq = (state, entries, config) => {
   const latestSeq = state.settingsMap.get('latest-anchor-seq') || 0;
   const key = latestSeq > 0 ? `journal:anchor:seq:${latestSeq}` : null;
   const anchorText = key ? getSummary(state, key) : null;

@@ -140,7 +140,7 @@ export const renderJournalPage = (stateParam = null) => {
       renderEntries(entriesElement, entries, {
         onEdit: handleEditEntry,
         onDelete: handleDeleteEntry
-      });
+      }, state);
     }
     
     // Render character info
@@ -318,7 +318,7 @@ export const clearEntryForm = () => {
 // =============================================================================
 
 // Build full-source text up to inclusive seq S
-const buildAnchorSourceToSeq = (state, seqInclusive) => {
+export const buildAnchorSourceToSeq = (state, seqInclusive) => {
   const entries = getEntries(state).slice().sort((a, b) => (a.seq || 0) - (b.seq || 0));
   const text = entries
     .filter(e => typeof e.seq === 'number' && e.seq <= seqInclusive)
@@ -327,17 +327,17 @@ const buildAnchorSourceToSeq = (state, seqInclusive) => {
   return text;
 };
 
-const getLatestAnchorSeq = (state) => {
+export const getLatestAnchorSeq = (state) => {
   const val = getSetting(state, LATEST_ANCHOR_KEY, 0);
   return typeof val === 'number' ? val : (parseInt(val, 10) || 0);
 };
 
-const setLatestAnchorSeq = (state, seq) => {
+export const setLatestAnchorSeq = (state, seq) => {
   // Store in settings map for simplicity
   state.settingsMap.set(LATEST_ANCHOR_KEY, seq);
 };
 
-const processAnchorToLatest = (state) => {
+export const processAnchorToLatest = (state) => {
   try {
     if (!isAIEnabled()) return;
     const entries = getEntries(state);
@@ -355,7 +355,7 @@ const processAnchorToLatest = (state) => {
   }
 };
 
-const maybeTriggerAnchorBuild = (state) => {
+export const maybeTriggerAnchorBuild = (state) => {
   try {
     if (!isAIEnabled()) return;
     const entries = getEntries(state);

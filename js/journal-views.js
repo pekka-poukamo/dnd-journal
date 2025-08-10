@@ -300,7 +300,7 @@ export const renderCharacterSummary = (container, character) => {
 };
 
 // Render journal entries list with intelligent DOM updates (performance optimized)
-export const renderEntries = (container, entries, options = {}) => {
+export const renderEntries = (container, entries, options = {}, stateParam = null) => {
   if (!container) return;
   
   if (entries.length === 0) {
@@ -310,7 +310,7 @@ export const renderEntries = (container, entries, options = {}) => {
   }
   
   const sortedEntries = sortEntriesByDate(entries);
-  const state = getYjsState();
+  const state = stateParam || getYjsState();
   const latestAnchorSeq = state.settingsMap.get(LATEST_ANCHOR_KEY) || 0;
   const anchorKey = latestAnchorSeq > 0 ? `journal:anchor:seq:${latestAnchorSeq}` : null;
   const anchorText = anchorKey ? getStoredSummary(state, anchorKey) : null;
