@@ -16,8 +16,7 @@ export const buildContext = (character = null, entries = null) => {
 
   const config = {
     characterWords: 300,
-    entryWords: 200,
-    metaWords: 1000
+    entryWords: 200
   };
 
   // Build character context string
@@ -35,22 +34,11 @@ export const buildContext = (character = null, entries = null) => {
     buildCharacterSection(field, content, config)
   );
 
-  // Prepare async entries context call
+  // Prepare async entries context call (anchor-based)
   let entriesPromise;
   if (entries && entries.length > 0) {
-    if (entries.length > 10) {
-      // Parallel adventure summary (older entries only) and recent entries
-      const olderEntries = entries.slice(0, -5);
-      const recentEntriesOnly = entries.slice(-5);
-      entriesPromise = Promise.all([
-        createAdventureSummary(olderEntries, config),
-        createEntriesInfo(recentEntriesOnly, config, 'Recent Detailed Adventures')
-      ]).then(([adventureSummary, recentEntries]) =>
-        `\n\nAdventure Summary: ${adventureSummary}${recentEntries}`
-      );
-    } else {
-      entriesPromise = createEntriesInfo(entries, config);
-    }
+    const state = getYjsState();
+    entriesPromise = buildEntriesWithLatestAnchorSeq(state, entries, config);
   } else {
     entriesPromise = Promise.resolve('\n\nNo journal entries yet. This character is just beginning their adventure.');
   }
@@ -108,38 +96,15 @@ const createEntriesInfo = (entries, config, sectionTitle = 'Adventures') => {
     .then(entryInfos => `\n\n${sectionTitle}:` + entryInfos.join(''));
 };
 
-// Create adventure summary from older entries only
-const createAdventureSummary = (entries, config) => {
-  const adventureSummaryKey = 'journal:adventure-summary';
-  
-  // Generate individual entry summaries for all older entries
-  const entrySummaryPromises = entries.map(entry => {
-    if (getWordCount(entry.content) > config.entryWords) {
-      const entryKey = `entry:${entry.id}`;
-      return summarize(entryKey, entry.content, config.entryWords)
-        .then(entrySummary => `${entrySummary}`)
-        .catch(error => {
-          console.warn(`Failed to generate summary for entry ${entry.id}:`, error);
-          return `${entry.content}`;
-        });
-    } else {
-      return Promise.resolve(`${entry.content}`);
-    }
-  });
-  
-  return Promise.all(entrySummaryPromises)
-    .then(entrySummaries => {
-      if (entrySummaries.length === 0) {
-        return '';
-      }
-      
-      const summaryText = entrySummaries.join('\n\n');
-      return summarize(adventureSummaryKey, summaryText, config.metaWords);
-    })
-    .catch(error => {
-      console.warn('Failed to generate adventure summary:', error);
-      return '';
-    });
+// Anchor-based entries composition using anchor seq pointer
+const buildEntriesWithLatestAnchorSeq = (state, entries, config) => {
+  const latestSeq = state.settingsMap.get('latest-anchor-seq') || 0;
+  const key = latestSeq > 0 ? `journal:anchor:seq:${latestSeq}` : null;
+  const anchorText = key ? getSummary(state, key) : null;
+  const tail = latestSeq > 0 ? entries.filter(e => (e.seq || 0) > latestSeq) : entries;
+  const anchorBlock = anchorText ? `\n\nAdventure So Far (Anchor upto ${latestSeq}): ${anchorText}` : '';
+  return createEntriesInfo(tail, config, anchorText ? 'Recent Adventures' : 'Adventures')
+    .then(tailBlock => `${anchorBlock}${tailBlock}`);
 };
 
 // Check if we have enough context for meaningful AI generation

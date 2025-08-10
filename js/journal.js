@@ -10,7 +10,9 @@ import {
   onCharacterChange,
   onJournalChange,
   onQuestionsChange,
-  clearSessionQuestions
+  clearSessionQuestions,
+  onSettingsChange,
+  getSetting
 } from './yjs.js';
 
 import { saveNavigationCache, getCachedJournalEntries, preWarmCache, isCacheRecentAndValid } from './navigation-cache.js';
@@ -24,12 +26,16 @@ import {
   renderCachedJournalContent
 } from './journal-views.js';
 
-import { generateId, isValidEntry, formatDate, getFormData, showNotification } from './utils.js';
+import { generateId, isValidEntry, formatDate, getFormData, showNotification, PAGE_SIZE, computeNextSeq } from './utils.js';
 
 import { generateQuestions } from './ai.js';
 import { hasContext as hasGoodContext } from './context.js';
 import { clearSummary } from './summarization.js';
 import { isAIEnabled } from './ai.js';
+import { summarize } from './summarization.js';
+import { onSettingsChange, getSetting } from './yjs.js';
+
+// Paging configuration centralized in utils
 
 // State management
 let entriesContainer = null;
@@ -38,6 +44,7 @@ let entryFormContainer = null;
 let currentState = null;
 let aiPromptText = null;
 let regenerateBtn = null;
+const LATEST_ANCHOR_KEY = 'latest-anchor-seq';
 
 // Initialize Journal page with optimized loading strategy
 export const initJournalPage = async (stateParam = null) => {
@@ -86,11 +93,21 @@ export const initJournalPage = async (stateParam = null) => {
     onJournalChange(state, () => {
       renderJournalPage(state);
       renderAIPromptWithLogic(state);
+      maybeTriggerAnchorBuild(state);
     });
 
     onCharacterChange(state, () => {
       renderCharacterInfo(state);
       renderAIPromptWithLogic(state);
+    });
+
+    // When settings change, if AI just became enabled, process pending summaries in order
+    onSettingsChange(state, () => {
+      const enabled = getSetting(state, 'ai-enabled', false) && getSetting(state, 'openai-api-key', '');
+      if (enabled) {
+        // Try to catch up anchors to latest
+        processAnchorToLatest(state);
+      }
     });
 
     onQuestionsChange(state, () => {
@@ -123,7 +140,7 @@ export const renderJournalPage = (stateParam = null) => {
       renderEntries(entriesElement, entries, {
         onEdit: handleEditEntry,
         onDelete: handleDeleteEntry
-      });
+      }, state);
     }
     
     // Render character info
@@ -186,6 +203,7 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     // Create entry with ID and timestamp
     const entry = {
       id: generateId(),
+      seq: computeNextSeq(getEntries(state)),
       content: trimmedData.content,
       timestamp: Date.now()
     };
@@ -194,6 +212,9 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     clearSessionQuestions(state); // Clear questions when journal data changes
     clearEntryForm();
     showNotification('Entry added successfully!', 'success');
+    
+    // Consider triggering anchor build when enough new entries exist
+    maybeTriggerAnchorBuild(state);
     
   } catch (error) {
     console.error('Failed to add entry:', error);
@@ -273,11 +294,8 @@ export const handleDeleteEntry = (entryId, stateParam = null) => {
     
     if (confirm('Are you sure you want to delete this entry?')) {
       deleteEntry(state, entryId);
-      
-      // Clear cache when entry is deleted
       clearSummary(`entry:${entryId}`);
-      clearSessionQuestions(state); // Clear questions when journal data changes
-      
+      clearSessionQuestions(state);
       showNotification('Entry deleted successfully!', 'success');
     }
     
@@ -295,6 +313,61 @@ export const clearEntryForm = () => {
   }
 };
 
+// =============================================================================
+// ANCHOR HELPERS (pure calculations + orchestrators)
+// =============================================================================
+
+// Build full-source text up to inclusive seq S
+export const buildAnchorSourceToSeq = (state, seqInclusive) => {
+  const entries = getEntries(state).slice().sort((a, b) => (a.seq || 0) - (b.seq || 0));
+  const text = entries
+    .filter(e => typeof e.seq === 'number' && e.seq <= seqInclusive)
+    .map(e => e.content || '')
+    .join('\n\n');
+  return text;
+};
+
+export const getLatestAnchorSeq = (state) => {
+  const val = getSetting(state, LATEST_ANCHOR_KEY, 0);
+  return typeof val === 'number' ? val : (parseInt(val, 10) || 0);
+};
+
+export const setLatestAnchorSeq = (state, seq) => {
+  // Store in settings map for simplicity
+  state.settingsMap.set(LATEST_ANCHOR_KEY, seq);
+};
+
+export const processAnchorToLatest = (state) => {
+  try {
+    if (!isAIEnabled()) return;
+    const entries = getEntries(state);
+    if (entries.length === 0) return;
+    const maxSeq = Math.max(...entries.map(e => e.seq || 0));
+    const latestSeq = getLatestAnchorSeq(state);
+    if (maxSeq <= 0 || maxSeq === latestSeq) return;
+    const source = buildAnchorSourceToSeq(state, maxSeq);
+    const key = `journal:anchor:seq:${maxSeq}`;
+    summarize(key, source, 900)
+      .then(() => setLatestAnchorSeq(state, maxSeq))
+      .catch(() => {});
+  } catch (err) {
+    console.warn('Failed to process anchor to latest:', err);
+  }
+};
+
+export const maybeTriggerAnchorBuild = (state) => {
+  try {
+    if (!isAIEnabled()) return;
+    const entries = getEntries(state);
+    const latestSeq = getLatestAnchorSeq(state);
+    const ahead = entries.filter(e => typeof e.seq === 'number' && e.seq > latestSeq).length;
+    if (ahead >= 10) {
+      processAnchorToLatest(state);
+    }
+  } catch (err) {
+    console.warn('Failed to evaluate anchor trigger:', err);
+  }
+};
 // =============================================================================
 // AI PROMPT FUNCTIONALITY
 // =============================================================================

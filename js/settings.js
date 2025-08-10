@@ -136,6 +136,29 @@ const setupFormHandlers = () => {
     clearSummariesButton.setAttribute('data-handler-attached', 'true');
   }
   
+  // Manual anchor build trigger
+  const buildAnchorButton = document.getElementById('build-anchor-latest');
+  if (buildAnchorButton && !buildAnchorButton.hasAttribute('data-handler-attached')) {
+    buildAnchorButton.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const state = getYjsState();
+        const { isAIEnabled } = await import('./ai.js');
+        if (!isAIEnabled()) {
+          showNotification('Enable AI and set API key first', 'warning');
+          return;
+        }
+        const Journal = await import('./journal.js');
+        Journal.processAnchorToLatest(state);
+        showNotification('Building anchor to latest...', 'info');
+      } catch (err) {
+        console.warn('Failed to trigger anchor build:', err);
+        showNotification('Failed to trigger anchor build', 'error');
+      }
+    });
+    buildAnchorButton.setAttribute('data-handler-attached', 'true');
+  }
+  
   const refreshAppButton = document.getElementById('refresh-app');
   if (refreshAppButton && !refreshAppButton.hasAttribute('data-handler-attached')) {
     refreshAppButton.addEventListener('click', () => window.location.reload());

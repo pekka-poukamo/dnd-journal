@@ -11,6 +11,8 @@ import { getYjsState } from './yjs.js';
 import { getWordCount } from './utils.js';
 import { getSummary as getStoredSummary } from './yjs.js';
 
+const LATEST_ANCHOR_KEY = 'latest-anchor-seq';
+
 // Create journal entry form
 export const createEntryForm = (options = {}) => {
   const form = document.createElement('form');
@@ -298,7 +300,7 @@ export const renderCharacterSummary = (container, character) => {
 };
 
 // Render journal entries list with intelligent DOM updates (performance optimized)
-export const renderEntries = (container, entries, options = {}) => {
+export const renderEntries = (container, entries, options = {}, stateParam = null) => {
   if (!container) return;
   
   if (entries.length === 0) {
@@ -308,10 +310,12 @@ export const renderEntries = (container, entries, options = {}) => {
   }
   
   const sortedEntries = sortEntriesByDate(entries);
-
-  // If many entries, reflect summarization logic:
-  // - Show latest 5 entries individually (these are included directly in prompts)
-  // - Group the rest under a collapsible section with the meta summary visible
+  const state = stateParam || getYjsState();
+  const latestAnchorSeq = state.settingsMap.get(LATEST_ANCHOR_KEY) || 0;
+  const anchorKey = latestAnchorSeq > 0 ? `journal:anchor:seq:${latestAnchorSeq}` : null;
+  const anchorText = anchorKey ? getStoredSummary(state, anchorKey) : null;
+ 
+  // Simple list; no page dividers for anchor approach
   if (sortedEntries.length > 10) {
     // Recent detailed entries: latest 5
     const recentEntries = sortedEntries.slice(0, 5);
@@ -341,20 +345,19 @@ export const renderEntries = (container, entries, options = {}) => {
     olderHeader.textContent = 'Older Adventures';
     olderSection.appendChild(olderHeader);
 
-    const metaSummaryContainer = document.createElement('div');
-    metaSummaryContainer.className = 'meta-summary-container';
-
-    const metaSummaryTitle = document.createElement('div');
-    metaSummaryTitle.className = 'meta-summary__title';
-    metaSummaryTitle.textContent = 'Campaign Chronicle (Adventure Summary)';
-    metaSummaryContainer.appendChild(metaSummaryTitle);
-
-    const metaSummaryText = document.createElement('div');
-    metaSummaryText.className = 'meta-summary__text';
-    metaSummaryText.textContent = 'Generating overall summary...';
-    metaSummaryContainer.appendChild(metaSummaryText);
-
-    olderSection.appendChild(metaSummaryContainer);
+    if (anchorText) {
+      const anchorContainer = document.createElement('div');
+      anchorContainer.className = 'meta-summary-container';
+      const title = document.createElement('div');
+      title.className = 'meta-summary__title';
+      title.textContent = `Adventure So Far (Anchor upto ${latestAnchorSeq})`;
+      const text = document.createElement('div');
+      text.className = 'meta-summary__text';
+      text.innerHTML = parseMarkdown(anchorText);
+      anchorContainer.appendChild(title);
+      anchorContainer.appendChild(text);
+      olderSection.appendChild(anchorContainer);
+    }
 
     // Collapsible list of older entries
     const collapsible = document.createElement('div');
@@ -398,9 +401,6 @@ export const renderEntries = (container, entries, options = {}) => {
     // Replace container content
     container.innerHTML = '';
     container.appendChild(fragment);
-
-    // After render, ensure meta summary is shown (use cached or generate)
-    ensureAndRenderMetaSummary(sortedEntries, metaSummaryText);
     return;
   }
   
@@ -420,14 +420,11 @@ export const renderEntries = (container, entries, options = {}) => {
   
   sortedEntries.forEach(entry => {
     updatedIds.add(entry.id);
-    
     const existingElement = existingEntries.get(entry.id);
     if (existingElement) {
-      // Update existing element in place (more efficient than recreation)
       updateEntryElement(existingElement, entry, options.onEdit, options.onDelete);
       fragment.appendChild(existingElement);
     } else {
-      // Create new element only if it doesn't exist
       const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
       fragment.appendChild(entryElement);
     }
