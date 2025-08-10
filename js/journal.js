@@ -26,7 +26,7 @@ import {
   renderCachedJournalContent
 } from './journal-views.js';
 
-import { generateId, isValidEntry, formatDate, getFormData, showNotification, PAGE_SIZE, computeNextSeq, didClosePage, getPageIndexForSeq, getEntriesForPage } from './utils.js';
+import { generateId, isValidEntry, formatDate, getFormData, showNotification, PAGE_SIZE } from './utils.js';
 
 import { generateQuestions } from './ai.js';
 import { hasContext as hasGoodContext } from './context.js';
@@ -198,12 +198,8 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     }
 
     // Create entry with ID and timestamp
-    const existing = getEntries(state);
-    const nextSeq = computeNextSeq(existing);
     const entry = {
       id: generateId(),
-      seq: nextSeq,
-      type: 'user',
       content: trimmedData.content,
       timestamp: Date.now()
     };
@@ -327,8 +323,7 @@ export const clearEntryForm = () => {
 // ANCHOR HELPERS (pure calculations + orchestrators)
 // =============================================================================
 
-// computeNextSeq imported from utils
-
+// no seq, anchors use array indices
 // Build anchor text source for index i: previous anchor + entries (i-1)*10..i*10-1
 const buildAnchorSource = (state, index) => {
   const entries = getEntries(state);

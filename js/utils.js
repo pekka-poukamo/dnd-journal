@@ -181,43 +181,6 @@ const repositionNotifications = () => {
   });
 };
 
-// Paging utilities (centralized)
-export const PAGE_SIZE = 10;
-
-export const computeNextSeq = (entries) => {
-  const maxSeq = entries.reduce((max, e, idx) => {
-    const s = typeof e.seq === 'number' ? e.seq : idx; // fallback to index for legacy
-    return s > max ? s : max;
-  }, -1);
-  return maxSeq + 1;
-};
-
-export const didClosePage = (totalCount, pageSize = PAGE_SIZE) => {
-  return totalCount > 0 && totalCount % pageSize === 0;
-};
-
-export const getPageIndexForSeq = (seq, pageSize = PAGE_SIZE) => Math.floor(seq / pageSize);
-
-export const getCurrentPageIndex = (entries, pageSize = PAGE_SIZE) => {
-  if (!entries || entries.length === 0) return 0;
-  const maxSeq = entries.reduce((max, e, idx) => {
-    const s = typeof e.seq === 'number' ? e.seq : idx;
-    return s > max ? s : max;
-  }, -1);
-  return Math.max(0, getPageIndexForSeq(maxSeq, pageSize));
-};
-
-export const getEntriesForPage = (entries, pageIndex, pageSize = PAGE_SIZE) => {
-  const start = pageIndex * pageSize;
-  const end = start + pageSize;
-  return entries.filter(e => {
-    const s = typeof e.seq === 'number' ? e.seq : entries.indexOf(e);
-    return s >= start && s < end;
-  }).sort((a, b) => {
-    const sa = typeof a.seq === 'number' ? a.seq : entries.indexOf(a);
-    const sb = typeof b.seq === 'number' ? b.seq : entries.indexOf(b);
-    return sa - sb;
-  });
-};
+// No other pagination helpers needed for anchor approach
 
 

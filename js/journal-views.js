@@ -78,11 +78,8 @@ export const createEntryElement = (entry, onEdit, onDelete) => {
   deleteButton.textContent = 'Delete';
   deleteButton.onclick = () => onDelete(entry.id);
   
-  // Hide edit/delete for page-summary entries
-  if (entry.type !== 'page-summary') {
-    actions.appendChild(editButton);
-    actions.appendChild(deleteButton);
-  }
+  actions.appendChild(editButton);
+  actions.appendChild(deleteButton);
   
   meta.appendChild(timestamp);
   meta.appendChild(wordCountSpan);
