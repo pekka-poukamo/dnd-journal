@@ -10,7 +10,9 @@ import {
   onCharacterChange,
   onJournalChange,
   onQuestionsChange,
-  clearSessionQuestions
+  clearSessionQuestions,
+  onSettingsChange,
+  getSetting
 } from './yjs.js';
 
 import { saveNavigationCache, getCachedJournalEntries, preWarmCache, isCacheRecentAndValid } from './navigation-cache.js';
@@ -31,6 +33,7 @@ import { hasContext as hasGoodContext } from './context.js';
 import { clearSummary } from './summarization.js';
 import { isAIEnabled } from './ai.js';
 import { summarize } from './summarization.js';
+import { onSettingsChange, getSetting } from './yjs.js';
 
 // Paging configuration (radically simple)
 const PAGE_SIZE = 10;
@@ -95,6 +98,14 @@ export const initJournalPage = async (stateParam = null) => {
     onCharacterChange(state, () => {
       renderCharacterInfo(state);
       renderAIPromptWithLogic(state);
+    });
+
+    // When settings change, if AI just became enabled, process pending summaries in order
+    onSettingsChange(state, () => {
+      const enabled = getSetting(state, 'ai-enabled', false) && getSetting(state, 'openai-api-key', '');
+      if (enabled) {
+        processPendingPageSummariesInOrder(state);
+      }
     });
 
     onQuestionsChange(state, () => {
@@ -291,18 +302,6 @@ export const handleDeleteEntry = (entryId, stateParam = null) => {
       const entries = getEntries(state);
       const target = entries.find(e => e.id === entryId);
       if (target) {
-        const isLegacy = typeof target.seq !== 'number';
-        const pagingActive = entries.length >= PAGE_SIZE; // only enforce soft-delete when paging matters
-
-        if (isLegacy || !pagingActive) {
-          // Hard delete for legacy or before paging is active
-          deleteEntry(state, entryId);
-          clearSummary(`entry:${entryId}`);
-          clearSessionQuestions(state);
-          showNotification('Entry deleted successfully!', 'success');
-          return;
-        }
-
         const placeholder = '[Deleted entry]';
         updateEntry(state, entryId, { deleted: true, content: placeholder });
         clearSummary(`entry:${entryId}`);
@@ -400,19 +399,55 @@ const insertPageSummaryPlaceholderAndCompute = (state, closedPageIndex) => {
       showNotification(`Page ${closedPageIndex} summary ready`, 'success');
     };
     
-    // If AI is enabled, use remote summary with caching; otherwise use local fallback
+    // If AI is enabled, schedule summary creation; otherwise leave placeholder pending
     if (isAIEnabled()) {
       summarize(pageKey, source, 800)
         .then(finalize)
-        .catch(() => finalize(buildLocalPageSummary(pageEntries)));
-    } else {
-      finalize(buildLocalPageSummary(pageEntries));
+        .catch(() => {/* keep pending on failure */});
     }
   } catch (err) {
     console.warn('Failed to insert/compute page summary:', err);
   }
 };
 
+// Process any pending page-summary placeholders in ascending page order to ensure recursive chain
+const processPendingPageSummariesInOrder = (state) => {
+  try {
+    if (!isAIEnabled()) return;
+    const entries = getEntries(state);
+    // Find all page-summary entries not ready
+    const pending = entries.filter(e => e.type === 'page-summary' && (!e.meta || e.meta.ready !== true));
+    if (pending.length === 0) return;
+    // Order by summarizedPage ascending
+    const ordered = pending
+      .map(e => ({ entry: e, page: e.meta && typeof e.meta.summarizedPage === 'number' ? e.meta.summarizedPage : getPageIndexForSeq((typeof e.seq === 'number' ? e.seq : entries.indexOf(e)) - 1) }))
+      .sort((a, b) => a.page - b.page);
+    
+    // Process sequentially to preserve recursion
+    const processNext = (idx) => {
+      if (idx >= ordered.length) return Promise.resolve();
+      const pageIndex = ordered[idx].page;
+      const pageEntries = getEntriesForPage(getEntries(state), pageIndex);
+      const source = pageEntries.map(e => (e.content || '')).join('\n\n');
+      const pageKey = `journal:page:${pageIndex}:summary`;
+      return summarize(pageKey, source, 800)
+        .then(text => {
+          // Update the corresponding placeholder for this page (which is in next page's first slot)
+          const placeholderSeq = (pageIndex + 1) * PAGE_SIZE;
+          const allAfter = getEntries(state);
+          const placeholder = allAfter.find(e => (typeof e.seq === 'number' ? e.seq : allAfter.indexOf(e)) === placeholderSeq && e.type === 'page-summary');
+          if (placeholder) {
+            updateEntry(state, placeholder.id, { content: text, meta: { summarizedPage: pageIndex, ready: true } });
+          }
+        })
+        .catch(() => {/* keep pending */})
+        .then(() => processNext(idx + 1));
+    };
+    processNext(0);
+  } catch (err) {
+    console.warn('Failed to process pending page summaries:', err);
+  }
+};
 // =============================================================================
 // AI PROMPT FUNCTIONALITY
 // =============================================================================
