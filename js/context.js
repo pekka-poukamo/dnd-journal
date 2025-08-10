@@ -3,7 +3,7 @@
 
 import { getYjsState, getCharacterData, getEntries, getSummary } from './yjs.js';
 import { summarize } from './summarization.js';
-import { formatDate, getWordCount, getCurrentPageIndex, getEntriesForPage } from './utils.js';
+import { formatDate, getWordCount } from './utils.js';
 
 // Build context string for AI from character and entries
 export const buildContext = (character = null, entries = null) => {
@@ -34,12 +34,10 @@ export const buildContext = (character = null, entries = null) => {
     buildCharacterSection(field, content, config)
   );
 
-  // Prepare async entries context call (page-aware, recursive via first entry)
+  // Prepare async entries context call (anchor-based)
   let entriesPromise;
   if (entries && entries.length > 0) {
-    const currentPage = getCurrentPageIndex(entries);
-    const pageEntries = getEntriesForPage(entries, currentPage);
-    entriesPromise = createEntriesInfo(pageEntries, config, 'Adventures');
+    entriesPromise = buildEntriesWithLatestAnchor(entries, config);
   } else {
     entriesPromise = Promise.resolve('\n\nNo journal entries yet. This character is just beginning their adventure.');
   }
@@ -97,7 +95,31 @@ const createEntriesInfo = (entries, config, sectionTitle = 'Adventures') => {
     .then(entryInfos => `\n\n${sectionTitle}:` + entryInfos.join(''));
 };
 
-// Removed older adventure summary path in favor of page-aware context
+// Anchor-based entries composition
+const buildEntriesWithLatestAnchor = (entries, config) => {
+  // Latest anchor index = Math.floor((entries.length - 1) / 10)
+  const latestAnchorIdx = Math.floor((entries.length - 1) / 10);
+  if (latestAnchorIdx < 0) {
+    return createEntriesInfo(entries, config, 'Adventures');
+  }
+  const state = getYjsState();
+  const tryAnchor = (idx) => {
+    if (idx < 0) return Promise.resolve(null);
+    const key = `journal:anchor:index:${idx}`;
+    const existing = getSummary(state, key);
+    if (existing) return Promise.resolve(existing);
+    // No generation here; context only reads existing anchors
+    return tryAnchor(idx - 1);
+  };
+  return tryAnchor(latestAnchorIdx).then(anchorText => {
+    // Determine tail entries: entries after the anchor boundary (idx * 10 + 1 to end)
+    const tailStart = (anchorText ? ((latestAnchorIdx + 1) * 10) : 0);
+    const tail = entries.slice(tailStart);
+    const anchorBlock = anchorText ? `\n\nAdventure So Far (Anchor ${latestAnchorIdx}): ${anchorText}` : '';
+    return createEntriesInfo(tail, config, anchorText ? 'Recent Adventures' : 'Adventures')
+      .then(tailBlock => `${anchorBlock}${tailBlock}`);
+  });
+};
 
 // Check if we have enough context for meaningful AI generation
 export const hasContext = (character = null, entries = null) => {

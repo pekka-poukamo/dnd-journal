@@ -103,7 +103,7 @@ export const initJournalPage = async (stateParam = null) => {
     onSettingsChange(state, () => {
       const enabled = getSetting(state, 'ai-enabled', false) && getSetting(state, 'openai-api-key', '');
       if (enabled) {
-        processPendingPageSummariesInOrder(state);
+        processAnchorsAscending(state);
       }
     });
 
@@ -213,11 +213,11 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     clearEntryForm();
     showNotification('Entry added successfully!', 'success');
     
-    // If this addition closed a page, insert a page-summary placeholder at the beginning of the new page
+    // If we reached an anchor boundary (every 10 entries), optionally process anchors
     const afterAdd = getEntries(state);
-    if (didClosePage(afterAdd.length)) {
-      const closedPageIndex = Math.floor(afterAdd.length / PAGE_SIZE) - 1;
-      insertPageSummaryPlaceholderAndCompute(state, closedPageIndex);
+    if (afterAdd.length % PAGE_SIZE === 0) {
+      // Create/refresh anchors only when AI is enabled; otherwise defer
+      processAnchorsAscending(state);
     }
     
   } catch (error) {
@@ -324,100 +324,41 @@ export const clearEntryForm = () => {
 };
 
 // =============================================================================
-// PAGE-BASED SUMMARY HELPERS (pure calculations + orchestrators)
+// ANCHOR HELPERS (pure calculations + orchestrators)
 // =============================================================================
 
-// computeNextSeq, didClosePage, getPageIndexForSeq, getEntriesForPage imported from utils
+// computeNextSeq imported from utils
 
-const buildLocalPageSummary = (pageEntries, maxWordsPerEntry = 60) => {
-  const lines = pageEntries.map(e => {
-    const text = (e.content || '').trim();
-    const words = text.split(/\s+/).filter(Boolean);
-    const snippet = words.slice(0, Math.max(1, maxWordsPerEntry)).join(' ');
-    return `- ${snippet}${words.length > maxWordsPerEntry ? '…' : ''}`;
-  });
-  return `Previous Page Summary (local):\n\n${lines.join('\n')}`;
+// Build anchor text source for index i: previous anchor + entries (i-1)*10..i*10-1
+const buildAnchorSource = (state, index) => {
+  const entries = getEntries(state);
+  const start = (index - 1) * PAGE_SIZE;
+  const end = Math.min(index * PAGE_SIZE, entries.length);
+  const chunk = entries.slice(start, end).map(e => e.content || '').join('\n\n');
+  if (index <= 1) return chunk;
+  const prevKey = `journal:anchor:index:${index - 1}`;
+  const prev = getSummary(state, prevKey) || '';
+  return prev ? `${prev}\n\n${chunk}` : chunk;
 };
 
-const insertPageSummaryPlaceholderAndCompute = (state, closedPageIndex) => {
-  try {
-    const all = getEntries(state);
-    const placeholderSeq = (closedPageIndex + 1) * PAGE_SIZE; // first slot of next page
-    
-    // Idempotency: if a page-summary already exists at that seq, skip insertion
-    const exists = all.find(e => (typeof e.seq === 'number' ? e.seq : all.indexOf(e)) === placeholderSeq && e.type === 'page-summary');
-    let placeholderEntry = exists;
-    if (!exists) {
-      placeholderEntry = {
-        id: generateId(),
-        seq: placeholderSeq,
-        type: 'page-summary',
-        meta: { summarizedPage: closedPageIndex, ready: false },
-        content: `Previous Page Summary (Page ${closedPageIndex}) — generating…`,
-        timestamp: Date.now()
-      };
-      addEntry(state, placeholderEntry);
-    }
-    
-    // Build source text for the closed page p (include any summary entry at start of that page for recursion)
-    const pageEntries = getEntriesForPage(getEntries(state), closedPageIndex);
-    const source = pageEntries.map(e => (e.content || '')).join('\n\n');
-    const pageKey = `journal:page:${closedPageIndex}:summary`;
-    
-    const finalize = (text) => {
-      // Update cache and placeholder with final text
-      // Cache via summarize() or directly set via updateEntry content change
-      updateEntry(state, placeholderEntry.id, { content: text, meta: { summarizedPage: closedPageIndex, ready: true } });
-      showNotification(`Page ${closedPageIndex} summary ready`, 'success');
-    };
-    
-    // If AI is enabled, schedule summary creation; otherwise leave placeholder pending
-    if (isAIEnabled()) {
-      summarize(pageKey, source, 800)
-        .then(finalize)
-        .catch(() => {/* keep pending on failure */});
-    }
-  } catch (err) {
-    console.warn('Failed to insert/compute page summary:', err);
-  }
-};
-
-// Process any pending page-summary placeholders in ascending page order to ensure recursive chain
-const processPendingPageSummariesInOrder = (state) => {
+const processAnchorsAscending = (state) => {
   try {
     if (!isAIEnabled()) return;
-    const entries = getEntries(state);
-    // Find all page-summary entries not ready
-    const pending = entries.filter(e => e.type === 'page-summary' && (!e.meta || e.meta.ready !== true));
-    if (pending.length === 0) return;
-    // Order by summarizedPage ascending
-    const ordered = pending
-      .map(e => ({ entry: e, page: e.meta && typeof e.meta.summarizedPage === 'number' ? e.meta.summarizedPage : getPageIndexForSeq((typeof e.seq === 'number' ? e.seq : entries.indexOf(e)) - 1) }))
-      .sort((a, b) => a.page - b.page);
-    
-    // Process sequentially to preserve recursion
-    const processNext = (idx) => {
-      if (idx >= ordered.length) return Promise.resolve();
-      const pageIndex = ordered[idx].page;
-      const pageEntries = getEntriesForPage(getEntries(state), pageIndex);
-      const source = pageEntries.map(e => (e.content || '')).join('\n\n');
-      const pageKey = `journal:page:${pageIndex}:summary`;
-      return summarize(pageKey, source, 800)
-        .then(text => {
-          // Update the corresponding placeholder for this page (which is in next page's first slot)
-          const placeholderSeq = (pageIndex + 1) * PAGE_SIZE;
-          const allAfter = getEntries(state);
-          const placeholder = allAfter.find(e => (typeof e.seq === 'number' ? e.seq : allAfter.indexOf(e)) === placeholderSeq && e.type === 'page-summary');
-          if (placeholder) {
-            updateEntry(state, placeholder.id, { content: text, meta: { summarizedPage: pageIndex, ready: true } });
-          }
-        })
-        .catch(() => {/* keep pending */})
-        .then(() => processNext(idx + 1));
+    const total = getEntries(state).length;
+    const lastIndex = Math.floor(total / PAGE_SIZE);
+    if (lastIndex <= 0) return;
+    const buildNext = (i) => {
+      if (i > lastIndex) return Promise.resolve();
+      const key = `journal:anchor:index:${i}`;
+      if (getSummary(state, key)) {
+        return buildNext(i + 1);
+      }
+      const source = buildAnchorSource(state, i);
+      return summarize(key, source, 800).then(() => buildNext(i + 1)).catch(() => buildNext(i + 1));
     };
-    processNext(0);
+    buildNext(1);
   } catch (err) {
-    console.warn('Failed to process pending page summaries:', err);
+    console.warn('Failed to process anchors:', err);
   }
 };
 // =============================================================================

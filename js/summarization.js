@@ -63,6 +63,8 @@ export const summarize = (summaryKey, content, maxWords = null) => {
     prompt = PROMPTS.summarization.entry(content, maxWords || 400);
   } else if (summaryKey.startsWith('character:')) {
     prompt = PROMPTS.summarization.character(content, maxWords || 500);
+  } else if (summaryKey.startsWith('journal:anchor:index:')) {
+    prompt = PROMPTS.summarization.adventureSummary(content, maxWords || 800);
   } else if (summaryKey.startsWith('journal:page:')) {
     // Page-based summary (recursive roll-up); use adventure summary prompt
     prompt = PROMPTS.summarization.adventureSummary(content, maxWords || 800);
