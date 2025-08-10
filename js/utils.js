@@ -183,4 +183,13 @@ const repositionNotifications = () => {
 
 // No other pagination helpers needed for anchor approach
 
+// Seq utilities
+export const computeNextSeq = (entries) => {
+  const maxSeq = entries.reduce((max, e, idx) => {
+    const s = typeof e.seq === 'number' ? e.seq : idx;
+    return s > max ? s : max;
+  }, -1);
+  return maxSeq + 1;
+};
+
 

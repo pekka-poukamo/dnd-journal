@@ -37,7 +37,7 @@ export const buildContext = (character = null, entries = null) => {
   // Prepare async entries context call (anchor-based)
   let entriesPromise;
   if (entries && entries.length > 0) {
-    entriesPromise = buildEntriesWithLatestAnchor(entries, config);
+    entriesPromise = buildEntriesWithLatestAnchorSeq(entries, config);
   } else {
     entriesPromise = Promise.resolve('\n\nNo journal entries yet. This character is just beginning their adventure.');
   }
@@ -95,30 +95,16 @@ const createEntriesInfo = (entries, config, sectionTitle = 'Adventures') => {
     .then(entryInfos => `\n\n${sectionTitle}:` + entryInfos.join(''));
 };
 
-// Anchor-based entries composition
-const buildEntriesWithLatestAnchor = (entries, config) => {
-  // Latest anchor index = Math.floor((entries.length - 1) / 10)
-  const latestAnchorIdx = Math.floor((entries.length - 1) / 10);
-  if (latestAnchorIdx < 0) {
-    return createEntriesInfo(entries, config, 'Adventures');
-  }
+// Anchor-based entries composition using anchor seq pointer
+const buildEntriesWithLatestAnchorSeq = (entries, config) => {
   const state = getYjsState();
-  const tryAnchor = (idx) => {
-    if (idx < 0) return Promise.resolve(null);
-    const key = `journal:anchor:index:${idx}`;
-    const existing = getSummary(state, key);
-    if (existing) return Promise.resolve(existing);
-    // No generation here; context only reads existing anchors
-    return tryAnchor(idx - 1);
-  };
-  return tryAnchor(latestAnchorIdx).then(anchorText => {
-    // Determine tail entries: entries after the anchor boundary (idx * 10 + 1 to end)
-    const tailStart = (anchorText ? ((latestAnchorIdx + 1) * 10) : 0);
-    const tail = entries.slice(tailStart);
-    const anchorBlock = anchorText ? `\n\nAdventure So Far (Anchor ${latestAnchorIdx}): ${anchorText}` : '';
-    return createEntriesInfo(tail, config, anchorText ? 'Recent Adventures' : 'Adventures')
-      .then(tailBlock => `${anchorBlock}${tailBlock}`);
-  });
+  const latestSeq = state.settingsMap.get('latest-anchor-seq') || 0;
+  const key = latestSeq > 0 ? `journal:anchor:seq:${latestSeq}` : null;
+  const anchorText = key ? getSummary(state, key) : null;
+  const tail = latestSeq > 0 ? entries.filter(e => (e.seq || 0) > latestSeq) : entries;
+  const anchorBlock = anchorText ? `\n\nAdventure So Far (Anchor upto ${latestSeq}): ${anchorText}` : '';
+  return createEntriesInfo(tail, config, anchorText ? 'Recent Adventures' : 'Adventures')
+    .then(tailBlock => `${anchorBlock}${tailBlock}`);
 };
 
 // Check if we have enough context for meaningful AI generation

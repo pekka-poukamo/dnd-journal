@@ -26,7 +26,7 @@ import {
   renderCachedJournalContent
 } from './journal-views.js';
 
-import { generateId, isValidEntry, formatDate, getFormData, showNotification, PAGE_SIZE } from './utils.js';
+import { generateId, isValidEntry, formatDate, getFormData, showNotification, PAGE_SIZE, computeNextSeq } from './utils.js';
 
 import { generateQuestions } from './ai.js';
 import { hasContext as hasGoodContext } from './context.js';
@@ -44,6 +44,7 @@ let entryFormContainer = null;
 let currentState = null;
 let aiPromptText = null;
 let regenerateBtn = null;
+const LATEST_ANCHOR_KEY = 'latest-anchor-seq';
 
 // Initialize Journal page with optimized loading strategy
 export const initJournalPage = async (stateParam = null) => {
@@ -92,6 +93,7 @@ export const initJournalPage = async (stateParam = null) => {
     onJournalChange(state, () => {
       renderJournalPage(state);
       renderAIPromptWithLogic(state);
+      maybeTriggerAnchorBuild(state);
     });
 
     onCharacterChange(state, () => {
@@ -103,7 +105,8 @@ export const initJournalPage = async (stateParam = null) => {
     onSettingsChange(state, () => {
       const enabled = getSetting(state, 'ai-enabled', false) && getSetting(state, 'openai-api-key', '');
       if (enabled) {
-        processAnchorsAscending(state);
+        // Try to catch up anchors to latest
+        processAnchorToLatest(state);
       }
     });
 
@@ -200,6 +203,7 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     // Create entry with ID and timestamp
     const entry = {
       id: generateId(),
+      seq: computeNextSeq(getEntries(state)),
       content: trimmedData.content,
       timestamp: Date.now()
     };
@@ -209,12 +213,8 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     clearEntryForm();
     showNotification('Entry added successfully!', 'success');
     
-    // If we reached an anchor boundary (every 10 entries), optionally process anchors
-    const afterAdd = getEntries(state);
-    if (afterAdd.length % PAGE_SIZE === 0) {
-      // Create/refresh anchors only when AI is enabled; otherwise defer
-      processAnchorsAscending(state);
-    }
+    // Consider triggering anchor build when enough new entries exist
+    maybeTriggerAnchorBuild(state);
     
   } catch (error) {
     console.error('Failed to add entry:', error);
@@ -293,16 +293,10 @@ export const handleDeleteEntry = (entryId, stateParam = null) => {
     const state = stateParam || getYjsState();
     
     if (confirm('Are you sure you want to delete this entry?')) {
-      // Soft-delete to preserve paging; keep seq stable
-      const entries = getEntries(state);
-      const target = entries.find(e => e.id === entryId);
-      if (target) {
-        const placeholder = '[Deleted entry]';
-        updateEntry(state, entryId, { deleted: true, content: placeholder });
-        clearSummary(`entry:${entryId}`);
-        clearSessionQuestions(state); // Clear questions when journal data changes
-        showNotification('Entry deleted successfully!', 'success');
-      }
+      deleteEntry(state, entryId);
+      clearSummary(`entry:${entryId}`);
+      clearSessionQuestions(state);
+      showNotification('Entry deleted successfully!', 'success');
     }
     
   } catch (error) {
@@ -323,37 +317,55 @@ export const clearEntryForm = () => {
 // ANCHOR HELPERS (pure calculations + orchestrators)
 // =============================================================================
 
-// no seq, anchors use array indices
-// Build anchor text source for index i: previous anchor + entries (i-1)*10..i*10-1
-const buildAnchorSource = (state, index) => {
-  const entries = getEntries(state);
-  const start = (index - 1) * PAGE_SIZE;
-  const end = Math.min(index * PAGE_SIZE, entries.length);
-  const chunk = entries.slice(start, end).map(e => e.content || '').join('\n\n');
-  if (index <= 1) return chunk;
-  const prevKey = `journal:anchor:index:${index - 1}`;
-  const prev = getSummary(state, prevKey) || '';
-  return prev ? `${prev}\n\n${chunk}` : chunk;
+// Build full-source text up to inclusive seq S
+const buildAnchorSourceToSeq = (state, seqInclusive) => {
+  const entries = getEntries(state).slice().sort((a, b) => (a.seq || 0) - (b.seq || 0));
+  const text = entries
+    .filter(e => typeof e.seq === 'number' && e.seq <= seqInclusive)
+    .map(e => e.content || '')
+    .join('\n\n');
+  return text;
 };
 
-const processAnchorsAscending = (state) => {
+const getLatestAnchorSeq = (state) => {
+  const val = getSetting(state, LATEST_ANCHOR_KEY, 0);
+  return typeof val === 'number' ? val : (parseInt(val, 10) || 0);
+};
+
+const setLatestAnchorSeq = (state, seq) => {
+  // Store in settings map for simplicity
+  state.settingsMap.set(LATEST_ANCHOR_KEY, seq);
+};
+
+const processAnchorToLatest = (state) => {
   try {
     if (!isAIEnabled()) return;
-    const total = getEntries(state).length;
-    const lastIndex = Math.floor(total / PAGE_SIZE);
-    if (lastIndex <= 0) return;
-    const buildNext = (i) => {
-      if (i > lastIndex) return Promise.resolve();
-      const key = `journal:anchor:index:${i}`;
-      if (getSummary(state, key)) {
-        return buildNext(i + 1);
-      }
-      const source = buildAnchorSource(state, i);
-      return summarize(key, source, 800).then(() => buildNext(i + 1)).catch(() => buildNext(i + 1));
-    };
-    buildNext(1);
+    const entries = getEntries(state);
+    if (entries.length === 0) return;
+    const maxSeq = Math.max(...entries.map(e => e.seq || 0));
+    const latestSeq = getLatestAnchorSeq(state);
+    if (maxSeq <= 0 || maxSeq === latestSeq) return;
+    const source = buildAnchorSourceToSeq(state, maxSeq);
+    const key = `journal:anchor:seq:${maxSeq}`;
+    summarize(key, source, 900)
+      .then(() => setLatestAnchorSeq(state, maxSeq))
+      .catch(() => {});
   } catch (err) {
-    console.warn('Failed to process anchors:', err);
+    console.warn('Failed to process anchor to latest:', err);
+  }
+};
+
+const maybeTriggerAnchorBuild = (state) => {
+  try {
+    if (!isAIEnabled()) return;
+    const entries = getEntries(state);
+    const latestSeq = getLatestAnchorSeq(state);
+    const ahead = entries.filter(e => typeof e.seq === 'number' && e.seq > latestSeq).length;
+    if (ahead >= 10) {
+      processAnchorToLatest(state);
+    }
+  } catch (err) {
+    console.warn('Failed to evaluate anchor trigger:', err);
   }
 };
 // =============================================================================

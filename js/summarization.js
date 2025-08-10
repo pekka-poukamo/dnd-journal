@@ -65,14 +65,8 @@ export const summarize = (summaryKey, content, maxWords = null) => {
     prompt = PROMPTS.summarization.character(content, maxWords || 500);
   } else if (summaryKey.startsWith('journal:anchor:index:')) {
     prompt = PROMPTS.summarization.adventureSummary(content, maxWords || 800);
-  } else if (summaryKey.startsWith('journal:page:')) {
-    // Page-based summary (recursive roll-up); use adventure summary prompt
-    prompt = PROMPTS.summarization.adventureSummary(content, maxWords || 800);
-  } else if (summaryKey.startsWith('journal:adventure-summary')) {
-    prompt = PROMPTS.summarization.adventureSummary(content, maxWords || 750);
-  } else if (summaryKey.startsWith('journal:meta-summary')) {
-    // Old meta-summary no longer supported intentionally
-    prompt = PROMPTS.summarization.adventureSummary(content, maxWords || 750);
+  } else if (summaryKey.startsWith('journal:anchor:seq:')) {
+    prompt = PROMPTS.summarization.adventureSummary(content, maxWords || 900);
   } else {
     prompt = `Summarize this content concisely:\n\n${content}`;
   }
