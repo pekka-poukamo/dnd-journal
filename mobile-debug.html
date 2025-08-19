@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Debug - D&D Journal</title>
+    <style>
+        body { font-family: system-ui; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .small { font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>Mobile Debug</h1>
+    <div id="status"></div>
+    
+    <script>
+        const statusEl = document.getElementById('status');
+        
+        function addStatus(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            statusEl.appendChild(div);
+            console.log(message);
+        }
+        
+        // Capture all errors
+        window.addEventListener('error', (e) => {
+            addStatus(`❌ JavaScript Error:<br><strong>${e.error?.message || e.message}</strong><br><span class="small">File: ${e.filename}:${e.lineno}</span>`, 'error');
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            addStatus(`❌ Promise Rejection:<br><strong>${e.reason}</strong>`, 'error');
+        });
+        
+        addStatus('✅ Basic JavaScript running', 'success');
+        addStatus(`📱 User Agent: ${navigator.userAgent}`, 'info');
+        addStatus(`🌐 Location: ${location.href}`, 'info');
+    </script>
+    
+    <!-- Same import map as main app -->
+    <script type="importmap">
+    {
+      "imports": {
+        "yjs": "./node_modules/yjs/dist/yjs.mjs",
+        "y-websocket": "./node_modules/y-websocket/src/y-websocket.js",
+        "y-indexeddb": "./node_modules/y-indexeddb/src/y-indexeddb.js",
+        "y-protocols/sync": "./node_modules/y-protocols/sync.js",
+        "y-protocols/auth": "./node_modules/y-protocols/auth.js",
+        "y-protocols/awareness": "./node_modules/y-protocols/awareness.js",
+        "lib0/observable": "./node_modules/lib0/observable.js",
+        "lib0/array": "./node_modules/lib0/array.js",
+        "lib0/math": "./node_modules/lib0/math.js",
+        "lib0/map": "./node_modules/lib0/map.js",
+        "lib0/encoding": "./node_modules/lib0/encoding.js",
+        "lib0/decoding": "./node_modules/lib0/decoding.js",
+        "lib0/random": "./node_modules/lib0/random.js",
+        "lib0/promise": "./node_modules/lib0/promise.js",
+        "lib0/buffer": "./node_modules/lib0/buffer.js",
+        "lib0/error": "./node_modules/lib0/error.js",
+        "lib0/binary": "./node_modules/lib0/binary.js",
+        "lib0/function": "./node_modules/lib0/function.js",
+        "lib0/set": "./node_modules/lib0/set.js",
+        "lib0/logging": "./node_modules/lib0/logging.js",
+        "lib0/time": "./node_modules/lib0/time.js",
+        "lib0/string": "./node_modules/lib0/string.js",
+        "lib0/iterator": "./node_modules/lib0/iterator.js",
+        "lib0/object": "./node_modules/lib0/object.js",
+        "lib0/environment": "./node_modules/lib0/environment.js",
+        "lib0/indexeddb": "./node_modules/lib0/indexeddb.js",
+        "lib0/broadcastchannel": "./node_modules/lib0/broadcastchannel.js",
+        "lib0/url": "./node_modules/lib0/url.js"
+      }
+    }
+    </script>
+    
+    <script type="module">
+        try {
+            addStatus('🔄 Testing module imports...', 'info');
+            
+            // Test basic module loading
+            const yjs = await import('yjs');
+            addStatus('✅ YJS imported successfully', 'success');
+            
+            const utils = await import('./js/utils.js');
+            addStatus('✅ Utils imported successfully', 'success');
+            
+            const yjsModule = await import('./js/yjs.js');
+            addStatus('✅ YJS module imported successfully', 'success');
+            
+            // Test YJS initialization
+            addStatus('🔄 Testing YJS initialization...', 'info');
+            const state = await yjsModule.initYjs();
+            addStatus('✅ YJS initialized successfully', 'success');
+            
+            // Test journal import
+            const journal = await import('./js/journal.js');
+            addStatus('✅ Journal module imported successfully', 'success');
+            
+            addStatus('🎉 All modules working correctly!', 'success');
+            
+        } catch (error) {
+            addStatus(`❌ Module test failed:<br><strong>${error.message}</strong><br><span class="small">${error.stack}</span>`, 'error');
+        }
+    </script>
+</body>
+</html>
