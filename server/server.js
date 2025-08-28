@@ -35,7 +35,6 @@ const wss = new WebSocketServer({ port: PORT, host: HOST });
 const activeConnections = new Map();
 const activeDocuments = new Map();
 
-
 // Log WebSocket server events
 wss.on('connection', (ws, req) => {
   const connectionId = Math.random().toString(36).substr(2, 9);
