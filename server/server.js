@@ -47,8 +47,9 @@ wss.on('connection', (ws, req) => {
   
   const url = req.url;
   
-  console.log(`🔗 New connection from ${clientIP} (${req.socket.remoteAddress})`);
-  activeConnections.set(connectionId, { ip: clientIP, url, connectedAt: new Date().toISOString() });
+  const userAgent = req.headers['user-agent'] || 'Unknown';
+  console.log(`🔗 New connection from ${clientIP} (${req.socket.remoteAddress}) - ${userAgent.substring(0, 50)}...`);
+  activeConnections.set(connectionId, { ip: clientIP, url, userAgent, connectedAt: new Date().toISOString() });
 
   setupWSConnection(ws, req, {
     getYDoc: (docName) => {
