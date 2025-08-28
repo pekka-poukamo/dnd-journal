@@ -29,12 +29,15 @@ export const buildMessages = (systemPrompt, userPrompt) => {
     : [{ role: 'user', content: userPrompt }];
 };
 
-// Simple AI call function
-const callAI = (systemPrompt, userPrompt) => {
+// Simple AI call function with timeout to avoid hanging UI
+const callAI = (systemPrompt, userPrompt, timeoutMs = 20000) => {
   const state = getYjsState();
   const apiKey = getSetting(state, 'openai-api-key', '');
   
   const messages = buildMessages(systemPrompt, userPrompt);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   return fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -47,9 +50,11 @@ const callAI = (systemPrompt, userPrompt) => {
       messages,
       max_tokens: 2500,
       temperature: 0.8
-    })
+    }),
+    signal: controller.signal
   })
   .then(response => {
+    clearTimeout(timeoutId);
     if (!response.ok) {
       return response.json()
         .then(errorData => {
@@ -61,7 +66,14 @@ const callAI = (systemPrompt, userPrompt) => {
     }
     return response.json();
   })
-  .then(data => data.choices[0]?.message?.content?.trim());
+  .then(data => data.choices[0]?.message?.content?.trim())
+  .catch(error => {
+    // Normalize abort errors
+    if (error?.name === 'AbortError') {
+      throw new Error('Request timed out while contacting AI service');
+    }
+    throw error;
+  });
 };
 
 // Generate storytelling questions (uses Yjs for sync)

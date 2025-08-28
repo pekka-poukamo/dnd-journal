@@ -10,11 +10,14 @@ const isAIEnabled = () => {
   return Boolean(enabled && apiKey);
 };
 
-// Simple AI call function
-const callAI = (prompt) => {
+// Simple AI call function with timeout to avoid hanging UI
+const callAI = (prompt, timeoutMs = 20000) => {
   const state = getYjsState();
   const apiKey = getSetting(state, 'openai-api-key', '');
-  
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   return fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -26,15 +29,23 @@ const callAI = (prompt) => {
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 2500,
       temperature: 0.3
-    })
+    }),
+    signal: controller.signal
   })
   .then(response => {
+    clearTimeout(timeoutId);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     return response.json();
   })
-  .then(data => data.choices[0].message.content.trim());
+  .then(data => data.choices[0].message.content.trim())
+  .catch(error => {
+    if (error?.name === 'AbortError') {
+      throw new Error('Request timed out while contacting AI service');
+    }
+    throw error;
+  });
 };
 
 // Summarize content with caching
