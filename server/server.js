@@ -38,10 +38,16 @@ const activeDocuments = new Map();
 // Log WebSocket server events
 wss.on('connection', (ws, req) => {
   const connectionId = Math.random().toString(36).substr(2, 9);
-  const clientIP = req.socket.remoteAddress;
+  
+  // Get real client IP, handling proxy headers
+  const clientIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+                   req.headers['x-real-ip'] ||
+                   req.headers['cf-connecting-ip'] || // Cloudflare
+                   req.socket.remoteAddress;
+  
   const url = req.url;
   
-  console.log(`🔗 New connection from ${clientIP}`);
+  console.log(`🔗 New connection from ${clientIP} (${req.socket.remoteAddress})`);
   activeConnections.set(connectionId, { ip: clientIP, url, connectedAt: new Date().toISOString() });
 
   setupWSConnection(ws, req, {
