@@ -1,4 +1,4 @@
-name: Deploy to Surge
+name: Deploy to Raspberry Pi
 
 on:
   push:
@@ -7,6 +7,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      PI_HOST: ${{ secrets.PI_HOST }}
+      PI_USER: ${{ secrets.PI_USER }}
+      PI_SSH_PORT: ${{ secrets.PI_SSH_PORT }}
+      PI_REPO_PATH: ${{ secrets.PI_REPO_PATH }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -19,23 +24,23 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run tests
         run: npm run test:client
-      
-      - name: Generate version info
+
+      - name: Start SSH agent and add key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PI_SSH_PRIVATE_KEY }}
+
+      - name: Add Pi host to known_hosts
         run: |
-          echo "// Auto-generated version info - DO NOT EDIT" > js/version.js
-          echo "export const VERSION_INFO = {" >> js/version.js
-          echo "  commit: '${{ github.sha }}'," >> js/version.js
-          echo "  shortCommit: '${GITHUB_SHA:0:7}'," >> js/version.js
-          echo "  runNumber: '${{ github.run_number }}'," >> js/version.js
-          echo "  timestamp: '$(date -u +"%Y-%m-%d %H:%M:%S UTC")'," >> js/version.js
-          echo "  ref: '${{ github.ref_name }}'" >> js/version.js
-          echo "};" >> js/version.js
-      
-      - name: Deploy to Surge
-        run: npm run deploy
-        env:
-          SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
-          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          mkdir -p ~/.ssh
+          PORT=${PI_SSH_PORT:-22}
+          ssh-keyscan -p "$PORT" -H "$PI_HOST" >> ~/.ssh/known_hosts
+
+      - name: Push to Pi bare repository
+        run: |
+          PORT=${PI_SSH_PORT:-22}
+          git remote add pi "ssh://${PI_USER}@${PI_HOST}:${PORT}${PI_REPO_PATH}"
+          git push pi HEAD:main
