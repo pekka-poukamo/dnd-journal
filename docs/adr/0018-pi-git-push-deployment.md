@@ -43,7 +43,6 @@ Forbidden additions:
 GitHub Actions (high-level):
 - Add secrets: `PI_HOST`, `PI_USER`, `PI_REPO_PATH`, `PI_SSH_PRIVATE_KEY` (and optional `PI_SSH_PORT`)
 - Use an SSH agent in CI, add known_hosts via `ssh-keyscan`, and `git push` to the Pi remote
- - Generate `js/version.js` before pushing using `scripts/generate-version.sh` so the UI shows commit and run info
 
 Pi server (example outline, not committed here):
 - Bare repo at `/home/pi/repos/dnd-journal.git`
@@ -54,10 +53,7 @@ Pi server (example outline, not committed here):
 #!/usr/bin/env bash
 set -euo pipefail
 GIT_WORK_TREE=/var/www/dnd-journal git checkout -f
-# Optional: generate version info locally if you prefer generating on the Pi
-# RUN_NUMBER can be derived however you like (e.g., date or rev-list)
-# export RUN_NUMBER="$(git --git-dir=/home/pi/repos/dnd-journal.git rev-list --count HEAD)"
-# bash /var/www/dnd-journal/scripts/generate-version.sh
+# Note: version info is not generated during CI; `js/version.js` remains static
 # Optional: reload static server (if using one)
 ```
 

@@ -78,9 +78,8 @@ Required GitHub Secrets:
 - `PI_SSH_PRIVATE_KEY`: Private key for CI push
 - `PI_SSH_PORT` (optional): SSH port, defaults to 22
 
-Version info generation:
-- CI runs `scripts/generate-version.sh` to write `js/version.js` before pushing
-- Alternatively, call the same script from your Pi post-receive hook
+Version info:
+- `js/version.js` uses development defaults and is not modified during CI deploy
 
 ## Architecture
 
