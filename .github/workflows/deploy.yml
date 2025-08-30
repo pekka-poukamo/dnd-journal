@@ -38,14 +38,9 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.PI_SSH_PRIVATE_KEY }}
 
-      - name: Add Pi host to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          PORT=${PI_SSH_PORT:-22}
-          ssh-keyscan -p "$PORT" -H "$PI_HOST" >> ~/.ssh/known_hosts
-
       - name: Push to Pi bare repository
         run: |
           PORT=${PI_SSH_PORT:-22}
+          export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
           git remote add pi "ssh://${PI_USER}@${PI_HOST}:${PORT}${PI_REPO_PATH}"
           git push pi HEAD:main
