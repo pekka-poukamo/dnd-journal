@@ -1,52 +1,10 @@
 // Summarization - Simple AI summarization with caching
-import { getYjsState, setSummary, getSummary, getSetting } from './yjs.js';
+import { getYjsState, setSummary, getSummary } from './yjs.js';
 import { PROMPTS } from './prompts.js';
+import { isAIEnabled, callChatCompletion } from './ai.js';
 
-// Check if AI is available
-const isAIEnabled = () => {
-  const state = getYjsState();
-  const apiKey = getSetting(state, 'openai-api-key', '');
-  const enabled = getSetting(state, 'ai-enabled', false);
-  return Boolean(enabled && apiKey);
-};
-
-// Simple AI call function with timeout to avoid hanging UI
-const callAI = (prompt, timeoutMs = 20000) => {
-  const state = getYjsState();
-  const apiKey = getSetting(state, 'openai-api-key', '');
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  return fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'gpt-4.1',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 2500,
-      temperature: 0.3
-    }),
-    signal: controller.signal
-  })
-  .then(response => {
-    clearTimeout(timeoutId);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    return response.json();
-  })
-  .then(data => data.choices[0].message.content.trim())
-  .catch(error => {
-    if (error?.name === 'AbortError') {
-      throw new Error('Request timed out while contacting AI service');
-    }
-    throw error;
-  });
-};
+// Shared call via AI module wrapper
+const callAI = (prompt) => callChatCompletion(null, prompt);
 
 // Summarize content with caching
 export const summarize = (summaryKey, content, maxWords = null) => {

@@ -30,7 +30,7 @@ export const buildMessages = (systemPrompt, userPrompt) => {
 };
 
 // Simple AI call function with timeout to avoid hanging UI
-const callAI = (systemPrompt, userPrompt, timeoutMs = 20000) => {
+export const callChatCompletion = (systemPrompt, userPrompt, timeoutMs = 20000) => {
   const state = getYjsState();
   const apiKey = getSetting(state, 'openai-api-key', '');
   
@@ -96,7 +96,7 @@ export const generateQuestions = (character = null, entries = null, forceRegener
   return buildContext(character, entries)
     .then(context => {
       const userPrompt = PROMPTS.storytelling.user(context);
-      return callAI(PROMPTS.storytelling.system, userPrompt);
+      return callChatCompletion(PROMPTS.storytelling.system, userPrompt);
     })
     .then(questions => {
       // Store in Yjs for sync
