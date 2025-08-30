@@ -9,7 +9,7 @@ Users want to install the D&D Journal app on their iOS devices for quick access 
 The challenge is enabling iOS home screen installation while maintaining radical simplicity and compliance with existing ADRs.
 
 ## Decision
-We will implement **minimal PWA capability** using only the essential files and meta tags required for iOS Safari installation, with no additional JavaScript, service workers, or complex features.
+We will implement **minimal PWA capability** using only the essential files and meta tags required for iOS Safari installation. Originally this excluded service workers. This ADR is amended by ADR-0017 to include a minimal service worker solely for first-party app-shell offline availability, without additional PWA features.
 
 ## Rationale
 ### Benefits
@@ -65,7 +65,6 @@ favicon.svg         # 11 lines - single scalable icon
 - Complies with all existing architectural constraints
 
 ### Negative
-- No offline functionality (by design)
 - No install prompts or advanced PWA features
 - Android users must manually use browser "Install" option
 - No push notifications or background sync
