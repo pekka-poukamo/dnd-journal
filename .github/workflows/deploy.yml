@@ -42,6 +42,7 @@ jobs:
 
       - name: Connectivity diagnostics (optional)
         if: env.DEPLOY_DEBUG == 'true'
+        continue-on-error: true
         run: |
           PORT=${PI_SSH_PORT:-22}
           echo "DNS resolution for host"
@@ -59,6 +60,17 @@ jobs:
             echo "IPv6 OK"
           else
             echo "IPv6 FAILED"
+          fi
+          echo "Attempt netcat IPv4 probe"
+          if command -v nc >/dev/null 2>&1; then
+            HOST_V4=$(getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 || true)
+            if [ -n "$HOST_V4" ]; then
+              nc -vz -4 -w 5 "$HOST_V4" "$PORT" || true
+            else
+              nc -vz -4 -w 5 "$PI_HOST" "$PORT" || true
+            fi
+          else
+            echo "nc not available"
           fi
           # Require at least one family to be reachable
           if ! getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 | xargs -I{} timeout 5 bash -lc "cat < /dev/null > /dev/tcp/{}/${PORT}" && \
