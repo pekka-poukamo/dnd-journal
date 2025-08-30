@@ -62,9 +62,25 @@ npm run coverage  # Test coverage (80% target)
 Automated testing and deployment via GitHub Actions:
 
 - **Pull Requests**: Tests + coverage report for changed files
-- **Main Branch**: Tests + automatic deployment to [dnd-journal.surge.sh](http://dnd-journal.surge.sh)
+- **Main Branch**: Tests + automatic deployment to Raspberry Pi via git-over-SSH
 - **Test Matrix**: Node.js 16.x, 18.x, and 20.x
 - **Zero Build**: Static files deployed directly (ADR-0006)
+
+### Deployment to Raspberry Pi
+
+CI pushes the current `main` commit to a bare repo on a Raspberry Pi over SSH. A post-receive hook on the Pi updates the working tree and performs minimal deployment steps.
+
+Required GitHub Secrets:
+
+- `PI_HOST`: Pi hostname or IP
+- `PI_USER`: SSH username
+- `PI_REPO_PATH`: Absolute path to bare repo (e.g. `/home/pi/repos/dnd-journal.git`)
+- `PI_SSH_PRIVATE_KEY`: Private key for CI push
+- `PI_SSH_PORT` (optional): SSH port, defaults to 22
+
+Version info:
+- `scripts/generate-version.sh` prints commit/run metadata for logs or optional artifacts
+- `js/version.js` remains unchanged during CI and deploy
 
 ## Architecture
 

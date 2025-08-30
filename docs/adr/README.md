@@ -19,7 +19,7 @@ This directory contains Architecture Decision Records (ADRs) that document the k
 | [ADR-0005](0005-mandatory-testing.md) | Mandatory Testing for All Code | Accepted |
 | [ADR-0006](0006-no-build-tools.md) | No Build Tools or Bundlers | Accepted |
 | [ADR-0007](0007-feature-freeze-boundaries.md) | Feature Freeze Boundaries | Accepted |
-| [ADR-0008](0008-surge-deployment-only.md) | Surge.sh Deployment Only | Accepted |
+| [ADR-0008](0008-surge-deployment-only.md) | Surge.sh Deployment Only | Superseded |
 | [ADR-0009](0009-minimal-pwa-for-ios-installation.md) | Minimal PWA for iOS Installation | Accepted |
 | [ADR-0010](0010-es6-modules-only.md) | ES6 Modules Only | Accepted |
 | [ADR-0011](0011-test-state-isolation.md) | Test State Isolation | Accepted |
@@ -29,6 +29,7 @@ This directory contains Architecture Decision Records (ADRs) that document the k
 | [ADR-0015](0015-view-logic-separation.md) | View-Logic Separation Architecture | Accepted |
 | [ADR-0016](0016-navigation-cache-strategy.md) | Navigation Cache Strategy - Amendment to Yjs Persistence | Accepted |
 | [ADR-0017](0017-minimal-service-worker-offline-app-shell.md) | Minimal Service Worker for Offline App-Shell | Accepted |
+| [ADR-0018](0018-pi-git-push-deployment.md) | Raspberry Pi Git-Push Deployment | Accepted |
 
 ## For AI Agents
 
