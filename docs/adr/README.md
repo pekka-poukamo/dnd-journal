@@ -28,6 +28,7 @@ This directory contains Architecture Decision Records (ADRs) that document the k
 | [ADR-0014](0014-local-first-modules-via-npm-and-import-maps.md) | Local-First Modules via npm and Import Maps | Accepted |
 | [ADR-0015](0015-view-logic-separation.md) | View-Logic Separation Architecture | Accepted |
 | [ADR-0016](0016-navigation-cache-strategy.md) | Navigation Cache Strategy - Amendment to Yjs Persistence | Accepted |
+| [ADR-0017](0017-minimal-service-worker-offline-app-shell.md) | Minimal Service Worker for Offline App-Shell | Accepted |
 
 ## For AI Agents
 
