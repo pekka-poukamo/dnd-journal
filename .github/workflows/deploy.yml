@@ -42,21 +42,7 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.PI_SSH_PRIVATE_KEY }}
 
-      - name: Connectivity diagnostics (optional)
-        if: env.DEPLOY_DEBUG == 'true'
-        continue-on-error: true
-        run: |
-          PORT=${PI_SSH_PORT:-22}
-          echo "DNS resolution for host"
-          getent hosts "${PI_HOST}" || true
-          echo "Attempt IPv4 reachability"
-          HOST_V4=$(getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 || true)
-          TARGET=${HOST_V4:-$PI_HOST}
-          if command -v nc >/dev/null 2>&1; then
-            nc -vz -4 -w 5 "$TARGET" "$PORT" || true
-          else
-            timeout 5 bash -lc "cat < /dev/null > /dev/tcp/${TARGET}/${PORT}" || true
-          fi
+      
 
       - name: Add host key to known_hosts
         run: |
