@@ -53,7 +53,11 @@ jobs:
         run: |
           PORT=${PI_SSH_PORT:-22}
           mkdir -p ~/.ssh
-          ssh-keyscan -p "$PORT" -T 5 "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          if timeout 5 bash -lc "cat < /dev/null > /dev/tcp/${PI_HOST}/${PORT}"; then
+            ssh-keyscan -p "$PORT" -T 5 "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          else
+            echo "Host ${PI_HOST}:${PORT} not reachable; skipping ssh-keyscan"
+          fi
 
       - name: Push to Pi bare repository
         run: |
