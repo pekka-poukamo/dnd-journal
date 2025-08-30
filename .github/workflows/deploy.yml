@@ -46,6 +46,8 @@ jobs:
           PORT=${PI_SSH_PORT:-22}
           echo "DNS resolution for host"
           getent hosts "${PI_HOST}" || true
+          echo "A records (IPv4):" && getent ahostsv4 "$PI_HOST" | awk '{print $1}' | sort -u || true
+          echo "AAAA records (IPv6):" && getent ahostsv6 "$PI_HOST" | awk '{print $1}' | sort -u || true
           echo "Attempt IPv4 reachability on ${PI_HOST}:${PORT}"
           if getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 | xargs -I{} timeout 5 bash -lc "cat < /dev/null > /dev/tcp/{}/${PORT}"; then
             echo "IPv4 OK"
@@ -69,17 +71,26 @@ jobs:
         run: |
           PORT=${PI_SSH_PORT:-22}
           mkdir -p ~/.ssh
-          if timeout 5 bash -lc "cat < /dev/null > /dev/tcp/${PI_HOST}/${PORT}"; then
-            ssh-keyscan -p "$PORT" -T 5 "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          HOST_V4=$(getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 || true)
+          TARGET_FOR_SCAN=${HOST_V4:-$PI_HOST}
+          if timeout 5 bash -lc "cat < /dev/null > /dev/tcp/${TARGET_FOR_SCAN}/${PORT}"; then
+            if [ -n "$HOST_V4" ]; then
+              ssh-keyscan -4 -p "$PORT" -T 5 "$TARGET_FOR_SCAN" >> ~/.ssh/known_hosts 2>/dev/null || true
+            else
+              ssh-keyscan -p "$PORT" -T 5 "$TARGET_FOR_SCAN" >> ~/.ssh/known_hosts 2>/dev/null || true
+            fi
           else
-            echo "Host ${PI_HOST}:${PORT} not reachable; skipping ssh-keyscan"
+            echo "Host ${TARGET_FOR_SCAN}:${PORT} not reachable; skipping ssh-keyscan"
           fi
 
       - name: Push to Pi bare repository
         run: |
           PORT=${PI_SSH_PORT:-22}
-          SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3 -4"
+          HOST_V4=$(getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 || true)
+          TARGET_HOST=${HOST_V4:-$PI_HOST}
+          SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3"
+          if [ -n "$HOST_V4" ]; then SSH_OPTS="$SSH_OPTS -4"; fi
           if [ "${DEPLOY_DEBUG:-}" = "true" ]; then SSH_OPTS="$SSH_OPTS -v"; fi
           export GIT_SSH_COMMAND="ssh ${SSH_OPTS}"
-          git remote add pi "ssh://${PI_USER}@${PI_HOST}:${PORT}${PI_REPO_PATH}"
+          git remote add pi "ssh://${PI_USER}@${TARGET_HOST}:${PORT}${PI_REPO_PATH}"
           git push pi HEAD:main
