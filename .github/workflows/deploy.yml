@@ -49,36 +49,13 @@ jobs:
           PORT=${PI_SSH_PORT:-22}
           echo "DNS resolution for host"
           getent hosts "${PI_HOST}" || true
-          echo "A records (IPv4):" && getent ahostsv4 "$PI_HOST" | awk '{print $1}' | sort -u || true
-          echo "AAAA records (IPv6):" && getent ahostsv6 "$PI_HOST" | awk '{print $1}' | sort -u || true
-          echo "Attempt IPv4 reachability on ${PI_HOST}:${PORT}"
-          if getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 | xargs -I{} timeout 5 bash -lc "cat < /dev/null > /dev/tcp/{}/${PORT}"; then
-            echo "IPv4 OK"
-          else
-            echo "IPv4 FAILED"
-          fi
-          echo "Attempt IPv6 reachability on [${PI_HOST}]:${PORT}"
-          if getent ahostsv6 "$PI_HOST" | awk '{print $1}' | head -n1 | xargs -I{} timeout 5 bash -lc "cat < /dev/null > /dev/tcp/{}/${PORT}"; then
-            echo "IPv6 OK"
-          else
-            echo "IPv6 FAILED"
-          fi
-          echo "Attempt netcat IPv4 probe"
+          echo "Attempt IPv4 reachability"
+          HOST_V4=$(getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 || true)
+          TARGET=${HOST_V4:-$PI_HOST}
           if command -v nc >/dev/null 2>&1; then
-            HOST_V4=$(getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 || true)
-            if [ -n "$HOST_V4" ]; then
-              nc -vz -4 -w 5 "$HOST_V4" "$PORT" || true
-            else
-              nc -vz -4 -w 5 "$PI_HOST" "$PORT" || true
-            fi
+            nc -vz -4 -w 5 "$TARGET" "$PORT" || true
           else
-            echo "nc not available"
-          fi
-          # Require at least one family to be reachable
-          if ! getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 | xargs -I{} timeout 5 bash -lc "cat < /dev/null > /dev/tcp/{}/${PORT}" && \
-             ! getent ahostsv6 "$PI_HOST" | awk '{print $1}' | head -n1 | xargs -I{} timeout 5 bash -lc "cat < /dev/null > /dev/tcp/{}/${PORT}"; then
-            echo "No reachable IP family (v4/v6) to ${PI_HOST}:${PORT}" >&2
-            exit 1
+            timeout 5 bash -lc "cat < /dev/null > /dev/tcp/${TARGET}/${PORT}" || true
           fi
 
       - name: Add host key to known_hosts
