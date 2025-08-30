@@ -45,9 +45,25 @@ jobs:
         run: |
           PORT=${PI_SSH_PORT:-22}
           echo "DNS resolution for host"
-          getent hosts "${PI_HOST}"
-          echo "TCP reachability on port ${PORT}"
-          timeout 5 bash -lc "cat < /dev/null > /dev/tcp/${PI_HOST}/${PORT}" && echo "OK" || (echo "FAILED" && exit 1)
+          getent hosts "${PI_HOST}" || true
+          echo "Attempt IPv4 reachability on ${PI_HOST}:${PORT}"
+          if getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 | xargs -I{} timeout 5 bash -lc "cat < /dev/null > /dev/tcp/{}/${PORT}"; then
+            echo "IPv4 OK"
+          else
+            echo "IPv4 FAILED"
+          fi
+          echo "Attempt IPv6 reachability on [${PI_HOST}]:${PORT}"
+          if getent ahostsv6 "$PI_HOST" | awk '{print $1}' | head -n1 | xargs -I{} timeout 5 bash -lc "cat < /dev/null > /dev/tcp/{}/${PORT}"; then
+            echo "IPv6 OK"
+          else
+            echo "IPv6 FAILED"
+          fi
+          # Require at least one family to be reachable
+          if ! getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 | xargs -I{} timeout 5 bash -lc "cat < /dev/null > /dev/tcp/{}/${PORT}" && \
+             ! getent ahostsv6 "$PI_HOST" | awk '{print $1}' | head -n1 | xargs -I{} timeout 5 bash -lc "cat < /dev/null > /dev/tcp/{}/${PORT}"; then
+            echo "No reachable IP family (v4/v6) to ${PI_HOST}:${PORT}" >&2
+            exit 1
+          fi
 
       - name: Add host key to known_hosts
         run: |
@@ -62,7 +78,7 @@ jobs:
       - name: Push to Pi bare repository
         run: |
           PORT=${PI_SSH_PORT:-22}
-          SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3"
+          SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3 -4"
           if [ "${DEPLOY_DEBUG:-}" = "true" ]; then SSH_OPTS="$SSH_OPTS -v"; fi
           export GIT_SSH_COMMAND="ssh ${SSH_OPTS}"
           git remote add pi "ssh://${PI_USER}@${PI_HOST}:${PORT}${PI_REPO_PATH}"
