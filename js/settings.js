@@ -78,8 +78,7 @@ export const renderSettingsPage = (stateParam = null) => {
     const settings = {
       'openai-api-key': getSetting(state, 'openai-api-key', ''),
       'ai-enabled': getSetting(state, 'ai-enabled', false),
-      'sync-server-url': getSetting(state, 'sync-server-url', ''),
-      'journal-id': getSetting(state, 'journal-id', '')
+      'sync-server-url': getSetting(state, 'sync-server-url', '')
     };
     
     // Use module-level element if available, otherwise find it
@@ -171,12 +170,10 @@ export const saveSettings = (stateParam = null) => {
     const apiKey = (formData['openai-api-key'] || '').trim();
     const aiEnabled = formData['ai-enabled'] === true || formData['ai-enabled'] === 'on';
     const syncServerUrl = (formData['sync-server-url'] || '').trim();
-    const journalId = (formData['journal-id'] || '').trim();
     
     setSetting(state, 'openai-api-key', apiKey);
     setSetting(state, 'ai-enabled', aiEnabled);
     setSetting(state, 'sync-server-url', syncServerUrl);
-    setSetting(state, 'journal-id', journalId);
     
     showNotification('Settings saved successfully!', 'success');
   } catch (error) {
