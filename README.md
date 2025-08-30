@@ -79,7 +79,8 @@ Required GitHub Secrets:
 - `PI_SSH_PORT` (optional): SSH port, defaults to 22
 
 Version info:
-- `js/version.js` uses development defaults and is not modified during CI deploy
+- `scripts/generate-version.sh` prints commit/run metadata for logs or optional artifacts
+- `js/version.js` remains unchanged during CI and deploy
 
 ## Architecture
 

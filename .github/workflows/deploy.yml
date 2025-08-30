@@ -28,7 +28,10 @@ jobs:
       - name: Run tests
         run: npm run test:client
 
-      # Intentionally do not generate js/version.js here; version.js remains static
+      - name: Generate version info (log only)
+        run: |
+          export RUN_NUMBER=${{ github.run_number }}
+          bash scripts/generate-version.sh
 
       - name: Start SSH agent and add key
         uses: webfactory/ssh-agent@v0.9.0
