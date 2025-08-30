@@ -13,6 +13,7 @@ jobs:
       PI_USER: ${{ secrets.PI_USER }}
       PI_SSH_PORT: ${{ secrets.PI_SSH_PORT }}
       PI_REPO_PATH: ${{ secrets.PI_REPO_PATH }}
+      DEPLOY_DEBUG: ${{ secrets.DEPLOY_DEBUG }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -39,9 +40,26 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.PI_SSH_PRIVATE_KEY }}
 
+      - name: Connectivity diagnostics (optional)
+        if: env.DEPLOY_DEBUG == 'true'
+        run: |
+          PORT=${PI_SSH_PORT:-22}
+          echo "DNS resolution for host"
+          getent hosts "${PI_HOST}"
+          echo "TCP reachability on port ${PORT}"
+          timeout 5 bash -lc "cat < /dev/null > /dev/tcp/${PI_HOST}/${PORT}" && echo "OK" || (echo "FAILED" && exit 1)
+
+      - name: Add host key to known_hosts
+        run: |
+          PORT=${PI_SSH_PORT:-22}
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "$PORT" -T 5 "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
       - name: Push to Pi bare repository
         run: |
           PORT=${PI_SSH_PORT:-22}
-          export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
+          SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3"
+          if [ "${DEPLOY_DEBUG:-}" = "true" ]; then SSH_OPTS="$SSH_OPTS -v"; fi
+          export GIT_SSH_COMMAND="ssh ${SSH_OPTS}"
           git remote add pi "ssh://${PI_USER}@${PI_HOST}:${PORT}${PI_REPO_PATH}"
           git push pi HEAD:main
