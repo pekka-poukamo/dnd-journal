@@ -13,9 +13,12 @@ jobs:
       PI_USER: ${{ secrets.PI_USER }}
       PI_SSH_PORT: ${{ secrets.PI_SSH_PORT }}
       PI_REPO_PATH: ${{ secrets.PI_REPO_PATH }}
+      DEPLOY_DEBUG: ${{ secrets.DEPLOY_DEBUG }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -39,9 +42,32 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.PI_SSH_PRIVATE_KEY }}
 
+      
+
+      - name: Add host key to known_hosts
+        run: |
+          PORT=${PI_SSH_PORT:-22}
+          mkdir -p ~/.ssh
+          HOST_V4=$(getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 || true)
+          TARGET_FOR_SCAN=${HOST_V4:-$PI_HOST}
+          if timeout 5 bash -lc "cat < /dev/null > /dev/tcp/${TARGET_FOR_SCAN}/${PORT}"; then
+            if [ -n "$HOST_V4" ]; then
+              ssh-keyscan -4 -p "$PORT" -T 5 "$TARGET_FOR_SCAN" >> ~/.ssh/known_hosts 2>/dev/null || true
+            else
+              ssh-keyscan -p "$PORT" -T 5 "$TARGET_FOR_SCAN" >> ~/.ssh/known_hosts 2>/dev/null || true
+            fi
+          else
+            echo "Host ${TARGET_FOR_SCAN}:${PORT} not reachable; skipping ssh-keyscan"
+          fi
+
       - name: Push to Pi bare repository
         run: |
           PORT=${PI_SSH_PORT:-22}
-          export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
-          git remote add pi "ssh://${PI_USER}@${PI_HOST}:${PORT}${PI_REPO_PATH}"
+          HOST_V4=$(getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 || true)
+          TARGET_HOST=${HOST_V4:-$PI_HOST}
+          SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3"
+          if [ -n "$HOST_V4" ]; then SSH_OPTS="$SSH_OPTS -4"; fi
+          if [ "${DEPLOY_DEBUG:-}" = "true" ]; then SSH_OPTS="$SSH_OPTS -v"; fi
+          export GIT_SSH_COMMAND="ssh ${SSH_OPTS}"
+          git remote add pi "ssh://${PI_USER}@${TARGET_HOST}:${PORT}${PI_REPO_PATH}"
           git push pi HEAD:main
