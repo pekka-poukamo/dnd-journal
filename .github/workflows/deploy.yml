@@ -65,9 +65,20 @@ jobs:
           PORT=${PI_SSH_PORT:-22}
           HOST_V4=$(getent ahostsv4 "$PI_HOST" | awk '{print $1}' | head -n1 || true)
           TARGET_HOST=${HOST_V4:-$PI_HOST}
+
           SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3"
           if [ -n "$HOST_V4" ]; then SSH_OPTS="$SSH_OPTS -4"; fi
           if [ "${DEPLOY_DEBUG:-}" = "true" ]; then SSH_OPTS="$SSH_OPTS -v"; fi
-          export GIT_SSH_COMMAND="ssh ${SSH_OPTS}"
-          git remote add pi "ssh://${PI_USER}@${TARGET_HOST}:${PORT}${PI_REPO_PATH}"
+
+          export GIT_SSH_COMMAND="ssh $SSH_OPTS -p $PORT"
+
+          # Check that the repo exists on the Pi
+          echo "Checking remote repo path..."
+          ssh -p "$PORT" $PI_USER@$TARGET_HOST "ls -ld $PI_REPO_PATH"
+
+          # Add or reset remote
+          git remote remove pi 2>/dev/null || true
+          git remote add pi "ssh://$PI_USER@$TARGET_HOST:$PORT$PI_REPO_PATH"
+
+          echo "Pushing HEAD to main on Pi..."
           git push pi HEAD:main
