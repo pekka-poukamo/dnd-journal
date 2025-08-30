@@ -34,22 +34,9 @@ jobs:
           bash scripts/generate-version.sh
 
       - name: Start SSH agent and add key
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.PI_SSH_PRIVATE_KEY }}
-          SSH_PASSPHRASE: ${{ secrets.PI_SSH_PASSPHRASE }}
-        run: |
-          eval "$(ssh-agent -s)"
-          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
-          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
-          if [ -n "$SSH_PASSPHRASE" ]; then
-            echo "echo \"$SSH_PASSPHRASE\"" > /tmp/ssh_askpass.sh
-            chmod 700 /tmp/ssh_askpass.sh
-            export SSH_ASKPASS=/tmp/ssh_askpass.sh
-            export SSH_ASKPASS_REQUIRE=force
-            export DISPLAY=:0
-          fi
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-          if [ -f /tmp/ssh_askpass.sh ]; then rm -f /tmp/ssh_askpass.sh; unset SSH_ASKPASS SSH_ASKPASS_REQUIRE; fi
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PI_SSH_PRIVATE_KEY }}
 
       - name: Add Pi host to known_hosts
         run: |

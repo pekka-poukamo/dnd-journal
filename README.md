@@ -77,7 +77,6 @@ Required GitHub Secrets:
 - `PI_REPO_PATH`: Absolute path to bare repo (e.g. `/home/pi/repos/dnd-journal.git`)
 - `PI_SSH_PRIVATE_KEY`: Private key for CI push
 - `PI_SSH_PORT` (optional): SSH port, defaults to 22
- - `PI_SSH_PASSPHRASE` (optional): Passphrase for the private key if encrypted
 
 Version info:
 - `scripts/generate-version.sh` prints commit/run metadata for logs or optional artifacts
