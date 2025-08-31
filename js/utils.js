@@ -94,6 +94,25 @@ export const formatAIPromptText = (text) => {
     .trim();
 };
 
+// Normalize room/journal names for cross-platform compatibility
+// - lower-case
+// - strip diacritics (e.g., ä -> a)
+// - replace whitespace and underscores with '-'
+// - keep only a-z, 0-9 and '-'
+// - collapse multiple '-' and trim leading/trailing '-'
+export const normalizeRoomName = (input) => {
+  const source = (input || '').toString();
+  const lower = source.toLowerCase();
+  // Remove diacritics via NFD unicode normalization
+  const withoutDiacritics = lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // Replace spaces/underscores with hyphens
+  const withHyphens = withoutDiacritics.replace(/[\s_]+/g, '-');
+  // Remove disallowed characters
+  const safe = withHyphens.replace(/[^a-z0-9-]/g, '');
+  // Collapse multiple hyphens and trim
+  return safe.replace(/-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
+};
+
 // Pure function to get form data from any form
 export const getFormData = (form) => {
   // Try FormData first, fallback to manual extraction for test environments

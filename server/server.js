@@ -14,6 +14,15 @@ import { existsSync, readdirSync, statSync } from 'fs';
 import { createServer } from 'http';
 import { parse } from 'url';
 import * as Y from 'yjs';
+// Normalize room names similarly on the server to ensure consistent doc paths
+const normalizeRoomName = (input) => {
+  const source = (input || '').toString();
+  const lower = source.toLowerCase();
+  const withoutDiacritics = lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const withHyphens = withoutDiacritics.replace(/[\s_]+/g, '-');
+  const safe = withHyphens.replace(/[^a-z0-9-]/g, '');
+  return safe.replace(/-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
+};
 
 const PORT = process.env.PORT || process.argv[2] || 1234;
 const HOST = process.env.HOST || process.argv[3] || '0.0.0.0';
@@ -45,7 +54,8 @@ const httpServer = createServer((req, res) => {
     // Room status endpoint: GET /sync/room/:name/status
     if (req.method === 'GET' && pathname && pathname.startsWith('/sync/room/') && pathname.endsWith('/status')) {
       const parts = pathname.split('/').filter(Boolean); // ['sync','room',':name','status']
-      const roomName = decodeURIComponent(parts[2] || '');
+      const providedName = decodeURIComponent(parts[2] || '');
+      const roomName = normalizeRoomName(providedName);
       const roomPath = DATA_DIR + '/' + roomName;
       let exists = false;
       try {
@@ -107,16 +117,17 @@ wss.on('connection', (ws, req) => {
 
   setupWSConnection(ws, req, {
     getYDoc: (docName) => {
-      if (!activeDocuments.has(docName)) {
-        console.log(`📄 New document: "${docName}"`);
-        activeDocuments.set(docName, {
+      const normalizedDocName = normalizeRoomName(docName);
+      if (!activeDocuments.has(normalizedDocName)) {
+        console.log(`📄 New document: "${normalizedDocName}"`);
+        activeDocuments.set(normalizedDocName, {
           createdAt: new Date().toISOString(),
           connections: new Set([connectionId])
         });
       }
-      activeDocuments.get(docName).connections.add(connectionId);
+      activeDocuments.get(normalizedDocName).connections.add(connectionId);
       
-      const persistence = new LeveldbPersistence(DATA_DIR + '/' + docName);
+      const persistence = new LeveldbPersistence(DATA_DIR + '/' + normalizedDocName);
       return persistence.doc;
     }
   });

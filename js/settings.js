@@ -17,6 +17,8 @@ import {
 } from './settings-views.js';
 
 import { getFormData, showNotification } from './utils.js';
+import { normalizeRoomName } from './utils.js';
+import { getSyncServerHttpBase } from './yjs.js';
 import { showChoiceModal as baseShowChoiceModal } from './components/modal.js';
 
 // Allow overriding in tests via dependency injection
@@ -179,7 +181,8 @@ export const saveSettings = (stateParam = null) => {
     // Gather inputs
     const apiKey = (formData['openai-api-key'] || '').trim();
     const aiEnabled = formData['ai-enabled'] === true || formData['ai-enabled'] === 'on';
-    const journalName = (formData['journal-name'] || '').trim();
+    const journalNameRaw = (formData['journal-name'] || '').trim();
+    const journalName = normalizeRoomName(journalNameRaw);
     
     const applySettings = (targetState) => {
       setSetting(targetState, 'openai-api-key', apiKey);
@@ -201,12 +204,19 @@ export const saveSettings = (stateParam = null) => {
       return;
     }
 
-    // Use same-origin server for status check when journal is provided
+    // Use sync server base for status check when journal is provided
     try {
-      const isBrowser = typeof window !== 'undefined' && window.location && window.location.origin;
-      const baseOrigin = isBrowser && (window.location.protocol === 'http:' || window.location.protocol === 'https:')
-        ? window.location.origin
-        : 'http://localhost:1234';
+      const baseOrigin = getSyncServerHttpBase();
+      let shouldCheck = true;
+      try {
+        const urlObj = new URL(baseOrigin);
+        shouldCheck = (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1');
+      } catch {}
+      if (!shouldCheck) {
+        // In production or unknown host, skip existence check to avoid noisy console/network errors
+        applySettings(state);
+        return;
+      }
       const statusUrl = `${baseOrigin}/sync/room/${encodeURIComponent(journalName)}/status`;
       return fetch(statusUrl)
         .then(r => r.ok ? r.json() : { exists: false })

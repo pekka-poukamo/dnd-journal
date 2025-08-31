@@ -2,6 +2,7 @@
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
+import { normalizeRoomName } from './utils.js';
 
 // Internal Y.js state (private)
 let ydoc = null;
@@ -16,6 +17,19 @@ const resolveWebSocketUrl = () => {
     }
   } catch {}
   return 'ws://localhost:1234/ws';
+};
+
+// Derive the HTTP(S) base URL of the sync server from the WebSocket URL
+export const getSyncServerHttpBase = () => {
+  const wsUrl = resolveWebSocketUrl();
+  try {
+    const url = new URL(wsUrl);
+    const isSecure = url.protocol === 'wss:';
+    return `${isSecure ? 'https' : 'http'}://${url.host}`;
+  } catch {
+    // Fallback to localhost default
+    return 'http://localhost:1234';
+  }
 };
 
 
@@ -118,7 +132,9 @@ const setupSyncFromSettings = () => {
     if (journalName) {
       try {
         const wsUrl = resolveWebSocketUrl();
-        provider = new WebsocketProvider(wsUrl, journalName, ydoc);
+        // Always normalize the document/room name used for sync
+        const normalizedDocName = normalizeRoomName(journalName);
+        provider = new WebsocketProvider(wsUrl, normalizedDocName, ydoc);
         // Rely on CRDT; no post-sync preference overwrites
       } catch (error) {
         console.warn('Failed to connect to sync server:', error);
