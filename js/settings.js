@@ -16,7 +16,7 @@ import {
   renderAIPromptPreview
 } from './settings-views.js';
 
-import { getFormData, showNotification } from './utils.js';
+import { getFormData, showNotification, isValidRoomName } from './utils.js';
 import { normalizeRoomName } from './utils.js';
 import { getSyncServerHttpBase } from './yjs.js';
 import { showChoiceModal as baseShowChoiceModal } from './components/modal.js';
@@ -159,6 +159,20 @@ const setupFormHandlers = () => {
   if (!formElement) return;
 
   if (!formElement.hasAttribute('data-handler-attached')) {
+    // Lowercase and validate on blur for journal-name
+    const journalInput = formElement.querySelector('[name="journal-name"]');
+    if (journalInput && !journalInput.hasAttribute('data-lowercase-attached')) {
+      journalInput.addEventListener('input', () => {
+        journalInput.value = (journalInput.value || '').toLowerCase();
+      });
+      journalInput.addEventListener('blur', () => {
+        const value = (journalInput.value || '').toLowerCase();
+        if (value && !isValidRoomName(value)) {
+          showNotification('Invalid name. Use lowercase letters, numbers, and hyphens only.', 'warning');
+        }
+      });
+      journalInput.setAttribute('data-lowercase-attached', 'true');
+    }
     formElement.addEventListener('submit', (e) => {
       e.preventDefault();
       saveSettings();
@@ -181,7 +195,11 @@ export const saveSettings = (stateParam = null) => {
     // Gather inputs
     const apiKey = (formData['openai-api-key'] || '').trim();
     const aiEnabled = formData['ai-enabled'] === true || formData['ai-enabled'] === 'on';
-    const journalNameRaw = (formData['journal-name'] || '').trim();
+    const journalNameRaw = (formData['journal-name'] || '').trim().toLowerCase();
+    if (journalNameRaw && !isValidRoomName(journalNameRaw)) {
+      showNotification('Invalid journal name. Allowed: lowercase letters, numbers, hyphens.', 'error');
+      return;
+    }
     const journalName = normalizeRoomName(journalNameRaw);
     
     const applySettings = (targetState) => {

@@ -2,7 +2,7 @@
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
-import { normalizeRoomName } from './utils.js';
+import { normalizeRoomName, isValidRoomName } from './utils.js';
 
 // Internal Y.js state (private)
 let ydoc = null;
@@ -134,6 +134,9 @@ const setupSyncFromSettings = () => {
         const wsUrl = resolveWebSocketUrl();
         // Always normalize the document/room name used for sync
         const normalizedDocName = normalizeRoomName(journalName);
+        if (!isValidRoomName(normalizedDocName)) {
+          return; // Do not attempt to connect with invalid names
+        }
         provider = new WebsocketProvider(wsUrl, normalizedDocName, ydoc);
         // Rely on CRDT; no post-sync preference overwrites
       } catch (error) {

@@ -101,16 +101,19 @@ export const formatAIPromptText = (text) => {
 // - keep only a-z, 0-9 and '-'
 // - collapse multiple '-' and trim leading/trailing '-'
 export const normalizeRoomName = (input) => {
+  // Legacy helper retained for compatibility: now only lowercases
   const source = (input || '').toString();
-  const lower = source.toLowerCase();
-  // Remove diacritics via NFD unicode normalization
-  const withoutDiacritics = lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  // Replace spaces/underscores with hyphens
-  const withHyphens = withoutDiacritics.replace(/[\s_]+/g, '-');
-  // Remove disallowed characters
-  const safe = withHyphens.replace(/[^a-z0-9-]/g, '');
-  // Collapse multiple hyphens and trim
-  return safe.replace(/-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
+  return source.toLowerCase();
+};
+
+// Validate room/journal names. Allowed:
+// - lowercase Unicode letters (including accents), numbers
+// - hyphen '-'
+// Disallow spaces and other punctuation for URL/path safety
+export const isValidRoomName = (input) => {
+  const value = (input || '').toString();
+  const pattern = /^[\p{Ll}\p{Nd}-]+$/u;
+  return pattern.test(value);
 };
 
 // Pure function to get form data from any form

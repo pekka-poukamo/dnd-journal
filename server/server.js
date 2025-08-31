@@ -15,14 +15,8 @@ import { createServer } from 'http';
 import { parse } from 'url';
 import * as Y from 'yjs';
 // Normalize room names similarly on the server to ensure consistent doc paths
-const normalizeRoomName = (input) => {
-  const source = (input || '').toString();
-  const lower = source.toLowerCase();
-  const withoutDiacritics = lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const withHyphens = withoutDiacritics.replace(/[\s_]+/g, '-');
-  const safe = withHyphens.replace(/[^a-z0-9-]/g, '');
-  return safe.replace(/-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
-};
+const normalizeRoomName = (input) => (input || '').toString().toLowerCase();
+const isValidRoomName = (input) => /^[\p{Ll}\p{Nd}-]+$/u.test((input || '').toString());
 
 const PORT = process.env.PORT || process.argv[2] || 1234;
 const HOST = process.env.HOST || process.argv[3] || '0.0.0.0';
@@ -56,6 +50,12 @@ const httpServer = createServer((req, res) => {
       const parts = pathname.split('/').filter(Boolean); // ['sync','room',':name','status']
       const providedName = decodeURIComponent(parts[2] || '');
       const roomName = normalizeRoomName(providedName);
+      if (!isValidRoomName(roomName)) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: 'Invalid room name' }));
+        return;
+      }
       const roomPath = DATA_DIR + '/' + roomName;
       let exists = false;
       try {
@@ -118,6 +118,9 @@ wss.on('connection', (ws, req) => {
   setupWSConnection(ws, req, {
     getYDoc: (docName) => {
       const normalizedDocName = normalizeRoomName(docName);
+      if (!isValidRoomName(normalizedDocName)) {
+        throw new Error('Invalid room name');
+      }
       if (!activeDocuments.has(normalizedDocName)) {
         console.log(`📄 New document: "${normalizedDocName}"`);
         activeDocuments.set(normalizedDocName, {
