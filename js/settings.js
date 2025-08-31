@@ -17,7 +17,13 @@ import {
 } from './settings-views.js';
 
 import { getFormData, showNotification } from './utils.js';
-import { showChoiceModal } from './components/modal.js';
+import { showChoiceModal as baseShowChoiceModal } from './components/modal.js';
+
+// Allow overriding in tests via dependency injection
+let showChoiceModal = baseShowChoiceModal;
+export const setShowChoiceModal = (impl) => {
+  showChoiceModal = typeof impl === 'function' ? impl : baseShowChoiceModal;
+};
 
 import { saveNavigationCache } from './navigation-cache.js';
 

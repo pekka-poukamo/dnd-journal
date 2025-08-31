@@ -154,6 +154,22 @@ describe('Simple Y.js Module', function() {
     });
   });
 
+  describe('Persistence helpers', function() {
+    it('should clear local IndexedDB persistence without throwing', function() {
+      expect(() => YjsModule.clearLocalYjsPersistence()).to.not.throw();
+    });
+
+    it('should reset and reinitialize Y.Doc without reload', async function() {
+      YjsModule.setCharacter(state, 'name', 'Temp');
+      YjsModule.resetYjs();
+      const state2 = await YjsModule.initYjs();
+      // After reset, maps should be fresh and accessible
+      expect(() => YjsModule.setCharacter(state2, 'name', 'AfterReset')).to.not.throw();
+      const name = YjsModule.getCharacter(state2, 'name');
+      expect(name).to.equal('AfterReset');
+    });
+  });
+
   describe('Summary operations', function() {
     it('should set and get summaries', function() {
       YjsModule.setSummary(state, 'test-summary', 'This is a summary');

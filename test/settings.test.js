@@ -18,6 +18,7 @@ describe('Settings Page', function() {
             <input id="openai-api-key" name="openai-api-key" />
             <input id="ai-enabled" name="ai-enabled" type="checkbox" />
             <input id="sync-server-url" name="sync-server-url" />
+            <input id="journal-name" name="journal-name" />
             <button type="submit">Save Settings</button>
           </form>
           <div id="connection-status"></div>
@@ -127,6 +128,47 @@ describe('Settings Page', function() {
       Settings.saveSettings(state);
       
       expect(YjsModule.getSetting(state, 'ai-enabled')).to.be.false;
+    });
+  });
+
+  describe('Journal name conflict flow', function() {
+    beforeEach(function() {
+      // Stub fetch to simulate room existence
+      global.fetch = (url) => Promise.resolve({ ok: true, json: () => Promise.resolve({ exists: true }) });
+    });
+    
+    it('should cancel when modal returns cancel', async function() {
+      // Inject modal to always return cancel
+      Settings.setShowChoiceModal(() => Promise.resolve('cancel'));
+
+      Settings.initSettingsPage(state);
+      document.getElementById('journal-name').value = 'my-journal';
+      document.getElementById('sync-server-url').value = 'ws://localhost:1234';
+      await Settings.saveSettings(state);
+      // Journal name should remain unchanged (empty)
+      expect(YjsModule.getSetting(state, 'journal-name', '')).to.equal('');
+    });
+
+    it('should choose merge and keep settings', async function() {
+      Settings.setShowChoiceModal(() => Promise.resolve('merge'));
+
+      Settings.initSettingsPage(state);
+      document.getElementById('journal-name').value = 'merge-journal';
+      document.getElementById('sync-server-url').value = 'ws://localhost:1234';
+      await Settings.saveSettings(state);
+      expect(YjsModule.getSetting(state, 'journal-name', '')).to.equal('merge-journal');
+    });
+
+    it('should choose replace and reset Y.Doc then apply settings', async function() {
+      Settings.setShowChoiceModal(() => Promise.resolve('replace'));
+
+      Settings.initSettingsPage(state);
+      document.getElementById('journal-name').value = 'server-journal';
+      document.getElementById('sync-server-url').value = 'ws://localhost:1234';
+      await Settings.saveSettings(state);
+      // After replace flow, the setting should be stored
+      const newState = YjsModule.getYjsState();
+      expect(YjsModule.getSetting(newState, 'journal-name', '')).to.equal('server-journal');
     });
   });
 
