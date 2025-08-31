@@ -132,9 +132,15 @@ describe('Settings Page', function() {
   });
 
   describe('Journal name conflict flow', function() {
+    let originalFetch;
     beforeEach(function() {
       // Stub fetch to simulate room existence
+      originalFetch = global.fetch;
       global.fetch = (url) => Promise.resolve({ ok: true, json: () => Promise.resolve({ exists: true }) });
+    });
+    afterEach(function() {
+      // Restore original fetch to avoid leaking into other suites
+      global.fetch = originalFetch;
     });
     
     it('should cancel when modal returns cancel', async function() {

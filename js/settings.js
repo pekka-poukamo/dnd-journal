@@ -215,7 +215,7 @@ export const saveSettings = (stateParam = null) => {
     if (syncServerUrl) {
       const url = new URL(syncServerUrl.replace(/^ws/, 'http'));
       const statusUrl = `${url.protocol}//${url.host}/sync/room/${encodeURIComponent(journalName)}/status`;
-      fetch(statusUrl)
+      return fetch(statusUrl)
         .then(r => r.ok ? r.json() : { exists: false })
         .then(async ({ exists }) => {
           if (!exists) {
@@ -253,7 +253,7 @@ export const saveSettings = (stateParam = null) => {
           applySettings(state);
         });
     } else {
-      applySettings(state);
+      return Promise.resolve(applySettings(state));
     }
   } catch (error) {
     console.error('Failed to save settings:', error);
