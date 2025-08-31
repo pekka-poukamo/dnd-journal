@@ -4,7 +4,8 @@ import {
   getYjsState,
   setSetting,
   getSetting,
-  onSettingsChange
+  onSettingsChange,
+  resetYjs
 } from './yjs.js';
 
 import {
@@ -176,29 +177,33 @@ export const saveSettings = (stateParam = null) => {
     }
     const formData = getFormData(formElement);
     
-    // Save individual settings with optional preflight
+    // Gather inputs
     const apiKey = (formData['openai-api-key'] || '').trim();
     const aiEnabled = formData['ai-enabled'] === true || formData['ai-enabled'] === 'on';
     const syncServerUrl = (formData['sync-server-url'] || '').trim();
     const journalName = (formData['journal-name'] || '').trim();
     
-    // Always save non-sync settings immediately
-    setSetting(state, 'openai-api-key', apiKey);
-    setSetting(state, 'ai-enabled', aiEnabled);
-    setSetting(state, 'sync-server-url', syncServerUrl);
-
-    // If no journal name, clear and finish
-    if (!journalName) {
-      setSetting(state, 'journal-name', '');
-      showNotification('Settings saved successfully!', 'success');
-      return;
-    }
-
-    // If journal name present and sync server set, preflight check
-    const doSave = () => {
-      setSetting(state, 'journal-name', journalName);
+    const applySettings = (targetState) => {
+      setSetting(targetState, 'openai-api-key', apiKey);
+      setSetting(targetState, 'ai-enabled', aiEnabled);
+      setSetting(targetState, 'sync-server-url', syncServerUrl);
+      setSetting(targetState, 'journal-name', journalName);
       showNotification('Settings saved successfully!', 'success');
     };
+
+    const applySettingsLocalOnly = (targetState) => {
+      setSetting(targetState, 'openai-api-key', apiKey);
+      setSetting(targetState, 'ai-enabled', aiEnabled);
+      setSetting(targetState, 'sync-server-url', syncServerUrl);
+      setSetting(targetState, 'journal-name', '');
+      showNotification('Settings saved successfully!', 'success');
+    };
+
+    // If no journal name, operate local-only
+    if (!journalName) {
+      applySettingsLocalOnly(state);
+      return;
+    }
 
     if (syncServerUrl) {
       const url = new URL(syncServerUrl.replace(/^ws/, 'http'));
@@ -207,7 +212,7 @@ export const saveSettings = (stateParam = null) => {
         .then(r => r.ok ? r.json() : { exists: false })
         .then(async ({ exists }) => {
           if (!exists) {
-            doSave();
+            applySettings(state);
             return;
           }
           const choice = await showChoiceModal({
@@ -231,16 +236,23 @@ export const saveSettings = (stateParam = null) => {
                 req.onerror = () => {};
               }
             } catch {}
+            // Reset in-memory Y.Doc (no reload), then apply settings on a fresh doc
+            resetYjs();
+            initYjs().then(() => {
+              const freshState = getYjsState();
+              applySettings(freshState);
+            });
+            return;
           }
-          // Merge: rely on CRDT. Replace: local cache cleared before connect, server wins naturally.
-          doSave();
+          // Merge: rely on CRDT
+          applySettings(state);
         })
         .catch(() => {
           // On error, just save
-          doSave();
+          applySettings(state);
         });
     } else {
-      doSave();
+      applySettings(state);
     }
   } catch (error) {
     console.error('Failed to save settings:', error);
