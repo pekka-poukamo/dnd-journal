@@ -15,6 +15,7 @@ import {
 } from './settings-views.js';
 
 import { getFormData, showNotification } from './utils.js';
+import { showChoiceModal } from './components/modal.js';
 
 import { saveNavigationCache } from './navigation-cache.js';
 
@@ -204,22 +205,26 @@ export const saveSettings = (stateParam = null) => {
       const statusUrl = `${url.protocol}//${url.host}/sync/room/${encodeURIComponent(journalName)}/status`;
       fetch(statusUrl)
         .then(r => r.ok ? r.json() : { exists: false })
-        .then(({ exists }) => {
+        .then(async ({ exists }) => {
           if (!exists) {
             doSave();
             return;
           }
-          const userPrefersLocal = confirm('This journal already has data on the server. Use local data?');
-          if (userPrefersLocal) {
-            doSave();
+          const choice = await showChoiceModal({
+            title: 'Journal already exists',
+            message: 'Choose which data to use for this journal on this device.',
+            options: [
+              { id: 'local', label: 'Use local', type: 'secondary' },
+              { id: 'server', label: 'Use server', type: 'primary' },
+              { id: 'cancel', label: 'Cancel', type: 'secondary' }
+            ]
+          });
+          if (choice === 'cancel') {
+            showNotification('Cancelled. No changes made.', 'info');
             return;
           }
-          const userPrefersServer = confirm('Use synced server data instead? Press Cancel to abort.');
-          if (!userPrefersServer) {
-            showNotification('Cancelled. No changes made.', 'info');
-            return; // Do not save journal name or reconnect
-          }
-          // Prefer server: connect without clearing local storage; conflicts resolve naturally
+          // Prefer server: simply connect; LWW resolves character fields
+          // Prefer local: saving and reconnecting will push local last
           doSave();
         })
         .catch(() => {
