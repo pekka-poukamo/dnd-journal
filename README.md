@@ -25,7 +25,7 @@ npm run setup:server  # Fast install with npm ci
 npm run server
 ```
 
-Then in Settings, set sync server to `ws://localhost:1234`. Documents persist in LevelDB at `./server/data/`.
+The app auto-discovers the sync server. If you run the local server, the client connects to `ws://localhost:1234/ws` automatically. Documents persist in LevelDB at `./server/data/`.
 
 **Note**: For deployment, only server dependencies are separate. Client uses standard `node_modules/` with import maps.
 
@@ -36,7 +36,7 @@ npm install
 npm start
 ```
 
-The server runs on `0.0.0.0:1234` by default, allowing local network connections.
+The server runs on `0.0.0.0:1234` by default, allowing local network connections. WebSocket endpoint is available at `/ws` (e.g. `ws://<host>:1234/ws`).
 
 ### Expected Startup Warning
 

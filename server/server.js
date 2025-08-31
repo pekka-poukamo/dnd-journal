@@ -74,6 +74,7 @@ const httpServer = createServer((req, res) => {
 
 httpServer.listen(Number(PORT), HOST);
 
+// Accept WebSocket connections (all paths). We normalize '/ws/<room>' to '/<room>' below
 const wss = new WebSocketServer({ server: httpServer });
 
 // Track active connections and documents
@@ -90,7 +91,15 @@ wss.on('connection', (ws, req) => {
                    req.headers['cf-connecting-ip'] || // Cloudflare
                    req.socket.remoteAddress;
   
-  const url = req.url;
+  let url = req.url;
+  // Normalize URL so that connections made to '/ws/<room>' are treated as '/<room>'
+  // This keeps document names consistent regardless of whether the client uses a '/ws' base path
+  try {
+    if (url && url.startsWith('/ws/')) {
+      req.url = url.replace(/^\/ws\//, '/');
+      url = req.url;
+    }
+  } catch {}
   
   const userAgent = req.headers['user-agent'] || 'Unknown';
   console.log(`🔗 New connection from ${clientIP} (${req.socket.remoteAddress}) - ${userAgent.substring(0, 50)}...`);
