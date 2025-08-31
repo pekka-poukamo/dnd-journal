@@ -87,7 +87,6 @@ export const renderSettingsPage = (stateParam = null) => {
     const settings = {
       'openai-api-key': getSetting(state, 'openai-api-key', ''),
       'ai-enabled': getSetting(state, 'ai-enabled', false),
-      'sync-server-url': getSetting(state, 'sync-server-url', ''),
       'journal-name': getSetting(state, 'journal-name', '')
     };
     
@@ -100,7 +99,7 @@ export const renderSettingsPage = (stateParam = null) => {
     const statusElement = connectionStatusElement || document.getElementById('connection-status');
     if (statusElement) {
       const connected = false; // TODO: implement connection status check
-      renderConnectionStatus(statusElement, connected, settings['sync-server-url']);
+      renderConnectionStatus(statusElement, connected, undefined);
     }
   } catch (error) {
     console.error('Failed to render settings page:', error);
@@ -119,14 +118,7 @@ const setupFormHandlers = () => {
     testApiButton.setAttribute('data-handler-attached', 'true');
   }
   
-  const testConnectionButton = document.getElementById('test-connection');
-  if (testConnectionButton && !testConnectionButton.hasAttribute('data-handler-attached')) {
-    testConnectionButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      testConnection();
-    });
-    testConnectionButton.setAttribute('data-handler-attached', 'true');
-  }
+  // Connection testing UI removed
   
   const showAIPromptButton = document.getElementById('show-ai-prompt');
   if (showAIPromptButton && !showAIPromptButton.hasAttribute('data-handler-attached')) {
@@ -187,13 +179,11 @@ export const saveSettings = (stateParam = null) => {
     // Gather inputs
     const apiKey = (formData['openai-api-key'] || '').trim();
     const aiEnabled = formData['ai-enabled'] === true || formData['ai-enabled'] === 'on';
-    const syncServerUrl = (formData['sync-server-url'] || '').trim();
     const journalName = (formData['journal-name'] || '').trim();
     
     const applySettings = (targetState) => {
       setSetting(targetState, 'openai-api-key', apiKey);
       setSetting(targetState, 'ai-enabled', aiEnabled);
-      setSetting(targetState, 'sync-server-url', syncServerUrl);
       setSetting(targetState, 'journal-name', journalName);
       showNotification('Settings saved successfully!', 'success');
     };
@@ -201,7 +191,6 @@ export const saveSettings = (stateParam = null) => {
     const applySettingsLocalOnly = (targetState) => {
       setSetting(targetState, 'openai-api-key', apiKey);
       setSetting(targetState, 'ai-enabled', aiEnabled);
-      setSetting(targetState, 'sync-server-url', syncServerUrl);
       setSetting(targetState, 'journal-name', '');
       showNotification('Settings saved successfully!', 'success');
     };
@@ -212,9 +201,13 @@ export const saveSettings = (stateParam = null) => {
       return;
     }
 
-    if (syncServerUrl) {
-      const url = new URL(syncServerUrl.replace(/^ws/, 'http'));
-      const statusUrl = `${url.protocol}//${url.host}/sync/room/${encodeURIComponent(journalName)}/status`;
+    // Use same-origin server for status check when journal is provided
+    try {
+      const isBrowser = typeof window !== 'undefined' && window.location && window.location.origin;
+      const baseOrigin = isBrowser && (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+        ? window.location.origin
+        : 'http://localhost:1234';
+      const statusUrl = `${baseOrigin}/sync/room/${encodeURIComponent(journalName)}/status`;
       return fetch(statusUrl)
         .then(r => r.ok ? r.json() : { exists: false })
         .then(async ({ exists }) => {
@@ -252,7 +245,7 @@ export const saveSettings = (stateParam = null) => {
           // On error, just save
           applySettings(state);
         });
-    } else {
+    } catch {
       return Promise.resolve(applySettings(state));
     }
   } catch (error) {
@@ -336,72 +329,7 @@ export const testAPIKey = (stateParam = null) => {
 };
 
 // Test connection
-export const testConnection = (stateParam = null) => {
-  // Always use current form value for testing
-  const syncServerInput = document.getElementById('sync-server-url');
-  const syncServerUrl = syncServerInput ? syncServerInput.value.trim() : '';
-  
-  if (!syncServerUrl) {
-    showNotification('Please enter a sync server URL first', 'warning');
-    return Promise.resolve();
-  }
-  
-  // Validate URL format
-  if (!syncServerUrl.startsWith('ws://') && !syncServerUrl.startsWith('wss://')) {
-    showNotification('Sync server URL must start with ws:// or wss://', 'warning');
-    return Promise.resolve();
-  }
-  
-  // Show testing message
-  showNotification('Testing connection...', 'info');
-  
-  // Test WebSocket connection and return promise
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket(syncServerUrl);
-    
-    const timeout = setTimeout(() => {
-      ws.close();
-      reject(new Error('Connection timeout'));
-    }, 5000); // 5 second timeout
-    
-    ws.onopen = () => {
-      clearTimeout(timeout);
-      ws.close();
-      resolve('Connected successfully');
-    };
-    
-    ws.onerror = (error) => {
-      clearTimeout(timeout);
-      reject(new Error('Connection failed'));
-    };
-    
-    ws.onclose = (event) => {
-      clearTimeout(timeout);
-      if (event.wasClean) {
-        resolve('Connection test completed');
-      } else {
-        reject(new Error('Connection closed unexpectedly'));
-      }
-    };
-  })
-  .then(result => {
-    showNotification('Sync server connection successful!', 'success');
-    return result;
-  })
-  .catch(testError => {
-    console.warn('Connection test failed:', testError);
-    if (testError.message.includes('timeout')) {
-      showNotification('Connection test timed out - server may be unreachable', 'warning');
-    } else {
-      showNotification('Failed to connect to sync server', 'error');
-    }
-    throw testError;
-  })
-  .catch(error => {
-    console.error('Failed to test connection:', error);
-    showNotification('Error testing connection', 'error');
-  });
-};
+// Connection testing UI removed
 
 // Show current AI prompt
 export const showCurrentAIPrompt = async () => {

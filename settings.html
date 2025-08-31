@@ -118,31 +118,9 @@
                         <p class="settings-section-description">Sync your journal entries across multiple devices in real-time</p>
                     </div>
                     
-                    <!-- Sync Server Configuration Subsection -->
+                    <!-- Sync Journal Configuration Subsection -->
                     <div class="settings-subsection">
-                        <h3 class="settings-subsection-title">Server Configuration</h3>
-                        
-                        <div class="form-group">
-                            <label for="sync-server-url" class="form-label">
-                                Sync Server (Optional)
-                            </label>
-                            <input 
-                                type="text" 
-                                id="sync-server-url" 
-                                name="sync-server-url"
-                                class="form-input" 
-                                placeholder="ws://192.168.1.100:1234 or wss://your-server.com:1234"
-                                autocomplete="off"
-                                data-lpignore="true"
-                                data-1p-ignore="true"
-                                data-bwignore="true"
-                                data-form-type="other"
-                            >
-                            <p class="form-help">
-                                Leave empty to use public servers. Enter a WebSocket URL to use your own private server.
-                                <a href="https://github.com/yjs/y-websocket" target="_blank">Setup guide</a>
-                            </p>
-                        </div>
+                        <h3 class="settings-subsection-title">Journal Configuration</h3>
 
                         <div class="form-group">
                             <label for="journal-name" class="form-label">
@@ -171,25 +149,14 @@
                         
                     </div>
                     
-                    <!-- Sync Testing & Status Subsection -->
-                    <div class="settings-subsection">
-                        <h3 class="settings-subsection-title">Testing & Status</h3>
-                        
-                        <div class="form-group">
-                            <button id="test-connection" type="button" class="btn btn-secondary">
-                                Test Connection
-                            </button>
-                            <div id="sync-test-result" class="api-test-result"></div>
+                    <!-- Sync Status Subsection (optional, simplified) -->
+                    <div class="settings-subsection" id="sync-status-container" style="display: none;">
+                        <h3 class="settings-subsection-title">Status</h3>
+                        <div class="sync-indicator">
+                            <span class="sync-dot" id="sync-dot"></span>
+                            <span id="sync-text">Checking...</span>
                         </div>
-                        
-                        <div class="form-group" id="sync-status-container" style="display: none;">
-                            <label class="form-label">Current Status</label>
-                            <div class="sync-indicator">
-                                <span class="sync-dot" id="sync-dot"></span>
-                                <span id="sync-text">Checking...</span>
-                            </div>
-                            <p class="form-help" id="sync-help">Sync status information</p>
-                        </div>
+                        <p class="form-help" id="sync-help">Sync status information</p>
                     </div>
                 </section>
 

@@ -17,13 +17,11 @@ describe('Settings Page', function() {
           <form id="settings-form">
             <input id="openai-api-key" name="openai-api-key" />
             <input id="ai-enabled" name="ai-enabled" type="checkbox" />
-            <input id="sync-server-url" name="sync-server-url" />
             <input id="journal-name" name="journal-name" />
             <button type="submit">Save Settings</button>
           </form>
           <div id="connection-status"></div>
           <button id="test-api-key">Test API Key</button>
-          <button id="test-connection">Test Connection</button>
         </body>
       </html>
     `);
@@ -47,14 +45,12 @@ describe('Settings Page', function() {
     it('should load settings data', function() {
       YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
       YjsModule.setSetting(state, 'ai-enabled', true);
-      YjsModule.setSetting(state, 'sync-server-url', 'ws://localhost:8080');
       
       Settings.initSettingsPage(state);
       Settings.renderSettingsPage(state);
       
       expect(document.getElementById('openai-api-key').value).to.equal('sk-test123');
       expect(document.getElementById('ai-enabled').checked).to.be.true;
-      expect(document.getElementById('sync-server-url').value).to.equal('ws://localhost:8080');
     });
   });
 
@@ -91,13 +87,11 @@ describe('Settings Page', function() {
       const form = document.getElementById('settings-form');
       document.getElementById('openai-api-key').value = 'sk-newsecret';
       document.getElementById('ai-enabled').checked = true;
-      document.getElementById('sync-server-url').value = 'ws://newserver:9000';
       
       Settings.saveSettings(state);
       
       expect(YjsModule.getSetting(state, 'openai-api-key')).to.equal('sk-newsecret');
       expect(YjsModule.getSetting(state, 'ai-enabled')).to.be.true;
-      expect(YjsModule.getSetting(state, 'sync-server-url')).to.equal('ws://newserver:9000');
     });
 
     it('should handle trimming settings', function() {
@@ -105,13 +99,11 @@ describe('Settings Page', function() {
       Settings.initSettingsPage(state);
       
       document.getElementById('openai-api-key').value = '  sk-trimtest  ';
-      document.getElementById('sync-server-url').value = '  ws://trimserver  ';
       
       Settings.saveSettings(state);
       
       // Settings should be trimmed when saved
       expect(YjsModule.getSetting(state, 'openai-api-key')).to.equal('sk-trimtest');
-      expect(YjsModule.getSetting(state, 'sync-server-url')).to.equal('ws://trimserver');
     });
 
     it('should handle boolean settings', function() {
@@ -149,7 +141,6 @@ describe('Settings Page', function() {
 
       Settings.initSettingsPage(state);
       document.getElementById('journal-name').value = 'my-journal';
-      document.getElementById('sync-server-url').value = 'ws://localhost:1234';
       await Settings.saveSettings(state);
       // Journal name should remain unchanged (empty)
       expect(YjsModule.getSetting(state, 'journal-name', '')).to.equal('');
@@ -160,7 +151,6 @@ describe('Settings Page', function() {
 
       Settings.initSettingsPage(state);
       document.getElementById('journal-name').value = 'merge-journal';
-      document.getElementById('sync-server-url').value = 'ws://localhost:1234';
       await Settings.saveSettings(state);
       expect(YjsModule.getSetting(state, 'journal-name', '')).to.equal('merge-journal');
       // Ensure no reset happened in merge flow by adding a value and reading it back
@@ -173,7 +163,6 @@ describe('Settings Page', function() {
 
       Settings.initSettingsPage(state);
       document.getElementById('journal-name').value = 'server-journal';
-      document.getElementById('sync-server-url').value = 'ws://localhost:1234';
       await Settings.saveSettings(state);
       // After replace flow, the setting should be stored
       const newState = YjsModule.getYjsState();
@@ -181,7 +170,7 @@ describe('Settings Page', function() {
     });
   });
 
-  describe('API and connection testing functionality', function() {
+  describe('API testing functionality', function() {
     it('should handle API key testing when key is available', function() {
       YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
       YjsModule.setSetting(state, 'ai-enabled', true);
@@ -196,24 +185,6 @@ describe('Settings Page', function() {
       expect(() => Settings.testAPIKey(state)).to.not.throw();
     });
 
-    it('should handle connection testing with valid URL', function() {
-      YjsModule.setSetting(state, 'sync-server-url', 'ws://localhost:8080');
-      
-      expect(() => Settings.testConnection(state)).to.not.throw();
-    });
-
-    it('should handle invalid connection URL', function() {
-      YjsModule.setSetting(state, 'sync-server-url', 'invalid-url');
-      
-      expect(() => Settings.testConnection(state)).to.not.throw();
-    });
-
-    it('should handle missing sync URL', function() {
-      const syncUrl = YjsModule.getSetting(state, 'sync-server-url', '');
-      expect(syncUrl).to.equal('');
-      
-      expect(() => Settings.testConnection(state)).to.not.throw();
-    });
   });
 
   describe('Reactive updates', function() {

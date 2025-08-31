@@ -36,7 +36,6 @@ describe('Integration Tests', function() {
           <form id="settings-form">
             <input id="openai-api-key" name="openai-api-key" />
             <input id="ai-enabled" name="ai-enabled" type="checkbox" />
-            <input id="sync-server-url" name="sync-server-url" />
           </form>
           <div id="connection-status"></div>
         </body>

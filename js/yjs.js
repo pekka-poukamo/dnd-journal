@@ -7,6 +7,17 @@ import { WebsocketProvider } from 'y-websocket';
 let ydoc = null;
 let provider = null;
 let isInitialized = false;
+// Resolve WS URL from current origin, defaulting to localhost in file://
+const resolveWebSocketUrl = () => {
+  try {
+    if (typeof window !== 'undefined' && window.location && window.location.host) {
+      const isSecure = window.location.protocol === 'https:';
+      return `${isSecure ? 'wss' : 'ws'}://${window.location.host}/ws`;
+    }
+  } catch {}
+  return 'ws://localhost:1234/ws';
+};
+
 
 // Reset function for testing
 export const resetYjs = () => {
@@ -102,12 +113,12 @@ const setupSyncFromSettings = () => {
   
   try {
     const state = getYjsState();
-    const syncServer = getSetting(state, 'sync-server-url', '');
     const journalName = (getSetting(state, 'journal-name', '') || '').trim();
     
-    if (syncServer && syncServer.trim() && journalName) {
+    if (journalName) {
       try {
-        provider = new WebsocketProvider(syncServer.trim(), journalName, ydoc);
+        const wsUrl = resolveWebSocketUrl();
+        provider = new WebsocketProvider(wsUrl, journalName, ydoc);
         // Rely on CRDT; no post-sync preference overwrites
       } catch (error) {
         console.warn('Failed to connect to sync server:', error);
@@ -196,8 +207,8 @@ export const getEntries = (state) => {
 export const setSetting = (state, key, value) => {
   getSettingsMap(state).set(key, value);
   
-  // If sync server or journal changed, reconnect
-  if (key === 'sync-server-url' || key === 'journal-name') {
+  // If journal changed, reconnect
+  if (key === 'journal-name') {
     reconnectSync();
   }
 };

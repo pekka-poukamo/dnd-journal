@@ -36,35 +36,21 @@ describe('UI Contracts - Settings Page (settings.html)', function() {
     expect(form).to.exist;
 
     const btnTestApi = document.getElementById('test-api-key');
-    const btnTestConn = document.getElementById('test-connection');
     const btnShowPrompt = document.getElementById('show-ai-prompt');
     const btnClearSummaries = document.getElementById('clear-summaries');
 
     expect(btnTestApi).to.exist;
-    expect(btnTestConn).to.exist;
     expect(btnShowPrompt).to.exist;
     expect(btnClearSummaries).to.exist;
 
     Settings.initSettingsPage(YjsModule.getYjsState());
 
     expect(btnTestApi.getAttribute('data-handler-attached')).to.equal('true');
-    expect(btnTestConn.getAttribute('data-handler-attached')).to.equal('true');
     expect(btnShowPrompt.getAttribute('data-handler-attached')).to.equal('true');
     expect(btnClearSummaries.getAttribute('data-handler-attached')).to.equal('true');
   });
 
-  it('should trigger notification when testing invalid sync URL', function() {
-    Settings.initSettingsPage(YjsModule.getYjsState());
-
-    const syncInput = document.getElementById('sync-server-url');
-    const btnTestConn = document.getElementById('test-connection');
-    syncInput.value = 'invalid-url';
-
-    btnTestConn.click();
-
-    const notification = document.querySelector('.notification');
-    expect(notification).to.exist;
-  });
+  // Connection testing removed from UI
 
   it('should trigger notification when testing API key', function() {
     Settings.initSettingsPage(YjsModule.getYjsState());
@@ -85,14 +71,12 @@ describe('UI Contracts - Settings Page (settings.html)', function() {
     const form = document.getElementById('settings-form');
     document.getElementById('openai-api-key').value = 'sk-form-123';
     document.getElementById('ai-enabled').checked = true;
-    document.getElementById('sync-server-url').value = 'ws://form-server:1234';
 
     const submitEvent = new window.Event('submit', { bubbles: true, cancelable: true });
     form.dispatchEvent(submitEvent);
 
     expect(YjsModule.getSetting(state, 'openai-api-key')).to.equal('sk-form-123');
     expect(YjsModule.getSetting(state, 'ai-enabled')).to.equal(true);
-    expect(YjsModule.getSetting(state, 'sync-server-url')).to.equal('ws://form-server:1234');
   });
 
   it('should not show AI prompt when button is disabled (AI not enabled)', async function() {
