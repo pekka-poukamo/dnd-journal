@@ -209,16 +209,17 @@ export const saveSettings = (stateParam = null) => {
             doSave();
             return;
           }
-          const useLocal = confirm('This journal already has data on the server. Use your local data instead of the synced data? Press Cancel to load the synced data.');
-          if (!useLocal) {
-            // Clear local persistence before connecting so remote becomes source of truth
-            try {
-              if (window && window.indexedDB) {
-                const req = window.indexedDB.deleteDatabase('dnd-journal');
-                req.onsuccess = () => {};
-              }
-            } catch {}
+          const userPrefersLocal = confirm('This journal already has data on the server. Use local data?');
+          if (userPrefersLocal) {
+            doSave();
+            return;
           }
+          const userPrefersServer = confirm('Use synced server data instead? Press Cancel to abort.');
+          if (!userPrefersServer) {
+            showNotification('Cancelled. No changes made.', 'info');
+            return; // Do not save journal name or reconnect
+          }
+          // Prefer server: connect without clearing local storage; conflicts resolve naturally
           doSave();
         })
         .catch(() => {
