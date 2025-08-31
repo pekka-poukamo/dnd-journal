@@ -68,6 +68,17 @@ export const initYjs = async () => {
   return getYjsState();
 };
 
+// Clear local IndexedDB persistence used by Yjs for this app
+export const clearLocalYjsPersistence = () => {
+  try {
+    if (typeof window !== 'undefined' && window.indexedDB) {
+      const request = window.indexedDB.deleteDatabase('dnd-journal');
+      request.onsuccess = () => {};
+      request.onerror = () => {};
+    }
+  } catch {}
+};
+
 // Get current Y.js state object for pure functions
 export const getYjsState = () => {
   if (!isInitialized) {

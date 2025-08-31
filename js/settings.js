@@ -5,7 +5,8 @@ import {
   setSetting,
   getSetting,
   onSettingsChange,
-  resetYjs
+  resetYjs,
+  clearLocalYjsPersistence
 } from './yjs.js';
 
 import {
@@ -229,14 +230,8 @@ export const saveSettings = (stateParam = null) => {
             return;
           }
           if (choice === 'replace') {
-            try {
-              if (window && window.indexedDB) {
-                const req = window.indexedDB.deleteDatabase('dnd-journal');
-                req.onsuccess = () => {};
-                req.onerror = () => {};
-              }
-            } catch {}
-            // Reset in-memory Y.Doc (no reload), then apply settings on a fresh doc
+            // Clear persisted cache via yjs module, reset in-memory doc, then re-init
+            clearLocalYjsPersistence();
             resetYjs();
             initYjs().then(() => {
               const freshState = getYjsState();
