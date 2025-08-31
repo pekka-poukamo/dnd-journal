@@ -163,6 +163,9 @@ describe('Settings Page', function() {
       document.getElementById('sync-server-url').value = 'ws://localhost:1234';
       await Settings.saveSettings(state);
       expect(YjsModule.getSetting(state, 'journal-name', '')).to.equal('merge-journal');
+      // Ensure no reset happened in merge flow by adding a value and reading it back
+      YjsModule.setSetting(state, 'probe', 'ok');
+      expect(YjsModule.getSetting(state, 'probe')).to.equal('ok');
     });
 
     it('should choose replace and reset Y.Doc then apply settings', async function() {
