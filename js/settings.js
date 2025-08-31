@@ -223,8 +223,12 @@ export const saveSettings = (stateParam = null) => {
             showNotification('Cancelled. No changes made.', 'info');
             return;
           }
+          // Persist preference for next connect (cleared by yjs after applying)
+          if (choice === 'local' || choice === 'server') {
+            setSetting(state, 'journal-prefer', choice);
+          }
           // Prefer server: simply connect; LWW resolves character fields
-          // Prefer local: saving and reconnecting will push local last
+          // Prefer local: yjs will reapply character fields after connect
           doSave();
         })
         .catch(() => {
