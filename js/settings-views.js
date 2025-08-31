@@ -61,6 +61,14 @@ export const renderSettingsForm = (formOrSettings, settings = null) => {
     // Support both key names for backward compatibility
     syncServerInput.value = settingsData['sync-server-url'] || settingsData['dnd-journal-sync-server'] || '';
   }
+
+  // Journal name
+  const journalNameInput = form ?
+    form.querySelector('[name="journal-name"]') :
+    document.getElementById('journal-name');
+  if (journalNameInput) {
+    journalNameInput.value = settingsData['journal-name'] || '';
+  }
 };
 
 // Update connection status display

@@ -92,10 +92,11 @@ const setupSyncFromSettings = () => {
   try {
     const state = getYjsState();
     const syncServer = getSetting(state, 'sync-server-url', '');
+    const journalName = (getSetting(state, 'journal-name', '') || '').trim();
     
-    if (syncServer && syncServer.trim()) {
+    if (syncServer && syncServer.trim() && journalName) {
       try {
-        provider = new WebsocketProvider(syncServer.trim(), 'dnd-journal', ydoc);
+        provider = new WebsocketProvider(syncServer.trim(), journalName, ydoc);
       } catch (error) {
         console.warn('Failed to connect to sync server:', error);
       }
@@ -184,7 +185,7 @@ export const setSetting = (state, key, value) => {
   getSettingsMap(state).set(key, value);
   
   // If sync server was updated, reconnect
-  if (key === 'sync-server-url') {
+  if (key === 'sync-server-url' || key === 'journal-name') {
     reconnectSync();
   }
 };

@@ -78,7 +78,8 @@ export const renderSettingsPage = (stateParam = null) => {
     const settings = {
       'openai-api-key': getSetting(state, 'openai-api-key', ''),
       'ai-enabled': getSetting(state, 'ai-enabled', false),
-      'sync-server-url': getSetting(state, 'sync-server-url', '')
+      'sync-server-url': getSetting(state, 'sync-server-url', ''),
+      'journal-name': getSetting(state, 'journal-name', '')
     };
     
     // Use module-level element if available, otherwise find it
@@ -137,6 +138,14 @@ const setupFormHandlers = () => {
   }
   
   const refreshAppButton = document.getElementById('refresh-app');
+  const unlinkBtn = document.getElementById('unlink-journal');
+  if (unlinkBtn && !unlinkBtn.hasAttribute('data-handler-attached')) {
+    unlinkBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      unlinkJournal();
+    });
+    unlinkBtn.setAttribute('data-handler-attached', 'true');
+  }
   if (refreshAppButton && !refreshAppButton.hasAttribute('data-handler-attached')) {
     refreshAppButton.addEventListener('click', () => window.location.reload());
     refreshAppButton.setAttribute('data-handler-attached', 'true');
@@ -166,19 +175,76 @@ export const saveSettings = (stateParam = null) => {
     }
     const formData = getFormData(formElement);
     
-    // Save individual settings
+    // Save individual settings with optional preflight
     const apiKey = (formData['openai-api-key'] || '').trim();
     const aiEnabled = formData['ai-enabled'] === true || formData['ai-enabled'] === 'on';
     const syncServerUrl = (formData['sync-server-url'] || '').trim();
+    const journalName = (formData['journal-name'] || '').trim();
     
+    // Always save non-sync settings immediately
     setSetting(state, 'openai-api-key', apiKey);
     setSetting(state, 'ai-enabled', aiEnabled);
     setSetting(state, 'sync-server-url', syncServerUrl);
-    
-    showNotification('Settings saved successfully!', 'success');
+
+    // If no journal name, clear and finish
+    if (!journalName) {
+      setSetting(state, 'journal-name', '');
+      showNotification('Settings saved successfully!', 'success');
+      return;
+    }
+
+    // If journal name present and sync server set, preflight check
+    const doSave = () => {
+      setSetting(state, 'journal-name', journalName);
+      showNotification('Settings saved successfully!', 'success');
+    };
+
+    if (syncServerUrl) {
+      const url = new URL(syncServerUrl.replace(/^ws/, 'http'));
+      const statusUrl = `${url.protocol}//${url.host}/sync/room/${encodeURIComponent(journalName)}/status`;
+      fetch(statusUrl)
+        .then(r => r.ok ? r.json() : { exists: false })
+        .then(({ exists }) => {
+          if (!exists) {
+            doSave();
+            return;
+          }
+          const useLocal = confirm('This journal already has data on the server. Use your local data instead of the synced data? Press Cancel to load the synced data.');
+          if (!useLocal) {
+            // Clear local persistence before connecting so remote becomes source of truth
+            try {
+              if (window && window.indexedDB) {
+                const req = window.indexedDB.deleteDatabase('dnd-journal');
+                req.onsuccess = () => {};
+              }
+            } catch {}
+          }
+          doSave();
+        })
+        .catch(() => {
+          // On error, just save
+          doSave();
+        });
+    } else {
+      doSave();
+    }
   } catch (error) {
     console.error('Failed to save settings:', error);
     showNotification('Failed to save settings', 'error');
+  }
+};
+
+// Unlink from server: clear journal name and disconnect via settings observer
+export const unlinkJournal = (stateParam = null) => {
+  try {
+    const state = stateParam || getYjsState();
+    const confirmed = confirm('You will continue locally. Server data remains under this journal name. Proceed?');
+    if (!confirmed) return;
+    setSetting(state, 'journal-name', '');
+    showNotification('Unlinked. You are now working locally only.', 'success');
+  } catch (error) {
+    console.error('Failed to unlink journal:', error);
+    showNotification('Failed to unlink', 'error');
   }
 };
 
