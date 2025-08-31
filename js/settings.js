@@ -4,7 +4,9 @@ import {
   getYjsState,
   setSetting,
   getSetting,
-  onSettingsChange
+  onSettingsChange,
+  resetYjs,
+  clearLocalYjsPersistence
 } from './yjs.js';
 
 import {
@@ -15,6 +17,13 @@ import {
 } from './settings-views.js';
 
 import { getFormData, showNotification } from './utils.js';
+import { showChoiceModal as baseShowChoiceModal } from './components/modal.js';
+
+// Allow overriding in tests via dependency injection
+let showChoiceModal = baseShowChoiceModal;
+export const setShowChoiceModal = (impl) => {
+  showChoiceModal = typeof impl === 'function' ? impl : baseShowChoiceModal;
+};
 
 import { saveNavigationCache } from './navigation-cache.js';
 
@@ -78,7 +87,8 @@ export const renderSettingsPage = (stateParam = null) => {
     const settings = {
       'openai-api-key': getSetting(state, 'openai-api-key', ''),
       'ai-enabled': getSetting(state, 'ai-enabled', false),
-      'sync-server-url': getSetting(state, 'sync-server-url', '')
+      'sync-server-url': getSetting(state, 'sync-server-url', ''),
+      'journal-name': getSetting(state, 'journal-name', '')
     };
     
     // Use module-level element if available, otherwise find it
@@ -137,6 +147,14 @@ const setupFormHandlers = () => {
   }
   
   const refreshAppButton = document.getElementById('refresh-app');
+  const unlinkBtn = document.getElementById('unlink-journal');
+  if (unlinkBtn && !unlinkBtn.hasAttribute('data-handler-attached')) {
+    unlinkBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      unlinkJournal();
+    });
+    unlinkBtn.setAttribute('data-handler-attached', 'true');
+  }
   if (refreshAppButton && !refreshAppButton.hasAttribute('data-handler-attached')) {
     refreshAppButton.addEventListener('click', () => window.location.reload());
     refreshAppButton.setAttribute('data-handler-attached', 'true');
@@ -166,19 +184,94 @@ export const saveSettings = (stateParam = null) => {
     }
     const formData = getFormData(formElement);
     
-    // Save individual settings
+    // Gather inputs
     const apiKey = (formData['openai-api-key'] || '').trim();
     const aiEnabled = formData['ai-enabled'] === true || formData['ai-enabled'] === 'on';
     const syncServerUrl = (formData['sync-server-url'] || '').trim();
+    const journalName = (formData['journal-name'] || '').trim();
     
-    setSetting(state, 'openai-api-key', apiKey);
-    setSetting(state, 'ai-enabled', aiEnabled);
-    setSetting(state, 'sync-server-url', syncServerUrl);
-    
-    showNotification('Settings saved successfully!', 'success');
+    const applySettings = (targetState) => {
+      setSetting(targetState, 'openai-api-key', apiKey);
+      setSetting(targetState, 'ai-enabled', aiEnabled);
+      setSetting(targetState, 'sync-server-url', syncServerUrl);
+      setSetting(targetState, 'journal-name', journalName);
+      showNotification('Settings saved successfully!', 'success');
+    };
+
+    const applySettingsLocalOnly = (targetState) => {
+      setSetting(targetState, 'openai-api-key', apiKey);
+      setSetting(targetState, 'ai-enabled', aiEnabled);
+      setSetting(targetState, 'sync-server-url', syncServerUrl);
+      setSetting(targetState, 'journal-name', '');
+      showNotification('Settings saved successfully!', 'success');
+    };
+
+    // If no journal name, operate local-only
+    if (!journalName) {
+      applySettingsLocalOnly(state);
+      return;
+    }
+
+    if (syncServerUrl) {
+      const url = new URL(syncServerUrl.replace(/^ws/, 'http'));
+      const statusUrl = `${url.protocol}//${url.host}/sync/room/${encodeURIComponent(journalName)}/status`;
+      return fetch(statusUrl)
+        .then(r => r.ok ? r.json() : { exists: false })
+        .then(async ({ exists }) => {
+          if (!exists) {
+            applySettings(state);
+            return;
+          }
+          const choice = await showChoiceModal({
+            title: 'Journal found on server',
+            message: 'This journal name already has saved data on the server. What would you like to do on this device?',
+            options: [
+              { id: 'merge', label: 'Merge with server', type: 'primary' },
+              { id: 'replace', label: 'Use server copy (discard this device\'s local data)', type: 'secondary' },
+              { id: 'cancel', label: 'Cancel', type: 'secondary' }
+            ]
+          });
+          if (choice === 'cancel') {
+            showNotification('Cancelled. No changes made.', 'info');
+            return;
+          }
+          if (choice === 'replace') {
+            // Clear persisted cache via yjs module, reset in-memory doc, then re-init
+            clearLocalYjsPersistence();
+            resetYjs();
+            initYjs().then(() => {
+              const freshState = getYjsState();
+              applySettings(freshState);
+            });
+            return;
+          }
+          // Merge: rely on CRDT
+          applySettings(state);
+        })
+        .catch(() => {
+          // On error, just save
+          applySettings(state);
+        });
+    } else {
+      return Promise.resolve(applySettings(state));
+    }
   } catch (error) {
     console.error('Failed to save settings:', error);
     showNotification('Failed to save settings', 'error');
+  }
+};
+
+// Unlink from server: clear journal name and disconnect via settings observer
+export const unlinkJournal = (stateParam = null) => {
+  try {
+    const state = stateParam || getYjsState();
+    const confirmed = confirm('You will continue locally. Server data remains under this journal name. Proceed?');
+    if (!confirmed) return;
+    setSetting(state, 'journal-name', '');
+    showNotification('Unlinked. You are now working locally only.', 'success');
+  } catch (error) {
+    console.error('Failed to unlink journal:', error);
+    showNotification('Failed to unlink', 'error');
   }
 };
 

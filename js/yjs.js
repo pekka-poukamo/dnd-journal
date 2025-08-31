@@ -68,6 +68,17 @@ export const initYjs = async () => {
   return getYjsState();
 };
 
+// Clear local IndexedDB persistence used by Yjs for this app
+export const clearLocalYjsPersistence = () => {
+  try {
+    if (typeof window !== 'undefined' && window.indexedDB) {
+      const request = window.indexedDB.deleteDatabase('dnd-journal');
+      request.onsuccess = () => {};
+      request.onerror = () => {};
+    }
+  } catch {}
+};
+
 // Get current Y.js state object for pure functions
 export const getYjsState = () => {
   if (!isInitialized) {
@@ -92,10 +103,12 @@ const setupSyncFromSettings = () => {
   try {
     const state = getYjsState();
     const syncServer = getSetting(state, 'sync-server-url', '');
+    const journalName = (getSetting(state, 'journal-name', '') || '').trim();
     
-    if (syncServer && syncServer.trim()) {
+    if (syncServer && syncServer.trim() && journalName) {
       try {
-        provider = new WebsocketProvider(syncServer.trim(), 'dnd-journal', ydoc);
+        provider = new WebsocketProvider(syncServer.trim(), journalName, ydoc);
+        // Rely on CRDT; no post-sync preference overwrites
       } catch (error) {
         console.warn('Failed to connect to sync server:', error);
       }
@@ -183,8 +196,8 @@ export const getEntries = (state) => {
 export const setSetting = (state, key, value) => {
   getSettingsMap(state).set(key, value);
   
-  // If sync server was updated, reconnect
-  if (key === 'sync-server-url') {
+  // If sync server or journal changed, reconnect
+  if (key === 'sync-server-url' || key === 'journal-name') {
     reconnectSync();
   }
 };
