@@ -7,8 +7,6 @@ import { WebsocketProvider } from 'y-websocket';
 let ydoc = null;
 let provider = null;
 let isInitialized = false;
-let pendingPreference = null; // 'local' | 'server' | null
-let pendingLocalSnapshot = null; // { character: { key: value } } | null
 
 // Reset function for testing
 export const resetYjs = () => {
@@ -99,48 +97,7 @@ const setupSyncFromSettings = () => {
     if (syncServer && syncServer.trim() && journalName) {
       try {
         provider = new WebsocketProvider(syncServer.trim(), journalName, ydoc);
-
-        // Enforce user preference after initial sync
-        provider.once('synced', async () => {
-          try {
-            if (!pendingPreference) return;
-            const currentState = getYjsState();
-            const characterMap = currentState.characterMap;
-
-            if (pendingPreference === 'local' && pendingLocalSnapshot && pendingLocalSnapshot.character) {
-              ydoc.transact(() => {
-                Object.keys(pendingLocalSnapshot.character).forEach((key) => {
-                  characterMap.set(key, pendingLocalSnapshot.character[key]);
-                });
-              });
-              pendingLocalSnapshot = null;
-            } else if (pendingPreference === 'server') {
-              // Load server snapshot into a temporary doc and apply its character fields last
-              const tempDoc = new Y.Doc();
-              const tempProvider = new WebsocketProvider(syncServer.trim(), journalName, tempDoc);
-              await new Promise((resolve) => tempProvider.once('synced', resolve));
-              const serverCharacter = tempDoc.getMap('character');
-              const serverData = {};
-              serverCharacter.forEach((value, key) => {
-                serverData[key] = value;
-              });
-              ydoc.transact(() => {
-                Object.keys(serverData).forEach((key) => {
-                  characterMap.set(key, serverData[key]);
-                });
-              });
-              tempProvider.destroy();
-              tempDoc.destroy();
-            }
-
-            // Clear preference flag in settings to avoid re-application
-            setSetting(currentState, 'journal-prefer', '');
-          } catch (e) {
-            console.warn('Preference enforcement failed:', e);
-          } finally {
-            pendingPreference = null;
-          }
-        });
+        // Rely on CRDT; no post-sync preference overwrites
       } catch (error) {
         console.warn('Failed to connect to sync server:', error);
       }
@@ -157,22 +114,6 @@ const reconnectSync = () => {
     provider.destroy();
     provider = null;
   }
-  try {
-    const state = getYjsState();
-    // Capture preference before switching
-    const prefer = getSetting(state, 'journal-prefer', '') || '';
-    pendingPreference = (prefer === 'local' || prefer === 'server') ? prefer : null;
-    if (pendingPreference === 'local') {
-      const currentCharacter = {};
-      state.characterMap.forEach((value, key) => {
-        currentCharacter[key] = value;
-      });
-      pendingLocalSnapshot = { character: currentCharacter };
-    } else {
-      pendingLocalSnapshot = null;
-    }
-  } catch {}
-
   setupSyncFromSettings();
 };
 
@@ -244,7 +185,7 @@ export const getEntries = (state) => {
 export const setSetting = (state, key, value) => {
   getSettingsMap(state).set(key, value);
   
-  // If sync server was updated, reconnect
+  // If sync server or journal changed, reconnect
   if (key === 'sync-server-url' || key === 'journal-name') {
     reconnectSync();
   }

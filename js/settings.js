@@ -211,11 +211,11 @@ export const saveSettings = (stateParam = null) => {
             return;
           }
           const choice = await showChoiceModal({
-            title: 'Journal already exists',
-            message: 'Choose which data to use for this journal on this device.',
+            title: 'Journal found on server',
+            message: 'This journal name already has saved data on the server. What would you like to do on this device?',
             options: [
-              { id: 'local', label: 'Use local', type: 'secondary' },
-              { id: 'server', label: 'Use server', type: 'primary' },
+              { id: 'merge', label: 'Merge with server', type: 'primary' },
+              { id: 'replace', label: 'Use server copy (discard this device\'s local data)', type: 'secondary' },
               { id: 'cancel', label: 'Cancel', type: 'secondary' }
             ]
           });
@@ -223,12 +223,16 @@ export const saveSettings = (stateParam = null) => {
             showNotification('Cancelled. No changes made.', 'info');
             return;
           }
-          // Persist preference for next connect (cleared by yjs after applying)
-          if (choice === 'local' || choice === 'server') {
-            setSetting(state, 'journal-prefer', choice);
+          if (choice === 'replace') {
+            try {
+              if (window && window.indexedDB) {
+                const req = window.indexedDB.deleteDatabase('dnd-journal');
+                req.onsuccess = () => {};
+                req.onerror = () => {};
+              }
+            } catch {}
           }
-          // Prefer server: simply connect; LWW resolves character fields
-          // Prefer local: yjs will reapply character fields after connect
+          // Merge: rely on CRDT. Replace: local cache cleared before connect, server wins naturally.
           doSave();
         })
         .catch(() => {
