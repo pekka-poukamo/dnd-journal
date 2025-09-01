@@ -16,7 +16,8 @@ import {
   renderAIPromptPreview
 } from './settings-views.js';
 
-import { getFormData, showNotification } from './utils.js';
+import { getFormData, showNotification, isValidRoomName } from './utils.js';
+import { getSyncServerHttpBase } from './yjs.js';
 import { showChoiceModal as baseShowChoiceModal } from './components/modal.js';
 
 // Allow overriding in tests via dependency injection
@@ -157,6 +158,28 @@ const setupFormHandlers = () => {
   if (!formElement) return;
 
   if (!formElement.hasAttribute('data-handler-attached')) {
+    // Lowercase and validate on blur for journal-name
+    const journalInput = formElement.querySelector('[name="journal-name"]');
+    if (journalInput && !journalInput.hasAttribute('data-lowercase-attached')) {
+      journalInput.addEventListener('input', () => {
+        const val = (journalInput.value || '').toLowerCase();
+        journalInput.value = val;
+        // Live validity feedback: remove invalid style while typing
+        if (isValidRoomName(val) || val === '') {
+          journalInput.classList.remove('form-input--invalid');
+        }
+      });
+      journalInput.addEventListener('blur', () => {
+        const value = (journalInput.value || '').toLowerCase();
+        if (value && !isValidRoomName(value)) {
+          showNotification('Invalid name. Use lowercase letters, numbers, and hyphens only.', 'warning');
+          journalInput.classList.add('form-input--invalid');
+        } else {
+          journalInput.classList.remove('form-input--invalid');
+        }
+      });
+      journalInput.setAttribute('data-lowercase-attached', 'true');
+    }
     formElement.addEventListener('submit', (e) => {
       e.preventDefault();
       saveSettings();
@@ -179,7 +202,12 @@ export const saveSettings = (stateParam = null) => {
     // Gather inputs
     const apiKey = (formData['openai-api-key'] || '').trim();
     const aiEnabled = formData['ai-enabled'] === true || formData['ai-enabled'] === 'on';
-    const journalName = (formData['journal-name'] || '').trim();
+    const journalNameRaw = (formData['journal-name'] || '').trim().toLowerCase();
+    if (journalNameRaw && !isValidRoomName(journalNameRaw)) {
+      showNotification('Invalid journal name. Allowed: lowercase letters, numbers, hyphens.', 'error');
+      return;
+    }
+    const journalName = journalNameRaw; // already lowercased above
     
     const applySettings = (targetState) => {
       setSetting(targetState, 'openai-api-key', apiKey);
@@ -201,12 +229,19 @@ export const saveSettings = (stateParam = null) => {
       return;
     }
 
-    // Use same-origin server for status check when journal is provided
+    // Use sync server base for status check when journal is provided
     try {
-      const isBrowser = typeof window !== 'undefined' && window.location && window.location.origin;
-      const baseOrigin = isBrowser && (window.location.protocol === 'http:' || window.location.protocol === 'https:')
-        ? window.location.origin
-        : 'http://localhost:1234';
+      const baseOrigin = getSyncServerHttpBase();
+      let shouldCheck = true;
+      try {
+        const urlObj = new URL(baseOrigin);
+        shouldCheck = (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1');
+      } catch {}
+      if (!shouldCheck) {
+        // In production or unknown host, skip existence check to avoid noisy console/network errors
+        applySettings(state);
+        return;
+      }
       const statusUrl = `${baseOrigin}/sync/room/${encodeURIComponent(journalName)}/status`;
       return fetch(statusUrl)
         .then(r => r.ok ? r.json() : { exists: false })

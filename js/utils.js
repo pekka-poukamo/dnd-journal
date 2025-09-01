@@ -94,6 +94,16 @@ export const formatAIPromptText = (text) => {
     .trim();
 };
 
+// Validate room/journal names. Allowed:
+// - lowercase Unicode letters (including accents), numbers
+// - hyphen '-'
+// Disallow spaces and other punctuation for URL/path safety
+export const isValidRoomName = (input) => {
+  const value = (input || '').toString();
+  const pattern = /^[\p{Ll}\p{Nd}-]+$/u;
+  return pattern.test(value);
+};
+
 // Pure function to get form data from any form
 export const getFormData = (form) => {
   // Try FormData first, fallback to manual extraction for test environments

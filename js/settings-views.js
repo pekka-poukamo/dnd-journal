@@ -67,7 +67,9 @@ export const renderSettingsForm = (formOrSettings, settings = null) => {
     form.querySelector('[name="journal-name"]') :
     document.getElementById('journal-name');
   if (journalNameInput) {
-    journalNameInput.value = settingsData['journal-name'] || '';
+    journalNameInput.value = (settingsData['journal-name'] || '').toLowerCase();
+    // Provide inline hint for allowed characters
+    journalNameInput.setAttribute('placeholder', 'lowercase letters, numbers, hyphens only');
   }
 };
 
