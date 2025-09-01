@@ -15,13 +15,11 @@ describe('Settings Page', function() {
       <html>
         <body>
           <form id="settings-form">
-            <input id="openai-api-key" name="openai-api-key" />
-            <input id="ai-enabled" name="ai-enabled" type="checkbox" />
             <input id="journal-name" name="journal-name" />
             <button type="submit">Save Settings</button>
           </form>
           <div id="connection-status"></div>
-          <button id="test-api-key">Test API Key</button>
+          <div id="ai-status"></div>
         </body>
       </html>
     `);
@@ -43,26 +41,22 @@ describe('Settings Page', function() {
     });
 
     it('should load settings data', function() {
-      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
-      YjsModule.setSetting(state, 'ai-enabled', true);
+      YjsModule.setSetting(state, 'journal-name', 'jn');
       
       Settings.initSettingsPage(state);
       Settings.renderSettingsPage(state);
       
-      expect(document.getElementById('openai-api-key').value).to.equal('sk-test123');
-      expect(document.getElementById('ai-enabled').checked).to.be.true;
+      expect(document.getElementById('journal-name').value).to.equal('jn');
     });
   });
 
   describe('renderSettingsPage', function() {
     it('should render settings form', function() {
-      YjsModule.setSetting(state, 'openai-api-key', 'sk-test456');
-      YjsModule.setSetting(state, 'ai-enabled', false);
+      YjsModule.setSetting(state, 'journal-name', 'abc');
       
       Settings.initSettingsPage(state);
       
-      expect(document.getElementById('openai-api-key').value).to.equal('sk-test456');
-      expect(document.getElementById('ai-enabled').checked).to.be.false;
+      expect(document.getElementById('journal-name').value).to.equal('abc');
     });
 
     it('should handle empty settings data', function() {
@@ -85,42 +79,26 @@ describe('Settings Page', function() {
       Settings.initSettingsPage(state);
       
       const form = document.getElementById('settings-form');
-      document.getElementById('openai-api-key').value = 'sk-newsecret';
-      document.getElementById('ai-enabled').checked = true;
+      document.getElementById('journal-name').value = 'jn-1';
       
       Settings.saveSettings(state);
       
-      expect(YjsModule.getSetting(state, 'openai-api-key')).to.equal('sk-newsecret');
-      expect(YjsModule.getSetting(state, 'ai-enabled')).to.be.true;
+      expect(YjsModule.getSetting(state, 'journal-name')).to.equal('jn-1');
     });
 
     it('should handle trimming settings', function() {
       // Initialize the page first to set up form element reference
       Settings.initSettingsPage(state);
       
-      document.getElementById('openai-api-key').value = '  sk-trimtest  ';
+      document.getElementById('journal-name').value = '  jn  ';
       
       Settings.saveSettings(state);
       
       // Settings should be trimmed when saved
-      expect(YjsModule.getSetting(state, 'openai-api-key')).to.equal('sk-trimtest');
+      expect(YjsModule.getSetting(state, 'journal-name')).to.equal('jn');
     });
 
-    it('should handle boolean settings', function() {
-      // Initialize the page first to set up form element reference
-      Settings.initSettingsPage(state);
-      
-      document.getElementById('ai-enabled').checked = true;
-      
-      Settings.saveSettings(state);
-      
-      expect(YjsModule.getSetting(state, 'ai-enabled')).to.be.true;
-      
-      document.getElementById('ai-enabled').checked = false;
-      Settings.saveSettings(state);
-      
-      expect(YjsModule.getSetting(state, 'ai-enabled')).to.be.false;
-    });
+    // ai-enabled setting removed
   });
 
   describe('Journal name conflict flow', function() {
@@ -191,14 +169,12 @@ describe('Settings Page', function() {
     it('should update when Y.js settings change', function() {
       Settings.initSettingsPage(state);
       
-      YjsModule.setSetting(state, 'openai-api-key', 'sk-reactive');
-      YjsModule.setSetting(state, 'ai-enabled', true);
+      YjsModule.setSetting(state, 'journal-name', 'reactive');
       
       // Note: In real app, Y.js observers would trigger updates
       Settings.renderSettingsPage(state);
       
-      expect(document.getElementById('openai-api-key').value).to.equal('sk-reactive');
-      expect(document.getElementById('ai-enabled').checked).to.be.true;
+      expect(document.getElementById('journal-name').value).to.equal('reactive');
     });
   });
 
@@ -213,32 +189,12 @@ describe('Settings Page', function() {
       document.body.appendChild(aiPromptPreview);
     });
 
-    it('should handle showing AI prompt when AI is disabled', async function() {
-      YjsModule.setSetting(state, 'ai-enabled', false);
-      YjsModule.setSetting(state, 'openai-api-key', '');
-      
-      await Settings.showCurrentAIPrompt();
-      
-      const promptContent = document.getElementById('ai-prompt-content');
-      expect(promptContent.innerHTML).to.include('AI features are not enabled');
-    });
+    // AI disabled case removed; server indicates availability when needed
 
-    it('should handle showing AI prompt when AI is enabled but no API key', async function() {
-      YjsModule.setSetting(state, 'ai-enabled', true);
-      YjsModule.setSetting(state, 'openai-api-key', '');
-      
-      await Settings.showCurrentAIPrompt();
-      
-      const promptContent = document.getElementById('ai-prompt-content');
-      expect(promptContent.innerHTML).to.include('AI features are not enabled');
-    });
+    // No API key case removed
 
-    it('should handle showing AI prompt when AI is enabled with API key', async function() {
-      YjsModule.setSetting(state, 'ai-enabled', true);
-      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
-      
+    it('should show AI prompt preview when available', async function() {
       await Settings.showCurrentAIPrompt();
-      
       const promptPreview = document.getElementById('ai-prompt-preview');
       expect(promptPreview.style.display).to.equal('block');
     });

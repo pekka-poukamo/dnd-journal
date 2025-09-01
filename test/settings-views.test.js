@@ -12,91 +12,23 @@ describe('Settings Views Module', function() {
     
     // Set up a clean DOM environment for each test
     document.body.innerHTML = `
-      <form id="settings-form">
-        <input type="text" id="openai-api-key" name="openai-api-key" />
-        <input type="checkbox" id="ai-enabled" name="ai-enabled" />
-      </form>
+      <form id="settings-form"></form>
       <div id="connection-status"></div>
       <div id="test-container"></div>
     `;
   });
 
   describe('renderSettingsForm', function() {
-    it('should populate API key input', function() {
-      const settings = {
-        'openai-api-key': 'sk-test123'
-      };
-
-      SettingsViews.renderSettingsForm(settings);
-
-      const apiKeyInput = document.getElementById('openai-api-key');
-      expect(apiKeyInput.value).to.equal('sk-test123');
-    });
-
-    it('should handle empty API key', function() {
-      const settings = {
-        'openai-api-key': ''
-      };
-
-      SettingsViews.renderSettingsForm(settings);
-
-      const apiKeyInput = document.getElementById('openai-api-key');
-      expect(apiKeyInput.value).to.equal('');
-    });
-
-    it('should handle undefined API key', function() {
-      const settings = {};
-
-      SettingsViews.renderSettingsForm(settings);
-
-      const apiKeyInput = document.getElementById('openai-api-key');
-      expect(apiKeyInput.value).to.equal('');
-    });
-
-    it('should set AI enabled checkbox when true', function() {
-      const settings = {
-        'ai-enabled': true
-      };
-
-      SettingsViews.renderSettingsForm(settings);
-
-      const aiEnabledCheckbox = document.getElementById('ai-enabled');
-      expect(aiEnabledCheckbox.checked).to.be.true;
-    });
-
-    it('should set AI enabled checkbox when string "true"', function() {
-      const settings = {
-        'ai-enabled': 'true'
-      };
-
-      SettingsViews.renderSettingsForm(settings);
-
-      const aiEnabledCheckbox = document.getElementById('ai-enabled');
-      expect(aiEnabledCheckbox.checked).to.be.true;
-    });
-
-    it('should unset AI enabled checkbox when false', function() {
-      const settings = {
-        'ai-enabled': false
-      };
-
-      SettingsViews.renderSettingsForm(settings);
-
-      const aiEnabledCheckbox = document.getElementById('ai-enabled');
-      expect(aiEnabledCheckbox.checked).to.be.false;
+    // API key and AI toggle removed from UI; ensure function is no-op without fields
+    it('should not throw with minimal settings', function() {
+      expect(() => SettingsViews.renderSettingsForm({ 'journal-name': 'test' })).to.not.throw();
     });
 
     // Sync server input removed from UI
 
     it('should handle missing form elements gracefully', function() {
-      // Remove form elements
-      document.getElementById('openai-api-key').remove();
-      document.getElementById('ai-enabled').remove();
-      // sync-server-url input removed in new UI
-
       const settings = {
-        'openai-api-key': 'sk-test',
-        'ai-enabled': true,
+        'journal-name': 'jn',
         'dnd-journal-sync-server': 'wss://test.com'
       };
 
@@ -115,17 +47,12 @@ describe('Settings Views Module', function() {
       }).to.not.throw();
     });
 
-    it('should populate all settings at once', function() {
-      const settings = {
-        'openai-api-key': 'sk-complete-test',
-        'ai-enabled': true
-      };
-
-      SettingsViews.renderSettingsForm(settings);
-
-      expect(document.getElementById('openai-api-key').value).to.equal('sk-complete-test');
-      expect(document.getElementById('ai-enabled').checked).to.be.true;
-      // no sync-server-url assertion as it's removed
+    it('should enable show AI prompt button', function() {
+      const button = document.createElement('button');
+      button.id = 'show-ai-prompt';
+      document.body.appendChild(button);
+      SettingsViews.renderSettingsForm({});
+      expect(button.disabled).to.be.false;
     });
   });
 
@@ -327,13 +254,13 @@ describe('Settings Views Module', function() {
       document.body.appendChild(aiPromptPreview);
     });
 
-    it('should render AI disabled state', function() {
+    it('should render AI unavailable state', function() {
       SettingsViews.renderAIPromptPreview(false, null);
 
       const promptContent = document.getElementById('ai-prompt-content');
       const promptPreview = document.getElementById('ai-prompt-preview');
       
-      expect(promptContent.innerHTML).to.include('AI features are not enabled');
+      expect(promptContent.innerHTML).to.include('AI is currently unavailable');
       expect(promptPreview.style.display).to.equal('block');
     });
 

@@ -11,12 +11,10 @@ import {
 import { PROMPTS } from './prompts.js';
 import { buildContext, hasContext } from './context.js';
 
-// Check if AI is available
+// Check if AI is available (server-driven)
 export const isAIEnabled = () => {
-  const state = getYjsState();
-  const apiKey = getSetting(state, 'openai-api-key', '');
-  const enabled = getSetting(state, 'ai-enabled', false);
-  return Boolean(enabled && apiKey);
+  // Assume enabled; caller may optionally check /ai/status elsewhere for UI
+  return true;
 };
 
 // Build messages array for OpenAI API
@@ -29,31 +27,28 @@ export const buildMessages = (systemPrompt, userPrompt) => {
     : [{ role: 'user', content: userPrompt }];
 };
 
-// Simple AI call function
+// Simple AI call function via server proxy
 const callAI = (systemPrompt, userPrompt) => {
   const state = getYjsState();
-  const apiKey = getSetting(state, 'openai-api-key', '');
-  
+  const journalName = getSetting(state, 'journal-name', '') || undefined;
   const messages = buildMessages(systemPrompt, userPrompt);
 
-  return fetch('https://api.openai.com/v1/chat/completions', {
+  // Use same-origin server
+  const isBrowser = typeof window !== 'undefined' && window.location && window.location.origin;
+  const baseOrigin = isBrowser && (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+    ? window.location.origin
+    : 'http://localhost:1234';
+
+  return fetch(`${baseOrigin}/ai/chat`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'gpt-4.1',
-      messages,
-      max_tokens: 2500,
-      temperature: 0.8
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, max_tokens: 2500, temperature: 0.8, room: journalName })
   })
   .then(response => {
     if (!response.ok) {
       return response.json()
         .then(errorData => {
-          throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+          throw new Error(errorData.error || `HTTP ${response.status}`);
         })
         .catch(() => {
           throw new Error(`HTTP ${response.status}`);
@@ -61,12 +56,12 @@ const callAI = (systemPrompt, userPrompt) => {
     }
     return response.json();
   })
-  .then(data => data.choices[0]?.message?.content?.trim());
+  .then(data => data.content);
 };
 
 // Generate storytelling questions (uses Yjs for sync)
 export const generateQuestions = (character = null, entries = null, forceRegenerate = false) => {
-  if (!isAIEnabled() || !hasContext(character, entries)) {
+  if (!hasContext(character, entries)) {
     return Promise.resolve(null);
   }
 
@@ -101,10 +96,6 @@ export const generateQuestions = (character = null, entries = null, forceRegener
 
 // Get prompt preview (for debugging/display)
 export const getPromptPreview = (character = null, entries = null) => {
-  if (!isAIEnabled()) {
-    return Promise.resolve(null);
-  }
-
   return buildContext(character, entries)
     .then(context => {
       const userPrompt = PROMPTS.storytelling.user(context);

@@ -32,13 +32,84 @@ console.log(`📁 Data directory: ${existsSync(DATA_DIR) ? 'exists' : 'will be c
 const httpServer = createServer((req, res) => {
   try {
     const { pathname } = parse(req.url || '', true);
-    // CORS for simple GET
+    // CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS') {
       res.statusCode = 204;
       res.end();
+      return;
+    }
+
+    // AI status endpoint: GET /ai/status
+    if (req.method === 'GET' && pathname === '/ai/status') {
+      const enabled = Boolean(process.env.OPENAI_API_KEY);
+      const model = process.env.OPENAI_MODEL || 'gpt-4.1';
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ enabled, model }));
+      return;
+    }
+
+    // AI chat proxy: POST /ai/chat
+    if (req.method === 'POST' && pathname === '/ai/chat') {
+      const enabled = Boolean(process.env.OPENAI_API_KEY);
+      if (!enabled) {
+        res.statusCode = 503;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: 'AI not configured', enabled: false }));
+        return;
+      }
+
+      let raw = '';
+      req.on('data', (chunk) => { raw += chunk; });
+      req.on('end', async () => {
+        try {
+          const body = raw ? JSON.parse(raw) : {};
+          const messages = Array.isArray(body.messages) ? body.messages : [];
+          if (!messages.length) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'messages[] required' }));
+            return;
+          }
+
+          const model = body.model || process.env.OPENAI_MODEL || 'gpt-4.1';
+          const temperature = typeof body.temperature === 'number' ? Math.max(0, Math.min(2, body.temperature)) : 0.8;
+          const max_tokens = typeof body.max_tokens === 'number' ? body.max_tokens : 2500;
+
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ model, messages, temperature, max_tokens })
+          });
+
+          if (!response.ok) {
+            let errMsg = `HTTP ${response.status}`;
+            try {
+              const errData = await response.json();
+              errMsg = errData.error?.message || errMsg;
+            } catch {}
+            res.statusCode = response.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: errMsg }));
+            return;
+          }
+
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content?.trim() || '';
+          const usage = data.usage || null;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ content, model, usage }));
+        } catch (e) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'AI proxy error' }));
+        }
+      });
       return;
     }
 

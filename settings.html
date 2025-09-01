@@ -164,61 +164,18 @@
                 <section class="settings-section">
                     <div class="settings-section-header">
                         <h2>AI Features</h2>
-                        <p class="settings-section-description">Enable AI-powered summarization and insights for your journal</p>
+                        <p class="settings-section-description">AI-powered summarization and insights for your journal</p>
+                        <div id="ai-status" class="api-test-result" style="display: none; margin-top: 8px;"></div>
                     </div>
                     
-                    <!-- AI Configuration Subsection -->
+                    <!-- AI Prompt Tools Subsection -->
                     <div class="settings-subsection">
-                        <h3 class="settings-subsection-title">Configuration</h3>
-                        
-                        <div class="form-group">
-                            <label for="openai-api-key" class="form-label">
-                                OpenAI API Key
-                            </label>
-                            <input 
-                                type="password" 
-                                id="openai-api-key" 
-                                name="openai-api-key"
-                                class="form-input" 
-                                placeholder="sk-..."
-                                autocomplete="off"
-                                data-lpignore="true"
-                                data-1p-ignore="true"
-                                data-bwignore="true"
-                                data-form-type="other"
-                            >
-                            <p class="form-help">
-                                Your API key is stored locally and never sent to our servers.
-                                <a href="https://platform.openai.com/api-keys" target="_blank">Get your API key from OpenAI</a>
-                            </p>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="ai-enabled" name="ai-enabled" class="checkbox-input">
-                                <span class="checkbox-text">Enable AI features (requires API key)</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <!-- AI Testing & Validation Subsection -->
-                    <div class="settings-subsection">
-                        <h3 class="settings-subsection-title">Testing & Validation</h3>
-                        
-                        <div class="form-group">
-                            <button id="test-api-key" type="button" class="btn btn-secondary">
-                                Test API Key
-                            </button>
-                            <div id="api-test-result" class="api-test-result"></div>
-                        </div>
+                        <h3 class="settings-subsection-title">Tools</h3>
                         
                         <div class="form-group">
                             <button id="show-ai-prompt" class="btn btn-secondary" disabled>
                                 Show Current AI Prompt
                             </button>
-                            <small class="form-text text-muted">
-                                Requires OpenAI API Key and AI Features to be enabled above.
-                            </small>
                             <div id="ai-prompt-preview" class="api-test-result" style="display: none;">
                                 <h4>Current AI Prompt Preview:</h4>
                                 <div id="ai-prompt-content" class="prompt-content"></div>

@@ -131,6 +131,20 @@ global.fetch = async function(url, options) {
       }
     };
   }
+  // Mock server AI status and chat endpoints
+  if (typeof url === 'string' && (url.endsWith('/ai/status') || url.endsWith('/ai/chat'))) {
+    await new Promise(function(resolve) { setImmediate(resolve); });
+    if (url.endsWith('/ai/status')) {
+      return { ok: true, status: 200, json: async () => ({ enabled: true, model: 'gpt-4.1' }) };
+    }
+    if (url.endsWith('/ai/chat')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ content: 'Mocked response from server proxy', model: 'gpt-4.1', usage: null })
+      };
+    }
+  }
   return {
     ok: false,
     status: 404,

@@ -13,7 +13,8 @@ import {
   renderSettingsForm,
   renderConnectionStatus,
   renderCachedSettingsContent,
-  renderAIPromptPreview
+  renderAIPromptPreview,
+  renderAIStatus
 } from './settings-views.js';
 
 import { getFormData, showNotification } from './utils.js';
@@ -66,6 +67,22 @@ export const initSettingsPage = async (stateParam = null) => {
     
     // Replace cached content with fresh data
     renderSettingsPage();
+    // Fetch AI status and render indicator (only when unavailable)
+    try {
+      const isBrowser = typeof window !== 'undefined' && window.location && window.location.origin;
+      const baseOrigin = isBrowser && (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+        ? window.location.origin
+        : 'http://localhost:1234';
+      const res = await fetch(`${baseOrigin}/ai/status`);
+      if (res.ok) {
+        const status = await res.json();
+        renderAIStatus(Boolean(status.enabled), status.model);
+      } else {
+        renderAIStatus(false);
+      }
+    } catch {
+      renderAIStatus(false);
+    }
     
     // Set up form handling after initial render (ensures DOM elements exist)
     setupFormHandlers();
@@ -85,8 +102,6 @@ export const renderSettingsPage = (stateParam = null) => {
   try {
     const state = stateParam || getYjsState();
     const settings = {
-      'openai-api-key': getSetting(state, 'openai-api-key', ''),
-      'ai-enabled': getSetting(state, 'ai-enabled', false),
       'journal-name': getSetting(state, 'journal-name', '')
     };
     
@@ -109,14 +124,7 @@ export const renderSettingsPage = (stateParam = null) => {
 // Set up form event handlers
 const setupFormHandlers = () => {
   // Set up button handlers first (independent of form)
-  const testApiButton = document.getElementById('test-api-key');
-  if (testApiButton && !testApiButton.hasAttribute('data-handler-attached')) {
-    testApiButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      testAPIKey();
-    });
-    testApiButton.setAttribute('data-handler-attached', 'true');
-  }
+  // Test API key button removed
   
   // Connection testing UI removed
   
@@ -177,20 +185,14 @@ export const saveSettings = (stateParam = null) => {
     const formData = getFormData(formElement);
     
     // Gather inputs
-    const apiKey = (formData['openai-api-key'] || '').trim();
-    const aiEnabled = formData['ai-enabled'] === true || formData['ai-enabled'] === 'on';
     const journalName = (formData['journal-name'] || '').trim();
     
     const applySettings = (targetState) => {
-      setSetting(targetState, 'openai-api-key', apiKey);
-      setSetting(targetState, 'ai-enabled', aiEnabled);
       setSetting(targetState, 'journal-name', journalName);
       showNotification('Settings saved successfully!', 'success');
     };
 
     const applySettingsLocalOnly = (targetState) => {
-      setSetting(targetState, 'openai-api-key', apiKey);
-      setSetting(targetState, 'ai-enabled', aiEnabled);
       setSetting(targetState, 'journal-name', '');
       showNotification('Settings saved successfully!', 'success');
     };
@@ -200,6 +202,10 @@ export const saveSettings = (stateParam = null) => {
       applySettingsLocalOnly(state);
       return;
     }
+
+    // Optimistically apply journal name synchronously for responsive UI/tests
+    const previousJournalName = getSetting(state, 'journal-name', '');
+    setSetting(state, 'journal-name', journalName);
 
     // Use same-origin server for status check when journal is provided
     try {
@@ -226,6 +232,8 @@ export const saveSettings = (stateParam = null) => {
           });
           if (choice === 'cancel') {
             showNotification('Cancelled. No changes made.', 'info');
+            // Revert optimistic change
+            setSetting(state, 'journal-name', previousJournalName);
             return;
           }
           if (choice === 'replace') {
@@ -334,22 +342,34 @@ export const testAPIKey = (stateParam = null) => {
 // Show current AI prompt
 export const showCurrentAIPrompt = async () => {
   try {
-    const aiEnabled = isAIEnabled();
-    
-    if (!aiEnabled) {
-      renderAIPromptPreview(aiEnabled, null);
-      showNotification('AI features not enabled', 'info');
+    // Check server AI status
+    const isBrowser = typeof window !== 'undefined' && window.location && window.location.origin;
+    const baseOrigin = isBrowser && (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+      ? window.location.origin
+      : 'http://localhost:1234';
+    let available = true;
+    try {
+      const statusRes = await fetch(`${baseOrigin}/ai/status`);
+      if (statusRes.ok) {
+        const status = await statusRes.json();
+        available = Boolean(status && status.enabled);
+      }
+    } catch {
+      available = false;
+    }
+
+    // Show preview container immediately, then fill with messages
+    renderAIPromptPreview(available, null);
+    if (!available) {
+      showNotification('AI currently unavailable', 'warning');
       return;
     }
-    
-    // Show preview container immediately, then fill with messages
-    renderAIPromptPreview(aiEnabled, null);
-    
+
     // Get prompt preview using same logic as AI module
     const promptPreview = await getPromptPreview();
     const messages = promptPreview ? buildMessages(promptPreview.systemPrompt, promptPreview.userPrompt) : null;
     
-    renderAIPromptPreview(aiEnabled, messages);
+    renderAIPromptPreview(true, messages);
     showNotification('Current AI prompts displayed', 'success');
   } catch (error) {
     console.error('Failed to show AI prompt:', error);

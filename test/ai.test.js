@@ -24,25 +24,15 @@ describe('AI Module', function() {
   });
 
   describe('isAIEnabled', function() {
-    it('should return false when AI is disabled', function() {
-      YjsModule.setSetting(state, 'ai-enabled', false);
-      expect(AI.isAIEnabled(state)).to.be.false;
-    });
-
-    it('should return true when AI is enabled and API key is set', function() {
-      YjsModule.setSetting(state, 'ai-enabled', true);
-      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+    it('should return true by default (server-managed availability)', function() {
       expect(AI.isAIEnabled(state)).to.be.true;
     });
   });
 
   describe('generateQuestions', function() {
-    it('should return null when API not available', async function() {
-      // No API key set, so API should not be available
-      const character = { name: 'Test Character' };
-      const entries = [];
-      
-      const result = await AI.generateQuestions(character, entries);
+    it('should return null when no context available', async function() {
+      // No character and entries
+      const result = await AI.generateQuestions(null, null);
       expect(result).to.be.null;
     });
 
@@ -93,18 +83,7 @@ describe('AI Module', function() {
   });
 
   describe('getPromptPreview', function() {
-    it('should return null when AI not available', async function() {
-      // No API key set
-      const character = { name: 'Test Character' };
-      const entries = [];
-      
-      const result = await AI.getPromptPreview(character, entries);
-      expect(result).to.be.null;
-    });
-
-    it('should return prompt preview when AI available', async function() {
-      YjsModule.setSetting(state, 'ai-enabled', true);
-      YjsModule.setSetting(state, 'openai-api-key', 'sk-test123');
+    it('should return prompt preview with minimal context', async function() {
       
       const character = {
         name: 'Aragorn',

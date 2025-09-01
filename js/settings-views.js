@@ -20,37 +20,11 @@ export const renderSettingsForm = (formOrSettings, settings = null) => {
     settingsData = settings;
   }
   
-  // API Key setting - try form-based access first, then fallback to document query
-  const apiKeyInput = form ? 
-    form.querySelector('[name="openai-api-key"]') : 
-    document.getElementById('openai-api-key');
-  if (apiKeyInput) {
-    apiKeyInput.value = settingsData['openai-api-key'] || '';
-  }
-  
-  // AI Features checkbox
-  const aiEnabledCheckbox = form ? form.querySelector('[name="ai-enabled"]') : document.getElementById('ai-enabled');
-  if (aiEnabledCheckbox) {
-    aiEnabledCheckbox.checked = settingsData['ai-enabled'] === 'true' || settingsData['ai-enabled'] === true;
-  }
-  
-  // Update show AI prompt button state
+  // Ensure AI prompt button is enabled by default; availability handled elsewhere
   const showPromptButton = document.getElementById('show-ai-prompt');
   if (showPromptButton) {
-    const hasApiKey = settingsData['openai-api-key'] && settingsData['openai-api-key'].trim().length > 0;
-    const aiEnabled = settingsData['ai-enabled'] === 'true' || settingsData['ai-enabled'] === true;
-    showPromptButton.disabled = !hasApiKey || !aiEnabled;
-    
-    // Update button title to give user feedback about requirements
-    if (!hasApiKey && !aiEnabled) {
-      showPromptButton.title = 'Requires OpenAI API Key and AI Features to be enabled';
-    } else if (!hasApiKey) {
-      showPromptButton.title = 'Requires OpenAI API Key';
-    } else if (!aiEnabled) {
-      showPromptButton.title = 'Requires AI Features to be enabled';
-    } else {
-      showPromptButton.title = 'Show current AI prompt configuration';
-    }
+    showPromptButton.disabled = false;
+    showPromptButton.title = 'Show current AI prompt configuration';
   }
   
   // Sync server setting - try different ID patterns and key names
@@ -102,7 +76,7 @@ export const setTestConnectionLoading = (isLoading) => {
 };
 
 // Render AI prompt preview
-export const renderAIPromptPreview = (aiEnabled, messages = null) => {
+export const renderAIPromptPreview = (aiAvailable, messages = null) => {
   const promptPreviewElement = document.getElementById('ai-prompt-preview');
   const promptContentElement = document.getElementById('ai-prompt-content');
   
@@ -111,11 +85,11 @@ export const renderAIPromptPreview = (aiEnabled, messages = null) => {
     return;
   }
   
-  if (!aiEnabled) {
+  if (!aiAvailable) {
     promptContentElement.innerHTML = `
       <div class="system-prompt">
-        <p><strong>AI features are not enabled.</strong></p>
-        <p>Please configure your OpenAI API key and enable AI features to view prompts.</p>
+        <p><strong>AI is currently unavailable.</strong></p>
+        <p>The server does not have an API key configured or is unreachable.</p>
       </div>
     `;
   } else if (!messages) {
@@ -143,6 +117,19 @@ export const renderAIPromptPreview = (aiEnabled, messages = null) => {
   }
   
   promptPreviewElement.style.display = 'block';
+};
+
+// Render AI status indicator (visible only when unavailable)
+export const renderAIStatus = (available, model) => {
+  const status = document.getElementById('ai-status');
+  if (!status) return;
+  if (available) {
+    status.style.display = 'none';
+    status.textContent = '';
+  } else {
+    status.style.display = 'block';
+    status.textContent = 'AI is unavailable on the server.';
+  }
 };
 
 // Pure function to render cached settings content immediately
