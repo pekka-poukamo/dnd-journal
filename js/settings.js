@@ -17,7 +17,6 @@ import {
 } from './settings-views.js';
 
 import { getFormData, showNotification, isValidRoomName } from './utils.js';
-import { normalizeRoomName } from './utils.js';
 import { getSyncServerHttpBase } from './yjs.js';
 import { showChoiceModal as baseShowChoiceModal } from './components/modal.js';
 
@@ -208,7 +207,7 @@ export const saveSettings = (stateParam = null) => {
       showNotification('Invalid journal name. Allowed: lowercase letters, numbers, hyphens.', 'error');
       return;
     }
-    const journalName = normalizeRoomName(journalNameRaw);
+    const journalName = journalNameRaw; // already lowercased above
     
     const applySettings = (targetState) => {
       setSetting(targetState, 'openai-api-key', apiKey);

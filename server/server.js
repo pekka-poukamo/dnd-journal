@@ -15,7 +15,6 @@ import { createServer } from 'http';
 import { parse } from 'url';
 import * as Y from 'yjs';
 // Normalize room names similarly on the server to ensure consistent doc paths
-const normalizeRoomName = (input) => (input || '').toString().toLowerCase();
 const isValidRoomName = (input) => /^[\p{Ll}\p{Nd}-]+$/u.test((input || '').toString());
 
 const PORT = process.env.PORT || process.argv[2] || 1234;
@@ -49,7 +48,7 @@ const httpServer = createServer((req, res) => {
     if (req.method === 'GET' && pathname && pathname.startsWith('/sync/room/') && pathname.endsWith('/status')) {
       const parts = pathname.split('/').filter(Boolean); // ['sync','room',':name','status']
       const providedName = decodeURIComponent(parts[2] || '');
-      const roomName = normalizeRoomName(providedName);
+      const roomName = (providedName || '').toString().toLowerCase();
       if (!isValidRoomName(roomName)) {
         res.statusCode = 400;
         res.setHeader('Content-Type', 'application/json');
@@ -117,7 +116,7 @@ wss.on('connection', (ws, req) => {
 
   setupWSConnection(ws, req, {
     getYDoc: (docName) => {
-      const normalizedDocName = normalizeRoomName(docName);
+      const normalizedDocName = (docName || '').toString().toLowerCase();
       if (!isValidRoomName(normalizedDocName)) {
         throw new Error('Invalid room name');
       }

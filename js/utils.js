@@ -94,18 +94,6 @@ export const formatAIPromptText = (text) => {
     .trim();
 };
 
-// Normalize room/journal names for cross-platform compatibility
-// - lower-case
-// - strip diacritics (e.g., ä -> a)
-// - replace whitespace and underscores with '-'
-// - keep only a-z, 0-9 and '-'
-// - collapse multiple '-' and trim leading/trailing '-'
-export const normalizeRoomName = (input) => {
-  // Legacy helper retained for compatibility: now only lowercases
-  const source = (input || '').toString();
-  return source.toLowerCase();
-};
-
 // Validate room/journal names. Allowed:
 // - lowercase Unicode letters (including accents), numbers
 // - hyphen '-'

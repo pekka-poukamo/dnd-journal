@@ -2,7 +2,7 @@
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
-import { normalizeRoomName, isValidRoomName } from './utils.js';
+import { isValidRoomName } from './utils.js';
 
 // Internal Y.js state (private)
 let ydoc = null;
@@ -132,8 +132,7 @@ const setupSyncFromSettings = () => {
     if (journalName) {
       try {
         const wsUrl = resolveWebSocketUrl();
-        // Always normalize the document/room name used for sync
-        const normalizedDocName = normalizeRoomName(journalName);
+        const normalizedDocName = journalName.toLowerCase();
         if (!isValidRoomName(normalizedDocName)) {
           return; // Do not attempt to connect with invalid names
         }
