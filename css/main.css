@@ -246,6 +246,19 @@ main {
   border-color: var(--color-accent);
 }
 
+/* Invalid input states */
+.form-input--invalid,
+.form-textarea--invalid,
+.form-select--invalid {
+  border-color: #ef4444;
+}
+
+.form-input--invalid:focus,
+.form-textarea--invalid:focus,
+.form-select--invalid:focus {
+  border-color: #ef4444;
+}
+
 .form-textarea {
   min-height: 100px;
   resize: vertical;

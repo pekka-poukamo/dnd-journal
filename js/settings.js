@@ -163,12 +163,20 @@ const setupFormHandlers = () => {
     const journalInput = formElement.querySelector('[name="journal-name"]');
     if (journalInput && !journalInput.hasAttribute('data-lowercase-attached')) {
       journalInput.addEventListener('input', () => {
-        journalInput.value = (journalInput.value || '').toLowerCase();
+        const val = (journalInput.value || '').toLowerCase();
+        journalInput.value = val;
+        // Live validity feedback: remove invalid style while typing
+        if (isValidRoomName(val) || val === '') {
+          journalInput.classList.remove('form-input--invalid');
+        }
       });
       journalInput.addEventListener('blur', () => {
         const value = (journalInput.value || '').toLowerCase();
         if (value && !isValidRoomName(value)) {
           showNotification('Invalid name. Use lowercase letters, numbers, and hyphens only.', 'warning');
+          journalInput.classList.add('form-input--invalid');
+        } else {
+          journalInput.classList.remove('form-input--invalid');
         }
       });
       journalInput.setAttribute('data-lowercase-attached', 'true');
