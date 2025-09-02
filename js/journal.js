@@ -25,6 +25,7 @@ import {
 } from './journal-views.js';
 
 import { generateId, isValidEntry, formatDate, getFormData, showNotification } from './utils.js';
+import { PART_SIZE_DEFAULT, recomputeRecentSummary, maybeCloseOpenPart } from './parts.js';
 
 import { generateQuestions } from './ai.js';
 import { hasContext as hasGoodContext } from './context.js';
@@ -191,6 +192,12 @@ export const handleAddEntry = (entryData, stateParam = null) => {
     };
 
     addEntry(state, entry);
+    // Summaries: try closing part if threshold reached, otherwise update recent summary
+    maybeCloseOpenPart(state, PART_SIZE_DEFAULT).then((closed) => {
+      if (!closed) {
+        return recomputeRecentSummary(state, PART_SIZE_DEFAULT);
+      }
+    }).catch(() => {});
     clearSessionQuestions(state); // Clear questions when journal data changes
     clearEntryForm();
     showNotification('Entry added successfully!', 'success');
