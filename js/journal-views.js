@@ -503,7 +503,7 @@ export const renderEntries = (container, entries, options = {}) => {
 // Ensure meta summary is available and render it into the provided element
 const ensureAndRenderMetaSummary = (allEntries, targetElement) => {
   const state = getYjsState();
-  const existing = getStoredSummary(state, 'journal:adventure-summary');
+  const existing = getSummary(state, 'journal:adventure-summary');
   if (existing) {
     targetElement.innerHTML = parseMarkdown(existing);
     return;
