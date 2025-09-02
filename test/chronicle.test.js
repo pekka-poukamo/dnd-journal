@@ -83,7 +83,7 @@ describe('Chronicle Page', function() {
     // Enable AI so recompute can run and seed initial recent to detect change
     setSetting(state, 'ai-enabled', true);
     setSetting(state, 'openai-api-key', 'test');
-    setSummary(state, RECENT_SUMMARY_KEY, 'old recent');
+    ensureChronicleStructure(state).set('recentSummary', 'old recent');
     // Add open part entries to summarize
     addEntry(state, { id: 'r1', content: 'open one', timestamp: Date.now() });
     addEntry(state, { id: 'r2', content: 'open two', timestamp: Date.now() });
