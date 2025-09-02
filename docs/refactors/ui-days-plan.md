@@ -27,11 +27,6 @@
 - On part close/backfill, generate and set `chronicle.parts[n].title` once.
 - Fallback to "Part N" if missing.
 
-## Day G: UX polish
-- Copy-to-clipboard for So Far / Recent.
-- Expand/collapse accessibility, keyboard navigation.
-- Skeleton loaders; mobile/desktop layout refinements.
-
 ## Day H: Backfill and edge cases
 - On Chronicle/Part load, lazy backfill missing summaries/titles.
 - Handle 0 parts, small journals, and very large lists (virtualization if needed).
