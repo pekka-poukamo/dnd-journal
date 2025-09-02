@@ -12,19 +12,23 @@
 - Build `journal:recent-summary` (~1000 words) for the open part; clear on entry changes.
 
 ## Phase 3: Context integration (no flags)
-- Update context builder to use: character summaries + `journal:parts:so-far:latest` + `journal:recent-summary`.
-- Remove old “older vs last 5 recent” split.
+- Update context builder to use: character summaries + so-far summary + recent summary only.
+- Remove old “older vs last 5 recent” split and fallback to entries.
 - Integration tests for question generation path.
 
 ## Phase 4: Backfill and migration
 - Lazy backfill on access: generate missing part summaries and latest so‑far as needed.
-- Ensure idempotent across devices (Yjs last-writer-wins for simple keys).
+- Ensure idempotent across devices.
 - Handle journals with 0, < partSize, and multiple parts.
 
-## Phase 5: UI implementation
-- Add read-only views for Parts list (Part 1, Part 2, …) and “Adventure so far”.
-- Show latest so‑far summary and current recent summary in journal UI.
-- Do not allow regenerating closed parts; allow regenerating recent only.
+## Phase 5: UI implementation (object-based model)
+- Data model change: use Yjs objects (Y.Map/Y.Array) under `chronicle`:
+  - `chronicle.parts` (Y.Map<number → Y.Map>) with `{ title, summary, entries (Y.Array), createdAt }`
+  - `chronicle.latestPartIndex` (number)
+  - `chronicle.soFarSummary` (string), `chronicle.recentSummary` (string)
+- Chronicle page: Parts list + expandable So Far; "Regenerate Recent" only.
+- Part page: Part N + Title, summary, entries (collapsible), Back to Chronicle.
+- Journal page: entries only; no summaries.
 
 ## Phase 6: Documentation and cleanup
 - Developer docs + ADR addendum describing parts model, keys, and invariants.

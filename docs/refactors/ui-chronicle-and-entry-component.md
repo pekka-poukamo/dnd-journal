@@ -52,16 +52,14 @@
 
 ---
 
-## Colon-Keyed Storage vs. Objects/Arrays in Yjs
+## Data Model Shift: Objects/Arrays in Yjs (render-friendly)
 
-### What we use now
-- Flat, colon-keyed entries in a `summariesMap` (Y.Map):
-  - `journal:part:<n>` → part summary (string)
-  - `journal:part:<n>:entries` → JSON array of entry IDs (stringified)
-  - `journal:part:<n>:title` → part title (string)
-  - `journal:parts:latest` → latest closed index (stringified number)
-  - `journal:parts:so-far:latest` → combined summary (string)
-  - `journal:recent-summary` → open-part summary (string)
+### New structure
+- `chronicle` (Y.Map)
+  - `parts` (Y.Map<number → Y.Map>): per part `{ title: string, summary: string, entries: Y.Array<string>, createdAt: number }`
+  - `latestPartIndex` (number)
+  - `soFarSummary` (string)
+  - `recentSummary` (string)
 
 ### Why colon keys?
 - Pros:
@@ -75,17 +73,6 @@
   - Grouping overhead: listing all parts requires scanning keys or maintaining an index.
   - Type safety: values are strings; JSON encoding/decoding is caller’s responsibility.
 
-### Alternative: nested objects/arrays in Yjs
-- Store a `Y.Map` → `parts` where each `n` maps to a `Y.Map` with `{ title, entries (Y.Array), summary }`.
-- Pros:
-  - Stronger cohesion: part data co-located; easier to iterate related fields.
-  - Clearer typing if you model arrays/maps natively (less stringification).
-- Cons:
-  - Heavier reads/writes: materializing nested structures to access a single field.
-  - Migration friction: restructuring nested CRDTs is more complex than adding keys.
-  - Conflict complexity: concurrent edits in nested structures need more careful merge semantics.
-
 ### Recommendation
-- Keep colon-keyed flat storage for immutable, independently readable items (part summary, title, entries membership, so-far, recent).
-- Consider a lightweight index key (e.g., `journal:parts:index` → `[1,2,...]`) if listing/scanning becomes a hotspot.
-- If we later need richer mutable part metadata, we can introduce a nested `Y.Map` per part while keeping read-heavy artifacts (summary, so-far) as flat keys.
+- Adopt the object/array structure above for Chronicle rendering and part management.
+- Keep immutable behavior: closed parts never edited; only `recentSummary` and `soFarSummary` overwritten.
