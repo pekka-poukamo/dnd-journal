@@ -21,7 +21,12 @@
 - Ensure idempotent across devices (Yjs last-writer-wins for simple keys).
 - Handle journals with 0, < partSize, and multiple parts.
 
-## Phase 5: Documentation and cleanup
+## Phase 5: UI implementation
+- Add read-only views for Parts list (Part 1, Part 2, …) and “Adventure so far”.
+- Show latest so‑far summary and current recent summary in journal UI.
+- Do not allow regenerating closed parts; allow regenerating recent only.
+
+## Phase 6: Documentation and cleanup
 - Developer docs + ADR addendum describing parts model, keys, and invariants.
 - UI retains existing “Remove summaries” action; no change needed.
 
