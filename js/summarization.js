@@ -93,7 +93,7 @@ export const summarize = (summaryKey, content, maxWords = null) => {
   } else if (summaryKey.startsWith('journal:adventure-summary')) {
     prompt = PROMPTS.summarization.adventureSummary(content, maxWords);
   } else if (summaryKey.startsWith('journal:meta-summary')) {
-    // Old meta-summary no longer supported intentionally
+    // Align meta summary to use the same adventure summary pattern
     prompt = PROMPTS.summarization.adventureSummary(content, maxWords);
   } else {
     prompt = `Summarize this content concisely:\n\n${content}`;
