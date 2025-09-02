@@ -3,6 +3,7 @@
 
 import { getYjsState, getSummary, setSummary, getEntries } from './yjs.js';
 import { summarize } from './summarization.js';
+import { PROMPTS } from './prompts.js';
 
 export const PART_SIZE_DEFAULT = 20;
 
@@ -86,6 +87,18 @@ export const maybeCloseOpenPart = async (state, partSize = PART_SIZE_DEFAULT) =>
     const fullText = partEntries.map(e => e.content).join('\n\n');
     const partSummaryKey = getPartSummaryKey(partIndex);
     await summarize(partSummaryKey, fullText, 1000);
+
+    // Generate part title once if missing (short, evocative)
+    const titleKey = `journal:part:${partIndex}:title`;
+    if (!getSummary(state, titleKey)) {
+      const titlePrompt = PROMPTS.partTitle(fullText);
+      // Reuse summarize call path without JSON; treat as generic summary function
+      // We can call summarize with a custom key to cache the title text
+      const title = await summarize(titleKey, titlePrompt, 50).catch(() => null);
+      if (title && typeof title === 'string') {
+        setSummary(state, titleKey, title);
+      }
+    }
 
     // Update latest index
     setLatestClosedPartIndex(state, partIndex);
