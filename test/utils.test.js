@@ -261,6 +261,37 @@ describe('Utils Module', function() {
       expect(html).to.include('</p>');
       expect(html).to.include('<br>');
     });
+
+    it('should handle nested unordered lists', function() {
+      const markdown = '- Item 1\n  - Sub 1\n  - Sub 2\n- Item 2\n  * Sub A\n    - Sub A.1';
+      const html = Utils.parseMarkdown(markdown);
+
+      expect(html).to.include('<ul>');
+      expect(html).to.include('<li>Item 1');
+      expect(html).to.include('<ul>');
+      expect(html).to.include('<li>Sub 1</li>');
+      expect(html).to.include('<li>Sub 2</li>');
+      expect(html).to.include('</ul>');
+      expect(html).to.include('<li>Item 2');
+      // mixed markers and deeper nesting
+      expect(html).to.include('<li>Sub A');
+      expect(html).to.include('<li>Sub A.1</li>');
+    });
+
+    it('should handle nested ordered lists', function() {
+      const markdown = '1. One\n   1. One-A\n   2. One-B\n2. Two\n   1. Two-A\n      1. Two-A-i';
+      const html = Utils.parseMarkdown(markdown);
+
+      expect(html).to.include('<ol>');
+      expect(html).to.include('<li>One');
+      expect(html).to.include('<ol>');
+      expect(html).to.include('<li>One-A</li>');
+      expect(html).to.include('<li>One-B</li>');
+      expect(html).to.include('</ol>');
+      expect(html).to.include('<li>Two');
+      expect(html).to.include('<li>Two-A');
+      expect(html).to.include('<li>Two-A-i</li>');
+    });
   });
 
   describe('formatAIPromptText', function() {
