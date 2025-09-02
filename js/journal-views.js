@@ -7,7 +7,7 @@ import {
   getFormDataForPage
 } from './navigation-cache.js';
 import { summarize } from './summarization.js';
-import { getYjsState, getSummary } from './yjs.js';
+import { getYjsState } from './yjs.js';
 import { getWordCount } from './utils.js';
 import { isAIEnabled } from './ai.js';
 import { createEntryItem } from './components/entry-item.js';
@@ -52,11 +52,8 @@ export const createEntryElement = (entry, onEdit, onDelete) => createEntryItem(e
 export const createEntrySummarySection = (entry) => {
   const summarySection = document.createElement('div');
   summarySection.className = 'entry-summary-section';
-  
-  // Always start with full content display and let summarize() handle cache checking
   summarySection.appendChild(createSummaryDisplay(null, entry));
   generateSummaryAsync(entry, summarySection);
-  
   return summarySection;
 };
 
@@ -402,57 +399,9 @@ export const renderEntries = (container, entries, options = {}) => {
 
 // Ensure meta summary is available and render it into the provided element
 const ensureAndRenderMetaSummary = (allEntries, targetElement) => {
-  const state = getYjsState();
-  const existing = getSummary(state, 'journal:adventure-summary');
-  if (existing) {
-    targetElement.innerHTML = parseMarkdown(existing);
-    return;
-  }
-
-  // Build summary source text similar to context.js logic
-  const config = { entryWords: 200, metaWords: 1000 };
-
-  const entryPromises = allEntries.map(entry => {
-    const key = `entry:${entry.id}`;
-
-    // Prefer cached structured summary if present
-    const cached = getSummary(state, key);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (parsed && parsed.summary) {
-          return Promise.resolve(`${parsed.summary}`);
-        }
-      } catch {}
-      return Promise.resolve(`${cached}`);
-    }
-
-    if (getWordCount(entry.content) > config.entryWords) {
-      return summarize(key, entry.content, config.entryWords)
-        .then(result => {
-          if (result && typeof result === 'object' && result.summary) {
-            return `${result.summary}`;
-          }
-          return `${result}`;
-        })
-        .catch(() => `${entry.content}`);
-    }
-    return Promise.resolve(`${entry.content}`);
-  });
-
-  return Promise.all(entryPromises)
-    .then(parts => parts.join('\n\n'))
-    .then(summaryText => summarize('journal:adventure-summary', summaryText, config.metaWords))
-    .then(meta => {
-      targetElement.innerHTML = parseMarkdown(meta || '');
-      return meta;
-    })
-    .catch(() => {
-      // Local-first graceful fallback: concise overview without AI
-      const fallback = buildLocalMetaSummary(allEntries, 60);
-      targetElement.innerHTML = parseMarkdown(fallback);
-      return null;
-    });
+  // Phase I cleanup: Journal no longer renders or stores overall meta summary
+  targetElement.innerHTML = '';
+  return Promise.resolve(null);
 };
 
 // Build a concise local-only meta summary (no AI). Keeps it readable and short.
