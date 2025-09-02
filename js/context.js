@@ -2,6 +2,7 @@
 // Single function for all AI context needs
 
 import { getYjsState, getCharacterData, getEntries, getSummary } from './yjs.js';
+import { SO_FAR_LATEST_KEY, RECENT_SUMMARY_KEY } from './parts.js';
 import { summarize } from './summarization.js';
 import { formatDate, getWordCount } from './utils.js';
 
@@ -36,22 +37,31 @@ export const buildContext = (character = null, entries = null) => {
     buildCharacterSection(field, content, config)
   );
 
-  // Prepare async entries context call (original behavior)
+  // Prepare async entries context call (Phase 3: use parts summaries when available)
   let entriesPromise;
   if (entries && entries.length > 0) {
-    if (entries.length > 10) {
-      // Parallel adventure summary (older entries only) and recent entries
-      const olderEntries = entries.slice(0, -5);
-      const recentEntriesOnly = entries.slice(-5);
-      entriesPromise = Promise.all([
-        createAdventureSummary(olderEntries, config),
-        createEntriesInfo(recentEntriesOnly, config, 'Recent Detailed Adventures')
-      ]).then(([adventureSummary, recentEntries]) =>
-        `\n\nAdventure Summary: ${adventureSummary}${recentEntries}`
-      );
-    } else {
-      entriesPromise = createEntriesInfo(entries, config);
-    }
+    entriesPromise = (async () => {
+      const state = getYjsState();
+      const soFar = getSummary(state, SO_FAR_LATEST_KEY) || '';
+      const recent = getSummary(state, RECENT_SUMMARY_KEY) || '';
+      if (soFar || recent) {
+        let result = '';
+        if (soFar) result += `\n\nAdventure So Far: ${soFar}`;
+        if (recent) result += `\n\nRecent Adventures: ${recent}`;
+        return result;
+      }
+      // Fallback: original behavior without triggering AI
+      if (entries.length > 10) {
+        const olderEntries = entries.slice(0, -5);
+        const recentEntriesOnly = entries.slice(-5);
+        const [adventureSummary, recentEntries] = await Promise.all([
+          createAdventureSummary(olderEntries, config),
+          createEntriesInfo(recentEntriesOnly, config, 'Recent Detailed Adventures')
+        ]);
+        return `\n\nAdventure Summary: ${adventureSummary}${recentEntries}`;
+      }
+      return createEntriesInfo(entries, config);
+    })();
   } else {
     entriesPromise = Promise.resolve('\n\nNo journal entries yet. This character is just beginning their adventure.');
   }
