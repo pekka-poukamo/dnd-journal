@@ -256,6 +256,8 @@ export const saveEntryEdit = (entryId, entryData, stateParam = null) => {
     
     // Clear cache when entry content changes
     clearSummary(`entry:${entryId}`);
+    // Clear recent (open part) summary so it can refresh; keep stable parts intact
+    clearSummary('journal:recent-summary');
     clearSessionQuestions(state); // Clear questions when journal data changes
     
     showNotification('Entry updated successfully!', 'success');
@@ -276,6 +278,7 @@ export const handleDeleteEntry = (entryId, stateParam = null) => {
       
       // Clear cache when entry is deleted
       clearSummary(`entry:${entryId}`);
+      clearSummary('journal:recent-summary');
       clearSessionQuestions(state); // Clear questions when journal data changes
       
       showNotification('Entry deleted successfully!', 'success');

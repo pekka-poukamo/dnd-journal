@@ -17,7 +17,8 @@ export const buildContext = (character = null, entries = null) => {
   const config = {
     characterWords: 300,
     entryWords: 200,
-    metaWords: 1000
+    metaWords: 1000,
+    partSize: 20
   };
 
   // Build character context string
@@ -35,22 +36,35 @@ export const buildContext = (character = null, entries = null) => {
     buildCharacterSection(field, content, config)
   );
 
-  // Prepare async entries context call
+  // Prepare async entries context call using stable parts and recent summary
   let entriesPromise;
   if (entries && entries.length > 0) {
-    if (entries.length > 10) {
-      // Parallel adventure summary (older entries only) and recent entries
-      const olderEntries = entries.slice(0, -5);
-      const recentEntriesOnly = entries.slice(-5);
-      entriesPromise = Promise.all([
-        createAdventureSummary(olderEntries, config),
-        createEntriesInfo(recentEntriesOnly, config, 'Recent Detailed Adventures')
-      ]).then(([adventureSummary, recentEntries]) =>
-        `\n\nAdventure Summary: ${adventureSummary}${recentEntries}`
-      );
-    } else {
-      entriesPromise = createEntriesInfo(entries, config);
-    }
+    const { closedParts, openPart } = partitionEntries(entries, config.partSize);
+    const latestClosedPartIndex = closedParts.length;
+    const latestClosedPart = latestClosedPartIndex > 0 ? closedParts[latestClosedPartIndex - 1] : null;
+
+    const adventureSoFarPromise = latestClosedPart
+      ? createPartSummary(latestClosedPart, config, latestClosedPartIndex)
+      : Promise.resolve('');
+
+    const recentSummaryPromise = openPart && openPart.length > 0
+      ? createRecentSummary(openPart, config)
+      : Promise.resolve('');
+
+    entriesPromise = Promise.all([adventureSoFarPromise, recentSummaryPromise])
+      .then(([adventureSoFar, recentSummary]) => {
+        let result = '';
+        if (adventureSoFar) {
+          result += `\n\nAdventure So Far (Part ${latestClosedPartIndex}): ${adventureSoFar}`;
+        }
+        if (recentSummary) {
+          result += `\n\nRecent Adventures: ${recentSummary}`;
+        }
+        if (!result) {
+          result = '\n\nNo journal entries yet. This character is just beginning their adventure.';
+        }
+        return result;
+      });
   } else {
     entriesPromise = Promise.resolve('\n\nNo journal entries yet. This character is just beginning their adventure.');
   }
@@ -61,7 +75,6 @@ export const buildContext = (character = null, entries = null) => {
     entriesPromise
   ])
   .then(([characterSections, entriesInfo]) => {
-    // Combine all context
     return characterInfo + characterSections.join('') + entriesInfo;
   });
 };
@@ -127,16 +140,26 @@ const createEntriesInfo = (entries, config, sectionTitle = 'Adventures') => {
     .then(entryInfos => `\n\n${sectionTitle}:` + entryInfos.join(''));
 };
 
-// Create adventure summary from older entries only
-const createAdventureSummary = (entries, config) => {
-  const adventureSummaryKey = 'journal:adventure-summary';
-  
-  // Generate individual entry summaries for all older entries
+// Partition entries into stable closed parts and an open recent part
+const partitionEntries = (entries, partSize) => {
+  const total = entries.length;
+  const numClosedParts = Math.floor(total / partSize);
+  const closedParts = [];
+  for (let i = 0; i < numClosedParts; i++) {
+    const start = i * partSize;
+    const end = start + partSize;
+    closedParts.push(entries.slice(start, end));
+  }
+  const openPart = entries.slice(numClosedParts * partSize);
+  return { closedParts, openPart };
+};
+
+// Build combined text from entries (uses cached entry summaries when available)
+const buildCombinedEntryText = (entries, config) => {
   const state = getYjsState();
-  const entrySummaryPromises = entries.map(entry => {
+  const entryPromises = entries.map(entry => {
     const entryKey = `entry:${entry.id}`;
 
-    // Prefer cached structured summaries when available
     const cached = getSummary(state, entryKey);
     if (cached) {
       try {
@@ -164,18 +187,26 @@ const createAdventureSummary = (entries, config) => {
 
     return Promise.resolve(`${entry.content}`);
   });
-  
-  return Promise.all(entrySummaryPromises)
-    .then(entrySummaries => {
-      if (entrySummaries.length === 0) {
-        return '';
-      }
-      
-      const summaryText = entrySummaries.join('\n\n');
-      return summarize(adventureSummaryKey, summaryText, config.metaWords);
-    })
+
+  return Promise.all(entryPromises).then(parts => parts.join('\n\n'));
+};
+
+// Create a stable part summary (~1000 words), cached under journal:part:<index>
+const createPartSummary = (entries, config, partIndex) => {
+  return buildCombinedEntryText(entries, config)
+    .then(summaryText => summarize(`journal:part:${partIndex}`, summaryText, config.metaWords))
     .catch(error => {
-      console.warn('Failed to generate adventure summary:', error);
+      console.warn(`Failed to generate part summary ${partIndex}:`, error);
+      return '';
+    });
+};
+
+// Create a ~1000-word recent summary (open part). This is not stable and may be cleared on changes.
+const createRecentSummary = (entries, config) => {
+  return buildCombinedEntryText(entries, config)
+    .then(summaryText => summarize('journal:recent-summary', summaryText, config.metaWords))
+    .catch(error => {
+      console.warn('Failed to generate recent summary:', error);
       return '';
     });
 };
