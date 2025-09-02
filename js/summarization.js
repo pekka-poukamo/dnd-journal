@@ -98,7 +98,6 @@ export const summarize = (summaryKey, content, maxWords = null) => {
   } else {
     prompt = `Summarize this content concisely:\n\n${content}`;
   }
-  console.log('summarize', summaryKey, prompt, options, maxWords);
   return callAI(prompt, options)
     .then(response => {
       // For entry summaries, response is already an object
