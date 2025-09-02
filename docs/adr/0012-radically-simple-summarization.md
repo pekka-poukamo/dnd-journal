@@ -60,8 +60,8 @@ const context = await getCharacterContext(); // Debug context
 ### Key Features:
 1. **Caching**: Summary checks cache before generating new content
 2. **Auto Character Summarization**: Long backstory/notes automatically summarized
-3. **Comprehensive Context**: Recent entries + summaries + meta-summaries (~2000 words)
-4. **Meta-Summary Logic**: After 10 summaries, combines 5 oldest into meta-summary
+3. **Comprehensive Context**: Recent entries + summaries (~2000 words)
+4. [Deprecated] Meta-summary logic removed in favor of Parts Chronicle model (ADR-0019)
 5. **Direct Keys**: Each entry/character field has specific summarization key
 
 ## Consequences
@@ -76,7 +76,7 @@ const context = await getCharacterContext(); // Debug context
 
 ### Negative
 - **Async Complexity**: Character and entry formatting now requires await
-- **Fixed Strategy**: Meta-summary logic is hardcoded
+- [Deprecated] Fixed meta-summary strategy is removed (see ADR-0019)
 - **Cache Dependencies**: Modules now depend on storage for performance
 
 ## Compliance
