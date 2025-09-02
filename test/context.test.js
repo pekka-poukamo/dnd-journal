@@ -173,5 +173,18 @@ describe('Context Module', function() {
       expect(context).to.include('Solo');
       expect(context).to.include('No journal entries yet');
     });
+
+    it('should summarize long backstory and notes', async function() {
+      const longText = new Array(1000).fill('lorem').join(' ');
+      const character = { name: 'LongOne', backstory: longText, notes: longText };
+      const entries = [];
+      // Enable AI so summarize can run
+      const s = getYjsState();
+      YjsModule.setSetting(s, 'ai-enabled', true);
+      YjsModule.setSetting(s, 'openai-api-key', 'test');
+      const ctx = await buildContext(character, entries);
+      expect(ctx).to.include('Backstory (Summary):');
+      expect(ctx).to.include('Notes (Summary):');
+    });
   });
 });

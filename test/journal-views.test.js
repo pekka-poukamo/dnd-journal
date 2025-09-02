@@ -230,6 +230,22 @@ describe('Journal Views Module', function() {
       const entryElements = container.querySelectorAll('.entry');
       expect(entryElements).to.have.length(2);
     });
+
+    it('should render recent and older sections when many entries', function() {
+      const container = document.getElementById('entries-container');
+      const many = [];
+      const base = 1640995200000;
+      for (let i = 0; i < 12; i++) {
+        many.push({ id: `e${i}`, content: `content ${i}`, timestamp: base + i * 1000 });
+      }
+      JournalViews.renderEntries(container, many, () => {}, () => {});
+      const sections = container.querySelectorAll('.entries-section');
+      expect(sections.length).to.be.greaterThan(0);
+      const recentHeader = container.querySelector('.entries-section--recent h3');
+      const olderHeader = container.querySelector('.entries-section--older h3');
+      expect(recentHeader.textContent).to.include('Recent Adventures');
+      expect(olderHeader.textContent).to.include('Older Adventures');
+    });
   });
 
   describe('renderCharacterSummary', function() {
