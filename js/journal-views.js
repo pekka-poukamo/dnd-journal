@@ -292,24 +292,11 @@ export const renderEntries = (container, entries, options = {}) => {
     olderHeader.textContent = 'Older Adventures';
     olderSection.appendChild(olderHeader);
 
-    const metaSummaryContainer = document.createElement('div');
-    metaSummaryContainer.className = 'meta-summary-container';
-
-    const metaSummaryTitle = document.createElement('div');
-    metaSummaryTitle.className = 'meta-summary__title';
-    metaSummaryTitle.textContent = 'Campaign Chronicle (Adventure Summary)';
-    metaSummaryContainer.appendChild(metaSummaryTitle);
-
-    const metaSummaryText = document.createElement('div');
-    metaSummaryText.className = 'meta-summary__text';
-    metaSummaryText.textContent = 'Generating overall summary...';
-    metaSummaryContainer.appendChild(metaSummaryText);
-
-    olderSection.appendChild(metaSummaryContainer);
+    // Phase 7: Remove legacy meta summary UI from Journal
 
     // Collapsible list of older entries
     const collapsible = document.createElement('div');
-    collapsible.className = 'entry-collapsible meta-summary-collapsible';
+    collapsible.className = 'entry-collapsible';
 
     const toggleButton = document.createElement('button');
     toggleButton.className = 'entry-summary__toggle';
@@ -324,7 +311,7 @@ export const renderEntries = (container, entries, options = {}) => {
     toggleButton.appendChild(toggleIcon);
 
     const olderContentDiv = document.createElement('div');
-    olderContentDiv.className = 'entry-summary__content meta-summary__entries';
+    olderContentDiv.className = 'entry-summary__content';
     olderContentDiv.style.display = 'none';
 
     toggleButton.addEventListener('click', () => {
@@ -350,8 +337,7 @@ export const renderEntries = (container, entries, options = {}) => {
     container.innerHTML = '';
     container.appendChild(fragment);
 
-    // After render, ensure meta summary is shown (use cached or generate)
-    ensureAndRenderMetaSummary(sortedEntries, metaSummaryText);
+    // Phase 7: No meta summary rendering in Journal
     return;
   }
   
