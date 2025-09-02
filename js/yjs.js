@@ -203,7 +203,9 @@ export const updateEntry = (state, entryId, updates) => {
   const entries = getEntries(state);
   const index = entries.findIndex(e => e.id === entryId);
   if (index !== -1) {
-    const updatedEntry = { ...entries[index], ...updates, timestamp: Date.now() };
+    // Preserve the original timestamp when editing an entry
+    const originalTimestamp = entries[index].timestamp;
+    const updatedEntry = { ...entries[index], ...updates, timestamp: originalTimestamp };
     getJournalArray(state).delete(index, 1);
     getJournalArray(state).insert(index, [updatedEntry]);
   }
