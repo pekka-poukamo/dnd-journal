@@ -74,23 +74,96 @@ export const parseMarkdown = (text) => {
     .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
     .replace(/`(.*?)`/g, '<code>$1</code>'); // Code
   
-  // Process simple lists - handle unordered lists first (both - and *)
-  result = result.replace(/^[-*] (.+)(\n[-*] .+)*/gm, (match) => {
-    const items = match.split('\n').map(line => {
-      const content = line.replace(/^[-*] /, '').trim();
-      return content ? `<li>${content}</li>` : '<li></li>';
-    }).join('');
-    return `<ul>${items}</ul>`;
-  });
-  
-  // Handle ordered lists
-  result = result.replace(/^\d+\. (.+)(\n\d+\. .+)*/gm, (match) => {
-    const items = match.split('\n').map(line => {
-      const content = line.replace(/^\d+\. /, '').trim();
-      return content ? `<li>${content}</li>` : '<li></li>';
-    }).join('');
-    return `<ol>${items}</ol>`;
-  });
+  // Process lists with nesting support based on indentation
+  // Build lists by scanning lines and managing a stack of list contexts
+  {
+    const lines = result.split('\n');
+    const listStack = [];
+    const outputParts = [];
+    let openLi = false;
+    let openLiIndent = -1;
+
+    const countIndent = (prefix) => {
+      if (!prefix) return 0;
+      // Treat a tab as two spaces to keep behavior simple and predictable
+      const normalized = prefix.replace(/\t/g, '  ');
+      return normalized.length;
+    };
+
+    const closeLiIfOpen = () => {
+      if (openLi) {
+        outputParts.push('</li>');
+        openLi = false;
+        openLiIndent = -1;
+      }
+    };
+
+    const closeListsUntil = (targetIndent) => {
+      while (listStack.length > 0 && listStack[listStack.length - 1].indent > targetIndent) {
+        closeLiIfOpen();
+        const ctx = listStack.pop();
+        outputParts.push(`</${ctx.type}>`);
+      }
+    };
+
+    const openListIfNeeded = (type, indent) => {
+      const top = listStack[listStack.length - 1];
+      if (!top || top.indent < indent) {
+        outputParts.push(`<${type}>`);
+        listStack.push({ type, indent });
+        return;
+      }
+      if (top.indent === indent && top.type !== type) {
+        // Switch list type at the same indentation level
+        closeLiIfOpen();
+        listStack.pop();
+        outputParts.push(`</${top.type}>`);
+        outputParts.push(`<${type}>`);
+        listStack.push({ type, indent });
+      }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const match = line.match(/^([ \t]*)([-*]|\d+\.)\s+(.*)$/);
+      if (match) {
+        const indent = countIndent(match[1] || '');
+        const marker = match[2];
+        const itemType = /\.$/.test(marker) ? 'ol' : 'ul';
+        const content = (match[3] || '').trim();
+
+        // If a new item does not increase indent relative to the open <li>, close it first
+        if (openLi && indent <= openLiIndent) {
+          closeLiIfOpen();
+        }
+
+        // Adjust list stack based on indentation
+        closeListsUntil(indent);
+        openListIfNeeded(itemType, indent);
+
+        // Start a new list item (keep it open to allow nested lists inside)
+        outputParts.push(`<li>${content}`);
+        openLi = true;
+        openLiIndent = indent;
+        continue;
+      }
+
+      // Non-list line: close any open list structures and output the line as-is
+      if (listStack.length > 0) {
+        closeLiIfOpen();
+        closeListsUntil(-1);
+      }
+      outputParts.push(line + '\n');
+    }
+
+    // Close any remaining open items/lists
+    if (listStack.length > 0) {
+      closeLiIfOpen();
+      closeListsUntil(-1);
+    }
+
+    result = outputParts.join('');
+  }
   
   // Handle paragraphs and line breaks
   // Split by double line breaks to identify paragraphs
