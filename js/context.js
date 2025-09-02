@@ -44,23 +44,11 @@ export const buildContext = (character = null, entries = null) => {
       const state = getYjsState();
       const soFar = getSummary(state, SO_FAR_LATEST_KEY) || '';
       const recent = getSummary(state, RECENT_SUMMARY_KEY) || '';
-      if (soFar || recent) {
-        let result = '';
-        if (soFar) result += `\n\nAdventure So Far: ${soFar}`;
-        if (recent) result += `\n\nRecent Adventures: ${recent}`;
-        return result;
-      }
-      // Fallback: original behavior without triggering AI
-      if (entries.length > 10) {
-        const olderEntries = entries.slice(0, -5);
-        const recentEntriesOnly = entries.slice(-5);
-        const [adventureSummary, recentEntries] = await Promise.all([
-          createAdventureSummary(olderEntries, config),
-          createEntriesInfo(recentEntriesOnly, config, 'Recent Detailed Adventures')
-        ]);
-        return `\n\nAdventure Summary: ${adventureSummary}${recentEntries}`;
-      }
-      return createEntriesInfo(entries, config);
+      // Only use parts-based summaries; do not fallback to entries list
+      let result = '';
+      if (soFar) result += `\n\nAdventure So Far: ${soFar}`;
+      if (recent) result += `\n\nRecent Adventures: ${recent}`;
+      return result || '\n\nNo journal summaries yet.';
     })();
   } else {
     entriesPromise = Promise.resolve('\n\nNo journal entries yet. This character is just beginning their adventure.');
