@@ -7,9 +7,9 @@ import {
   getFormDataForPage
 } from './navigation-cache.js';
 import { summarize } from './summarization.js';
-import { getYjsState } from './yjs.js';
+import { getYjsState, getSummary } from './yjs.js';
 import { getWordCount } from './utils.js';
-import { getSummary as getStoredSummary } from './yjs.js';
+import { isAIEnabled } from './ai.js';
 
 // Create journal entry form
 export const createEntryForm = (options = {}) => {
@@ -46,54 +46,106 @@ export const createEntryForm = (options = {}) => {
 
 // Create single journal entry element with summary display by default
 export const createEntryElement = (entry, onEdit, onDelete) => {
-  const entryDiv = document.createElement('article');
-  entryDiv.className = 'entry';
-  entryDiv.dataset.entryId = entry.id;
+  const article = document.createElement('article');
+  article.className = 'entry';
+  article.dataset.entryId = entry.id;
+
+  // Check if we have structured content from AI
+  // Get summary from the summaries map, not from the entry object
+  const state = getYjsState();
+  const summaryKey = `entry:${entry.id}`;
+  const storedSummary = getSummary(state, summaryKey);
   
-  const header = document.createElement('header');
-  header.className = 'entry-header';
+  let title, subtitle, summary;
+  if (storedSummary) {
+    try {
+      const summaryData = JSON.parse(storedSummary);
+      title = summaryData.title;
+      subtitle = summaryData.subtitle;
+      summary = summaryData.summary;
+    } catch (e) {
+      console.error('Failed to parse stored summary:', e);
+    }
+  }
   
-  const meta = document.createElement('div');
-  meta.className = 'entry-meta';
+  // If no structured content, use placeholders
+  if (!title || !subtitle || !summary) {
+    article.classList.add('entry--placeholder');
+    title = title || `Lorem Ipsum and Amet Consectur Adipiscing`;
+    subtitle = subtitle || `In which Lorem Ipsum, a dolor, sat with Amet Consectur, waiting...`;
+    summary = summary || `Mr. Ipsum and Mrs. Consectur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.`;
+  }
+
+  article.innerHTML = `
+    <div class="entry-header">
+      <div class="entry-title"><h3>${title}</h3></div>
+      
+      <div class="entry-subtitle">
+        <p>${subtitle}</p>
+      </div>
+      <div class="entry-meta">
+        <time class="entry-timestamp" datetime="${entry.timestamp}">
+          ${formatDate(entry.timestamp)}
+        </time>
+        <div class="entry-actions">
+          <button class="icon-button" title="Edit">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M11.5 2.5L13.5 4.5L4.5 13.5H2.5V11.5L11.5 2.5Z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="icon-button" title="Delete">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 4H14M5.5 4V2.5C5.5 2.22386 5.72386 2 6 2H10C10.2761 2 10.5 2.22386 10.5 2.5V4M12.5 4V13.5C12.5 13.7761 12.2761 14 12 14H4C3.72386 14 3.5 13.7761 3.5 13.5V4H12.5Z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="entry-summary">
+      <p>${summary}</p>
+    </div>
+    <div class="entry-content entry-content--hidden">
+      ${parseMarkdown(entry.content)}
+    </div>
+    <div class="entry-content-controls">
+      <button class="entry-content-control__toggle">Show chapter</button>
+    </div>
+  `;
   
-  const timestamp = document.createElement('time');
-  timestamp.className = 'entry-timestamp';
-  timestamp.textContent = formatDate(entry.timestamp);
-  timestamp.dateTime = new Date(entry.timestamp).toISOString();
+  // Add event listener to the toggle button
+  const toggleButton = article.querySelector('.entry-content-control__toggle');
+  const entryContent = article.querySelector('.entry-content');
   
-  // Word count placeholder (summaryCount (originalCount))
-  const wordCountSpan = document.createElement('span');
-  wordCountSpan.className = 'entry-word-count';
-  const originalCount = getWordCount(entry.content || '');
-  wordCountSpan.textContent = `(${originalCount})`;
+  toggleButton.addEventListener('click', () => {
+    entryContent.classList.toggle('entry-content--hidden');
+    
+    // Update button text based on current state
+    if (entryContent.classList.contains('entry-content--hidden')) {
+      toggleButton.textContent = 'Show chapter';
+    } else {
+      toggleButton.textContent = 'Hide chapter';
+    }
+  });
   
-  const actions = document.createElement('div');
-  actions.className = 'entry-actions';
+  // Set up edit and delete handlers
+  const editButton = article.querySelector('.icon-button[title="Edit"]');
+  const deleteButton = article.querySelector('.icon-button[title="Delete"]');
   
-  const editButton = document.createElement('button');
-  editButton.textContent = 'Edit';
-  editButton.onclick = () => onEdit(entry.id);
+  if (editButton && onEdit) {
+    editButton.addEventListener('click', () => onEdit(entry.id));
+  }
   
-  const deleteButton = document.createElement('button');
-  deleteButton.textContent = 'Delete';
-  deleteButton.onclick = () => onDelete(entry.id);
+  if (deleteButton && onDelete) {
+    deleteButton.addEventListener('click', () => onDelete(entry.id));
+  }
   
-  actions.appendChild(editButton);
-  actions.appendChild(deleteButton);
+  // If AI is enabled and we don't have a summary yet, generate one
+  if (isAIEnabled() && !storedSummary) {
+    // Generate summary asynchronously and update the display
+    generateSummaryAsync(entry, article);
+  }
   
-  meta.appendChild(timestamp);
-  meta.appendChild(wordCountSpan);
-  meta.appendChild(actions);
-  
-  header.appendChild(meta);
-  
-  // Create summary section with collapsible full content
-  const summarySection = createEntrySummarySection(entry);
-  
-  entryDiv.appendChild(header);
-  entryDiv.appendChild(summarySection);
-  
-  return entryDiv;
+  return article;
 };
 
 // Create entry summary section with collapsible full content
@@ -179,35 +231,37 @@ const createCollapsibleFullContent = (entry) => {
 };
 
 // Generate summary asynchronously and update display
-const generateSummaryAsync = (entry, summarySection) => {
+const generateSummaryAsync = (entry, targetElement) => {
   const summaryKey = `entry:${entry.id}`;
   
   return summarize(summaryKey, entry.content)
-    .then(summary => {
-      // Replace the content with summary display
-      const newDisplay = createSummaryDisplay(summary, entry);
-      summarySection.innerHTML = '';
-      summarySection.appendChild(newDisplay);
-
-      // Update word count metadata now that summary is available
-      const entryElement = summarySection.closest('.entry');
-      if (entryElement) {
-        const wordCountEl = entryElement.querySelector('.entry-word-count');
-        if (wordCountEl) {
-          const summaryCount = getWordCount(summary || '');
-          const originalCount = getWordCount(entry.content || '');
-          wordCountEl.textContent = `${summaryCount} (${originalCount})`;
+    .then(result => {
+      // Check if we got structured content or just a summary
+      if (result && typeof result === 'object' && result.title && result.subtitle && result.summary) {
+        // We have structured content - update the entry display
+        const entryElement = targetElement.closest('.entry') || targetElement;
+        if (entryElement) {
+          // Update title, subtitle, and summary
+          const titleElement = entryElement.querySelector('.entry-title h3');
+          const subtitleElement = entryElement.querySelector('.entry-subtitle p');
+          const summaryElement = entryElement.querySelector('.entry-summary p');
+          
+          if (titleElement) titleElement.textContent = result.title;
+          if (subtitleElement) subtitleElement.textContent = result.subtitle;
+          if (summaryElement) summaryElement.textContent = result.summary;
+          
+          // Remove placeholder class since we now have real content
+          entryElement.classList.remove('entry--placeholder');
         }
+        
+        return result.summary;
+      } else {
+        // Fallback to old behavior - just a summary string
+        return result;
       }
-      return summary;
     })
     .catch(error => {
       console.error('Failed to generate summary:', error);
-      // Remove loading indicator on error and keep full content
-      const loadingDiv = summarySection.querySelector('.entry-summary-loading');
-      if (loadingDiv) {
-        loadingDiv.remove();
-      }
       throw error;
     });
 };

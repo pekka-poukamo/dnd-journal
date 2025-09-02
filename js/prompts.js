@@ -21,8 +21,23 @@ Please create 3 introspective questions that would help this player discover com
   },
   
   summarization: {
-    entry: (text, maxWords = 400) => `Summarize this D&D journal entry. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
+    entry: (text) => `Generate structured content for this D&D journal entry.
 
+Return your response as a valid JSON object with this exact structure:
+{
+  "title": "A title",
+  "subtitle": "A subtitle",
+  "summary": "Summary"
+}
+
+Guidelines:
+- Title: A title of the journal entry in the style of A Tale of Two Cities by Dickens
+- Subtitle: A subheading of the journal entry, a 40 word or less in the style of Dickens, starting with "In which".
+- Summary: A summary of key contents in the style of Dickens, in 40 words or less
+- Do not add items to the summary, pertain to the entry itself
+- Return only the JSON object, no additional text or formatting
+
+Entry content:
 ${text}`,
     
     character: (text, maxWords = 500) => `Summarize this character information. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.

@@ -397,10 +397,12 @@ export const clearAllSummariesHandler = () => {
   try {
     const confirmed = confirm('Are you sure you want to clear all summaries? This action cannot be undone.');
     
-    if (confirmed) {
-      clearAllSummaries();
-      showNotification('All summaries have been cleared', 'success');
-    }
+          if (confirmed) {
+        // Clear the summaries cache
+        clearAllSummaries();
+        
+        showNotification('All summaries have been cleared', 'success');
+      }
   } catch (error) {
     console.error('Failed to clear summaries:', error);
     showNotification('Error clearing summaries', 'error');

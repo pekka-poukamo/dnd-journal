@@ -142,11 +142,8 @@
             <!-- Journal Entries -->
             <section class="entries-section">
                 <h2>The Journal of Puoskari</h2>
-                <div class="entries">
-                    <!-- Entries will be rendered here from JSON data -->
-                </div>
                 <div id="entries-container" class="entries-list">
-                    
+                    <!-- Entries will be rendered here by journal.js -->
                 </div>
             </section>
         </div>
@@ -154,11 +151,5 @@
     
     <script type="module" src="js/journal.js"></script>
     <script type="module" src="js/sw-register.js"></script>
-    <script type="module" src="js/mock-renderer.js"></script>
-    <script type="module">
-        import { renderMockEntries } from './js/mock-renderer.js';
-        // Render mock entries when page loads
-        document.addEventListener('DOMContentLoaded', renderMockEntries);
-    </script>
 </body>
 </html>

@@ -56,30 +56,66 @@ export const sortEntriesByDate = (entries) =>
 export const parseMarkdown = (text) => {
   if (!text) return '';
   
-  return text
+  // Trim whitespace from start and end
+  text = text.trim();
+  if (!text) return '';
+  
+  let result = text;
+  
+  // Process headers first (before other replacements)
+  result = result
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>');
+  
+  // Process inline formatting before list processing
+  result = result
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
     .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
-    .replace(/`(.*?)`/g, '<code>$1</code>') // Code
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>') // H3
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>') // H2
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>') // H1
-    // Handle unordered lists
-    .replace(/^- (.+)(\n- .+)*/gm, (match) => {
-      const items = match.split('\n').map(line => line.replace(/^- /, '').trim()).join('</li><li>');
-      return `<ul><li>${items}</li></ul>`;
-    })
-    // Handle ordered lists
-    .replace(/^\d+\. (.+)(\n\d+\. .+)*/gm, (match) => {
-      const items = match.split('\n').map(line => line.replace(/^\d+\. /, '').trim()).join('</li><li>');
-      return `<ol><li>${items}</li></ol>`;
-    })
-    .replace(/\n\n/g, '__PARAGRAPH__') // Paragraph breaks
-    .replace(/\n/g, '__LINE_BREAK__') // Line breaks
-    .replace(/__PARAGRAPH__/g, '</p><p>') // Convert paragraph breaks
-    .replace(/^/, '<p>') // Start with paragraph
-    .replace(/$/, '</p>') // End with paragraph
-    .replace(/<p><\/p>/g, '') // Remove empty paragraphs
-    .replace(/__LINE_BREAK__/g, '<br>'); // Single line breaks
+    .replace(/`(.*?)`/g, '<code>$1</code>'); // Code
+  
+  // Process simple lists - handle unordered lists first (both - and *)
+  result = result.replace(/^[-*] (.+)(\n[-*] .+)*/gm, (match) => {
+    const items = match.split('\n').map(line => {
+      const content = line.replace(/^[-*] /, '').trim();
+      return content ? `<li>${content}</li>` : '<li></li>';
+    }).join('');
+    return `<ul>${items}</ul>`;
+  });
+  
+  // Handle ordered lists
+  result = result.replace(/^\d+\. (.+)(\n\d+\. .+)*/gm, (match) => {
+    const items = match.split('\n').map(line => {
+      const content = line.replace(/^\d+\. /, '').trim();
+      return content ? `<li>${content}</li>` : '<li></li>';
+    }).join('');
+    return `<ol>${items}</ol>`;
+  });
+  
+  // Handle paragraphs and line breaks
+  // Split by double line breaks to identify paragraphs
+  const paragraphs = result.split(/\n\n+/);
+  
+  // Process each paragraph
+  result = paragraphs.map(paragraph => {
+    if (!paragraph.trim()) return '';
+    
+    // If it's already a header or list, don't wrap in paragraph
+    if (paragraph.match(/^<(h[1-6]|ul|ol)/)) {
+      return paragraph;
+    }
+    
+    // Replace single line breaks with <br> tags
+    const withLineBreaks = paragraph.replace(/\n/g, '<br>');
+    
+    // Wrap in paragraph tags
+    return `<p>${withLineBreaks}</p>`;
+  }).join('');
+  
+  // Clean up any empty paragraph tags
+  result = result.replace(/<p><\/p>/g, '');
+  
+  return result;
 };
 
 // Simple text formatter for AI prompts - supports newlines and basic formatting
