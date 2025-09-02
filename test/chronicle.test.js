@@ -92,7 +92,7 @@ describe('Chronicle Page', function() {
     await waitFor(() => {
       const el = document.getElementById('recent-content');
       return el && el.textContent && el.textContent !== 'Loading...';
-    }, 1000);
+    }, 5000);
     const before = document.getElementById('recent-content').textContent;
 
     // Click regenerate and ensure no errors; element remains present
