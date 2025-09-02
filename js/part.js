@@ -1,7 +1,5 @@
 // Part Page - renders a single Part with title, summary, and entries list
-import { initYjs, getYjsState, getEntries } from './yjs.js';
-import { getSummary } from './yjs.js';
-import { getPartEntriesKey } from './parts.js';
+import { initYjs, getYjsState, getEntries, ensureChronicleStructure, getChroniclePartsMap } from './yjs.js';
 import { createEntryItem } from './components/entry-item.js';
 
 const getQueryParam = (name) => {
@@ -19,14 +17,14 @@ const render = (state, partIndex) => {
   const listEl = document.getElementById('part-entries-list');
   if (!titleEl || !summaryEl || !listEl) return;
 
-  const title = getSummary(state, `journal:part:${partIndex}:title`) || `Part ${partIndex}`;
-  const summary = getSummary(state, `journal:part:${partIndex}`) || '';
+  const parts = getChroniclePartsMap(state);
+  const partObj = parts.get(String(partIndex));
+  const title = (partObj && partObj.get('title')) || `Part ${partIndex}`;
+  const summary = (partObj && partObj.get('summary')) || '';
   titleEl.textContent = title;
   summaryEl.textContent = summary || 'No summary available.';
 
-  const idsJson = getSummary(state, getPartEntriesKey(partIndex));
-  let ids = [];
-  try { ids = JSON.parse(idsJson || '[]'); } catch {}
+  const ids = (partObj && partObj.get('entries') && partObj.get('entries').toArray()) || [];
   const allEntries = getEntries(state);
   const idToEntry = new Map(allEntries.map(e => [e.id, e]));
   listEl.innerHTML = '';

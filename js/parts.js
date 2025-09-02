@@ -2,6 +2,16 @@
 // Focused utilities with no side effects
 
 import { getYjsState, getSummary, setSummary, getEntries } from './yjs.js';
+import { 
+  ensureChronicleStructure,
+  getChroniclePartsMap,
+  setChronicleSoFarSummary,
+  setChronicleRecentSummary,
+  setChronicleLatestPartIndex,
+  setChroniclePartTitle,
+  setChroniclePartSummary,
+  setChroniclePartEntries
+} from './yjs.js';
 import { summarize } from './summarization.js';
 import { PROMPTS } from './prompts.js';
 
@@ -42,10 +52,10 @@ export const setLatestClosedPartIndex = (state, index) => {
 
 // Persist a closed part's membership list (entry IDs) once, if not already set
 export const persistPartMembership = (state, partIndex, entryIds) => {
-  const key = getPartEntriesKey(partIndex);
-  const existing = getSummary(state, key);
-  if (!existing) {
-    setSummary(state, key, JSON.stringify(entryIds));
+  const parts = getChroniclePartsMap(state);
+  const existing = parts.get(String(partIndex));
+  if (!existing || !existing.get('entries')) {
+    setChroniclePartEntries(state, partIndex, entryIds);
   }
 };
 
@@ -70,7 +80,7 @@ export const maybeCloseOpenPart = async (state, partSize = PART_SIZE_DEFAULT) =>
   if (total === 0) return false;
 
   const expectedClosedParts = Math.floor(total / partSize);
-  const latestClosed = getLatestClosedPartIndex(state);
+  const latestClosed = ensureChronicleStructure(state).get('latestPartIndex') || 0;
   if (expectedClosedParts <= latestClosed) return false; // nothing new to close
 
   // Close all missing parts up to expectedClosedParts (handles bulk imports)
@@ -86,32 +96,30 @@ export const maybeCloseOpenPart = async (state, partSize = PART_SIZE_DEFAULT) =>
     // Generate part summary (~1000 words) from full raw text
     const fullText = partEntries.map(e => e.content).join('\n\n');
     const partSummaryKey = getPartSummaryKey(partIndex);
-    await summarize(partSummaryKey, fullText, 1000);
+    const partSummary = await summarize(partSummaryKey, fullText, 1000).catch(() => '');
+    if (partSummary) setChroniclePartSummary(state, partIndex, partSummary);
 
     // Generate part title once if missing (short, evocative)
-    const titleKey = `journal:part:${partIndex}:title`;
-    if (!getSummary(state, titleKey)) {
-      const titlePrompt = PROMPTS.partTitle(fullText);
-      // Reuse summarize call path without JSON; treat as generic summary function
-      // We can call summarize with a custom key to cache the title text
-      const title = await summarize(titleKey, titlePrompt, 50).catch(() => null);
-      if (title && typeof title === 'string') {
-        setSummary(state, titleKey, title);
-      }
-    }
+    const titlePrompt = PROMPTS.partTitle(fullText);
+    const titleKey = `journal:part:${partIndex}:title-gen`;
+    const title = await summarize(titleKey, titlePrompt, 50).catch(() => null);
+    if (title && typeof title === 'string') setChroniclePartTitle(state, partIndex, title);
 
     // Update latest index
-    setLatestClosedPartIndex(state, partIndex);
+    setChronicleLatestPartIndex(state, partIndex);
   }
 
   // Recompute so-far latest by concatenating all closed part summaries
+  const parts = getChroniclePartsMap(state);
   const allSummaries = [];
   for (let i = 1; i <= expectedClosedParts; i++) {
-    const s = getSummary(state, getPartSummaryKey(i));
+    const p = parts.get(String(i));
+    const s = p && p.get('summary');
     if (s) allSummaries.push(s);
   }
   const combined = allSummaries.join('\n\n');
-  await summarize(SO_FAR_LATEST_KEY, combined, 1000);
+  const soFar = await summarize(SO_FAR_LATEST_KEY, combined, 1000).catch(() => '');
+  if (soFar) setChronicleSoFarSummary(state, soFar);
 
   return true;
 };
@@ -123,7 +131,8 @@ export const recomputeRecentSummary = async (state, partSize = PART_SIZE_DEFAULT
   const numClosedParts = Math.floor(total / partSize);
   const openPart = entries.slice(numClosedParts * partSize);
   const fullText = openPart.map(e => e.content).join('\n\n');
-  await summarize(RECENT_SUMMARY_KEY, fullText, 1000);
+  const recent = await summarize(RECENT_SUMMARY_KEY, fullText, 1000).catch(() => '');
+  if (recent) setChronicleRecentSummary(state, recent);
 };
 
 // Backfill: ensure part summaries and so-far exist for current entries
@@ -134,7 +143,7 @@ export const backfillPartsIfMissing = async (state, partSize = PART_SIZE_DEFAULT
 
   // Determine how many parts should exist
   const expectedClosedParts = Math.floor(total / partSize);
-  const latestClosed = getLatestClosedPartIndex(state);
+  const latestClosed = ensureChronicleStructure(state).get('latestPartIndex') || 0;
 
   // Create any missing closed parts first
   let createdAny = false;
@@ -145,20 +154,24 @@ export const backfillPartsIfMissing = async (state, partSize = PART_SIZE_DEFAULT
     const ids = partEntries.map(e => e.id);
     persistPartMembership(state, partIndex, ids);
     const fullText = partEntries.map(e => e.content).join('\n\n');
-    await summarize(getPartSummaryKey(partIndex), fullText, 1000);
-    setLatestClosedPartIndex(state, partIndex);
+    const summary = await summarize(getPartSummaryKey(partIndex), fullText, 1000).catch(() => '');
+    if (summary) setChroniclePartSummary(state, partIndex, summary);
+    setChronicleLatestPartIndex(state, partIndex);
     createdAny = true;
   }
 
   // Ensure so-far latest exists if there are closed parts
   if (expectedClosedParts > 0) {
+    const parts = getChroniclePartsMap(state);
     const allSummaries = [];
     for (let i = 1; i <= expectedClosedParts; i++) {
-      const s = getSummary(state, getPartSummaryKey(i));
+      const p = parts.get(String(i));
+      const s = p && p.get('summary');
       if (s) allSummaries.push(s);
     }
     const combined = allSummaries.join('\n\n');
-    await summarize(SO_FAR_LATEST_KEY, combined, 1000);
+    const soFar = await summarize(SO_FAR_LATEST_KEY, combined, 1000).catch(() => '');
+    if (soFar) setChronicleSoFarSummary(state, soFar);
   }
 
   // Ensure recent summary exists for open part
