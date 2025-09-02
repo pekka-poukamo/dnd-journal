@@ -272,7 +272,6 @@ export const onQuestionsChange = (state, callback) => {
 // =============================================================================
 // CHRONICLE HELPERS (Yjs object-based structure)
 // =============================================================================
-import * as Y from 'yjs';
 
 export const ensureChronicleStructure = (state) => {
   const chronicle = getChronicleMap(state);
