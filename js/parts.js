@@ -113,3 +113,42 @@ export const recomputeRecentSummary = async (state, partSize = PART_SIZE_DEFAULT
   await summarize(RECENT_SUMMARY_KEY, fullText, 1000);
 };
 
+// Backfill: ensure part summaries and so-far exist for current entries
+export const backfillPartsIfMissing = async (state, partSize = PART_SIZE_DEFAULT) => {
+  const entries = getEntries(state);
+  const total = entries.length;
+  if (total === 0) return;
+
+  // Determine how many parts should exist
+  const expectedClosedParts = Math.floor(total / partSize);
+  const latestClosed = getLatestClosedPartIndex(state);
+
+  // Create any missing closed parts first
+  let createdAny = false;
+  for (let partIndex = latestClosed + 1; partIndex <= expectedClosedParts; partIndex++) {
+    const start = (partIndex - 1) * partSize;
+    const end = start + partSize;
+    const partEntries = entries.slice(start, end);
+    const ids = partEntries.map(e => e.id);
+    persistPartMembership(state, partIndex, ids);
+    const fullText = partEntries.map(e => e.content).join('\n\n');
+    await summarize(getPartSummaryKey(partIndex), fullText, 1000);
+    setLatestClosedPartIndex(state, partIndex);
+    createdAny = true;
+  }
+
+  // Ensure so-far latest exists if there are closed parts
+  if (expectedClosedParts > 0) {
+    const allSummaries = [];
+    for (let i = 1; i <= expectedClosedParts; i++) {
+      const s = getSummary(state, getPartSummaryKey(i));
+      if (s) allSummaries.push(s);
+    }
+    const combined = allSummaries.join('\n\n');
+    await summarize(SO_FAR_LATEST_KEY, combined, 1000);
+  }
+
+  // Ensure recent summary exists for open part
+  await recomputeRecentSummary(state, partSize);
+};
+

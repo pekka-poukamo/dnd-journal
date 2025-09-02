@@ -34,3 +34,8 @@
 - Closed parts are immutable: `journal:part:<n>` and `journal:part:<n>:entries` never change.
 - Only `journal:parts:so-far:latest` and `journal:recent-summary` are overwritten.
 - Part summaries use full entry text (not per-entry summaries).
+
+## Phase 7: Legacy cleanup
+- Remove unused legacy code paths for old “adventure summary” and meta summaries.
+- Delete deprecated prompt variants not used by parts/so‑far/recent.
+- Prune tests tied to legacy paths; retain high-signal coverage for parts flow.

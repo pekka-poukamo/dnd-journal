@@ -2,7 +2,7 @@
 // Single function for all AI context needs
 
 import { getYjsState, getCharacterData, getEntries, getSummary } from './yjs.js';
-import { SO_FAR_LATEST_KEY, RECENT_SUMMARY_KEY } from './parts.js';
+import { SO_FAR_LATEST_KEY, RECENT_SUMMARY_KEY, backfillPartsIfMissing, PART_SIZE_DEFAULT } from './parts.js';
 import { summarize } from './summarization.js';
 import { formatDate, getWordCount } from './utils.js';
 
@@ -42,6 +42,8 @@ export const buildContext = (character = null, entries = null) => {
   if (entries && entries.length > 0) {
     entriesPromise = (async () => {
       const state = getYjsState();
+      // Ensure required summaries exist
+      await backfillPartsIfMissing(state, PART_SIZE_DEFAULT);
       const soFar = getSummary(state, SO_FAR_LATEST_KEY) || '';
       const recent = getSummary(state, RECENT_SUMMARY_KEY) || '';
       // Only use parts-based summaries; do not fallback to entries list
