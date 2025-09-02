@@ -88,20 +88,39 @@ const buildCharacterSection = (fieldName, content, config) => {
 
 // Create entries info section with intelligent summarization
 const createEntriesInfo = (entries, config, sectionTitle = 'Adventures') => {
+  const state = getYjsState();
   const entryPromises = entries.map(entry => {
+    const entryKey = `entry:${entry.id}`;
+
+    // Prefer cached structured summaries when available
+    const cached = getSummary(state, entryKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.summary) {
+          return Promise.resolve(`\n- ${parsed.summary}`);
+        }
+      } catch {}
+      return Promise.resolve(`\n- ${cached}`);
+    }
+
     // Remove dates; include only content or summary
     if (getWordCount(entry.content) > config.entryWords) {
-      const entryKey = `entry:${entry.id}`;
       return summarize(entryKey, entry.content, config.entryWords)
-        .then(entrySummary => `\n- ${entrySummary}`)
+        .then(result => {
+          if (result && typeof result === 'object' && result.summary) {
+            return `\n- ${result.summary}`;
+          }
+          return `\n- ${result}`;
+        })
         .catch(error => {
           console.warn(`Failed to generate summary for entry ${entry.id}:`, error);
           return `\n- ${entry.content}`;
         });
-    } else {
-      // Content is short enough - include full content
-      return Promise.resolve(`\n- ${entry.content}`);
     }
+
+    // Content is short enough - include full content
+    return Promise.resolve(`\n- ${entry.content}`);
   });
   
   return Promise.all(entryPromises)
@@ -113,18 +132,37 @@ const createAdventureSummary = (entries, config) => {
   const adventureSummaryKey = 'journal:adventure-summary';
   
   // Generate individual entry summaries for all older entries
+  const state = getYjsState();
   const entrySummaryPromises = entries.map(entry => {
+    const entryKey = `entry:${entry.id}`;
+
+    // Prefer cached structured summaries when available
+    const cached = getSummary(state, entryKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.summary) {
+          return Promise.resolve(`${parsed.summary}`);
+        }
+      } catch {}
+      return Promise.resolve(`${cached}`);
+    }
+
     if (getWordCount(entry.content) > config.entryWords) {
-      const entryKey = `entry:${entry.id}`;
       return summarize(entryKey, entry.content, config.entryWords)
-        .then(entrySummary => `${entrySummary}`)
+        .then(result => {
+          if (result && typeof result === 'object' && result.summary) {
+            return `${result.summary}`;
+          }
+          return `${result}`;
+        })
         .catch(error => {
           console.warn(`Failed to generate summary for entry ${entry.id}:`, error);
           return `${entry.content}`;
         });
-    } else {
-      return Promise.resolve(`${entry.content}`);
     }
+
+    return Promise.resolve(`${entry.content}`);
   });
   
   return Promise.all(entrySummaryPromises)

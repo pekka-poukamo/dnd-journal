@@ -513,11 +513,28 @@ const ensureAndRenderMetaSummary = (allEntries, targetElement) => {
   const config = { entryWords: 200, metaWords: 1000 };
 
   const entryPromises = allEntries.map(entry => {
-    // Remove dates; include only content or summary
+    const key = `entry:${entry.id}`;
+
+    // Prefer cached structured summary if present
+    const cached = getSummary(state, key);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.summary) {
+          return Promise.resolve(`${parsed.summary}`);
+        }
+      } catch {}
+      return Promise.resolve(`${cached}`);
+    }
+
     if (getWordCount(entry.content) > config.entryWords) {
-      const key = `entry:${entry.id}`;
       return summarize(key, entry.content, config.entryWords)
-        .then(s => `${s}`)
+        .then(result => {
+          if (result && typeof result === 'object' && result.summary) {
+            return `${result.summary}`;
+          }
+          return `${result}`;
+        })
         .catch(() => `${entry.content}`);
     }
     return Promise.resolve(`${entry.content}`);
