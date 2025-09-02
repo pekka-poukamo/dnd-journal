@@ -17,7 +17,7 @@
     <!-- Google Fonts for Nordic Minimalism Design -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@100;300;400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,100;0,300;0,400;0,500;0,600;0,700;1,100;1,300;1,400;1,500;1,600;1,700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components/tabs.css">
@@ -51,44 +51,44 @@
     <link rel="modulepreload" href="./node_modules/lib0/environment.js">
     <link rel="modulepreload" href="./node_modules/lib0/indexeddb.js">
     <link rel="modulepreload" href="./node_modules/lib0/broadcastchannel.js">
-
+    
     <!-- Import Map for YJS modules -->
     <script type="importmap">
-    {
-      "imports": {
-        "yjs": "./node_modules/yjs/dist/yjs.mjs",
-        "y-websocket": "./node_modules/y-websocket/src/y-websocket.js",
-        "y-indexeddb": "./node_modules/y-indexeddb/src/y-indexeddb.js",
-        "y-protocols/sync": "./node_modules/y-protocols/sync.js",
-        "y-protocols/auth": "./node_modules/y-protocols/auth.js",
-        "y-protocols/awareness": "./node_modules/y-protocols/awareness.js",
-        "lib0/observable": "./node_modules/lib0/observable.js",
-        "lib0/array": "./node_modules/lib0/array.js",
-        "lib0/math": "./node_modules/lib0/math.js",
-        "lib0/map": "./node_modules/lib0/map.js",
-        "lib0/encoding": "./node_modules/lib0/encoding.js",
-        "lib0/decoding": "./node_modules/lib0/decoding.js",
-        "lib0/random": "./node_modules/lib0/random.js",
-        "lib0/promise": "./node_modules/lib0/promise.js",
-        "lib0/buffer": "./node_modules/lib0/buffer.js",
-        "lib0/error": "./node_modules/lib0/error.js",
-        "lib0/binary": "./node_modules/lib0/binary.js",
-        "lib0/function": "./node_modules/lib0/function.js",
-        "lib0/set": "./node_modules/lib0/set.js",
-        "lib0/logging": "./node_modules/lib0/logging.js",
-        "lib0/time": "./node_modules/lib0/time.js",
-        "lib0/string": "./node_modules/lib0/string.js",
-        "lib0/iterator": "./node_modules/lib0/iterator.js",
-        "lib0/object": "./node_modules/lib0/object.js",
-        "lib0/environment": "./node_modules/lib0/environment.js",
-        "lib0/indexeddb": "./node_modules/lib0/indexeddb.js",
-        "lib0/broadcastchannel": "./node_modules/lib0/broadcastchannel.js",
-        "lib0/url": "./node_modules/lib0/url.js",
-        "lib0/webcrypto": "./node_modules/lib0/webcrypto.js"
-      }
-    }
+        {
+            "imports": {
+                "yjs": "./node_modules/yjs/dist/yjs.mjs",
+                "y-websocket": "./node_modules/y-websocket/src/y-websocket.js",
+                "y-indexeddb": "./node_modules/y-indexeddb/src/y-indexeddb.js",
+                "y-protocols/sync": "./node_modules/y-protocols/sync.js",
+                "y-protocols/auth": "./node_modules/y-protocols/auth.js",
+                "y-protocols/awareness": "./node_modules/y-protocols/awareness.js",
+                "lib0/observable": "./node_modules/lib0/observable.js",
+                "lib0/array": "./node_modules/lib0/array.js",
+                "lib0/math": "./node_modules/lib0/math.js",
+                "lib0/map": "./node_modules/lib0/map.js",
+                "lib0/encoding": "./node_modules/lib0/encoding.js",
+                "lib0/decoding": "./node_modules/lib0/decoding.js",
+                "lib0/random": "./node_modules/lib0/random.js",
+                "lib0/promise": "./node_modules/lib0/promise.js",
+                "lib0/buffer": "./node_modules/lib0/buffer.js",
+                "lib0/error": "./node_modules/lib0/error.js",
+                "lib0/binary": "./node_modules/lib0/binary.js",
+                "lib0/function": "./node_modules/lib0/function.js",
+                "lib0/set": "./node_modules/lib0/set.js",
+                "lib0/logging": "./node_modules/lib0/logging.js",
+                "lib0/time": "./node_modules/lib0/time.js",
+                "lib0/string": "./node_modules/lib0/string.js",
+                "lib0/iterator": "./node_modules/lib0/iterator.js",
+                "lib0/object": "./node_modules/lib0/object.js",
+                "lib0/environment": "./node_modules/lib0/environment.js",
+                "lib0/indexeddb": "./node_modules/lib0/indexeddb.js",
+                "lib0/broadcastchannel": "./node_modules/lib0/broadcastchannel.js",
+                "lib0/url": "./node_modules/lib0/url.js",
+                "lib0/webcrypto": "./node_modules/lib0/webcrypto.js"
+            }
+        }
     </script>
-
+    
 </head>
 <body>
     <header class="tabs">
@@ -106,11 +106,11 @@
             </div>
         </div>
     </header>
-
+    
     <main>
         <div class="container-narrow">
-
-             <!-- Character Summary Section -->
+            
+            <!-- Character Summary Section -->
             <section id="character-summary" class="character-summary character-summary--minimal">
                 <!-- Character info will be rendered here by views.js -->
             </section>
@@ -129,7 +129,7 @@
                     </p>
                 </div>
             </section>
-
+            
             
             <!-- New Entry Section -->
             <section class="entry-section">
@@ -141,13 +141,24 @@
             
             <!-- Journal Entries -->
             <section class="entries-section">
-                <h2>Journal Entries</h2>
-                <div id="entries-container" class="entries-list"></div>
+                <h2>The Journal of Puoskari</h2>
+                <div class="entries">
+                    <!-- Entries will be rendered here from JSON data -->
+                </div>
+                <div id="entries-container" class="entries-list">
+                    
+                </div>
             </section>
         </div>
     </main>
-
-      <script type="module" src="js/journal.js"></script>
-      <script type="module" src="js/sw-register.js"></script>
+    
+    <script type="module" src="js/journal.js"></script>
+    <script type="module" src="js/sw-register.js"></script>
+    <script type="module" src="js/mock-renderer.js"></script>
+    <script type="module">
+        import { renderMockEntries } from './js/mock-renderer.js';
+        // Render mock entries when page loads
+        document.addEventListener('DOMContentLoaded', renderMockEntries);
+    </script>
 </body>
 </html>
