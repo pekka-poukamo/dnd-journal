@@ -1,5 +1,6 @@
 // Part Page - renders a single Part with title, summary, and entries list
 import { initYjs, getYjsState, getEntries, ensureChronicleStructure, getChroniclePartsMap } from './yjs.js';
+import { backfillPartsIfMissing, PART_SIZE_DEFAULT } from './parts.js';
 import { createEntryItem } from './components/entry-item.js';
 
 const getQueryParam = (name) => {
@@ -19,6 +20,12 @@ const render = (state, partIndex) => {
 
   const parts = getChroniclePartsMap(state);
   const partObj = parts.get(String(partIndex));
+  if (!partObj) {
+    titleEl.textContent = `Part ${partIndex}`;
+    summaryEl.textContent = 'No summary available.';
+    listEl.textContent = 'No entries for this part.';
+    return;
+  }
   const title = (partObj && partObj.get('title')) || `Part ${partIndex}`;
   const summary = (partObj && partObj.get('summary')) || '';
   titleEl.textContent = title;
@@ -42,6 +49,8 @@ const init = async () => {
   const state = getYjsState();
   const part = parseInt(getQueryParam('part') || '0', 10);
   if (!Number.isFinite(part) || part <= 0) return;
+  // Lazy backfill on Part page to ensure missing summaries/titles are generated
+  await backfillPartsIfMissing(state, PART_SIZE_DEFAULT);
   render(state, part);
 };
 
