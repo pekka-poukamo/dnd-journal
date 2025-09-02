@@ -385,6 +385,8 @@ const handleRegeneratePrompt = (stateParam = null) => {
   }
 };
 
+
+
 // Helper function to check if entries are equivalent (avoid unnecessary re-renders)
 const areEntriesEquivalent = (entries1, entries2) => {
   if (entries1.length !== entries2.length) return false;

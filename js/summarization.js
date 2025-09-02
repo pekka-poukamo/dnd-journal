@@ -2,6 +2,8 @@
 import { getYjsState, setSummary, getSummary, getSetting } from './yjs.js';
 import { PROMPTS } from './prompts.js';
 
+
+
 // Check if AI is available
 const isAIEnabled = () => {
   const state = getYjsState();
@@ -11,9 +13,21 @@ const isAIEnabled = () => {
 };
 
 // Simple AI call function
-const callAI = (prompt) => {
+const callAI = (prompt, options = {}) => {
   const state = getYjsState();
   const apiKey = getSetting(state, 'openai-api-key', '');
+  
+  const requestBody = {
+    model: 'gpt-4.1',
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: options.maxTokens || 2500,
+    temperature: options.temperature || 0.3
+  };
+  
+  // Add JSON mode if requested
+  if (options.jsonMode) {
+    requestBody.response_format = { type: "json_object" };
+  }
   
   return fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -21,12 +35,7 @@ const callAI = (prompt) => {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      model: 'gpt-4.1',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 2500,
-      temperature: 0.3
-    })
+    body: JSON.stringify(requestBody)
   })
   .then(response => {
     if (!response.ok) {
@@ -34,7 +43,22 @@ const callAI = (prompt) => {
     }
     return response.json();
   })
-  .then(data => data.choices[0].message.content.trim());
+  .then(data => {
+    const content = data.choices[0].message.content.trim();
+    
+    // If JSON mode was requested, parse it
+    if (options.jsonMode) {
+      try {
+        return JSON.parse(content);
+      } catch (parseError) {
+        console.error('Failed to parse JSON response:', parseError);
+        throw new Error('AI response was not valid JSON');
+      }
+    } else {
+      // Return regular text content
+      return content;
+    }
+  });
 };
 
 // Summarize content with caching
@@ -59,24 +83,39 @@ export const summarize = (summaryKey, content, maxWords = null) => {
   
   // Generate prompt with appropriate word count
   let prompt;
+  let options = {};
+  
   if (summaryKey.startsWith('entry:')) {
-    prompt = PROMPTS.summarization.entry(content, maxWords || 400);
+    prompt = PROMPTS.summarization.entry(content, maxWords);
+    options.jsonMode = true;
   } else if (summaryKey.startsWith('character:')) {
-    prompt = PROMPTS.summarization.character(content, maxWords || 500);
+    prompt = PROMPTS.summarization.character(content, maxWords);
   } else if (summaryKey.startsWith('journal:adventure-summary')) {
-    prompt = PROMPTS.summarization.adventureSummary(content, maxWords || 750);
+    prompt = PROMPTS.summarization.adventureSummary(content, maxWords);
   } else if (summaryKey.startsWith('journal:meta-summary')) {
     // Old meta-summary no longer supported intentionally
-    prompt = PROMPTS.summarization.adventureSummary(content, maxWords || 750);
+    prompt = PROMPTS.summarization.adventureSummary(content, maxWords);
   } else {
     prompt = `Summarize this content concisely:\n\n${content}`;
   }
-  
-  return callAI(prompt)
-    .then(summary => {
-      // Cache the result
-      setSummary(state, summaryKey, summary);
-      return summary;
+  console.log('summarize', summaryKey, prompt, options, maxWords);
+  return callAI(prompt, options)
+    .then(response => {
+      // For entry summaries, response is already an object
+      if (summaryKey.startsWith('entry:')) {
+        // Validate the structure
+        if (response && response.title && response.subtitle && response.summary) {
+          // Cache the structured content
+          setSummary(state, summaryKey, JSON.stringify(response));
+          return response;
+        } else {
+          throw new Error('Invalid structured content format');
+        }
+      } else {
+        // For non-entry summaries, return as-is
+        setSummary(state, summaryKey, response);
+        return response;
+      }
     })
     .catch(error => {
       console.error('Summarization failed:', error);

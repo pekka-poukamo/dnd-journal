@@ -17,7 +17,7 @@
     <!-- Google Fonts for Nordic Minimalism Design -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@100;300;400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,100;0,300;0,400;0,500;0,600;0,700;1,100;1,300;1,400;1,500;1,600;1,700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components/tabs.css">
@@ -108,11 +108,11 @@
             </div>
         </div>
     </header>
-
+    
     <main>
         <div class="container-narrow">
-
-             <!-- Character Summary Section -->
+            
+            <!-- Character Summary Section -->
             <section id="character-summary" class="character-summary character-summary--minimal">
                 <!-- Character info will be rendered here by views.js -->
             </section>
@@ -131,7 +131,7 @@
                     </p>
                 </div>
             </section>
-
+            
             
             <!-- New Entry Section -->
             <section class="entry-section">
@@ -143,13 +143,15 @@
             
             <!-- Journal Entries -->
             <section class="entries-section">
-                <h2>Journal Entries</h2>
-                <div id="entries-container" class="entries-list"></div>
+                <h2>The Journal of Puoskari</h2>
+                <div id="entries-container" class="entries-list">
+                    <!-- Entries will be rendered here by journal.js -->
+                </div>
             </section>
         </div>
     </main>
-
-      <script type="module" src="js/journal.js"></script>
-      <script type="module" src="js/sw-register.js"></script>
+    
+    <script type="module" src="js/journal.js"></script>
+    <script type="module" src="js/sw-register.js"></script>
 </body>
 </html>

@@ -71,7 +71,7 @@ describe('Journal Views Module', function() {
       const element = JournalViews.createEntryElement(mockEntry, onEdit, onDelete);
       
       expect(element.tagName).to.equal('ARTICLE');
-      expect(element.className).to.equal('entry');
+      expect(element.className).to.equal('entry entry--placeholder');
       expect(element.dataset.entryId).to.equal('test-entry-123');
     });
 
@@ -83,7 +83,7 @@ describe('Journal Views Module', function() {
       const timestamp = element.querySelector('.entry-timestamp');
       expect(timestamp).to.exist;
       expect(timestamp.tagName).to.equal('TIME');
-      expect(timestamp.dateTime).to.equal('2022-01-01T00:00:00.000Z');
+      expect(timestamp.dateTime).to.equal('1640995200000');
     });
 
     it('should render content with markdown parsing', function() {
@@ -100,14 +100,53 @@ describe('Journal Views Module', function() {
       expect(content.innerHTML).to.include('<em>italic text</em>');
     });
 
+    it('should not create empty paragraph tags', function() {
+      const entryWithEmptyContent = {
+        ...mockEntry,
+        content: ''
+      };
+      
+      const element = JournalViews.createEntryElement(entryWithEmptyContent, () => {}, () => {});
+      
+      const content = element.querySelector('.entry-content');
+      expect(content).to.exist;
+      expect(content.innerHTML).to.not.include('<p></p>');
+      expect(content.innerHTML).to.not.include('<p> </p>');
+      expect(content.innerHTML).to.not.include('<p>\n</p>');
+    });
+
+    it('should handle content with only whitespace', function() {
+      const entryWithWhitespace = {
+        ...mockEntry,
+        content: '   \n\n  \n\n  '
+      };
+      
+      const element = JournalViews.createEntryElement(entryWithWhitespace, () => {}, () => {});
+      
+      const content = element.querySelector('.entry-content');
+      expect(content).to.exist;
+      expect(content.innerHTML).to.not.include('<p></p>');
+      expect(content.innerHTML).to.not.include('<p> </p>');
+      expect(content.innerHTML).to.not.include('<p>\n</p>');
+    });
+
     it('should create edit and delete buttons', function() {
       const element = JournalViews.createEntryElement(mockEntry, () => {}, () => {});
       
       const buttons = element.querySelectorAll('button');
       
-      expect(buttons).to.have.length(2);
-      expect(buttons[0].textContent).to.equal('Edit');
-      expect(buttons[1].textContent).to.equal('Delete');
+      expect(buttons).to.have.length(3); // toggle button + edit + delete
+      
+      // Check for the toggle button
+      const toggleButton = element.querySelector('.entry-content-control__toggle');
+      expect(toggleButton).to.exist;
+      expect(toggleButton.textContent).to.equal('Show chapter');
+      
+      // Check for edit and delete buttons (they're icon buttons)
+      const editButton = element.querySelector('.icon-button[title="Edit"]');
+      const deleteButton = element.querySelector('.icon-button[title="Delete"]');
+      expect(editButton).to.exist;
+      expect(deleteButton).to.exist;
     });
 
     it('should handle missing callback functions', function() {

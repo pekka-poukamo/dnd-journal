@@ -211,7 +211,7 @@ describe('Utils Module', function() {
       expect(html).to.include('<code>code</code>');
     });
 
-    it('should handle lists', function() {
+    it('should handle simple unordered lists', function() {
       const markdown = '- Item 1\n- Item 2\n- Item 3';
       const html = Utils.parseMarkdown(markdown);
       
@@ -219,6 +219,29 @@ describe('Utils Module', function() {
       expect(html).to.include('<li>Item 1</li>');
       expect(html).to.include('<li>Item 2</li>');
       expect(html).to.include('<li>Item 3</li>');
+      expect(html).to.include('</ul>');
+    });
+
+    it('should handle unordered lists with asterisk indicators', function() {
+      const markdown = '* Item 1\n* Item 2\n* Item 3';
+      const html = Utils.parseMarkdown(markdown);
+      
+      expect(html).to.include('<ul>');
+      expect(html).to.include('<li>Item 1</li>');
+      expect(html).to.include('<li>Item 2</li>');
+      expect(html).to.include('<li>Item 3</li>');
+      expect(html).to.include('</ul>');
+    });
+
+    it('should handle mixed unordered list indicators', function() {
+      const markdown = '- Item 1\n* Item 2\n- Item 3';
+      const html = Utils.parseMarkdown(markdown);
+      
+      expect(html).to.include('<ul>');
+      expect(html).to.include('<li>Item 1</li>');
+      expect(html).to.include('<li>Item 2</li>');
+      expect(html).to.include('<li>Item 3</li>');
+      expect(html).to.include('</ul>');
     });
 
     it('should handle headers', function() {
