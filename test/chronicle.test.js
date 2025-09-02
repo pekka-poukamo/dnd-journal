@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 
 import { initYjs, resetYjs, getYjsState, setSummary, addEntry, setSetting } from '../js/yjs.js';
-import { SO_FAR_LATEST_KEY, RECENT_SUMMARY_KEY, getPartEntriesKey, setLatestClosedPartIndex } from '../js/parts.js';
+import { SO_FAR_LATEST_KEY, RECENT_SUMMARY_KEY, getPartEntriesKey, setLatestClosedPartIndex, setRecomputeRecentSummaryImpl } from '../js/parts.js';
 
 const waitFor = (fn, timeoutMs = 250) => new Promise((resolve, reject) => {
   const start = Date.now();
@@ -86,6 +86,11 @@ describe('Chronicle Page', function() {
     addEntry(state, { id: 'r1', content: 'open one', timestamp: Date.now() });
     addEntry(state, { id: 'r2', content: 'open two', timestamp: Date.now() });
 
+    // Stub recompute to update chronicle recent immediately
+    setRecomputeRecentSummaryImpl(async (s, size) => {
+      const el = document.getElementById('recent-content');
+      if (el) el.textContent = 'stubbed recent';
+    });
     await import('../js/chronicle.js');
 
     // Ensure initial render populated
@@ -95,11 +100,11 @@ describe('Chronicle Page', function() {
     }, 5000);
     const before = document.getElementById('recent-content').textContent;
 
-    // Click regenerate and ensure no errors; element remains present
+    // Click regenerate and ensure immediate DOM update via stub
     const btn = document.getElementById('regenerate-recent');
     expect(() => btn.click()).to.not.throw;
     const afterEl = document.getElementById('recent-content');
-    expect(afterEl).to.exist;
+    expect(afterEl.textContent).to.include('stubbed recent');
   });
 });
 
