@@ -125,7 +125,7 @@ export const maybeCloseOpenPart = async (state, partSize = PART_SIZE_DEFAULT) =>
 };
 
 // Recompute recent summary for the current open part
-let recomputeRecentSummaryImpl = async (state, partSize = PART_SIZE_DEFAULT) => {
+const defaultRecomputeRecentSummaryImpl = async (state, partSize = PART_SIZE_DEFAULT) => {
   const entries = getEntries(state);
   const total = entries.length;
   const numClosedParts = Math.floor(total / partSize);
@@ -138,12 +138,16 @@ let recomputeRecentSummaryImpl = async (state, partSize = PART_SIZE_DEFAULT) => 
 export const setRecomputeRecentSummaryImpl = (fn) => {
   if (typeof fn === 'function') {
     recomputeRecentSummaryImpl = fn;
+  } else {
+    recomputeRecentSummaryImpl = defaultRecomputeRecentSummaryImpl;
   }
 };
 
 export const recomputeRecentSummary = async (state, partSize = PART_SIZE_DEFAULT) => {
   return recomputeRecentSummaryImpl(state, partSize);
 };
+
+let recomputeRecentSummaryImpl = defaultRecomputeRecentSummaryImpl;
 
 // Backfill: ensure part summaries and so-far exist for current entries
 export const backfillPartsIfMissing = async (state, partSize = PART_SIZE_DEFAULT) => {

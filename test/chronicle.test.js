@@ -1,8 +1,8 @@
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import { expect } from 'chai';
 
-import { initYjs, resetYjs, getYjsState, setSummary, addEntry, setSetting } from '../js/yjs.js';
-import { SO_FAR_LATEST_KEY, RECENT_SUMMARY_KEY, getPartEntriesKey, setLatestClosedPartIndex, setRecomputeRecentSummaryImpl } from '../js/parts.js';
+import { initYjs, resetYjs, getYjsState, addEntry, setSetting, ensureChronicleStructure, getChroniclePartsMap, setChroniclePartEntries, setChroniclePartTitle, setChronicleLatestPartIndex, setChronicleRecentSummary } from '../js/yjs.js';
+import { SO_FAR_LATEST_KEY, RECENT_SUMMARY_KEY, setRecomputeRecentSummaryImpl } from '../js/parts.js';
 
 const waitFor = (fn, timeoutMs = 250) => new Promise((resolve, reject) => {
   const start = Date.now();
@@ -47,6 +47,8 @@ describe('Chronicle Page', function() {
   afterEach(function() {
     resetYjs();
     document.body.innerHTML = '';
+    // restore default impl for other tests
+    setRecomputeRecentSummaryImpl(null);
   });
 
   it('should render So Far and Parts list from summaries', async function() {
@@ -55,14 +57,14 @@ describe('Chronicle Page', function() {
     setSetting(state, 'ai-enabled', true);
     setSetting(state, 'openai-api-key', 'test');
     // Set so-far summary
-    setSummary(state, SO_FAR_LATEST_KEY, 'Combined tale across parts.');
+    ensureChronicleStructure(state).set('soFarSummary', 'Combined tale across parts.');
     // Create entries for part 1 and set membership and title
     const t = Date.now();
     addEntry(state, { id: 'e1', content: 'first content', timestamp: t - 10000 });
     addEntry(state, { id: 'e2', content: 'second content', timestamp: t });
-    setSummary(state, getPartEntriesKey(1), JSON.stringify(['e1','e2']));
-    setSummary(state, 'journal:part:1:title', 'Part 1: Beginnings');
-    setLatestClosedPartIndex(state, 1);
+    setChroniclePartEntries(state, 1, ['e1','e2']);
+    setChroniclePartTitle(state, 1, 'Part 1: Beginnings');
+    setChronicleLatestPartIndex(state, 1);
 
     await import('../js/chronicle.js');
 
@@ -88,8 +90,7 @@ describe('Chronicle Page', function() {
 
     // Stub recompute to update chronicle recent immediately
     setRecomputeRecentSummaryImpl(async (s, size) => {
-      const el = document.getElementById('recent-content');
-      if (el) el.textContent = 'stubbed recent';
+      setChronicleRecentSummary(s, 'stubbed recent');
     });
     await import('../js/chronicle.js');
 
