@@ -2,6 +2,8 @@
 import { initYjs, getYjsState } from './yjs.js';
 import { getEntries } from './yjs.js';
 import { ensureChronicleStructure, getChroniclePartsMap } from './yjs.js';
+import { onJournalChange, onSummariesChange } from './yjs.js';
+import { onChronicleChange } from './yjs.js';
 import { PART_SIZE_DEFAULT, backfillPartsIfMissing, recomputeRecentSummary } from './parts.js';
 import { formatDate } from './utils.js';
 
@@ -65,15 +67,48 @@ const renderPartsList = (state) => {
 const init = async () => {
   await initYjs();
   const state = getYjsState();
+
+  console.debug('[Chronicle] init: entries count before backfill =', getEntries(state).length);
   await backfillPartsIfMissing(state, PART_SIZE_DEFAULT);
+  console.debug('[Chronicle] after backfill: latestPartIndex =', ensureChronicleStructure(state).get('latestPartIndex'));
   renderSoFar(state);
   renderRecent(state);
   renderPartsList(state);
+
+  // React to journal changes (e.g., when persistence/ws sync loads entries later)
+  onJournalChange(state, () => {
+    const s = getYjsState();
+    console.debug('[Chronicle] journal changed: entries =', getEntries(s).length);
+    backfillPartsIfMissing(s, PART_SIZE_DEFAULT).then(() => {
+      renderSoFar(s);
+      renderRecent(s);
+      renderPartsList(s);
+    }).catch(() => {});
+  });
+
+  // React to summaries changes which may set soFar/recent or part summaries
+  onSummariesChange(state, () => {
+    const s = getYjsState();
+    console.debug('[Chronicle] summaries changed');
+    renderSoFar(s);
+    renderRecent(s);
+    renderPartsList(s);
+  });
+
+  // React to direct chronicle structure updates (e.g., titles, latestPartIndex)
+  onChronicleChange(state, () => {
+    const s = getYjsState();
+    console.debug('[Chronicle] chronicle changed: latestPartIndex =', ensureChronicleStructure(s).get('latestPartIndex'));
+    renderSoFar(s);
+    renderRecent(s);
+    renderPartsList(s);
+  });
 
   const regenBtn = document.getElementById('regenerate-recent');
   if (regenBtn) {
     regenBtn.addEventListener('click', async () => {
       const s = getYjsState();
+      console.debug('[Chronicle] regenerate recent clicked');
       await recomputeRecentSummary(s, PART_SIZE_DEFAULT);
       renderRecent(s);
     });

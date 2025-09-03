@@ -20,6 +20,7 @@ const PRECACHE_ASSETS = [
 	'/',
 	'/index.html',
 	'/chronicle.html',
+	'/part.html',
 	'/character.html',
 	'/settings.html',
 	'/manifest.json',
@@ -34,6 +35,7 @@ const PRECACHE_ASSETS = [
 	// JS entry points and core modules
 	'/js/journal.js',
 	'/js/chronicle.js',
+	'/js/part.js',
 	'/js/character.js',
 	'/js/settings.js',
 	'/js/journal-views.js',
@@ -105,14 +107,31 @@ self.addEventListener('fetch', (event) => {
 		return;
 	}
 
-	// Static assets: cache-first for same-origin, runtime-cache on first fetch
+	// Static assets: prefer fresh JS/CSS (network-first), cache-first for others
 	if (isSameOrigin(request)) {
+		const destination = request.destination;
+		if (destination === 'script' || destination === 'style' || destination === 'worker') {
+			// Network-first for rapidly changing assets during development
+			event.respondWith(
+				fetch(request)
+					.then((response) => {
+						if (response.ok) {
+							const clone = response.clone();
+							caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+						}
+						return response;
+					})
+					.catch(() => caches.match(request))
+			);
+			return;
+		}
+
+		// Default: cache-first
 		event.respondWith(
 			caches.match(request).then((cached) => {
 				if (cached) return cached;
 				return fetch(request)
 					.then((response) => {
-						// Only cache successful, basic/opaque responses from same-origin
 						if (response.ok) {
 							const clone = response.clone();
 							caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
