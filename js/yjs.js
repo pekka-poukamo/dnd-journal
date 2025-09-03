@@ -269,6 +269,10 @@ export const onQuestionsChange = (state, callback) => {
   state.questionsMap.observe(callback);
 };
 
+export const onChronicleChange = (state, callback) => {
+  getChronicleMap(state).observe(callback);
+};
+
 // =============================================================================
 // CHRONICLE HELPERS (Yjs object-based structure)
 // =============================================================================

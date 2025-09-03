@@ -3,6 +3,7 @@ import { initYjs, getYjsState } from './yjs.js';
 import { getEntries } from './yjs.js';
 import { ensureChronicleStructure, getChroniclePartsMap } from './yjs.js';
 import { onJournalChange, onSummariesChange } from './yjs.js';
+import { onChronicleChange } from './yjs.js';
 import { PART_SIZE_DEFAULT, backfillPartsIfMissing, recomputeRecentSummary } from './parts.js';
 import { formatDate } from './utils.js';
 
@@ -89,6 +90,15 @@ const init = async () => {
   onSummariesChange(state, () => {
     const s = getYjsState();
     console.debug('[Chronicle] summaries changed');
+    renderSoFar(s);
+    renderRecent(s);
+    renderPartsList(s);
+  });
+
+  // React to direct chronicle structure updates (e.g., titles, latestPartIndex)
+  onChronicleChange(state, () => {
+    const s = getYjsState();
+    console.debug('[Chronicle] chronicle changed: latestPartIndex =', ensureChronicleStructure(s).get('latestPartIndex'));
     renderSoFar(s);
     renderRecent(s);
     renderPartsList(s);
