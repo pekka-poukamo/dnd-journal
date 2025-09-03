@@ -1,5 +1,7 @@
 // Part Page - renders a single Part with title, summary, and entries list
 import { initYjs, getYjsState, getEntries, ensureChronicleStructure, getChroniclePartsMap } from './yjs.js';
+import { onJournalChange, onSummariesChange } from './yjs.js';
+import { onChronicleChange } from './yjs.js';
 import { backfillPartsIfMissing, PART_SIZE_DEFAULT } from './parts.js';
 import { createEntryItem } from './components/entry-item.js';
 
@@ -52,6 +54,24 @@ const init = async () => {
   // Lazy backfill on Part page to ensure missing summaries/titles are generated
   await backfillPartsIfMissing(state, PART_SIZE_DEFAULT);
   render(state, part);
+
+  // React to data arriving later via IndexedDB or sync
+  onJournalChange(state, () => {
+    const s = getYjsState();
+    backfillPartsIfMissing(s, PART_SIZE_DEFAULT).then(() => {
+      render(s, part);
+    }).catch(() => {});
+  });
+
+  onSummariesChange(state, () => {
+    const s = getYjsState();
+    render(s, part);
+  });
+
+  onChronicleChange(state, () => {
+    const s = getYjsState();
+    render(s, part);
+  });
 };
 
 init();
