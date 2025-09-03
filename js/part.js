@@ -22,6 +22,7 @@ const render = (state, partIndex) => {
 
   const parts = getChroniclePartsMap(state);
   const partObj = parts.get(String(partIndex));
+  console.debug('[Part] render: partIndex=', partIndex, 'hasPart=', !!partObj);
   if (!partObj) {
     titleEl.textContent = `Part ${partIndex}`;
     summaryEl.textContent = 'No summary available.';
@@ -34,6 +35,7 @@ const render = (state, partIndex) => {
   summaryEl.textContent = summary || 'No summary available.';
 
   const ids = (partObj && partObj.get('entries') && partObj.get('entries').toArray()) || [];
+  console.debug('[Part] entries ids =', ids);
   const allEntries = getEntries(state);
   const idToEntry = new Map(allEntries.map(e => [e.id, e]));
   listEl.innerHTML = '';
@@ -51,13 +53,16 @@ const init = async () => {
   const state = getYjsState();
   const part = parseInt(getQueryParam('part') || '0', 10);
   if (!Number.isFinite(part) || part <= 0) return;
+  console.debug('[Part] init: entries before backfill =', getEntries(state).length);
   // Lazy backfill on Part page to ensure missing summaries/titles are generated
   await backfillPartsIfMissing(state, PART_SIZE_DEFAULT);
+  console.debug('[Part] after backfill: latestPartIndex =', ensureChronicleStructure(state).get('latestPartIndex'));
   render(state, part);
 
   // React to data arriving later via IndexedDB or sync
   onJournalChange(state, () => {
     const s = getYjsState();
+    console.debug('[Part] journal changed: entries =', getEntries(s).length);
     backfillPartsIfMissing(s, PART_SIZE_DEFAULT).then(() => {
       render(s, part);
     }).catch(() => {});
@@ -65,11 +70,21 @@ const init = async () => {
 
   onSummariesChange(state, () => {
     const s = getYjsState();
+    console.debug('[Part] summaries changed');
     render(s, part);
   });
 
   onChronicleChange(state, () => {
     const s = getYjsState();
+    console.debug('[Part] chronicle changed');
+    render(s, part);
+  });
+
+  // Observe changes within the parts map (e.g., when part data loads from persistence)
+  const partsMap = getChroniclePartsMap(state);
+  partsMap.observe(() => {
+    const s = getYjsState();
+    console.debug('[Part] parts map changed');
     render(s, part);
   });
 };
