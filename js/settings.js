@@ -149,7 +149,49 @@ const setupFormHandlers = () => {
     unlinkBtn.setAttribute('data-handler-attached', 'true');
   }
   if (refreshAppButton && !refreshAppButton.hasAttribute('data-handler-attached')) {
-    refreshAppButton.addEventListener('click', () => window.location.reload());
+    refreshAppButton.addEventListener('click', async () => {
+      try {
+        const buttonElement = document.getElementById('refresh-app');
+        if (buttonElement) {
+          buttonElement.disabled = true;
+          buttonElement.textContent = 'Refreshing…';
+        }
+
+        // Best-effort: clear in-app navigation cache/session state
+        try {
+          if (typeof sessionStorage !== 'undefined' && sessionStorage) {
+            sessionStorage.clear();
+          }
+        } catch {}
+
+        // Best-effort: delete all CacheStorage entries (including SW precache)
+        try {
+          if (typeof caches !== 'undefined' && caches && caches.keys) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map((name) => caches.delete(name)));
+          }
+        } catch {}
+
+        // Best-effort: unregister all service workers
+        try {
+          if (typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((reg) => reg.unregister()));
+          }
+        } catch {}
+
+        // Force a cache-busting reload to fetch fresh assets from the server
+        try {
+          const baseUrl = window.location.href.split('#')[0].split('?')[0];
+          window.location.replace(`${baseUrl}?fresh=${Date.now()}`);
+        } catch {
+          window.location.reload();
+        }
+      } catch {
+        // Fallback: standard reload if anything goes wrong
+        window.location.reload();
+      }
+    });
     refreshAppButton.setAttribute('data-handler-attached', 'true');
   }
 
