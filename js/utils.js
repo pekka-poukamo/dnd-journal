@@ -17,11 +17,20 @@ export const safeParseJSON = (jsonString) => {
 // All data persistence must use Yjs Maps - see js/yjs.js
 
 // Pure function to generate unique IDs
-export const generateId = () => Date.now().toString();
+export const generateId = (() => {
+  let counter = 0;
+  return () => {
+    counter = (counter + 1) % 1000;
+    const time = Date.now();
+    const rand = Math.floor(Math.random() * 1000);
+    return `${time}-${counter}-${rand}`;
+  };
+})();
 
 // Pure function to format dates
 export const formatDate = (timestamp) => {
-  return new Date(timestamp).toLocaleDateString('en-US', {
+  const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+  return date.toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -254,61 +263,6 @@ export const getFormData = (form) => {
 };
 
 // Pure function to show toast notifications
-export const showNotification = (message, type = 'info', duration = 3000) => {
-  const notification = document.createElement('div');
-  notification.className = `notification notification--${type}`;
-  notification.textContent = message || '';
-  
-  // Add to body with proper positioning
-  document.body.appendChild(notification);
-  
-  // Stack notifications by adjusting bottom position
-  const existingNotifications = document.querySelectorAll('.notification');
-  if (existingNotifications.length > 1) {
-    let totalOffset = 0;
-    // Calculate offset based on existing notifications (excluding the current one)
-    Array.from(existingNotifications).slice(0, -1).forEach(existing => {
-      // Use offsetHeight if available, otherwise fallback to a reasonable default for tests
-      const height = existing.offsetHeight || 60; // Default height for test environments
-      totalOffset += height + 12; // 12px gap between notifications
-    });
-    notification.style.bottom = `calc(var(--space-xl) + ${totalOffset}px)`;
-  }
-  
-  // Auto-remove after specified duration
-  setTimeout(() => {
-    if (notification.parentNode) {
-      // Check if we're in a test environment (JSDOM doesn't support CSS animations well)
-      const isTestEnvironment = typeof window !== 'undefined' && window.navigator.userAgent.includes('jsdom');
-      
-      if (isTestEnvironment) {
-        // In test environment, remove immediately without animation
-        notification.parentNode.removeChild(notification);
-        repositionNotifications();
-      } else {
-        // In browser environment, use animation
-        notification.style.animation = 'slideOutToRight 0.3s ease-in forwards';
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-            // Reposition remaining notifications
-            repositionNotifications();
-          }
-        }, 300);
-      }
-    }
-  }, duration);
-};
-
-// Helper function to reposition remaining notifications after one is removed
-const repositionNotifications = () => {
-  const notifications = document.querySelectorAll('.notification');
-  notifications.forEach((notification, index) => {
-    // Use offsetHeight if available, otherwise fallback to a reasonable default for tests
-    const height = notification.offsetHeight || 60; // Default height for test environments
-    const offset = index * (height + 12);
-    notification.style.bottom = `calc(var(--space-xl) + ${offset}px)`;
-  });
-};
+export { showNotification } from './components/notifications.js';
 
 

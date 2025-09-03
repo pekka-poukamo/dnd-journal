@@ -1,6 +1,7 @@
 // Summarization - Simple AI summarization with caching
 import { getYjsState, setSummary, getSummary, getSetting } from './yjs.js';
 import { PROMPTS } from './prompts.js';
+import { callOpenAIChat } from './ai-request.js';
 
 
 
@@ -12,59 +13,23 @@ const isAIEnabled = () => {
   return Boolean(enabled && apiKey);
 };
 
-// Simple AI call function
+// Simple AI call function (centralized)
 const callAI = (prompt, options = {}) => {
-  const state = getYjsState();
-  const apiKey = getSetting(state, 'openai-api-key', '');
-  
-  const requestBody = {
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'user', content: prompt }],
-    max_tokens: options.maxTokens || 2500,
-    temperature: options.temperature || 0.3
-  };
-  
-  // Add JSON mode if requested
-  if (options.jsonMode) {
-    requestBody.response_format = { type: "json_object" };
-  }
-  
-  return fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(requestBody)
-  })
-  .then(async (response) => {
-    if (!response.ok) {
-      try {
-        const err = await response.json();
-        const message = err?.error?.message || `${response.statusText}`;
-        throw new Error(`HTTP ${response.status}: ${message}`);
-      } catch (_) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  const messages = [{ role: 'user', content: prompt }];
+  const response_format = options.jsonMode ? { type: 'json_object' } : undefined;
+  return callOpenAIChat(messages, { maxTokens: options.maxTokens || 2500, temperature: options.temperature || 0.3, response_format })
+    .then((data) => data.choices[0].message.content.trim())
+    .then((content) => {
+      if (options.jsonMode) {
+        try {
+          return JSON.parse(content);
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', parseError);
+          throw new Error('AI response was not valid JSON');
+        }
       }
-    }
-    return response.json();
-  })
-  .then(data => {
-    const content = data.choices[0].message.content.trim();
-    
-    // If JSON mode was requested, parse it
-    if (options.jsonMode) {
-      try {
-        return JSON.parse(content);
-      } catch (parseError) {
-        console.error('Failed to parse JSON response:', parseError);
-        throw new Error('AI response was not valid JSON');
-      }
-    } else {
-      // Return regular text content
       return content;
-    }
-  });
+    });
 };
 
 // Summarize content with caching
