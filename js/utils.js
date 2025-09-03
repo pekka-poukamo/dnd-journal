@@ -52,7 +52,17 @@ export const isValidEntry = (entryData) =>
 export const sortEntriesByDate = (entries) => 
   [...entries].sort((a, b) => b.timestamp - a.timestamp);
 
-// Simple markdown parser for basic formatting
+// Escape HTML special characters to prevent injection
+const escapeHtml = (input) => {
+  return String(input)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
+// Simple markdown parser for basic formatting (safe against HTML injection)
 export const parseMarkdown = (text) => {
   if (!text) return '';
   
@@ -60,7 +70,8 @@ export const parseMarkdown = (text) => {
   text = text.trim();
   if (!text) return '';
   
-  let result = text;
+  // Escape any raw HTML first
+  let result = escapeHtml(text);
   
   // Process headers first (before other replacements)
   result = result

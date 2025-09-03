@@ -6,8 +6,7 @@ import {
   getCachedSessionQuestions,
   getFormDataForPage
 } from './navigation-cache.js';
-import { summarize } from './summarization.js';
-import { getYjsState } from './yjs.js';
+// Views must remain pure: no state or service imports
 import { getWordCount } from './utils.js';
 import { isAIEnabled } from './ai.js';
 import { createEntryItem } from './components/entry-item.js';
@@ -49,11 +48,15 @@ export const createEntryForm = (options = {}) => {
 export const createEntryElement = (entry, onEdit, onDelete) => createEntryItem(entry, onEdit, onDelete);
 
 // Create entry summary section with collapsible full content
-export const createEntrySummarySection = (entry) => {
+// Accept optional precomputed summary to avoid orchestrating in views
+export const createEntrySummarySection = (entry, precomputedSummary = null) => {
   const summarySection = document.createElement('div');
   summarySection.className = 'entry-summary-section';
-  summarySection.appendChild(createSummaryDisplay(null, entry));
-  generateSummaryAsync(entry, summarySection);
+  if (precomputedSummary) {
+    summarySection.appendChild(createSummaryDisplay(precomputedSummary, entry));
+  } else {
+    summarySection.appendChild(createSummaryDisplay(null, entry));
+  }
   return summarySection;
 };
 
@@ -127,41 +130,7 @@ const createCollapsibleFullContent = (entry) => {
   return collapsibleDiv;
 };
 
-// Generate summary asynchronously and update display
-const generateSummaryAsync = (entry, targetElement) => {
-  const summaryKey = `entry:${entry.id}`;
-  
-  return summarize(summaryKey, entry.content)
-    .then(result => {
-      // Check if we got structured content or just a summary
-      if (result && typeof result === 'object' && result.title && result.subtitle && result.summary) {
-        // We have structured content - update the entry display
-        const entryElement = targetElement.closest('.entry') || targetElement;
-        if (entryElement) {
-          // Update title, subtitle, and summary
-          const titleElement = entryElement.querySelector('.entry-title h3');
-          const subtitleElement = entryElement.querySelector('.entry-subtitle p');
-          const summaryElement = entryElement.querySelector('.entry-summary p');
-          
-          if (titleElement) titleElement.textContent = result.title;
-          if (subtitleElement) subtitleElement.textContent = result.subtitle;
-          if (summaryElement) summaryElement.textContent = result.summary;
-          
-          // Remove placeholder class since we now have real content
-          entryElement.classList.remove('entry--placeholder');
-        }
-        
-        return result.summary;
-      } else {
-        // Fallback to old behavior - just a summary string
-        return result;
-      }
-    })
-    .catch(error => {
-      console.error('Failed to generate summary:', error);
-      throw error;
-    });
-};
+// Summarization orchestration removed from views by ADR-0015
 
 // Create edit form for an entry
 export const createEntryEditForm = (entry, options = {}) => {
@@ -279,7 +248,8 @@ export const renderEntries = (container, entries, options = {}) => {
     recentSection.appendChild(recentHeader);
 
     recentEntries.forEach(entry => {
-      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
+      const pre = typeof options.getPrecomputedSummary === 'function' ? options.getPrecomputedSummary(entry) : null;
+      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete, pre);
       recentSection.appendChild(entryElement);
     });
     fragment.appendChild(recentSection);
@@ -323,7 +293,8 @@ export const renderEntries = (container, entries, options = {}) => {
 
     // Populate older entries inside collapsible
     olderEntries.forEach(entry => {
-      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
+      const pre = typeof options.getPrecomputedSummary === 'function' ? options.getPrecomputedSummary(entry) : null;
+      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete, pre);
       olderContentDiv.appendChild(entryElement);
     });
 
@@ -365,7 +336,8 @@ export const renderEntries = (container, entries, options = {}) => {
       fragment.appendChild(existingElement);
     } else {
       // Create new element only if it doesn't exist
-      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete);
+      const pre = typeof options.getPrecomputedSummary === 'function' ? options.getPrecomputedSummary(entry) : null;
+      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete, pre);
       fragment.appendChild(entryElement);
     }
   });
@@ -405,7 +377,8 @@ const updateEntryElement = (element, entry, onEdit, onDelete) => {
   // Update summary section - recreate if content changed
   const summarySection = element.querySelector('.entry-summary-section');
   if (summarySection) {
-    const newSummarySection = createEntrySummarySection(entry);
+    const pre = null;
+    const newSummarySection = createEntrySummarySection(entry, pre);
     summarySection.replaceWith(newSummarySection);
   }
   

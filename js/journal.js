@@ -29,7 +29,7 @@ import { PART_SIZE_DEFAULT, recomputeRecentSummary, maybeCloseOpenPart } from '.
 
 import { generateQuestions } from './ai.js';
 import { hasContext as hasGoodContext } from './context.js';
-import { clearSummary } from './summarization.js';
+import { clearSummary, summarize } from './summarization.js';
 import { isAIEnabled } from './ai.js';
 
 // State management
@@ -86,6 +86,8 @@ export const initJournalPage = async (stateParam = null) => {
     // Set up reactive updates for future changes
     onJournalChange(state, () => {
       renderJournalPage(state);
+      // Trigger background summarization for any entries lacking summary
+      summarizeMissingEntrySummaries(state).catch(() => {});
       renderAIPromptWithLogic(state);
     });
 
@@ -100,6 +102,8 @@ export const initJournalPage = async (stateParam = null) => {
     
     // Set up AI prompt (can be async)
     setupAIPrompt(state);
+    // Kick off background summarization for current entries
+    summarizeMissingEntrySummaries(state).catch(() => {});
     
     // Save cache on page unload
     window.addEventListener('beforeunload', () => {
@@ -116,6 +120,7 @@ export const renderJournalPage = (stateParam = null) => {
   try {
     const state = stateParam || getYjsState();
     const entries = getEntries(state);
+    const summariesIndex = buildPrecomputedSummariesIndex(state, entries);
     
     // Render entries - use module-level element if available, otherwise find it
     const entriesElement = entriesContainer || document.getElementById('entries-container');
@@ -123,7 +128,8 @@ export const renderJournalPage = (stateParam = null) => {
     if (entriesElement) {
       renderEntries(entriesElement, entries, {
         onEdit: handleEditEntry,
-        onDelete: handleDeleteEntry
+        onDelete: handleDeleteEntry,
+        getPrecomputedSummary: (entry) => summariesIndex.get(entry.id) || null
       });
     }
     
@@ -133,6 +139,47 @@ export const renderJournalPage = (stateParam = null) => {
   } catch (error) {
     console.error('Failed to render journal page:', error);
   }
+};
+
+// Summarize entries that do not yet have a structured summary and update DOM inline
+const summarizeMissingEntrySummaries = async (stateParam = null) => {
+  const state = stateParam || getYjsState();
+  const entries = getEntries(state);
+  for (const entry of entries) {
+    const key = `entry:${entry.id}`;
+    const have = state.summariesMap.get(key);
+    if (have) continue;
+    if (!isAIEnabled()) break;
+    try {
+      const result = await summarize(key, entry.content);
+      // Update any rendered entry element if present
+      const element = document.querySelector(`[data-entry-id="${entry.id}"]`);
+      if (element && result && result.title && result.subtitle && result.summary) {
+        const titleElement = element.querySelector('.entry-title h3');
+        const subtitleElement = element.querySelector('.entry-subtitle p');
+        const summaryElement = element.querySelector('.entry-summary p');
+        if (titleElement) titleElement.textContent = result.title;
+        if (subtitleElement) subtitleElement.textContent = result.subtitle;
+        if (summaryElement) summaryElement.textContent = result.summary;
+        element.classList.remove('entry--placeholder');
+      }
+    } catch {}
+  }
+};
+
+// Build a map of entry.id -> precomputed structured summary object or serialized string
+const buildPrecomputedSummariesIndex = (state, entries) => {
+  const index = new Map();
+  try {
+    entries.forEach((entry) => {
+      const key = `entry:${entry.id}`;
+      const existing = state.summariesMap.get(key);
+      if (existing) {
+        index.set(entry.id, existing);
+      }
+    });
+  } catch {}
+  return index;
 };
 
 // Render character information
