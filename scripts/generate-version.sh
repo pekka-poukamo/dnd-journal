@@ -1,21 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Generate version info based on current Git state.
-# This script DOES NOT modify js/version.js.
-# It prints a JSON object to stdout. Optionally write to a file with --output.
-
 print_help() {
   cat <<'EOS'
 Usage: bash scripts/generate-version.sh [--output FILE]
 
 Outputs JSON with fields: commit, shortCommit, runNumber, timestamp, ref.
 
-Environment variables:
-  RUN_NUMBER   Optional. If set, used as the run number. Otherwise falls back
-               to `git rev-list --count HEAD` or "local" if unavailable.
-
-This script is side-effect free by default and does not change js/version.js.
+If --output is given, writes a JavaScript ES module file like:
+  export const VERSION_INFO = { ... };
 EOS
 }
 
@@ -52,11 +45,11 @@ JSON
 )
 
 if [[ -n "$OUTPUT_FILE" ]]; then
-  printf "%s\n" "$json_output" > "$OUTPUT_FILE"
+  {
+    echo "// Version info - Auto-generated during deployment"
+    echo "export const VERSION_INFO = $json_output;"
+  } > "$OUTPUT_FILE"
   echo "Wrote version info to $OUTPUT_FILE"
 else
   printf "%s\n" "$json_output"
 fi
-
- 
-
