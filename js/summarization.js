@@ -18,7 +18,7 @@ const callAI = (prompt, options = {}) => {
   const apiKey = getSetting(state, 'openai-api-key', '');
   
   const requestBody = {
-    model: 'gpt-4.1',
+    model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
     max_tokens: options.maxTokens || 2500,
     temperature: options.temperature || 0.3
@@ -37,9 +37,15 @@ const callAI = (prompt, options = {}) => {
     },
     body: JSON.stringify(requestBody)
   })
-  .then(response => {
+  .then(async (response) => {
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      try {
+        const err = await response.json();
+        const message = err?.error?.message || `${response.statusText}`;
+        throw new Error(`HTTP ${response.status}: ${message}`);
+      } catch (_) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
     }
     return response.json();
   })
@@ -85,7 +91,12 @@ export const summarize = (summaryKey, content, maxWords = null) => {
   let prompt;
   let options = {};
   
-  if (summaryKey.startsWith('entry:')) {
+  if (summaryKey.endsWith(':title-gen')) {
+    // For title generation keys, `content` is already an instruction prompt
+    prompt = content;
+    options.maxTokens = Math.min(80, maxWords ? Math.ceil(maxWords * 2) : 80);
+    options.temperature = 0.7;
+  } else if (summaryKey.startsWith('entry:')) {
     prompt = PROMPTS.summarization.entry(content, maxWords);
     options.jsonMode = true;
   } else if (summaryKey.startsWith('character:')) {
