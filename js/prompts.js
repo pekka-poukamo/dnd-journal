@@ -47,5 +47,16 @@ ${text}`,
     adventureSummary: (summaryText, maxWords = 750) => `Create a comprehensive adventure summary from these entry summaries. Maximum ${maxWords} words. Do not add any extra content beyond what's provided. Return summary only, no format mentions or self-referencing.
 
 ${summaryText}`
-  }
+  },
+
+  partTitle: (text, maxWords = 12) => `Generate a concise, evocative title for this D&D campaign part.
+
+Constraints:
+- Maximum ${maxWords} words
+- No quotation marks or punctuation at the end
+- Capture the core themes and arc suggested by the text
+- Return only the title text
+
+Source text:
+${text}`
 };

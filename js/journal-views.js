@@ -7,9 +7,10 @@ import {
   getFormDataForPage
 } from './navigation-cache.js';
 import { summarize } from './summarization.js';
-import { getYjsState, getSummary } from './yjs.js';
+import { getYjsState } from './yjs.js';
 import { getWordCount } from './utils.js';
 import { isAIEnabled } from './ai.js';
+import { createEntryItem } from './components/entry-item.js';
 
 // Create journal entry form
 export const createEntryForm = (options = {}) => {
@@ -45,118 +46,14 @@ export const createEntryForm = (options = {}) => {
 };
 
 // Create single journal entry element with summary display by default
-export const createEntryElement = (entry, onEdit, onDelete) => {
-  const article = document.createElement('article');
-  article.className = 'entry';
-  article.dataset.entryId = entry.id;
-
-  // Check if we have structured content from AI
-  // Get summary from the summaries map, not from the entry object
-  const state = getYjsState();
-  const summaryKey = `entry:${entry.id}`;
-  const storedSummary = getSummary(state, summaryKey);
-  
-  let title, subtitle, summary;
-  if (storedSummary) {
-    try {
-      const summaryData = JSON.parse(storedSummary);
-      title = summaryData.title;
-      subtitle = summaryData.subtitle;
-      summary = summaryData.summary;
-    } catch (e) {
-      console.error('Failed to parse stored summary:', e);
-    }
-  }
-  
-  // If no structured content, use placeholders
-  if (!title || !subtitle || !summary) {
-    article.classList.add('entry--placeholder');
-    title = title || `Lorem Ipsum and Amet Consectur Adipiscing`;
-    subtitle = subtitle || `In which Lorem Ipsum, a dolor, sat with Amet Consectur, waiting...`;
-    summary = summary || `Mr. Ipsum and Mrs. Consectur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.`;
-  }
-
-  article.innerHTML = `
-    <div class="entry-header">
-      <div class="entry-title"><h3>${title}</h3></div>
-      
-      <div class="entry-subtitle">
-        <p>${subtitle}</p>
-      </div>
-      <div class="entry-meta">
-        <time class="entry-timestamp" datetime="${entry.timestamp}">
-          ${formatDate(entry.timestamp)}
-        </time>
-        <div class="entry-actions">
-          <button class="icon-button" title="Edit">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M11.5 2.5L13.5 4.5L4.5 13.5H2.5V11.5L11.5 2.5Z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          <button class="icon-button" title="Delete">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 4H14M5.5 4V2.5C5.5 2.22386 5.72386 2 6 2H10C10.2761 2 10.5 2.22386 10.5 2.5V4M12.5 4V13.5C12.5 13.7761 12.2761 14 12 14H4C3.72386 14 3.5 13.7761 3.5 13.5V4H12.5Z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-    <div class="entry-summary">
-      <p>${summary}</p>
-    </div>
-    <div class="entry-content entry-content--hidden">
-      ${parseMarkdown(entry.content)}
-    </div>
-    <div class="entry-content-controls">
-      <button class="entry-content-control__toggle">Show chapter</button>
-    </div>
-  `;
-  
-  // Add event listener to the toggle button
-  const toggleButton = article.querySelector('.entry-content-control__toggle');
-  const entryContent = article.querySelector('.entry-content');
-  
-  toggleButton.addEventListener('click', () => {
-    entryContent.classList.toggle('entry-content--hidden');
-    
-    // Update button text based on current state
-    if (entryContent.classList.contains('entry-content--hidden')) {
-      toggleButton.textContent = 'Show chapter';
-    } else {
-      toggleButton.textContent = 'Hide chapter';
-    }
-  });
-  
-  // Set up edit and delete handlers
-  const editButton = article.querySelector('.icon-button[title="Edit"]');
-  const deleteButton = article.querySelector('.icon-button[title="Delete"]');
-  
-  if (editButton && onEdit) {
-    editButton.addEventListener('click', () => onEdit(entry.id));
-  }
-  
-  if (deleteButton && onDelete) {
-    deleteButton.addEventListener('click', () => onDelete(entry.id));
-  }
-  
-  // If AI is enabled and we don't have a summary yet, generate one
-  if (isAIEnabled() && !storedSummary) {
-    // Generate summary asynchronously and update the display
-    generateSummaryAsync(entry, article);
-  }
-  
-  return article;
-};
+export const createEntryElement = (entry, onEdit, onDelete) => createEntryItem(entry, onEdit, onDelete);
 
 // Create entry summary section with collapsible full content
 export const createEntrySummarySection = (entry) => {
   const summarySection = document.createElement('div');
   summarySection.className = 'entry-summary-section';
-  
-  // Always start with full content display and let summarize() handle cache checking
   summarySection.appendChild(createSummaryDisplay(null, entry));
   generateSummaryAsync(entry, summarySection);
-  
   return summarySection;
 };
 
@@ -395,24 +292,11 @@ export const renderEntries = (container, entries, options = {}) => {
     olderHeader.textContent = 'Older Adventures';
     olderSection.appendChild(olderHeader);
 
-    const metaSummaryContainer = document.createElement('div');
-    metaSummaryContainer.className = 'meta-summary-container';
-
-    const metaSummaryTitle = document.createElement('div');
-    metaSummaryTitle.className = 'meta-summary__title';
-    metaSummaryTitle.textContent = 'Campaign Chronicle (Adventure Summary)';
-    metaSummaryContainer.appendChild(metaSummaryTitle);
-
-    const metaSummaryText = document.createElement('div');
-    metaSummaryText.className = 'meta-summary__text';
-    metaSummaryText.textContent = 'Generating overall summary...';
-    metaSummaryContainer.appendChild(metaSummaryText);
-
-    olderSection.appendChild(metaSummaryContainer);
+    // Phase 7: Remove legacy meta summary UI from Journal
 
     // Collapsible list of older entries
     const collapsible = document.createElement('div');
-    collapsible.className = 'entry-collapsible meta-summary-collapsible';
+    collapsible.className = 'entry-collapsible';
 
     const toggleButton = document.createElement('button');
     toggleButton.className = 'entry-summary__toggle';
@@ -427,7 +311,7 @@ export const renderEntries = (container, entries, options = {}) => {
     toggleButton.appendChild(toggleIcon);
 
     const olderContentDiv = document.createElement('div');
-    olderContentDiv.className = 'entry-summary__content meta-summary__entries';
+    olderContentDiv.className = 'entry-summary__content';
     olderContentDiv.style.display = 'none';
 
     toggleButton.addEventListener('click', () => {
@@ -453,8 +337,7 @@ export const renderEntries = (container, entries, options = {}) => {
     container.innerHTML = '';
     container.appendChild(fragment);
 
-    // After render, ensure meta summary is shown (use cached or generate)
-    ensureAndRenderMetaSummary(sortedEntries, metaSummaryText);
+    // Phase 7: No meta summary rendering in Journal
     return;
   }
   
@@ -502,57 +385,9 @@ export const renderEntries = (container, entries, options = {}) => {
 
 // Ensure meta summary is available and render it into the provided element
 const ensureAndRenderMetaSummary = (allEntries, targetElement) => {
-  const state = getYjsState();
-  const existing = getSummary(state, 'journal:adventure-summary');
-  if (existing) {
-    targetElement.innerHTML = parseMarkdown(existing);
-    return;
-  }
-
-  // Build summary source text similar to context.js logic
-  const config = { entryWords: 200, metaWords: 1000 };
-
-  const entryPromises = allEntries.map(entry => {
-    const key = `entry:${entry.id}`;
-
-    // Prefer cached structured summary if present
-    const cached = getSummary(state, key);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (parsed && parsed.summary) {
-          return Promise.resolve(`${parsed.summary}`);
-        }
-      } catch {}
-      return Promise.resolve(`${cached}`);
-    }
-
-    if (getWordCount(entry.content) > config.entryWords) {
-      return summarize(key, entry.content, config.entryWords)
-        .then(result => {
-          if (result && typeof result === 'object' && result.summary) {
-            return `${result.summary}`;
-          }
-          return `${result}`;
-        })
-        .catch(() => `${entry.content}`);
-    }
-    return Promise.resolve(`${entry.content}`);
-  });
-
-  return Promise.all(entryPromises)
-    .then(parts => parts.join('\n\n'))
-    .then(summaryText => summarize('journal:adventure-summary', summaryText, config.metaWords))
-    .then(meta => {
-      targetElement.innerHTML = parseMarkdown(meta || '');
-      return meta;
-    })
-    .catch(() => {
-      // Local-first graceful fallback: concise overview without AI
-      const fallback = buildLocalMetaSummary(allEntries, 60);
-      targetElement.innerHTML = parseMarkdown(fallback);
-      return null;
-    });
+  // Phase I cleanup: Journal no longer renders or stores overall meta summary
+  targetElement.innerHTML = '';
+  return Promise.resolve(null);
 };
 
 // Build a concise local-only meta summary (no AI). Keeps it readable and short.

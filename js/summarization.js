@@ -90,10 +90,11 @@ export const summarize = (summaryKey, content, maxWords = null) => {
     options.jsonMode = true;
   } else if (summaryKey.startsWith('character:')) {
     prompt = PROMPTS.summarization.character(content, maxWords);
-  } else if (summaryKey.startsWith('journal:adventure-summary')) {
-    prompt = PROMPTS.summarization.adventureSummary(content, maxWords);
-  } else if (summaryKey.startsWith('journal:meta-summary')) {
-    // Align meta summary to use the same adventure summary pattern
+  } else if (
+    summaryKey.startsWith('journal:part:') ||
+    summaryKey === 'journal:recent-summary' ||
+    summaryKey.startsWith('journal:parts:so-far')
+  ) {
     prompt = PROMPTS.summarization.adventureSummary(content, maxWords);
   } else {
     prompt = `Summarize this content concisely:\n\n${content}`;
