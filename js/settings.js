@@ -31,6 +31,7 @@ import { saveNavigationCache } from './navigation-cache.js';
 import { isAIEnabled, getPromptPreview, buildMessages } from './ai.js';
 
 import { clearAllSummaries } from './summarization.js';
+import { renderVersionFooter } from './version-footer.js';
 
 // State management
 let settingsFormElement = null;
@@ -463,18 +464,9 @@ if (typeof document !== 'undefined') {
     import('./yjs.js').then(YjsModule => {
       YjsModule.initYjs().then(state => {
         initSettingsPage(state);
-        
+
         // Initialize version display in footer
-        const footerContent = document.querySelector('.footer-content');
-        import('./version.js').then(versionModule => {
-          const versionInfo = versionModule.VERSION_INFO;
-          const versionText = versionInfo.commit === 'dev' ? 'Development' : `v${versionInfo.runNumber} (${versionInfo.shortCommit})`;
-          const versionElement = document.createElement('div');
-          versionElement.className = 'version-info';
-          versionElement.textContent = versionText;
-          versionElement.title = `Deployed: ${versionInfo.timestamp}\nCommit: ${versionInfo.commit}\nBranch: ${versionInfo.ref}`;
-          footerContent.appendChild(versionElement);
-        });
+        renderVersionFooter();
       });
     });
   });
