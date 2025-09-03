@@ -1,6 +1,6 @@
 {
   "exclude": ["test/**", "node_modules/**"],
-  "include": ["js/**/*.js"],
+  "include": ["js/**/*.js", "server/**/*.js"],
   "reporter": ["text", "json"],
   "check-coverage": false,
   "lines": 80,

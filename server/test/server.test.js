@@ -1,51 +1,24 @@
 import { expect } from 'chai';
 import WebSocket from 'ws';
-import { spawn } from 'child_process';
-import { readFileSync, existsSync, rmSync } from 'fs';
+import { existsSync, rmSync } from 'fs';
+import { startServer } from '../server.js';
 
 describe('Server', function() {
   let serverProcess;
   const TEST_PORT = 9999;
   const TEST_DATA_DIR = './test-data';
   
-  before(function(done) {
+  before(async function() {
     // Clean up any existing test data
     if (existsSync(TEST_DATA_DIR)) {
       rmSync(TEST_DATA_DIR, { recursive: true, force: true });
     }
-    
-    let isDone = false;
-    
-    // Start server on test port
-    serverProcess = spawn('node', ['server.js', TEST_PORT], {
-      stdio: 'pipe',
-      env: { ...process.env, DATA_DIR: TEST_DATA_DIR }
-    });
-    
-    // Wait for server to start
-    serverProcess.stdout.on('data', (data) => {
-      if (!isDone && data.toString().includes('D&D Journal Server')) {
-        isDone = true;
-        done();
-      }
-    });
-    
-    serverProcess.stderr.on('data', (data) => {
-      console.error('Server error:', data.toString());
-    });
-    
-    // Timeout if server doesn't start
-    setTimeout(() => {
-      if (!isDone) {
-        isDone = true;
-        done(new Error('Server failed to start'));
-      }
-    }, 5000);
+    serverProcess = await startServer(TEST_PORT, '127.0.0.1', TEST_DATA_DIR);
   });
 
-  after(function() {
-    if (serverProcess) {
-      serverProcess.kill();
+  after(async function() {
+    if (serverProcess && serverProcess.stop) {
+      await serverProcess.stop();
     }
     // Clean up test data
     if (existsSync(TEST_DATA_DIR)) {

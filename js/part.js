@@ -89,5 +89,10 @@ const init = async () => {
   });
 };
 
+// For tests, expose a deterministic initializer
+export const initForTest = async () => {
+  return init();
+};
+
 init();
 
