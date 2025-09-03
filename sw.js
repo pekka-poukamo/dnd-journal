@@ -19,6 +19,7 @@ const CACHE_NAME = `app-cache-${CACHE_VERSION}`;
 const PRECACHE_ASSETS = [
 	'/',
 	'/index.html',
+	'/chronicle.html',
 	'/character.html',
 	'/settings.html',
 	'/manifest.json',
@@ -32,6 +33,7 @@ const PRECACHE_ASSETS = [
 	'/css/components/sync-status.css',
 	// JS entry points and core modules
 	'/js/journal.js',
+	'/js/chronicle.js',
 	'/js/character.js',
 	'/js/settings.js',
 	'/js/journal-views.js',
@@ -85,13 +87,20 @@ self.addEventListener('fetch', (event) => {
 	// Navigation requests: cache-first app shell with network fallback
 	if (request.mode === 'navigate') {
 		event.respondWith(
-			caches.match(request).then((cached) => {
-				if (cached) return cached;
-				// If specific page not cached, fall back to index or fetch
-				return caches.match('/index.html')
-					.then((indexCached) => indexCached || fetch(request))
-					.catch(() => caches.match('/index.html'));
-			})
+			// Try network first so navigations reach their real pages
+			fetch(request)
+				.then((response) => {
+					// Cache successful navigations for offline use
+					if (response.ok) {
+						const clone = response.clone();
+						caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+					}
+					return response;
+				})
+				.catch(() =>
+					// If offline, serve a cached copy of the request or fall back to index
+					caches.match(request).then((cached) => cached || caches.match('/index.html'))
+				)
 		);
 		return;
 	}
