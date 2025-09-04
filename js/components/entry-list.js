@@ -43,19 +43,19 @@ export const renderEntries = (container, entries, options = {}) => {
     collapsible.className = 'entry-collapsible';
 
     const toggleButton = document.createElement('button');
-    toggleButton.className = 'entry-summary__toggle';
+    toggleButton.className = 'collapsible__toggle';
     toggleButton.type = 'button';
     const toggleLabel = document.createElement('span');
-    toggleLabel.className = 'entry-summary__label';
+    toggleLabel.className = 'collapsible__label';
     toggleLabel.textContent = 'Show Older Entries';
     const toggleIcon = document.createElement('span');
-    toggleIcon.className = 'entry-summary__icon';
+    toggleIcon.className = 'collapsible__icon';
     toggleIcon.textContent = '▼';
     toggleButton.appendChild(toggleLabel);
     toggleButton.appendChild(toggleIcon);
 
     const olderContentDiv = document.createElement('div');
-    olderContentDiv.className = 'entry-summary__content';
+    olderContentDiv.className = 'collapsible__content';
     olderContentDiv.style.display = 'none';
 
     toggleButton.addEventListener('click', () => {

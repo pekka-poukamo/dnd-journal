@@ -66,7 +66,6 @@ export const createEntryItem = (entry, onEdit, onDelete, precomputedSummary = nu
   const toggleBtn = collapsible.querySelector('button');
   if (toggleBtn) {
     toggleBtn.classList.add('entry-content-control__toggle');
-    // Remove icon for exact text match in tests
     const icon = toggleBtn.querySelector('.collapsible__icon');
     if (icon) icon.remove();
   }
