@@ -239,6 +239,15 @@ describe('Journal Views Module', function() {
         many.push({ id: `e${i}`, content: `content ${i}`, timestamp: base + i * 1000 });
       }
       JournalViews.renderEntries(container, many, () => {}, () => {});
+      // Verify toggling older entries collapsible works
+      const toggleButton = container.querySelector('.entries-section--older .entry-summary__toggle');
+      expect(toggleButton).to.exist;
+      const contentDiv = container.querySelector('.entries-section--older .entry-summary__content');
+      expect(contentDiv.style.display).to.equal('none');
+      toggleButton.click();
+      expect(contentDiv.style.display).to.equal('block');
+      toggleButton.click();
+      expect(contentDiv.style.display).to.equal('none');
       const sections = container.querySelectorAll('.entries-section');
       expect(sections.length).to.be.greaterThan(0);
       const recentHeader = container.querySelector('.entries-section--recent h3');
