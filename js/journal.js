@@ -131,6 +131,7 @@ export const renderJournalPage = (stateParam = null) => {
         onDelete: handleDeleteEntry,
         getPrecomputedSummary: (entry) => summariesIndex.get(entry.id) || null
       });
+      maybeInjectEntryDebugControls(entriesElement, entries, state);
     }
     
     // Render character info
@@ -139,6 +140,46 @@ export const renderJournalPage = (stateParam = null) => {
   } catch (error) {
     console.error('Failed to render journal page:', error);
   }
+};
+
+// Inject per-entry regenerate buttons under debug mode
+const maybeInjectEntryDebugControls = (container, entries, state) => {
+  const debugEnabled = (() => {
+    try { return new URL(window.location.href).searchParams.get('debug') === '1' || localStorage.getItem('debug-mode') === '1'; } catch { return false; }
+  })();
+  if (!debugEnabled) return;
+  entries.forEach((entry) => {
+    const el = container.querySelector(`[data-entry-id="${entry.id}"] .entry-actions`);
+    if (!el) return;
+    if (el.querySelector('.btn-regenerate-entry')) return;
+    const btn = document.createElement('button');
+    btn.className = 'icon-button btn-regenerate-entry';
+    btn.title = 'Regenerate Summary';
+    btn.textContent = '↻';
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        // Clear and force regenerate
+        const { clearSummary, summarize } = await import('./summarization.js');
+        clearSummary(`entry:${entry.id}`);
+        const result = await summarize(`entry:${entry.id}`, entry.content);
+        // Update DOM immediately
+        const root = container.querySelector(`[data-entry-id="${entry.id}"]`);
+        if (root && result) {
+          const titleElement = root.querySelector('.entry-title h3');
+          const subtitleElement = root.querySelector('.entry-subtitle p');
+          const summaryElement = root.querySelector('.entry-summary p');
+          if (titleElement) titleElement.textContent = result.title || '';
+          if (subtitleElement) subtitleElement.textContent = result.subtitle || '';
+          if (summaryElement) summaryElement.textContent = result.summary || '';
+          root.classList.remove('entry--placeholder');
+        }
+      } catch (err) {
+        console.warn('Failed to regenerate entry summary:', err);
+      }
+    });
+    el.appendChild(btn);
+  });
 };
 
 // Summarize entries that do not yet have a structured summary and update DOM inline
