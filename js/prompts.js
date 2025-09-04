@@ -26,16 +26,15 @@ Please create 3 introspective questions that would help this player discover com
 Return your response as a valid JSON object with this exact structure:
 {
   "title": "A title",
-  "subtitle": "A subtitle",
-  "summary": "Summary"
+  "subtitle": "A subtitle"
 }
 
-Guidelines:
-- Title: A title of the journal entry in the style of A Tale of Two Cities by Dickens
-- Subtitle: A subheading of the journal entry, a 40 word or less in the style of Dickens, starting with "In which".
-- Summary: A summary of key contents in the style of Dickens, in 40 words or less
-- Do not add items to the summary, pertain to the entry itself
-- Return only the JSON object, no additional text or formatting
+Strict rules:
+- Use only information explicitly present in the entry text. Do not invent people, places, events, or outcomes not stated.
+- If the entry is very short or generic, produce a minimal, literal title and a brief subtitle that paraphrases the entry without adding details.
+- Title: concise, evocative, and varied. Avoid repetitive stock openings and clichés.
+- Subtitle: 40 words or fewer, starting with "In which" and grounded strictly in the entry.
+- Return only the JSON object, no additional text or formatting.
 
 Entry content:
 ${text}`,
