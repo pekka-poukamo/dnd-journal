@@ -1,35 +1,7 @@
 import { renderEntries } from './entry-list.js';
+import { createCollapsible } from './collapsible.js';
 
-const createCollapsibleSummary = (text) => {
-  const wrapper = document.createElement('div');
-  const toggleButton = document.createElement('button');
-  toggleButton.className = 'entry-summary__toggle';
-  toggleButton.type = 'button';
-  const toggleLabel = document.createElement('span');
-  toggleLabel.className = 'entry-summary__label';
-  toggleLabel.textContent = 'Show summary';
-  const toggleIcon = document.createElement('span');
-  toggleIcon.className = 'entry-summary__icon';
-  toggleIcon.textContent = '▼';
-  toggleButton.appendChild(toggleLabel);
-  toggleButton.appendChild(toggleIcon);
-
-  const contentDiv = document.createElement('div');
-  contentDiv.className = 'entry-summary__content';
-  contentDiv.style.display = 'none';
-  contentDiv.innerHTML = text;
-
-  toggleButton.addEventListener('click', () => {
-    const isExpanded = contentDiv.style.display !== 'none';
-    contentDiv.style.display = isExpanded ? 'none' : 'block';
-    toggleButton.classList.toggle('entry-summary__toggle--expanded', !isExpanded);
-    toggleLabel.textContent = isExpanded ? 'Show summary' : 'Hide summary';
-  });
-
-  wrapper.appendChild(toggleButton);
-  wrapper.appendChild(contentDiv);
-  return wrapper;
-};
+const createCollapsibleSummary = (html) => createCollapsible('Show summary', 'Hide summary', html);
 
 export const renderPart = (elements, data, options = {}) => {
   const { titleElement, summaryElement, listElement } = elements;

@@ -54,3 +54,18 @@ Each ADR follows this structure:
 
 ## Maintenance
 These ADRs are reviewed quarterly to ensure continued relevance, but the core decisions remain permanent to protect project integrity.
+
+## Debug Mode
+
+Enable optional summary regeneration controls on the Chronicle page to aid debugging.
+
+How to enable:
+
+- Append `?debug=1` to the page URL, for example: `/chronicle.html?debug=1`.
+- Or persist via console: `localStorage.setItem('debug-mode', '1')`.
+
+What you get:
+
+- Regenerate “Adventure So Far” summary button
+- Regenerate a specific Part summary by number
+- The existing “Regenerate Recent” button remains available
