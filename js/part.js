@@ -3,7 +3,7 @@ import { initYjs, getYjsState, getEntries, ensureChronicleStructure, getChronicl
 import { onJournalChange, onSummariesChange } from './yjs.js';
 import { onChronicleChange } from './yjs.js';
 import { backfillPartsIfMissing, PART_SIZE_DEFAULT } from './parts.js';
-import { createEntryItem } from './components/entry-item.js';
+import { renderEntries } from './components/entry-list.js';
 
 const getQueryParam = (name) => {
   try {
@@ -38,14 +38,8 @@ const render = (state, partIndex, providedEntries = null) => {
   console.debug('[Part] entries ids =', ids);
   const allEntries = Array.isArray(providedEntries) ? providedEntries : getEntries(state);
   const idToEntry = new Map(allEntries.map(e => [e.id, e]));
-  listEl.innerHTML = '';
-  ids.forEach((id) => {
-    const entry = idToEntry.get(id);
-    if (entry) {
-      const el = createEntryItem(entry, null, null);
-      listEl.appendChild(el);
-    }
-  });
+  const filteredEntries = ids.map((id) => idToEntry.get(id)).filter(Boolean);
+  renderEntries(listEl, filteredEntries, { onEdit: null, onDelete: null });
 };
 
 const init = async () => {
