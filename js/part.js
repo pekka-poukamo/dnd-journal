@@ -14,7 +14,7 @@ const getQueryParam = (name) => {
   }
 };
 
-const render = (state, partIndex) => {
+const render = (state, partIndex, providedEntries = null) => {
   const titleEl = document.getElementById('part-title');
   const summaryEl = document.getElementById('part-summary-content');
   const listEl = document.getElementById('part-entries-list');
@@ -36,7 +36,7 @@ const render = (state, partIndex) => {
 
   const ids = (partObj && partObj.get('entries') && partObj.get('entries').toArray()) || [];
   console.debug('[Part] entries ids =', ids);
-  const allEntries = getEntries(state);
+  const allEntries = Array.isArray(providedEntries) ? providedEntries : getEntries(state);
   const idToEntry = new Map(allEntries.map(e => [e.id, e]));
   listEl.innerHTML = '';
   ids.forEach((id) => {
@@ -57,27 +57,28 @@ const init = async () => {
   // Lazy backfill on Part page to ensure missing summaries/titles are generated
   await backfillPartsIfMissing(state, PART_SIZE_DEFAULT);
   console.debug('[Part] after backfill: latestPartIndex =', ensureChronicleStructure(state).get('latestPartIndex'));
-  render(state, part);
+  render(state, part, getEntries(state));
 
   // React to data arriving later via IndexedDB or sync
   onJournalChange(state, () => {
     const s = getYjsState();
-    console.debug('[Part] journal changed: entries =', getEntries(s).length);
+    const entries = getEntries(s);
+    console.debug('[Part] journal changed: entries =', entries.length);
     backfillPartsIfMissing(s, PART_SIZE_DEFAULT).then(() => {
-      render(s, part);
+      render(s, part, entries);
     }).catch(() => {});
   });
 
   onSummariesChange(state, () => {
     const s = getYjsState();
     console.debug('[Part] summaries changed');
-    render(s, part);
+    render(s, part, getEntries(s));
   });
 
   onChronicleChange(state, () => {
     const s = getYjsState();
     console.debug('[Part] chronicle changed');
-    render(s, part);
+    render(s, part, getEntries(s));
   });
 
   // Observe changes within the parts map (e.g., when part data loads from persistence)
@@ -85,7 +86,7 @@ const init = async () => {
   partsMap.observe(() => {
     const s = getYjsState();
     console.debug('[Part] parts map changed');
-    render(s, part);
+    render(s, part, getEntries(s));
   });
 };
 
