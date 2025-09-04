@@ -78,3 +78,10 @@ export const initPartPage = async (stateParam = null, partIndexParam = null) => 
   return { unsubscribe };
 };
 
+// Initialize when DOM is ready (align with other pages)
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initPartPage();
+  });
+}
+
