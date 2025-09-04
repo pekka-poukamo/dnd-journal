@@ -170,6 +170,8 @@ export const renderAIPromptPreview = (...args) => {
     promptContentElement.innerHTML = header + content;
   }
   
+  // Ensure the preview is visible even if initially hidden via utility class
+  try { promptPreviewElement.classList.remove('is-hidden'); } catch {}
   promptPreviewElement.style.display = 'block';
 };
 

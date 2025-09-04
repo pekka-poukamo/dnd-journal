@@ -104,6 +104,7 @@ describe('UI Contracts - Settings Page (settings.html)', function() {
     const preview = document.getElementById('ai-prompt-preview');
     const content = document.getElementById('ai-prompt-content');
     expect(preview.style.display).to.equal('block');
+    expect(preview.classList.contains('is-hidden')).to.equal(false);
     expect(content.innerHTML).to.satisfy((html) => html.includes('system-prompt') || html.includes('user-prompt'));
   });
 
