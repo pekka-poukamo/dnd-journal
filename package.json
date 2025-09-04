@@ -6,7 +6,7 @@
   "main": "index.html",
   "scripts": {
     "start": "npx http-server . -p 3000 -o",
-    "test": "npm run test:client && npm run test:server",
+    "test": "npm run guard && npm run test:client && npm run test:server",
     "test:client": "node --experimental-modules node_modules/.bin/mocha --require test/setup.js \"test/**/*.test.js\" --timeout 10000 --reporter spec --exit",
     "test:server": "cd server && npm test",
     "test:watch": "mocha test/**/*.test.js --watch --timeout 5000",
@@ -17,6 +17,7 @@
     "deploy": "git push pi",
     "server": "cd server && npm start",
     "setup": "npm ci && cd server && npm ci",
+    "guard": "node scripts/guard.js",
     "setup:server": "cd server && npm ci"
   },
   "repository": {
