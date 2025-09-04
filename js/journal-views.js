@@ -10,42 +10,14 @@ import {
 import { getWordCount } from './utils.js';
 import { isAIEnabled } from './ai.js';
 import { createEntryItem } from './components/entry-item.js';
+export { createEntryForm } from './components/entry-form.js';
+export { renderEntries } from './components/entry-list.js';
+export { renderCharacterSummary } from './components/character-summary.js';
 
-// Create journal entry form
-export const createEntryForm = (options = {}) => {
-  const form = document.createElement('form');
-  form.id = 'entry-form';
-  form.className = 'entry-form';
-  
-  form.innerHTML = `
-    <div class="form-group">
-      <label for="entry-content">Notes</label>
-      <textarea id="entry-content" name="content" class="form-textarea" rows="4" placeholder="Write your journal entry here..." required></textarea>
-    </div>
-    <div class="form-group">
-      <button type="submit" class="btn btn-primary">Add Entry</button>
-    </div>
-  `;
-  
-  // Set up form submission
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    const formData = new FormData(form);
-    const entryData = {
-      content: formData.get('content')
-    };
-    
-    if (options.onSubmit) {
-      options.onSubmit(entryData);
-    }
-  });
-  
-  return form;
-};
+// createEntryForm now lives in components/entry-form.js
 
 // Create single journal entry element with summary display by default
-export const createEntryElement = (entry, onEdit, onDelete) => createEntryItem(entry, onEdit, onDelete);
+export const createEntryElement = (entry, onEdit, onDelete, precomputedSummary = null) => createEntryItem(entry, onEdit, onDelete, precomputedSummary);
 
 // Create entry summary section with collapsible full content
 // Accept optional precomputed summary to avoid orchestrating in views
@@ -193,167 +165,10 @@ export const createEmptyState = (message) => {
 };
 
 // Render character summary (simplified for journal page)
-export const renderCharacterSummary = (container, character) => {
-  if (!container) return;
-  
-  container.innerHTML = '';
-  
-  if (!character.name && !character.race && !character.class) {
-    container.appendChild(createEmptyState('No character information yet.'));
-    return;
-  }
-  
-  const characterInfo = document.createElement('div');
-  characterInfo.className = 'character-info';
-  
-  const heading = document.createElement('h2')
-  heading.textContent = character.name
-  characterInfo.appendChild(heading)
-
-  const subheading = document.createElement('h5')
-  subheading.textContent = character.race + ' • ' + character.class
-  characterInfo.appendChild(subheading)
-  
-  container.appendChild(characterInfo);
-};
+// renderCharacterSummary now lives in components/character-summary.js
 
 // Render journal entries list with intelligent DOM updates (performance optimized)
-export const renderEntries = (container, entries, options = {}) => {
-  if (!container) return;
-  
-  if (entries.length === 0) {
-    container.innerHTML = '';
-    container.appendChild(createEmptyState('No journal entries yet. Start writing your adventure!'));
-    return;
-  }
-  
-  const sortedEntries = sortEntriesByDate(entries);
-
-  // If many entries, reflect summarization logic:
-  // - Show latest 5 entries individually (these are included directly in prompts)
-  // - Group the rest under a collapsible section with the meta summary visible
-  if (sortedEntries.length > 10) {
-    // Recent detailed entries: latest 5
-    const recentEntries = sortedEntries.slice(0, 5);
-    // Older entries: the rest
-    const olderEntries = sortedEntries.slice(5);
-
-    const fragment = document.createDocumentFragment();
-
-    // Section: Recent Adventures
-    const recentSection = document.createElement('section');
-    recentSection.className = 'entries-section entries-section--recent';
-    const recentHeader = document.createElement('h3');
-    recentHeader.textContent = 'Recent Adventures';
-    recentSection.appendChild(recentHeader);
-
-    recentEntries.forEach(entry => {
-      const pre = typeof options.getPrecomputedSummary === 'function' ? options.getPrecomputedSummary(entry) : null;
-      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete, pre);
-      recentSection.appendChild(entryElement);
-    });
-    fragment.appendChild(recentSection);
-
-    // Section: Older Adventures (collapsible with meta summary)
-    const olderSection = document.createElement('section');
-    olderSection.className = 'entries-section entries-section--older';
-
-    const olderHeader = document.createElement('h3');
-    olderHeader.textContent = 'Older Adventures';
-    olderSection.appendChild(olderHeader);
-
-    // Phase 7: Remove legacy meta summary UI from Journal
-
-    // Collapsible list of older entries
-    const collapsible = document.createElement('div');
-    collapsible.className = 'entry-collapsible';
-
-    const toggleButton = document.createElement('button');
-    toggleButton.className = 'entry-summary__toggle';
-    toggleButton.type = 'button';
-    const toggleLabel = document.createElement('span');
-    toggleLabel.className = 'entry-summary__label';
-    toggleLabel.textContent = 'Show Older Entries';
-    const toggleIcon = document.createElement('span');
-    toggleIcon.className = 'entry-summary__icon';
-    toggleIcon.textContent = '▼';
-    toggleButton.appendChild(toggleLabel);
-    toggleButton.appendChild(toggleIcon);
-
-    const olderContentDiv = document.createElement('div');
-    olderContentDiv.className = 'entry-summary__content';
-    olderContentDiv.style.display = 'none';
-
-    toggleButton.addEventListener('click', () => {
-      const isExpanded = olderContentDiv.style.display !== 'none';
-      olderContentDiv.style.display = isExpanded ? 'none' : 'block';
-      toggleButton.classList.toggle('entry-summary__toggle--expanded', !isExpanded);
-      toggleLabel.textContent = isExpanded ? 'Show Older Entries' : 'Hide Older Entries';
-    });
-
-    // Populate older entries inside collapsible
-    olderEntries.forEach(entry => {
-      const pre = typeof options.getPrecomputedSummary === 'function' ? options.getPrecomputedSummary(entry) : null;
-      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete, pre);
-      olderContentDiv.appendChild(entryElement);
-    });
-
-    collapsible.appendChild(toggleButton);
-    collapsible.appendChild(olderContentDiv);
-    olderSection.appendChild(collapsible);
-
-    fragment.appendChild(olderSection);
-
-    // Replace container content
-    container.innerHTML = '';
-    container.appendChild(fragment);
-
-    // Phase 7: No meta summary rendering in Journal
-    return;
-  }
-  
-  // Get existing entry elements for efficient updates
-  const existingEntries = new Map();
-  const existingElements = container.querySelectorAll('[data-entry-id]');
-  existingElements.forEach(element => {
-    const entryId = element.dataset.entryId;
-    if (entryId) {
-      existingEntries.set(entryId, element);
-    }
-  });
-  
-  // Use DocumentFragment for efficient DOM manipulation
-  const fragment = document.createDocumentFragment();
-  const updatedIds = new Set();
-  
-  sortedEntries.forEach(entry => {
-    updatedIds.add(entry.id);
-    
-    const existingElement = existingEntries.get(entry.id);
-    if (existingElement) {
-      // Update existing element in place (more efficient than recreation)
-      updateEntryElement(existingElement, entry, options.onEdit, options.onDelete);
-      fragment.appendChild(existingElement);
-    } else {
-      // Create new element only if it doesn't exist
-      const pre = typeof options.getPrecomputedSummary === 'function' ? options.getPrecomputedSummary(entry) : null;
-      const entryElement = createEntryElement(entry, options.onEdit, options.onDelete, pre);
-      fragment.appendChild(entryElement);
-    }
-  });
-  
-  // Remove elements for entries that no longer exist
-  existingElements.forEach(element => {
-    const entryId = element.dataset.entryId;
-    if (entryId && !updatedIds.has(entryId)) {
-      element.remove();
-    }
-  });
-  
-  // Clear container and append optimized fragment
-  container.innerHTML = '';
-  container.appendChild(fragment);
-};
+// renderEntries now lives in components/entry-list.js
 
 // Ensure meta summary is available and render it into the provided element
 const ensureAndRenderMetaSummary = (allEntries, targetElement) => {
