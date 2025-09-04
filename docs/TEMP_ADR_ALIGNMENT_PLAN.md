@@ -66,7 +66,7 @@ This document phases the agreed recommendations to align the codebase with ADRs 
   - Add a dev note on where UI helpers (notifications) live and how logic interacts with views.
 
 - Configuration quality-of-life
-  - Consider exposing `PART_SIZE_DEFAULT` via settings (optional).
+  - Do not expose `PART_SIZE_DEFAULT` via settings; keep it internal.
   - Audit import map and preloads for unused entries; prune to reduce noise.
 
 - Simple CI guardrails (no bundlers)

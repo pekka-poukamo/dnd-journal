@@ -33,6 +33,7 @@ We also moved from flat colon-keyed summaries to an object-based Yjs structure u
 - Closed parts immutable after closure.
 - Only `soFarSummary` and `recentSummary` are overwritten.
 - Part summaries use full raw entry text, not per-entry summaries.
+ - `PART_SIZE_DEFAULT` is an internal constant and not user-configurable.
 
 ## Rationale
 - Yjs objects improve renderability and cohesion while preserving local-first guarantees.
