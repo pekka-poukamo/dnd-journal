@@ -109,3 +109,27 @@
   outline: none;
 }
 
+/* Generic collapsible styles */
+.collapsible__toggle {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  padding: 0;
+  margin: 0 0 var(--space-sm) 0;
+  cursor: pointer;
+  font-style: italic;
+  transition: color 0.15s;
+}
+
+.collapsible__toggle:hover,
+.collapsible__toggle:focus {
+  color: var(--color-accent-hover);
+  outline: none;
+}
+
+.collapsible__content {
+  display: block; /* JS controls visibility */
+}
+
