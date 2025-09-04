@@ -15,7 +15,7 @@ import {
 import { summarize } from './summarization.js';
 import { PROMPTS } from './prompts.js';
 
-export const PART_SIZE_DEFAULT = 20;
+export const PART_SIZE_DEFAULT = 10;
 
 // Partition entries into closed parts of size `partSize` and an open remainder
 export const partitionEntries = (entries, partSize = PART_SIZE_DEFAULT) => {
