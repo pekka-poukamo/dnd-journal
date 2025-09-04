@@ -1,9 +1,9 @@
-// Part Page - renders a single Part with title, summary, and entries list
+// Part Page - logic only (no side effects on import)
 import { initYjs, getYjsState, getEntries, ensureChronicleStructure, getChroniclePartsMap } from './yjs.js';
 import { onJournalChange, onSummariesChange } from './yjs.js';
 import { onChronicleChange } from './yjs.js';
 import { backfillPartsIfMissing, PART_SIZE_DEFAULT } from './parts.js';
-import { createEntryItem } from './components/entry-item.js';
+import { renderPart } from './components/part-views.js';
 
 const getQueryParam = (name) => {
   try {
@@ -14,80 +14,74 @@ const getQueryParam = (name) => {
   }
 };
 
-const render = (state, partIndex) => {
-  const titleEl = document.getElementById('part-title');
-  const summaryEl = document.getElementById('part-summary-content');
-  const listEl = document.getElementById('part-entries-list');
-  if (!titleEl || !summaryEl || !listEl) return;
-
+const computePartData = (state, partIndex, providedEntries = null) => {
   const parts = getChroniclePartsMap(state);
   const partObj = parts.get(String(partIndex));
-  console.debug('[Part] render: partIndex=', partIndex, 'hasPart=', !!partObj);
-  if (!partObj) {
-    titleEl.textContent = `Part ${partIndex}`;
-    summaryEl.textContent = 'No summary available.';
-    listEl.textContent = 'No entries for this part.';
-    return;
-  }
-  const title = (partObj && partObj.get('title')) || `Part ${partIndex}`;
-  const summary = (partObj && partObj.get('summary')) || '';
-  titleEl.textContent = title;
-  summaryEl.textContent = summary || 'No summary available.';
-
-  const ids = (partObj && partObj.get('entries') && partObj.get('entries').toArray()) || [];
-  console.debug('[Part] entries ids =', ids);
-  const allEntries = getEntries(state);
+  const fallback = {
+    title: `Part ${partIndex}`,
+    summary: 'No summary available.',
+    entries: []
+  };
+  if (!partObj) return fallback;
+  const title = partObj.get('title') || `Part ${partIndex}`;
+  const summary = partObj.get('summary') || 'No summary available.';
+  const ids = (partObj.get('entries') && partObj.get('entries').toArray()) || [];
+  const allEntries = Array.isArray(providedEntries) ? providedEntries : getEntries(state);
   const idToEntry = new Map(allEntries.map(e => [e.id, e]));
-  listEl.innerHTML = '';
-  ids.forEach((id) => {
-    const entry = idToEntry.get(id);
-    if (entry) {
-      const el = createEntryItem(entry, null, null);
-      listEl.appendChild(el);
-    }
-  });
+  const entries = ids.map((id) => idToEntry.get(id)).filter(Boolean);
+  return { title, summary, entries };
 };
 
-const init = async () => {
-  await initYjs();
-  const state = getYjsState();
-  const part = parseInt(getQueryParam('part') || '0', 10);
-  if (!Number.isFinite(part) || part <= 0) return;
-  console.debug('[Part] init: entries before backfill =', getEntries(state).length);
-  // Lazy backfill on Part page to ensure missing summaries/titles are generated
+export const renderPartPage = (state, partIndex, providedEntries = null) => {
+  const data = computePartData(state, partIndex, providedEntries);
+  renderPart({ titleId: 'part-title', summaryId: 'part-summary-content', listId: 'part-entries-list' }, data);
+};
+
+export const initPartPage = async (stateParam = null, partIndexParam = null) => {
+  const state = stateParam || (await initYjs(), getYjsState());
+  const part = partIndexParam != null ? partIndexParam : parseInt(getQueryParam('part') || '0', 10);
+  if (!Number.isFinite(part) || part <= 0) return { unsubscribe: () => {} };
+
   await backfillPartsIfMissing(state, PART_SIZE_DEFAULT);
-  console.debug('[Part] after backfill: latestPartIndex =', ensureChronicleStructure(state).get('latestPartIndex'));
-  render(state, part);
+  renderPartPage(state, part, getEntries(state));
 
-  // React to data arriving later via IndexedDB or sync
-  onJournalChange(state, () => {
+  const offFns = [];
+  offFns.push(onJournalChange(state, () => {
     const s = getYjsState();
-    console.debug('[Part] journal changed: entries =', getEntries(s).length);
+    const entries = getEntries(s);
     backfillPartsIfMissing(s, PART_SIZE_DEFAULT).then(() => {
-      render(s, part);
+      renderPartPage(s, part, entries);
     }).catch(() => {});
-  });
-
-  onSummariesChange(state, () => {
+  }));
+  offFns.push(onSummariesChange(state, () => {
     const s = getYjsState();
-    console.debug('[Part] summaries changed');
-    render(s, part);
-  });
-
-  onChronicleChange(state, () => {
+    renderPartPage(s, part, getEntries(s));
+  }));
+  offFns.push(onChronicleChange(state, () => {
     const s = getYjsState();
-    console.debug('[Part] chronicle changed');
-    render(s, part);
-  });
-
-  // Observe changes within the parts map (e.g., when part data loads from persistence)
+    renderPartPage(s, part, getEntries(s));
+  }));
   const partsMap = getChroniclePartsMap(state);
-  partsMap.observe(() => {
+  const observer = () => {
     const s = getYjsState();
-    console.debug('[Part] parts map changed');
-    render(s, part);
-  });
+    renderPartPage(s, part, getEntries(s));
+  };
+  partsMap.observe(observer);
+  offFns.push(() => partsMap.unobserve(observer));
+
+  const unsubscribe = () => {
+    while (offFns.length) {
+      const off = offFns.pop();
+      try { off && off(); } catch {}
+    }
+  };
+  return { unsubscribe };
 };
 
-init();
+// Initialize when DOM is ready (align with other pages)
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initPartPage();
+  });
+}
 

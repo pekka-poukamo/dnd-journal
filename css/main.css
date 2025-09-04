@@ -81,6 +81,14 @@
   --transition: all 0.15s ease;
 }
 
+/* Utility classes */
+.is-hidden { display: none !important; }
+.flex-row { display: flex; align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-8 { gap: 8px; }
+.m-0 { margin: 0; }
+.mt-8 { margin-top: 8px; }
+
 body {
   /* Base Typography */
   font-family: var(--font-body);

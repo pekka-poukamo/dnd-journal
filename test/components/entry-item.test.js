@@ -26,8 +26,7 @@ describe('Entry Item Component', function() {
   it('renders stored structured summary when available', function() {
     const entry = { id: 'x2', content: 'bar', timestamp: Date.now() };
     const summary = { title: 'T', subtitle: 'S', summary: 'SUM' };
-    setSummary(state, `entry:${entry.id}`, JSON.stringify(summary));
-    const el = createEntryItem(entry, null, null);
+    const el = createEntryItem(entry, null, null, JSON.stringify(summary));
     expect(el.className).to.not.include('entry--placeholder');
     expect(el.querySelector('.entry-summary p').textContent).to.equal('SUM');
   });

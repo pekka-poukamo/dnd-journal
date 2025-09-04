@@ -10,6 +10,7 @@ import {
 } from './yjs.js';
 import { PROMPTS } from './prompts.js';
 import { buildContext, hasContext } from './context.js';
+import { callOpenAIChat } from './ai-request.js';
 
 // Check if AI is available
 export const isAIEnabled = () => {
@@ -29,39 +30,11 @@ export const buildMessages = (systemPrompt, userPrompt) => {
     : [{ role: 'user', content: userPrompt }];
 };
 
-// Simple AI call function
+// Simple AI call function (centralized)
 const callAI = (systemPrompt, userPrompt) => {
-  const state = getYjsState();
-  const apiKey = getSetting(state, 'openai-api-key', '');
-  
   const messages = buildMessages(systemPrompt, userPrompt);
-
-  return fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages,
-      max_tokens: 2500,
-      temperature: 0.8
-    })
-  })
-  .then(response => {
-    if (!response.ok) {
-      return response.json()
-        .then(errorData => {
-          throw new Error(errorData.error?.message || `HTTP ${response.status}`);
-        })
-        .catch(() => {
-          throw new Error(`HTTP ${response.status}`);
-        });
-    }
-    return response.json();
-  })
-  .then(data => data.choices[0]?.message?.content?.trim());
+  return callOpenAIChat(messages, { temperature: 0.8 })
+    .then((data) => data.choices[0]?.message?.content?.trim());
 };
 
 // Generate storytelling questions (uses Yjs for sync)

@@ -109,7 +109,7 @@
     </header>
     
     <!-- Sync Status Indicator -->
-    <div class="sync-status" id="sync-status" style="display: none;"></div>
+    <div class="sync-status is-hidden" id="sync-status"></div>
     
     <main>
         <div class="container">
@@ -144,7 +144,7 @@
                             <p class="form-help">
                                 Use a unique phrase. Any device using the same name will sync.
                             </p>
-                            <button id="unlink-journal" type="button" class="btn btn-secondary" style="margin-top: 8px;">
+                            <button id="unlink-journal" type="button" class="btn btn-secondary mt-8">
                                 Unlink from server
                             </button>
                         </div>
@@ -153,7 +153,7 @@
                     </div>
                     
                     <!-- Sync Status Subsection (optional, simplified) -->
-                    <div class="settings-subsection" id="sync-status-container" style="display: none;">
+                    <div class="settings-subsection is-hidden" id="sync-status-container">
                         <h3 class="settings-subsection-title">Status</h3>
                         <div class="sync-indicator">
                             <span class="sync-dot" id="sync-dot"></span>
@@ -222,7 +222,7 @@
                             <small class="form-text text-muted">
                                 Requires OpenAI API Key and AI Features to be enabled above.
                             </small>
-                            <div id="ai-prompt-preview" class="api-test-result" style="display: none;">
+                            <div id="ai-prompt-preview" class="api-test-result is-hidden">
                                 <h4>Current AI Prompt Preview:</h4>
                                 <div id="ai-prompt-content" class="prompt-content"></div>
                             </div>
@@ -251,7 +251,7 @@
                     </button>
                     
                     <!-- PWA Refresh Button - Only visible in standalone mode -->
-                    <button id="refresh-app" type="button" class="btn btn-secondary" style="display: none;" data-pwa-only>
+                    <button id="refresh-app" type="button" class="btn btn-secondary is-hidden" data-pwa-only>
                         Refresh App
                     </button>
 

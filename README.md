@@ -7,7 +7,10 @@ A simple D&D journal built with vanilla JavaScript.
 
 ## Quick Start
 
-Open `index.html` in a browser.
+Open `index.html` in a browser, or run a static server:
+```bash
+npm start
+```
 
 ## Cross-Device Sync
 
@@ -85,26 +88,46 @@ Version info:
 ## Architecture
 
 - Vanilla JavaScript only
-- Functional programming
-- ES6 modules
-- Yjs with IndexedDB persistence
-- No build tools
-- All code tested
+- Functional programming (ADR-0002)
+- ES6 modules (ADR-0010)
+- Yjs with IndexedDB persistence (ADR-0004)
+- Navigation session cache for fast UI (ADR-0016)
+- No build tools (ADR-0006)
+- All code tested (ADR-0005)
 
 ## Structure
 
 ```
-├── index.html          # Main app
-├── character.html      # Character page
-├── settings.html       # Settings page
-├── js/                 # JavaScript modules
-├── css/                # Styles
-├── node_modules/       # Client dependencies
-├── server/             # Server with separate dependencies
-├── test/               # Tests
-└── docs/adr/           # Architecture decisions
+├── index.html                     # Main app
+├── character.html                 # Character page
+├── settings.html                  # Settings page
+├── js/
+│   ├── journal.js                 # Journal logic
+│   ├── journal-views.js           # Facade re-exporting view components
+│   ├── components/
+│   │   ├── entry-form.js          # Entry form view
+│   │   ├── entry-item.js          # Single entry view
+│   │   ├── entry-list.js          # Entries list view
+│   │   ├── character-summary.js   # Character summary view
+│   │   └── notifications.js       # Toast notifications
+│   ├── ai-request.js              # Centralized OpenAI requests
+│   ├── ai.js                      # AI orchestration
+│   ├── summarization.js           # Summarization
+│   ├── utils.js                   # Pure utilities
+│   └── ...                        # Other modules (yjs, parts, etc.)
+├── css/                           # Styles
+├── node_modules/                  # Client dependencies (import maps)
+├── server/                        # Server with separate dependencies
+├── test/                          # Tests
+└── docs/adr/                      # Architecture decisions
 ```
 
 **Dependencies separated:**
 - **Client**: Uses `node_modules/` with import maps (per ADR-0014)
 - **Server** (`./server/`): Separate package.json with LevelDB dependencies
+
+## Notable Conventions
+
+- View-Logic separation (ADR-0015): logic modules import views; views are pure and do not import state/services.
+- Markdown rendering is sanitized by escaping HTML before transforms.
+- AI calls centralized in `js/ai-request.js` to avoid duplication.

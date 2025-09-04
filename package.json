@@ -38,14 +38,13 @@
   "bugs": {
     "url": "https://github.com/pekka-poukamo/dnd-journal/issues"
   },
-  "homepage": "http://dnd-journal.surge.sh",
+  "homepage": "",
   "devDependencies": {
     "c8": "^8.0.1",
     "chai": "^4.5.0",
     "http-server": "^14.1.1",
     "jsdom": "^23.2.0",
-    "mocha": "^10.8.2",
-    "surge": "^0.23.1"
+    "mocha": "^10.8.2"
   },
   "engines": {
     "node": ">=22.0.0"

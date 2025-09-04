@@ -1,46 +1,19 @@
 // Entry Item Component - Reusable renderer for a journal entry
 import { parseMarkdown, formatDate } from '../utils.js';
-import { getYjsState, getSummary } from '../yjs.js';
-import { summarize } from '../summarization.js';
-import { isAIEnabled } from '../ai.js';
+// Views must remain pure: no state or service imports
 
-// Internal: async summary generation mirroring journal-views behavior
-const generateSummaryAsync = (entry, targetElement) => {
-  const summaryKey = `entry:${entry.id}`;
-  return summarize(summaryKey, entry.content)
-    .then((result) => {
-      if (result && typeof result === 'object' && result.title && result.subtitle && result.summary) {
-        const entryElement = targetElement.closest('.entry') || targetElement;
-        if (entryElement) {
-          const titleElement = entryElement.querySelector('.entry-title h3');
-          const subtitleElement = entryElement.querySelector('.entry-subtitle p');
-          const summaryElement = entryElement.querySelector('.entry-summary p');
-          if (titleElement) titleElement.textContent = result.title;
-          if (subtitleElement) subtitleElement.textContent = result.subtitle;
-          if (summaryElement) summaryElement.textContent = result.summary;
-          entryElement.classList.remove('entry--placeholder');
-        }
-        return result.summary;
-      }
-      return result;
-    });
-};
+// Summarization orchestration removed from views by ADR-0015
 
-export const createEntryItem = (entry, onEdit, onDelete) => {
+export const createEntryItem = (entry, onEdit, onDelete, precomputedSummary = null) => {
   const article = document.createElement('article');
   article.className = 'entry';
   article.dataset.entryId = entry.id;
-
-  const state = getYjsState();
-  const summaryKey = `entry:${entry.id}`;
-  const storedSummary = getSummary(state, summaryKey);
-
   let title;
   let subtitle;
   let summary;
-  if (storedSummary) {
+  if (precomputedSummary) {
     try {
-      const summaryData = JSON.parse(storedSummary);
+      const summaryData = typeof precomputedSummary === 'string' ? JSON.parse(precomputedSummary) : precomputedSummary;
       title = summaryData.title;
       subtitle = summaryData.subtitle;
       summary = summaryData.summary;
@@ -101,9 +74,7 @@ export const createEntryItem = (entry, onEdit, onDelete) => {
   if (editButton && onEdit) editButton.addEventListener('click', () => onEdit(entry.id));
   if (deleteButton && onDelete) deleteButton.addEventListener('click', () => onDelete(entry.id));
 
-  if (isAIEnabled() && !storedSummary) {
-    generateSummaryAsync(entry, article).catch(() => {});
-  }
+  // No async summarization here; logic layer should update the DOM when ready
 
   return article;
 };
