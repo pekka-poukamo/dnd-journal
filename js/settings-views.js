@@ -6,36 +6,36 @@ import {
 } from './navigation-cache.js';
 
 // Render settings form with current data
-export const renderSettingsForm = (formOrSettings, settings = null) => {
-  // Handle both old signature (settings) and new signature (form, settings)
+// Backward compatible usage:
+// - renderSettingsForm(settingsData)
+// - renderSettingsForm(formElement, settingsData)
+export const renderSettingsForm = (formOrSettings, maybeSettings = null, uiElements = {}) => {
   let form = null;
   let settingsData = null;
-  
-  if (settings === null) {
-    // Old signature: renderSettingsForm(settings)
-    settingsData = formOrSettings;
-  } else {
-    // New signature: renderSettingsForm(form, settings)
+  const looksLikeForm = !!(formOrSettings && typeof formOrSettings.querySelector === 'function');
+  if (looksLikeForm) {
     form = formOrSettings;
-    settingsData = settings;
+    settingsData = maybeSettings || {};
+  } else {
+    settingsData = formOrSettings || {};
+    try { form = document.getElementById('settings-form'); } catch {}
   }
+  if (!form || typeof form.querySelector !== 'function') return;
   
   // API Key setting - try form-based access first, then fallback to document query
-  const apiKeyInput = form ? 
-    form.querySelector('[name="openai-api-key"]') : 
-    document.getElementById('openai-api-key');
+  const apiKeyInput = form.querySelector('[name="openai-api-key"]') || (typeof document !== 'undefined' ? document.getElementById('openai-api-key') : null);
   if (apiKeyInput) {
     apiKeyInput.value = settingsData['openai-api-key'] || '';
   }
   
   // AI Features checkbox
-  const aiEnabledCheckbox = form ? form.querySelector('[name="ai-enabled"]') : document.getElementById('ai-enabled');
+  const aiEnabledCheckbox = form.querySelector('[name="ai-enabled"]') || (typeof document !== 'undefined' ? document.getElementById('ai-enabled') : null);
   if (aiEnabledCheckbox) {
     aiEnabledCheckbox.checked = settingsData['ai-enabled'] === 'true' || settingsData['ai-enabled'] === true;
   }
   
   // Update show AI prompt button state
-  const showPromptButton = document.getElementById('show-ai-prompt');
+  const showPromptButton = uiElements.showPromptButton || (typeof document !== 'undefined' ? document.getElementById('show-ai-prompt') : null);
   if (showPromptButton) {
     const hasApiKey = settingsData['openai-api-key'] && settingsData['openai-api-key'].trim().length > 0;
     const aiEnabled = settingsData['ai-enabled'] === 'true' || settingsData['ai-enabled'] === true;
@@ -54,18 +54,14 @@ export const renderSettingsForm = (formOrSettings, settings = null) => {
   }
   
   // Sync server setting - try different ID patterns and key names
-  const syncServerInput = form ? 
-    form.querySelector('[name="sync-server-url"]') : 
-    (document.getElementById('sync-server-url') || document.getElementById('sync-server'));
+  const syncServerInput = form.querySelector('[name="sync-server-url"]') || (typeof document !== 'undefined' ? (document.getElementById('sync-server-url') || document.getElementById('sync-server')) : null);
   if (syncServerInput) {
     // Support both key names for backward compatibility
     syncServerInput.value = settingsData['sync-server-url'] || settingsData['dnd-journal-sync-server'] || '';
   }
 
   // Journal name
-  const journalNameInput = form ?
-    form.querySelector('[name="journal-name"]') :
-    document.getElementById('journal-name');
+  const journalNameInput = form.querySelector('[name="journal-name"]') || (typeof document !== 'undefined' ? document.getElementById('journal-name') : null);
   if (journalNameInput) {
     journalNameInput.value = (settingsData['journal-name'] || '').toLowerCase();
     // Provide inline hint for allowed characters
@@ -74,8 +70,22 @@ export const renderSettingsForm = (formOrSettings, settings = null) => {
 };
 
 // Update connection status display
-export const renderConnectionStatus = (isConnected, serverUrl) => {
-  const statusElement = document.getElementById('connection-status');
+// Backward compatible usage:
+// - renderConnectionStatus(isConnected, serverUrl)
+// - renderConnectionStatus(statusElement, isConnected, serverUrl)
+export const renderConnectionStatus = (statusElementOrIsConnected, maybeIsConnected, maybeServerUrl) => {
+  let statusElement = null;
+  let isConnected = false;
+  let serverUrl = undefined;
+  if (statusElementOrIsConnected && typeof statusElementOrIsConnected === 'object' && statusElementOrIsConnected !== null && ('textContent' in statusElementOrIsConnected)) {
+    statusElement = statusElementOrIsConnected;
+    isConnected = !!maybeIsConnected;
+    serverUrl = maybeServerUrl;
+  } else {
+    isConnected = !!statusElementOrIsConnected;
+    serverUrl = maybeIsConnected;
+    try { statusElement = document.getElementById('connection-status'); } catch {}
+  }
   if (!statusElement) return;
   
   if (isConnected) {
@@ -95,21 +105,37 @@ export const renderConnectionStatus = (isConnected, serverUrl) => {
 
 
 // Show/hide loading indicator for test connection
-export const setTestConnectionLoading = (isLoading) => {
-  const testBtn = document.getElementById('test-connection');
-  if (testBtn) {
+// Backward compatible: setTestConnectionLoading(isLoading) or setTestConnectionLoading(buttonEl, isLoading)
+export const setTestConnectionLoading = (testBtn, isLoading) => {
+  if (typeof testBtn === 'boolean' && typeof isLoading === 'undefined') {
+    isLoading = testBtn;
+    try { testBtn = document.getElementById('test-connection'); } catch { testBtn = null; }
+  }
+  if (testBtn && typeof testBtn === 'object') {
     testBtn.disabled = isLoading;
     testBtn.textContent = isLoading ? 'Testing...' : 'Test Connection';
   }
 };
 
 // Render AI prompt preview
-export const renderAIPromptPreview = (aiEnabled, messages = null) => {
-  const promptPreviewElement = document.getElementById('ai-prompt-preview');
-  const promptContentElement = document.getElementById('ai-prompt-content');
-  
+// Backward compatible usage:
+// - renderAIPromptPreview(aiEnabled, messages)
+// - renderAIPromptPreview(previewEl, contentEl, aiEnabled, messages)
+export const renderAIPromptPreview = (...args) => {
+  let promptPreviewElement = null;
+  let promptContentElement = null;
+  let aiEnabled = false;
+  let messages = null;
+  if (args.length >= 3 && typeof args[2] === 'boolean') {
+    [promptPreviewElement, promptContentElement, aiEnabled, messages = null] = args;
+  } else {
+    [aiEnabled, messages = null] = args;
+    try {
+      promptPreviewElement = document.getElementById('ai-prompt-preview');
+      promptContentElement = document.getElementById('ai-prompt-content');
+    } catch {}
+  }
   if (!promptPreviewElement || !promptContentElement) {
-    console.warn('AI prompt preview elements not found');
     return;
   }
   
@@ -160,12 +186,7 @@ export const renderCachedSettingsContent = (elements) => {
     
     // Render form with cached data
     if (settingsFormElement) {
-      renderSettingsForm(settingsFormElement, displayData, {
-        onSave: () => {}, // Disabled during cache phase
-        onClear: () => {} // Disabled during cache phase
-      });
-      
-
+      renderSettingsForm(settingsFormElement, displayData);
     }
     
     // Show loading indicator for connection status

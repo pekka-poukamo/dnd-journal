@@ -34,7 +34,10 @@ const computePartData = (state, partIndex, providedEntries = null) => {
 
 export const renderPartPage = (state, partIndex, providedEntries = null) => {
   const data = computePartData(state, partIndex, providedEntries);
-  renderPart({ titleId: 'part-title', summaryId: 'part-summary-content', listId: 'part-entries-list' }, data);
+  const titleElement = document.getElementById('part-title');
+  const summaryElement = document.getElementById('part-summary-content');
+  const listElement = document.getElementById('part-entries-list');
+  renderPart({ titleElement, summaryElement, listElement }, data);
 };
 
 export const initPartPage = async (stateParam = null, partIndexParam = null) => {
