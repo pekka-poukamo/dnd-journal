@@ -4,6 +4,8 @@ import { onJournalChange, onSummariesChange } from './yjs.js';
 import { onChronicleChange } from './yjs.js';
 import { backfillPartsIfMissing, PART_SIZE_DEFAULT } from './parts.js';
 import { renderPart } from './components/part-views.js';
+import { parseMarkdown } from './utils.js';
+import { getSummary } from './yjs.js';
 
 const getQueryParam = (name) => {
   try {
@@ -37,7 +39,12 @@ export const renderPartPage = (state, partIndex, providedEntries = null) => {
   const titleElement = document.getElementById('part-title');
   const summaryElement = document.getElementById('part-summary-content');
   const listElement = document.getElementById('part-entries-list');
-  renderPart({ titleElement, summaryElement, listElement }, data);
+  const options = {
+    formatText: (text) => parseMarkdown(text),
+    sortOrder: 'asc',
+    getPrecomputedSummary: (entry) => getSummary(state, `entry:${entry.id}`)
+  };
+  renderPart({ titleElement, summaryElement, listElement }, data, options);
 };
 
 export const initPartPage = async (stateParam = null, partIndexParam = null) => {

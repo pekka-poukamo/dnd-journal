@@ -10,7 +10,9 @@ export const renderEntries = (container, entries, options = {}) => {
     return;
   }
 
-  const sortedEntries = sortEntriesByDate(entries);
+  const sortedEntries = options.sortOrder === 'asc'
+    ? [...entries].sort((a, b) => a.timestamp - b.timestamp)
+    : sortEntriesByDate(entries);
 
   if (sortedEntries.length > 10) {
     const recentEntries = sortedEntries.slice(0, 5);

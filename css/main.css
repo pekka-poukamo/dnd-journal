@@ -438,10 +438,13 @@ li {
   background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, var(--color-background) 95%);
 }
 
-.entry-content p:first-of-type:first-letter {
-  initial-letter: 2;
-  margin-right: var(--space-xs);
-  font-style: italic;
+@supports (initial-letter: 2) or (-webkit-initial-letter: 2) {
+  .entry-content p:first-of-type:first-letter {
+    initial-letter: 2;
+    -webkit-initial-letter: 2;
+    margin-right: var(--space-xs);
+    font-style: italic;
+  }
 }
 
 .entry-content p:first-of-type:first-line {
