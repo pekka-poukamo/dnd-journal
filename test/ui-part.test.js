@@ -7,6 +7,7 @@ import path from 'path';
 
 import * as YjsModule from '../js/yjs.js';
 import * as Y from 'yjs';
+import { initPartPage } from '../js/part.js';
 
 const workspaceRoot = process.cwd();
 
@@ -47,8 +48,8 @@ describe('UI Contracts - Part Page (part.html)', function() {
     part1.set('entries', yIds);
     partsMap.set('1', part1);
 
-    // Import the page script after DOM and state are ready
-    await import('../js/part.js');
+    // Initialize page logic explicitly (no side effects on import)
+    await initPartPage(state, 1);
 
     // Allow microtasks to run
     await new Promise(r => setTimeout(r, 10));

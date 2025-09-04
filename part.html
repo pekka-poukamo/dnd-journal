@@ -76,7 +76,10 @@
         </div>
     </main>
 
-    <script type="module" src="js/part.js"></script>
+    <script type="module">
+      import { initPartPage } from './js/part.js';
+      initPartPage();
+    </script>
     <script type="module" src="js/sw-register.js"></script>
 </body>
 </html>
