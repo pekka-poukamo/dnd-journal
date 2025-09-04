@@ -10,21 +10,19 @@ export const createEntryItem = (entry, onEdit, onDelete, precomputedSummary = nu
   article.dataset.entryId = entry.id;
   let title;
   let subtitle;
-  let summary;
+  // No summary anymore; only title and subtitle are used
   if (precomputedSummary) {
     try {
       const summaryData = typeof precomputedSummary === 'string' ? JSON.parse(precomputedSummary) : precomputedSummary;
       title = summaryData.title;
       subtitle = summaryData.subtitle;
-      summary = summaryData.summary;
     } catch {}
   }
 
-  if (!title || !subtitle || !summary) {
+  if (!title || !subtitle) {
     article.classList.add('entry--placeholder');
     title = title || 'Lorem Ipsum and Amet Consectur Adipiscing';
     subtitle = subtitle || 'In which Lorem Ipsum, a dolor, sat with Amet Consectur, waiting...';
-    summary = summary || 'Mr. Ipsum and Mrs. Consectur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.';
   }
 
   article.innerHTML = `
@@ -51,9 +49,7 @@ export const createEntryItem = (entry, onEdit, onDelete, precomputedSummary = nu
         </div>
       </div>
     </div>
-    <div class="entry-summary">
-      <p>${summary}</p>
-    </div>
+    
     <div class="entry-content entry-content--hidden">
       ${parseMarkdown(entry.content)}
     </div>

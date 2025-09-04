@@ -16,18 +16,20 @@ describe('Entry Item Component', function() {
     YjsModule.resetYjs();
   });
 
-  it('renders placeholder when no stored summary', function() {
+  it('renders placeholder when no stored title/subtitle', function() {
     const entry = { id: 'x1', content: 'foo', timestamp: Date.now() };
     const el = createEntryItem(entry, null, null);
     expect(el.className).to.include('entry--placeholder');
-    expect(el.querySelector('.entry-summary p').textContent).to.be.a('string');
+    expect(el.querySelector('.entry-title h3').textContent).to.be.a('string');
+    expect(el.querySelector('.entry-subtitle p').textContent).to.be.a('string');
   });
 
-  it('renders stored structured summary when available', function() {
+  it('renders stored structured title/subtitle when available', function() {
     const entry = { id: 'x2', content: 'bar', timestamp: Date.now() };
-    const summary = { title: 'T', subtitle: 'S', summary: 'SUM' };
+    const summary = { title: 'T', subtitle: 'S' };
     const el = createEntryItem(entry, null, null, JSON.stringify(summary));
     expect(el.className).to.not.include('entry--placeholder');
-    expect(el.querySelector('.entry-summary p').textContent).to.equal('SUM');
+    expect(el.querySelector('.entry-title h3').textContent).to.equal('T');
+    expect(el.querySelector('.entry-subtitle p').textContent).to.equal('S');
   });
 });
