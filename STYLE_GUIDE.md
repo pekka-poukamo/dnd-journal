@@ -76,3 +76,18 @@ describe('Module', () => {
 - `require()` statements
 - Inline styles
 - Non-semantic HTML
+
+## View Purity (Architecture)
+
+Rendering modules (`*-views.js` and files under `js/components/`) must stay pure and presentation-focused.
+
+Checklist:
+- Accept data and callbacks as parameters; do not access global state.
+- Do not import state or service modules (e.g., Yjs integration, AI orchestration).
+- Do not perform network calls.
+- Return DOM elements or update only the given container.
+- Keep DOM creation and class toggling inside views; keep data validation and side effects in logic modules.
+
+UI helpers:
+- `js/components/notifications.js` provides `showNotification` for views.
+- Shared non-DOM helpers live in `js/utils.js`.

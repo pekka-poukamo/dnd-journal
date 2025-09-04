@@ -8,7 +8,6 @@ import {
 } from './navigation-cache.js';
 // Views must remain pure: no state or service imports
 import { getWordCount } from './utils.js';
-import { isAIEnabled } from './ai.js';
 import { createEntryItem } from './components/entry-item.js';
 export { createEntryForm } from './components/entry-form.js';
 export { renderEntries } from './components/entry-list.js';

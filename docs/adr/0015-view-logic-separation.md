@@ -196,3 +196,11 @@ This ADR builds upon and enforces:
 - **ADR-0005**: Comprehensive testing enabled by separation
 
 **This pattern is mandatory for all new functional modules and should be applied during any significant refactoring of existing modules.**
+
+## Quick Checklist for View Purity
+
+- Inputs only: receive all data via parameters; no global state access
+- Outputs only: return elements or update provided containers
+- No imports from state/service modules (Yjs, AI orchestration)
+- No network calls in views
+- Logic modules own data flow, validation, and side effects
