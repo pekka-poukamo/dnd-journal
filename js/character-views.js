@@ -6,11 +6,8 @@ import {
   getFormDataForPage
 } from './navigation-cache.js';
 
-// Render character form with current data
+// Render character form with current data (container must be provided by logic)
 export const renderCharacterForm = (form, character) => {
-  if (!form) {
-    form = document.getElementById('character-form');
-  }
   if (!form) return;
   
   const fields = ['name', 'race', 'class', 'backstory', 'notes'];
@@ -23,9 +20,8 @@ export const renderCharacterForm = (form, character) => {
   });
 };
 
-// Update summaries display
-export const renderSummaries = (backstorySummary, notesSummary, originals = {}) => {
-  const summariesContainer = document.getElementById('character-summaries') || document.getElementById('summaries-content');
+// Update summaries display (container must be provided by logic)
+export const renderSummaries = (summariesContainer, backstorySummary, notesSummary, originals = {}) => {
   if (!summariesContainer) return;
   
   if (!backstorySummary && !notesSummary) {
@@ -66,9 +62,8 @@ export const renderSummaries = (backstorySummary, notesSummary, originals = {}) 
   summariesContainer.innerHTML = summariesHTML;
 };
 
-// Show/hide generate summaries button
-export const toggleGenerateButton = (isAPIAvailable, hasContent = false) => {
-  const generateBtn = document.getElementById('generate-summaries');
+// Show/hide generate summaries button (element must be provided by logic)
+export const toggleGenerateButton = (generateBtn, isAPIAvailable, hasContent = false) => {
   if (generateBtn) {
     generateBtn.style.display = (isAPIAvailable && hasContent) ? 'inline-block' : 'none';
   }
@@ -91,12 +86,7 @@ export const renderCachedCharacterContent = (elements) => {
     
     // Render form with cached data
     if (characterFormElement) {
-      renderCharacterForm(characterFormElement, displayData, {
-        onSave: () => {}, // Disabled during cache phase
-        onGenerate: () => {} // Disabled during cache phase
-      });
-      
-
+      renderCharacterForm(characterFormElement, displayData);
     }
     
     // Show loading indicator for summaries

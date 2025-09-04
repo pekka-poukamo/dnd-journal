@@ -32,7 +32,7 @@ export const initCharacterPage = async (stateParam = null) => {
   try {
     // Get DOM elements
     characterFormElement = document.getElementById('character-form');
-    const summariesContainer = document.getElementById('summaries-container');
+    const summariesContainer = document.getElementById('summaries-content');
     
     if (!characterFormElement) {
       console.warn('Character form not found');
@@ -270,8 +270,8 @@ export const updateSummariesDisplay = (stateParam = null) => {
     const character = getCharacterData(state);
     const backstorySummary = getSummary(state, 'character:backstory');
     const notesSummary = getSummary(state, 'character:notes');
-    
-    renderSummaries(backstorySummary, notesSummary, { backstory: character.backstory || '', notes: character.notes || '' });
+    const summariesContainer = document.getElementById('summaries-content');
+    renderSummaries(summariesContainer, backstorySummary, notesSummary, { backstory: character.backstory || '', notes: character.notes || '' });
     
     const available = isAIEnabled();
     // Consider current form values as well to reflect immediate user input
@@ -279,7 +279,8 @@ export const updateSummariesDisplay = (stateParam = null) => {
     const currentBackstory = form?.querySelector('[name="backstory"]')?.value || character.backstory || '';
     const currentNotes = form?.querySelector('[name="notes"]')?.value || character.notes || '';
     const hasContent = (currentBackstory.trim().length > 0) || (currentNotes.trim().length > 0);
-    toggleGenerateButton(available, hasContent);
+    const generateBtn = document.getElementById('generate-summaries');
+    toggleGenerateButton(generateBtn, available, hasContent);
   } catch (error) {
     console.error('Failed to update summaries display:', error);
   }

@@ -88,6 +88,9 @@ Checklist:
 - Return DOM elements or update only the given container.
 - Keep DOM creation and class toggling inside views; keep data validation and side effects in logic modules.
 
+Note:
+- Views may import and use `js/navigation-cache.js` for UI-only cached rendering during navigation per ADR-0016. This cache is a temporary, UI-focused bridge and not a source of truth.
+
 UI helpers:
 - `js/components/notifications.js` provides `showNotification` for views.
 - Shared non-DOM helpers live in `js/utils.js`.

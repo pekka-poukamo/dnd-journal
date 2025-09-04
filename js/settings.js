@@ -95,7 +95,8 @@ export const renderSettingsPage = (stateParam = null) => {
     // Use module-level element if available, otherwise find it
     const formElement = settingsFormElement || document.getElementById('settings-form');
     if (formElement) {
-      renderSettingsForm(formElement, settings);
+      const showPromptButton = document.getElementById('show-ai-prompt');
+      renderSettingsForm(formElement, settings, { showPromptButton });
     }
     
     const statusElement = connectionStatusElement || document.getElementById('connection-status');
@@ -415,19 +416,29 @@ export const showCurrentAIPrompt = async () => {
     const aiEnabled = isAIEnabled();
     
     if (!aiEnabled) {
-      renderAIPromptPreview(aiEnabled, null);
+      const previewEl = document.getElementById('ai-prompt-preview');
+      const contentEl = document.getElementById('ai-prompt-content');
+      renderAIPromptPreview(previewEl, contentEl, aiEnabled, null);
       showNotification('AI features not enabled', 'info');
       return;
     }
     
     // Show preview container immediately, then fill with messages
-    renderAIPromptPreview(aiEnabled, null);
+    {
+      const previewEl = document.getElementById('ai-prompt-preview');
+      const contentEl = document.getElementById('ai-prompt-content');
+      renderAIPromptPreview(previewEl, contentEl, aiEnabled, null);
+    }
     
     // Get prompt preview using same logic as AI module
     const promptPreview = await getPromptPreview();
     const messages = promptPreview ? buildMessages(promptPreview.systemPrompt, promptPreview.userPrompt) : null;
     
-    renderAIPromptPreview(aiEnabled, messages);
+    {
+      const previewEl = document.getElementById('ai-prompt-preview');
+      const contentEl = document.getElementById('ai-prompt-content');
+      renderAIPromptPreview(previewEl, contentEl, aiEnabled, messages);
+    }
     showNotification('Current AI prompts displayed', 'success');
   } catch (error) {
     console.error('Failed to show AI prompt:', error);
