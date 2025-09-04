@@ -11,7 +11,7 @@ import {
   setChroniclePartTitle,
   setChroniclePartSummary,
   setChroniclePartEntries
-} from './yjs.js';
+} from './chronicle-state.js';
 import { summarize } from './summarization.js';
 import { PROMPTS } from './prompts.js';
 

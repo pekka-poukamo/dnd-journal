@@ -1,7 +1,7 @@
 // Chronicle Page Scaffold - renders placeholders for So Far and Parts list
 import { initYjs, getYjsState } from './yjs.js';
 import { getEntries } from './yjs.js';
-import { ensureChronicleStructure, getChroniclePartsMap } from './yjs.js';
+import { ensureChronicleStructure, getChroniclePartsMap } from './chronicle-state.js';
 import { onJournalChange, onSummariesChange } from './yjs.js';
 import { onChronicleChange } from './yjs.js';
 import { PART_SIZE_DEFAULT, backfillPartsIfMissing, recomputeRecentSummary } from './parts.js';
