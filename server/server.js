@@ -116,8 +116,11 @@ wss.on('connection', (ws, req) => {
 
   setupWSConnection(ws, req, {
     getYDoc: (docName) => {
+      console.log(`🔍 getYDoc called with docName: "${docName}"`);
       const normalizedDocName = (docName || '').toString().toLowerCase();
+      console.log(`🔍 Normalized docName: "${normalizedDocName}"`);
       if (!isValidRoomName(normalizedDocName)) {
+        console.log(`❌ Invalid room name: "${normalizedDocName}"`);
         throw new Error('Invalid room name');
       }
       if (!activeDocuments.has(normalizedDocName)) {
@@ -129,6 +132,7 @@ wss.on('connection', (ws, req) => {
       }
       activeDocuments.get(normalizedDocName).connections.add(connectionId);
       
+      console.log(`💾 Creating LevelDB persistence for: "${normalizedDocName}"`);
       const persistence = new LeveldbPersistence(DATA_DIR + '/' + normalizedDocName);
       return persistence.doc;
     }
