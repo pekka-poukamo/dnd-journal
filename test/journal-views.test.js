@@ -240,9 +240,9 @@ describe('Journal Views Module', function() {
       }
       JournalViews.renderEntries(container, many, () => {}, () => {});
       // Verify toggling older entries collapsible works
-      const toggleButton = container.querySelector('.entries-section--older .entry-summary__toggle');
+      const toggleButton = container.querySelector('.entries-section--older .collapsible__toggle');
       expect(toggleButton).to.exist;
-      const contentDiv = container.querySelector('.entries-section--older .entry-summary__content');
+      const contentDiv = container.querySelector('.entries-section--older .collapsible__content');
       expect(contentDiv.style.display).to.equal('none');
       toggleButton.click();
       expect(contentDiv.style.display).to.equal('block');

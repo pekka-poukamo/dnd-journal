@@ -96,6 +96,8 @@ export const maybeCloseOpenPart = async (state, partSize = PART_SIZE_DEFAULT) =>
     // Generate part summary (~1000 words) from full raw text
     const fullText = partEntries.map(e => e.content).join('\n\n');
     const partSummaryKey = getPartSummaryKey(partIndex);
+    // Show in-progress state immediately
+    setChroniclePartSummary(state, partIndex, 'Generating summary...');
     const partSummary = await summarize(partSummaryKey, fullText, 1000).catch(() => '');
     if (partSummary) setChroniclePartSummary(state, partIndex, partSummary);
 
@@ -118,6 +120,8 @@ export const maybeCloseOpenPart = async (state, partSize = PART_SIZE_DEFAULT) =>
     if (s) allSummaries.push(s);
   }
   const combined = allSummaries.join('\n\n');
+  // Show in-progress state for so-far
+  setChronicleSoFarSummary(state, 'Generating summary...');
   const soFar = await summarize(SO_FAR_LATEST_KEY, combined, 1000).catch(() => '');
   if (soFar) setChronicleSoFarSummary(state, soFar);
 
@@ -131,6 +135,8 @@ const defaultRecomputeRecentSummaryImpl = async (state, partSize = PART_SIZE_DEF
   const numClosedParts = Math.floor(total / partSize);
   const openPart = entries.slice(numClosedParts * partSize);
   const fullText = openPart.map(e => e.content).join('\n\n');
+  // Show in-progress state for recent
+  setChronicleRecentSummary(state, 'Generating summary...');
   const recent = await summarize(RECENT_SUMMARY_KEY, fullText, 1000).catch(() => '');
   if (recent) setChronicleRecentSummary(state, recent);
 };
@@ -168,6 +174,8 @@ export const backfillPartsIfMissing = async (state, partSize = PART_SIZE_DEFAULT
     const ids = partEntries.map(e => e.id);
     persistPartMembership(state, partIndex, ids);
     const fullText = partEntries.map(e => e.content).join('\n\n');
+    // In-progress state for part summary during backfill
+    setChroniclePartSummary(state, partIndex, 'Generating summary...');
     const summary = await summarize(getPartSummaryKey(partIndex), fullText, 1000).catch(() => '');
     if (summary) setChroniclePartSummary(state, partIndex, summary);
     setChronicleLatestPartIndex(state, partIndex);
@@ -184,11 +192,54 @@ export const backfillPartsIfMissing = async (state, partSize = PART_SIZE_DEFAULT
       if (s) allSummaries.push(s);
     }
     const combined = allSummaries.join('\n\n');
+    // In-progress state for so-far during backfill
+    setChronicleSoFarSummary(state, 'Generating summary...');
     const soFar = await summarize(SO_FAR_LATEST_KEY, combined, 1000).catch(() => '');
     if (soFar) setChronicleSoFarSummary(state, soFar);
   }
 
   // Ensure recent summary exists for open part
   await recomputeRecentSummary(state, partSize);
+};
+
+// Explicitly recompute a closed part summary by index (debug helper)
+export const recomputePartSummary = async (state, partIndex) => {
+  if (!Number.isFinite(partIndex) || partIndex <= 0) return;
+  const parts = getChroniclePartsMap(state);
+  const partObj = parts.get(String(partIndex));
+  const entries = getEntries(state);
+  let entryIds = [];
+  if (partObj && partObj.get('entries')) {
+    entryIds = partObj.get('entries').toArray();
+  } else {
+    // Fallback: derive by slicing journal array by part size
+    const start = (partIndex - 1) * PART_SIZE_DEFAULT;
+    entryIds = entries.slice(start, start + PART_SIZE_DEFAULT).map(e => e.id);
+  }
+  const idToEntry = new Map(entries.map(e => [e.id, e]));
+  const fullText = entryIds.map(id => (idToEntry.get(id) || {}).content || '').filter(Boolean).join('\n\n');
+  setChroniclePartSummary(state, partIndex, 'Generating summary...');
+  const result = await summarize(getPartSummaryKey(partIndex), fullText, 1000).catch(() => '');
+  if (result) setChroniclePartSummary(state, partIndex, result);
+};
+
+// Explicitly recompute the Adventure So Far summary (debug helper)
+export const recomputeSoFarSummary = async (state) => {
+  const parts = getChroniclePartsMap(state);
+  const latest = ensureChronicleStructure(state).get('latestPartIndex') || 0;
+  if (!latest || latest <= 0) {
+    setChronicleSoFarSummary(state, '');
+    return;
+  }
+  const allSummaries = [];
+  for (let i = 1; i <= latest; i++) {
+    const p = parts.get(String(i));
+    const s = p && p.get('summary');
+    if (s) allSummaries.push(s);
+  }
+  const combined = allSummaries.join('\n\n');
+  setChronicleSoFarSummary(state, 'Generating summary...');
+  const soFar = await summarize(SO_FAR_LATEST_KEY, combined, 1000).catch(() => '');
+  if (soFar) setChronicleSoFarSummary(state, soFar);
 };
 

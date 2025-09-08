@@ -1,5 +1,6 @@
 // Entry Item Component - Reusable renderer for a journal entry
 import { parseMarkdown, formatDate } from '../utils.js';
+import { createCollapsible } from './collapsible.js';
 // Views must remain pure: no state or service imports
 
 // Summarization orchestration removed from views by ADR-0015
@@ -48,8 +49,7 @@ export const createEntryItem = (entry, onEdit, onDelete, precomputedSummary = nu
           </button>
         </div>
       </div>
-    </div>
-    
+    </div>   
     <div class="entry-content entry-content--hidden">
       ${parseMarkdown(entry.content)}
     </div>
@@ -58,12 +58,18 @@ export const createEntryItem = (entry, onEdit, onDelete, precomputedSummary = nu
     </div>
   `;
 
-  const toggleButton = article.querySelector('.entry-content-control__toggle');
-  const entryContent = article.querySelector('.entry-content');
-  toggleButton.addEventListener('click', () => {
-    entryContent.classList.toggle('entry-content--hidden');
-    toggleButton.textContent = entryContent.classList.contains('entry-content--hidden') ? 'Show chapter' : 'Hide chapter';
-  });
+  const controls = article.querySelector('.entry-content-controls');
+  const contentWrapper = document.createElement('div');
+  contentWrapper.className = 'entry-content';
+  contentWrapper.innerHTML = parseMarkdown(entry.content);
+  const collapsible = createCollapsible('Show chapter', 'Hide chapter', contentWrapper);
+  const toggleBtn = collapsible.querySelector('button');
+  if (toggleBtn) {
+    toggleBtn.classList.add('entry-content-control__toggle');
+    const icon = toggleBtn.querySelector('.collapsible__icon');
+    if (icon) icon.remove();
+  }
+  controls.appendChild(collapsible);
 
   const editButton = article.querySelector('.icon-button[title="Edit"]');
   const deleteButton = article.querySelector('.icon-button[title="Delete"]');

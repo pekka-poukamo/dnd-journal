@@ -1,159 +1,127 @@
 #!/usr/bin/env node
 
-// D&D Journal - Simple Yjs Server with y-leveldb
+// D&D Journal - Simple Yjs Server
 // Usage: node server.js [port] [host]
-//
-// NOTE: You may see a warning "Yjs was already imported" on startup.
-// This is expected and harmless - it occurs because y-leveldb and y-websocket
-// both have internal Yjs imports. Server functionality is not affected.
 
+import express from 'express';
 import { WebSocketServer } from 'ws';
 import { setupWSConnection } from 'y-websocket/bin/utils';
 import { LeveldbPersistence } from 'y-leveldb';
-import { existsSync, readdirSync, statSync } from 'fs';
-import { createServer } from 'http';
-import { parse } from 'url';
-import * as Y from 'yjs';
-// Normalize room names similarly on the server to ensure consistent doc paths
+import { existsSync, readdirSync } from 'fs';
+
 const isValidRoomName = (input) => /^[\p{Ll}\p{Nd}-]+$/u.test((input || '').toString());
 
 const PORT = process.env.PORT || process.argv[2] || 1234;
 const HOST = process.env.HOST || process.argv[3] || '0.0.0.0';
 const DATA_DIR = process.env.DATA_DIR || './data';
 
-// Log startup information
-console.log(`🚀 D&D Journal Server: http/ws://${HOST}:${PORT}`);
-console.log(`💾 LevelDB: ${DATA_DIR}`);
+console.log(`🚀 D&D Journal Server starting on ${HOST}:${PORT}`);
+console.log(`📁 Data directory: ${DATA_DIR}`);
 console.log(`📁 Data directory exists: ${existsSync(DATA_DIR)}`);
 console.log(`🕐 Server started at: ${new Date().toISOString()}`);
 
-// Simple startup check
-console.log(`📁 Data directory: ${existsSync(DATA_DIR) ? 'exists' : 'will be created on first document'}`);
+// Express app for HTTP API
+const app = express();
 
-// HTTP server for minimal API endpoints
-const httpServer = createServer((req, res) => {
-  try {
-    const { pathname } = parse(req.url || '', true);
-    // CORS for simple GET
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    if (req.method === 'OPTIONS') {
-      res.statusCode = 204;
-      res.end();
-      return;
-    }
-
-    // Room status endpoint: GET /sync/room/:name/status
-    if (req.method === 'GET' && pathname && pathname.startsWith('/sync/room/') && pathname.endsWith('/status')) {
-      const parts = pathname.split('/').filter(Boolean); // ['sync','room',':name','status']
-      const providedName = decodeURIComponent(parts[2] || '');
-      const roomName = (providedName || '').toString().toLowerCase();
-      if (!isValidRoomName(roomName)) {
-        res.statusCode = 400;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Invalid room name' }));
-        return;
-      }
-      const roomPath = DATA_DIR + '/' + roomName;
-      let exists = false;
-      try {
-        if (existsSync(roomPath)) {
-          const contents = readdirSync(roomPath);
-          exists = Array.isArray(contents) && contents.length > 0;
-        }
-      } catch (e) {
-        exists = false;
-      }
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ exists }));
-      return;
-    }
-
-    // Default 404
-    res.statusCode = 404;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ error: 'Not found' }));
-  } catch (err) {
-    res.statusCode = 500;
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ error: 'Server error' }));
+// CORS middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
   }
+  next();
 });
 
-httpServer.listen(Number(PORT), HOST);
-
-// Accept WebSocket connections (all paths). We normalize '/ws/<room>' to '/<room>' below
-const wss = new WebSocketServer({ server: httpServer });
-
-// Track active connections and documents
-const activeConnections = new Map();
-const activeDocuments = new Map();
-
-// Log WebSocket server events
-wss.on('connection', (ws, req) => {
-  const connectionId = Math.random().toString(36).substr(2, 9);
+// Room status endpoint
+app.get('/sync/room/:roomName/status', (req, res) => {
+  const roomName = req.params.roomName.toLowerCase();
   
-  // Get real client IP, handling proxy headers
-  const clientIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-                   req.headers['x-real-ip'] ||
-                   req.headers['cf-connecting-ip'] || // Cloudflare
-                   req.socket.remoteAddress;
+  if (!isValidRoomName(roomName)) {
+    return res.status(400).json({ error: 'Invalid room name' });
+  }
   
-  let url = req.url;
-  // Normalize URL so that connections made to '/ws/<room>' are treated as '/<room>'
-  // This keeps document names consistent regardless of whether the client uses a '/ws' base path
-  try {
-    if (url && url.startsWith('/ws/')) {
-      req.url = url.replace(/^\/ws\//, '/');
-      url = req.url;
-    }
-  } catch {}
+  const roomPath = `${DATA_DIR}/${roomName}`;
+  const exists = existsSync(roomPath) && readdirSync(roomPath).length > 0;
   
-  const userAgent = req.headers['user-agent'] || 'Unknown';
-  console.log(`🔗 New connection from ${clientIP} (${req.socket.remoteAddress}) - ${userAgent.substring(0, 50)}...`);
-  activeConnections.set(connectionId, { ip: clientIP, url, userAgent, connectedAt: new Date().toISOString() });
-
-  setupWSConnection(ws, req, {
-    getYDoc: (docName) => {
-      const normalizedDocName = (docName || '').toString().toLowerCase();
-      if (!isValidRoomName(normalizedDocName)) {
-        throw new Error('Invalid room name');
-      }
-      if (!activeDocuments.has(normalizedDocName)) {
-        console.log(`📄 New document: "${normalizedDocName}"`);
-        activeDocuments.set(normalizedDocName, {
-          createdAt: new Date().toISOString(),
-          connections: new Set([connectionId])
-        });
-      }
-      activeDocuments.get(normalizedDocName).connections.add(connectionId);
-      
-      const persistence = new LeveldbPersistence(DATA_DIR + '/' + normalizedDocName);
-      return persistence.doc;
-    }
-  });
-
-  ws.on('close', () => {
-    activeConnections.delete(connectionId);
-    
-    // Remove connection from documents
-    for (const [docName, docInfo] of activeDocuments.entries()) {
-      if (docInfo.connections.has(connectionId)) {
-        docInfo.connections.delete(connectionId);
-      }
-    }
-  });
+  console.log(`📊 Room status check: ${roomName} - exists: ${exists}`);
+  res.json({ exists });
 });
 
-// Log server errors
+// Start HTTP server
+const server = app.listen(Number(PORT), HOST, () => {
+  console.log(`✅ HTTP server running at http://${HOST}:${PORT}`);
+  console.log(`🔌 WebSocket server ready at ws://${HOST}:${PORT}/ws`);
+});
+
+// WebSocket server for Yjs sync
+const wss = new WebSocketServer({ server });
+
 wss.on('error', (error) => {
   console.error('🚨 WebSocket server error:', error.message);
 });
 
+wss.on('connection', (ws, req) => {
+  // Get client info for logging
+  const clientIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+                   req.headers['x-real-ip'] ||
+                   req.headers['cf-connecting-ip'] ||
+                   req.socket.remoteAddress;
+  const userAgent = req.headers['user-agent'] || 'Unknown';
+  
+  // Strip /ws prefix to get clean room name
+  let originalUrl = req.url;
+  if (req.url?.startsWith('/ws/')) {
+    req.url = req.url.replace('/ws/', '/');
+  }
+  
+  // Extract room name from URL
+  const roomName = req.url?.split('/')[1] || 'unknown';
+  
+  console.log(`🔌 WebSocket connection from ${clientIP}`);
+  console.log(`   User-Agent: ${userAgent.substring(0, 80)}${userAgent.length > 80 ? '...' : ''}`);
+  console.log(`   Original URL: ${originalUrl} → Normalized: ${req.url}`);
+  console.log(`   Target room: "${roomName}"`);
 
+  setupWSConnection(ws, req, {
+    getYDoc: (docName) => {
+      const normalizedRoomName = (docName || '').toString().toLowerCase();
+      
+      if (!isValidRoomName(normalizedRoomName)) {
+        console.log(`❌ Invalid room name rejected: "${normalizedRoomName}" from ${clientIP}`);
+        throw new Error('Invalid room name');
+      }
+      
+      const persistencePath = `${DATA_DIR}/${normalizedRoomName}`;
+      console.log(`📄 Creating LevelDB persistence for room: "${normalizedRoomName}"`);
+      console.log(`   Client: ${clientIP}`);
+      console.log(`   Persistence path: ${persistencePath}`);
+      
+      const persistence = new LeveldbPersistence(persistencePath);
+      
+      // Log when document is ready
+      persistence.doc.on('update', () => {
+        console.log(`💾 Document updated in room: "${normalizedRoomName}"`);
+      });
+      
+      return persistence.doc;
+    }
+  });
+  
+  ws.on('close', (code, reason) => {
+    console.log(`🔌 WebSocket disconnected: ${clientIP} from room "${roomName}"`);
+    console.log(`   Close code: ${code}, reason: ${reason || 'none'}`);
+  });
+  
+  ws.on('error', (error) => {
+    console.error(`🚨 WebSocket error for ${clientIP} in room "${roomName}":`, error.message);
+  });
+});
 
 process.on('SIGINT', () => {
-  console.log('\n👋 Server stopped');
+  console.log('\n👋 Server shutting down');
   process.exit(0);
 });

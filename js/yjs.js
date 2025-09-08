@@ -135,28 +135,62 @@ export const getYjsState = () => {
 // Set up sync provider from settings
 const setupSyncFromSettings = () => {
   // Only try to get settings if we're initialized
-  if (!isInitialized) return;
+  if (!isInitialized) {
+    console.debug('Yjs not initialized, skipping sync setup');
+    return;
+  }
   
   try {
     const state = getYjsState();
     const journalName = (getSetting(state, 'journal-name', '') || '').trim();
     
+    console.log('Setting up sync from settings, journal name:', journalName);
+    
     if (journalName) {
       try {
         const wsUrl = resolveWebSocketUrl();
         const normalizedDocName = journalName.toLowerCase();
+        console.log('WebSocket URL:', wsUrl, 'Document name:', normalizedDocName);
+        
         if (!isValidRoomName(normalizedDocName)) {
+          console.warn('Invalid room name:', normalizedDocName);
           return; // Do not attempt to connect with invalid names
         }
+        
+        // Destroy existing provider if any
+        if (provider) {
+          console.log('Destroying existing provider');
+          provider.destroy();
+          provider = null;
+        }
+        
+        console.log('Creating new WebsocketProvider...');
         provider = new WebsocketProvider(wsUrl, normalizedDocName, ydoc);
+        
+        // Add event listeners for debugging
+        provider.on('status', (event) => {
+          console.log('WebSocket provider status:', event.status);
+        });
+        
+        provider.on('connection-close', (event) => {
+          console.log('WebSocket connection closed:', event);
+        });
+        
+        provider.on('connection-error', (event) => {
+          console.log('WebSocket connection error:', event);
+        });
+        
+        console.log('WebSocket provider created successfully');
         // Rely on CRDT; no post-sync preference overwrites
       } catch (error) {
         console.warn('Failed to connect to sync server:', error);
       }
+    } else {
+      console.log('No journal name set, skipping sync setup');
     }
   } catch (error) {
     // Settings not available yet, skip sync setup for now
-    console.debug('Settings not available during initialization, skipping sync setup');
+    console.debug('Settings not available during initialization, skipping sync setup:', error);
   }
 };
 
