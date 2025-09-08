@@ -24,10 +24,10 @@ const resolveWebSocketUrl = () => {
   try {
     if (typeof window !== 'undefined' && window.location && window.location.host) {
       const isSecure = window.location.protocol === 'https:';
-      return `${isSecure ? 'wss' : 'ws'}://${window.location.host}/ws`;
+      return `${isSecure ? 'wss' : 'ws'}://${window.location.host}`;
     }
   } catch {}
-  return 'ws://localhost:1234/ws';
+  return 'ws://localhost:1234';
 };
 
 // Derive the HTTP(S) base URL of the sync server from the WebSocket URL
