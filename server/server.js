@@ -62,6 +62,11 @@ httpServer.listen(Number(PORT), HOST);
 const wss = new WebSocketServer({ server: httpServer });
 
 wss.on('connection', (ws, req) => {
+  // Strip /ws prefix from URL to get clean room name
+  if (req.url?.startsWith('/ws/')) {
+    req.url = req.url.replace('/ws/', '/');
+  }
+
   setupWSConnection(ws, req, {
     getYDoc: (docName) => {
       const normalizedDocName = (docName || '').toString().toLowerCase();
