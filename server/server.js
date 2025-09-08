@@ -3,12 +3,11 @@
 // D&D Journal - Simple Yjs Server
 // Usage: node server.js [port] [host]
 
+import express from 'express';
 import { WebSocketServer } from 'ws';
 import { setupWSConnection } from 'y-websocket/bin/utils';
 import { LeveldbPersistence } from 'y-leveldb';
 import { existsSync, readdirSync } from 'fs';
-import { createServer } from 'http';
-import { parse } from 'url';
 
 const isValidRoomName = (input) => /^[\p{Ll}\p{Nd}-]+$/u.test((input || '').toString());
 
@@ -16,72 +15,73 @@ const PORT = process.env.PORT || process.argv[2] || 1234;
 const HOST = process.env.HOST || process.argv[3] || '0.0.0.0';
 const DATA_DIR = process.env.DATA_DIR || './data';
 
-console.log(`D&D Journal Server: http/ws://${HOST}:${PORT}`);
+console.log(`🚀 D&D Journal Server starting on ${HOST}:${PORT}`);
+console.log(`📁 Data directory: ${DATA_DIR}`);
 
-// HTTP server for room status endpoint
-const httpServer = createServer((req, res) => {
-  const { pathname } = parse(req.url || '', true);
-  
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+// Express app for HTTP API
+const app = express();
+
+// CORS middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
   
   if (req.method === 'OPTIONS') {
-    res.statusCode = 204;
-    res.end();
+    res.sendStatus(204);
     return;
   }
-
-  // Room status: GET /sync/room/:name/status
-  if (req.method === 'GET' && pathname?.startsWith('/sync/room/') && pathname.endsWith('/status')) {
-    const roomName = pathname.split('/')[3]?.toLowerCase();
-    
-    if (!isValidRoomName(roomName)) {
-      res.statusCode = 400;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ error: 'Invalid room name' }));
-      return;
-    }
-    
-    const roomPath = `${DATA_DIR}/${roomName}`;
-    const exists = existsSync(roomPath) && readdirSync(roomPath).length > 0;
-    
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ exists }));
-    return;
-  }
-
-  res.statusCode = 404;
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify({ error: 'Not found' }));
+  next();
 });
 
-httpServer.listen(Number(PORT), HOST);
+// Room status endpoint
+app.get('/sync/room/:roomName/status', (req, res) => {
+  const roomName = req.params.roomName.toLowerCase();
+  
+  if (!isValidRoomName(roomName)) {
+    return res.status(400).json({ error: 'Invalid room name' });
+  }
+  
+  const roomPath = `${DATA_DIR}/${roomName}`;
+  const exists = existsSync(roomPath) && readdirSync(roomPath).length > 0;
+  
+  console.log(`📊 Room status check: ${roomName} - exists: ${exists}`);
+  res.json({ exists });
+});
+
+// Start HTTP server
+const server = app.listen(Number(PORT), HOST, () => {
+  console.log(`✅ Server running at http://${HOST}:${PORT}`);
+});
 
 // WebSocket server for Yjs sync
-const wss = new WebSocketServer({ server: httpServer });
+const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws, req) => {
-  // Strip /ws prefix from URL to get clean room name
+  // Strip /ws prefix to get clean room name
   if (req.url?.startsWith('/ws/')) {
     req.url = req.url.replace('/ws/', '/');
   }
 
+  console.log(`🔌 WebSocket connection: ${req.url}`);
+
   setupWSConnection(ws, req, {
     getYDoc: (docName) => {
-      const normalizedDocName = (docName || '').toString().toLowerCase();
+      const roomName = (docName || '').toString().toLowerCase();
       
-      if (!isValidRoomName(normalizedDocName)) {
+      if (!isValidRoomName(roomName)) {
+        console.log(`❌ Invalid room name: ${roomName}`);
         throw new Error('Invalid room name');
       }
       
-      const persistence = new LeveldbPersistence(`${DATA_DIR}/${normalizedDocName}`);
+      console.log(`📄 Opening document: ${roomName}`);
+      const persistence = new LeveldbPersistence(`${DATA_DIR}/${roomName}`);
       return persistence.doc;
     }
   });
 });
 
 process.on('SIGINT', () => {
-  console.log('\nServer stopped');
+  console.log('\n👋 Server shutting down');
   process.exit(0);
 });

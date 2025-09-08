@@ -10,6 +10,7 @@
     "test:coverage": "c8 mocha test/**/*.test.js --timeout 10000"
   },
   "dependencies": {
+    "express": "^5.1.0",
     "ws": "^8.18.3",
     "y-leveldb": "^0.1.2",
     "y-websocket": "^1.5.4"
