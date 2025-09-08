@@ -111,13 +111,14 @@ wss.on('connection', (ws, req) => {
   } catch {}
   
   const userAgent = req.headers['user-agent'] || 'Unknown';
-  console.log(`🔗 New connection from ${clientIP} (${req.socket.remoteAddress}) - ${userAgent.substring(0, 50)}...`);
+  const normalizedDocName = (docName || '').toString().toLowerCase()
+  console.log(`🔗 New connection to room "${normalizedDocName}" from ${clientIP} (${req.socket.remoteAddress}) - ${userAgent.substring(0, 50)}...`);
   activeConnections.set(connectionId, { ip: clientIP, url, userAgent, connectedAt: new Date().toISOString() });
 
   setupWSConnection(ws, req, {
     getYDoc: (docName) => {
       console.log(`🔍 getYDoc called with docName: "${docName}"`);
-      const normalizedDocName = (docName || '').toString().toLowerCase();
+      ;
       console.log(`🔍 Normalized docName: "${normalizedDocName}"`);
       if (!isValidRoomName(normalizedDocName)) {
         console.log(`❌ Invalid room name: "${normalizedDocName}"`);
