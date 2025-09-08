@@ -32,8 +32,8 @@ Return your response as a valid JSON object with this exact structure:
 Strict rules:
 - Use only information explicitly present in the entry text. Do not invent people, places, events, or outcomes not stated.
 - If the entry is very short or generic, produce a minimal, literal title and a brief subtitle that paraphrases the entry without adding details.
-- Title: concise, evocative, and varied. Avoid repetitive stock openings and clichés.
-- Subtitle: 40 words or fewer, starting with "In which" and grounded strictly in the entry.
+- Title: A title of the journal entry in the style of A Tale of Two Cities by Dickens
+- Subtitle: A subheading of the journal entry, a 40 word or less in the style of Dickens, starting with "In which".
 - Return only the JSON object, no additional text or formatting.
 
 Entry content:
