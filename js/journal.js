@@ -195,13 +195,11 @@ const summarizeMissingEntrySummaries = async (stateParam = null) => {
       const result = await summarize(key, entry.content);
       // Update any rendered entry element if present
       const element = document.querySelector(`[data-entry-id="${entry.id}"]`);
-      if (element && result && result.title && result.subtitle && result.summary) {
+      if (element && result && result.title && result.subtitle) {
         const titleElement = element.querySelector('.entry-title h3');
         const subtitleElement = element.querySelector('.entry-subtitle p');
-        const summaryElement = element.querySelector('.entry-summary p');
         if (titleElement) titleElement.textContent = result.title;
         if (subtitleElement) subtitleElement.textContent = result.subtitle;
-        if (summaryElement) summaryElement.textContent = result.summary;
         element.classList.remove('entry--placeholder');
       }
     } catch {}

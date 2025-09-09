@@ -62,8 +62,20 @@ export const summarize = (summaryKey, content, maxWords = null) => {
     options.maxTokens = Math.min(80, maxWords ? Math.ceil(maxWords * 2) : 80);
     options.temperature = 0.7;
   } else if (summaryKey.startsWith('entry:')) {
+    // Short-content safeguard to avoid fabrication
+    const text = (content || '').trim();
+    const wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
+    if (wordCount > 0 && wordCount < 6) {
+      const fallbackTitle = text.split(/\s+/).slice(0, 12).join(' ');
+      const fallbackSubtitle = `In which ${text}`;
+      const response = { title: fallbackTitle, subtitle: fallbackSubtitle };
+      setSummary(state, summaryKey, JSON.stringify(response));
+      return Promise.resolve(response);
+    }
+
     prompt = PROMPTS.summarization.entry(content, maxWords);
     options.jsonMode = true;
+    options.temperature = options.temperature ?? 0.9;
   } else if (summaryKey.startsWith('character:')) {
     prompt = PROMPTS.summarization.character(content, maxWords);
   } else if (
@@ -79,11 +91,11 @@ export const summarize = (summaryKey, content, maxWords = null) => {
     .then(response => {
       // For entry summaries, response is already an object
       if (summaryKey.startsWith('entry:')) {
-        // Validate the structure
-        if (response && response.title && response.subtitle && response.summary) {
-          // Cache the structured content
-          setSummary(state, summaryKey, JSON.stringify(response));
-          return response;
+        // Validate the structure (title + subtitle only)
+        if (response && response.title && response.subtitle) {
+          const minimal = { title: String(response.title), subtitle: String(response.subtitle) };
+          setSummary(state, summaryKey, JSON.stringify(minimal));
+          return minimal;
         } else {
           throw new Error('Invalid structured content format');
         }

@@ -11,21 +11,19 @@ export const createEntryItem = (entry, onEdit, onDelete, precomputedSummary = nu
   article.dataset.entryId = entry.id;
   let title;
   let subtitle;
-  let summary;
+  // No summary anymore; only title and subtitle are used
   if (precomputedSummary) {
     try {
       const summaryData = typeof precomputedSummary === 'string' ? JSON.parse(precomputedSummary) : precomputedSummary;
       title = summaryData.title;
       subtitle = summaryData.subtitle;
-      summary = summaryData.summary;
     } catch {}
   }
 
-  if (!title || !subtitle || !summary) {
+  if (!title || !subtitle) {
     article.classList.add('entry--placeholder');
     title = title || 'Lorem Ipsum and Amet Consectur Adipiscing';
     subtitle = subtitle || 'In which Lorem Ipsum, a dolor, sat with Amet Consectur, waiting...';
-    summary = summary || 'Mr. Ipsum and Mrs. Consectur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.';
   }
 
   article.innerHTML = `
@@ -52,24 +50,23 @@ export const createEntryItem = (entry, onEdit, onDelete, precomputedSummary = nu
         </div>
       </div>
     </div>
-    <div class="entry-summary">
-      <p>${summary}</p>
-    </div>
-    <div class="entry-content-controls"></div>
   `;
 
-  const controls = article.querySelector('.entry-content-controls');
+  // Create collapsible content section using the reusable component
   const contentWrapper = document.createElement('div');
-  contentWrapper.className = 'entry-content';
   contentWrapper.innerHTML = parseMarkdown(entry.content);
   const collapsible = createCollapsible('Show chapter', 'Hide chapter', contentWrapper);
+  
+  // Style the toggle button to match existing design
   const toggleBtn = collapsible.querySelector('button');
   if (toggleBtn) {
     toggleBtn.classList.add('entry-content-control__toggle');
+    // Remove the icon since we don't want it for this use case
     const icon = toggleBtn.querySelector('.collapsible__icon');
     if (icon) icon.remove();
   }
-  controls.appendChild(collapsible);
+  
+  article.appendChild(collapsible);
 
   const editButton = article.querySelector('.icon-button[title="Edit"]');
   const deleteButton = article.querySelector('.icon-button[title="Delete"]');

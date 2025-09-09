@@ -94,7 +94,7 @@ describe('Journal Views Module', function() {
       
       const element = JournalViews.createEntryElement(entryWithMarkdown, () => {}, () => {});
       
-      const content = element.querySelector('.entry-content');
+      const content = element.querySelector('.collapsible__content');
       expect(content).to.exist;
       expect(content.innerHTML).to.include('<strong>Bold text</strong>');
       expect(content.innerHTML).to.include('<em>italic text</em>');
@@ -108,7 +108,7 @@ describe('Journal Views Module', function() {
       
       const element = JournalViews.createEntryElement(entryWithEmptyContent, () => {}, () => {});
       
-      const content = element.querySelector('.entry-content');
+      const content = element.querySelector('.collapsible__content');
       expect(content).to.exist;
       expect(content.innerHTML).to.not.include('<p></p>');
       expect(content.innerHTML).to.not.include('<p> </p>');
@@ -123,7 +123,7 @@ describe('Journal Views Module', function() {
       
       const element = JournalViews.createEntryElement(entryWithWhitespace, () => {}, () => {});
       
-      const content = element.querySelector('.entry-content');
+      const content = element.querySelector('.collapsible__content');
       expect(content).to.exist;
       expect(content.innerHTML).to.not.include('<p></p>');
       expect(content.innerHTML).to.not.include('<p> </p>');
@@ -132,7 +132,7 @@ describe('Journal Views Module', function() {
 
     it('should create edit and delete buttons', function() {
       const element = JournalViews.createEntryElement(mockEntry, () => {}, () => {});
-      
+
       const buttons = element.querySelectorAll('button');
       
       expect(buttons).to.have.length(3); // toggle button + edit + delete
