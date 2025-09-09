@@ -53,6 +53,7 @@ ${summaryText}`
 Constraints:
 - Maximum ${maxWords} words
 - No quotation marks or punctuation at the end
+- Be inspired by the style of Charles Dickens
 - Capture the core themes and arc suggested by the text
 - Return only the title text
 
