@@ -49,27 +49,24 @@ export const createEntryItem = (entry, onEdit, onDelete, precomputedSummary = nu
           </button>
         </div>
       </div>
-    </div>   
-    <div class="entry-content entry-content--hidden">
-      ${parseMarkdown(entry.content)}
-    </div>
-    <div class="entry-content-controls">
-      <button class="entry-content-control__toggle">Show chapter</button>
     </div>
   `;
 
-  const controls = article.querySelector('.entry-content-controls');
+  // Create collapsible content section using the reusable component
   const contentWrapper = document.createElement('div');
-  contentWrapper.className = 'entry-content';
   contentWrapper.innerHTML = parseMarkdown(entry.content);
   const collapsible = createCollapsible('Show chapter', 'Hide chapter', contentWrapper);
+  
+  // Style the toggle button to match existing design
   const toggleBtn = collapsible.querySelector('button');
   if (toggleBtn) {
     toggleBtn.classList.add('entry-content-control__toggle');
+    // Remove the icon since we don't want it for this use case
     const icon = toggleBtn.querySelector('.collapsible__icon');
     if (icon) icon.remove();
   }
-  controls.appendChild(collapsible);
+  
+  article.appendChild(collapsible);
 
   const editButton = article.querySelector('.icon-button[title="Edit"]');
   const deleteButton = article.querySelector('.icon-button[title="Delete"]');
