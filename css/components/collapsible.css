@@ -9,8 +9,7 @@
 .collapsible__content {
   overflow: hidden;
   transition: max-height 0.3s ease;
-  max-height: 4.5rem
-  ;
+  max-height: calc(4 * 1.4em); /* 2.5 lines, using line-height-normal */
   position: relative;
 }
 
@@ -75,3 +74,17 @@
   outline: none;
 }
 
+
+@supports (initial-letter: 2) or (-webkit-initial-letter: 2) {
+  .collapsible__content p:first-of-type:first-letter {
+    initial-letter: 2;
+    -webkit-initial-letter: 2;
+    margin-right: var(--space-xs);
+    font-style: italic;
+  }
+}
+
+.collapsible__content p:first-of-type:first-line {
+  text-transform: uppercase;
+  font-style: italic;
+}

@@ -13,7 +13,7 @@ export const renderPart = (elements, data, options = {}) => {
   summaryElement.innerHTML = '';
   const summaryText = (summary || 'No summary available.').trim();
   summaryElement.appendChild(createCollapsibleSummary(summaryText));
-
+ 
   renderEntries(listElement, entries || [], {
     onEdit: null,
     onDelete: null,
