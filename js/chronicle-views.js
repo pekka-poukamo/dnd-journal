@@ -5,15 +5,13 @@ import { formatDate, parseMarkdown } from './utils.js';
 export const renderSoFar = (container, text) => {
   if (!container) return;
   container.innerHTML = '';
-  const html = parseMarkdown((text || 'No summary yet.').trim());
-  container.appendChild(createCollapsible('Show', 'Hide', html));
+  container.appendChild(createCollapsible('Show summary', 'Hide summary', text));
 };
 
 export const renderRecent = (container, text) => {
   if (!container) return;
   container.innerHTML = '';
-  const html = parseMarkdown((text || 'No recent summary yet.').trim());
-  container.appendChild(createCollapsible('Show', 'Hide', html));
+  container.appendChild(createCollapsible('Show summary', 'Hide summary', text));
 };
 
 export const renderPartsList = (container, parts, idToEntry) => {

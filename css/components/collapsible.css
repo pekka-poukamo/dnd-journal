@@ -1,0 +1,77 @@
+.collapsible {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.collapsible__content {
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  max-height: 4.5rem
+  ;
+  position: relative;
+}
+
+.collapsible__content::after {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2.5em;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--color-background, #fff) 90%);
+}
+
+.collapsible__content--expanded {
+  max-height: none;
+}
+
+.collapsible__content--expanded::after {
+  display: none;
+}
+
+
+.collapsible__toggle {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  /* text-decoration: underline; */
+  font-style: italic;
+  transition: color 0.15s;
+}
+
+.collapsible__toggle:hover,
+.collapsible__toggle:focus {
+  color: var(--color-accent-hover);
+  outline: none;
+}
+
+/* Generic collapsible styles */
+.collapsible__toggle {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  padding: 0;
+  margin: 0 0 var(--space-sm) 0;
+  cursor: pointer;
+  font-style: italic;
+  transition: color 0.15s;
+}
+
+.collapsible__toggle:hover,
+.collapsible__toggle:focus {
+  color: var(--color-accent-hover);
+  outline: none;
+}
+

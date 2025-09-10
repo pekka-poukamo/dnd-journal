@@ -1,8 +1,10 @@
 // Generic collapsible component for summary-like blocks
 // Expects pre-formatted HTML content string
+import { parseMarkdown } from '../utils.js';
 
 export const createCollapsible = (showLabelText, hideLabelText, htmlOrElement) => {
   const wrapper = document.createElement('div');
+  wrapper.className = 'collapsible';
 
   const toggleButton = document.createElement('button');
   toggleButton.className = 'collapsible__toggle';
@@ -12,31 +14,25 @@ export const createCollapsible = (showLabelText, hideLabelText, htmlOrElement) =
   toggleLabel.className = 'collapsible__label';
   toggleLabel.textContent = showLabelText;
 
-  const toggleIcon = document.createElement('span');
-  toggleIcon.className = 'collapsible__icon';
-  toggleIcon.textContent = '▼';
-
   toggleButton.appendChild(toggleLabel);
-  toggleButton.appendChild(toggleIcon);
 
   const contentDiv = document.createElement('div');
   contentDiv.className = 'collapsible__content';
-  contentDiv.style.display = 'none';
   if (typeof htmlOrElement === 'string') {
-    contentDiv.innerHTML = htmlOrElement || '';
+    contentDiv.innerHTML = htmlOrElement ? parseMarkdown(htmlOrElement) : '';
   } else if (htmlOrElement && htmlOrElement.nodeType === 1) {
     contentDiv.appendChild(htmlOrElement);
   }
 
   toggleButton.addEventListener('click', () => {
-    const isExpanded = contentDiv.style.display !== 'none';
-    contentDiv.style.display = isExpanded ? 'none' : 'block';
+    const isExpanded = contentDiv.classList.contains('collapsible__content--expanded');
+    contentDiv.classList.toggle('collapsible__content--expanded', !isExpanded);
     toggleButton.classList.toggle('collapsible__toggle--expanded', !isExpanded);
     toggleLabel.textContent = isExpanded ? showLabelText : hideLabelText;
   });
 
-  wrapper.appendChild(toggleButton);
   wrapper.appendChild(contentDiv);
+  wrapper.appendChild(toggleButton);
   return wrapper;
 };
 

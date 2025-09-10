@@ -12,8 +12,7 @@ export const renderPart = (elements, data, options = {}) => {
   titleElement.textContent = title || '';
   summaryElement.innerHTML = '';
   const summaryText = (summary || 'No summary available.').trim();
-  const summaryHtml = options.formatText ? options.formatText(summaryText) : summaryText;
-  summaryElement.appendChild(createCollapsibleSummary(summaryHtml));
+  summaryElement.appendChild(createCollapsibleSummary(summaryText));
 
   renderEntries(listElement, entries || [], {
     onEdit: null,
